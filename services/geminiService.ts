@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig } from "../types";
 import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL } from '../constants';
@@ -224,8 +223,8 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
   const fullPrompt = `${author.systemPrompt}\n\n[CONTEXT LIBRARY]\n${config.coreLibrary}`;
   const model = author.model || DEFAULT_MODEL;
 
-  // Add instruction to start with a header
-  const userContent = `Task: "${taskContent}"\n\n[INSTRUCTION]\nStart the response with a short, bold Markdown Heading (e.g. ### Title) that summarizes the challenge. Do NOT put a colon at the end of the header.`;
+  // Add instruction to start with a header and AVOID COLONS
+  const userContent = `Task: "${taskContent}"\n\n[INSTRUCTION]\nStart the response with a short, bold Markdown Heading (e.g. ### Title) that summarizes the challenge. \nIMPORTANT: Do NOT put a colon (:) at the end of the header text.`;
 
   try {
     let response;
@@ -260,8 +259,8 @@ export const getKanbanTherapy = async (taskContent: string, state: 'stuck' | 'co
       ? `Пользователь застрял на задаче: "${taskContent}". Дай совет или упражнение.`
       : `Пользователь завершил задачу: "${taskContent}". Проведи краткую рефлексию.`;
 
-    // Add instruction for header
-    userMessage += `\n\n[INSTRUCTION]\nStart the response with a short, bold Markdown Heading (e.g. ### Title) matching the context. Do NOT put a colon at the end of the header.`;
+    // Add instruction for header and AVOID COLONS
+    userMessage += `\n\n[INSTRUCTION]\nStart the response with a short, bold Markdown Heading (e.g. ### Title) matching the context. \nIMPORTANT: Do NOT put a colon (:) at the end of the header text.`;
 
     let response;
     if (isGemmaModel(model)) {

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig } from '../types';
@@ -17,27 +16,42 @@ interface Props {
   onNavigateToTask?: (taskId: string) => void;
 }
 
-// Helper to strip trailing colons from headers
+// Helper to strip trailing colons from headers (Recursive)
 const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     if (typeof children === 'string') return children.replace(/:\s*$/, '');
     if (Array.isArray(children)) {
-        return children.map((child, i) => i === children.length - 1 ? cleanHeader(child) : child);
+        return React.Children.map(children, (child, i) => {
+             return i === React.Children.count(children) - 1 ? cleanHeader(child) : child;
+        });
+    }
+    if (React.isValidElement(children)) {
+        return React.cloneElement(children, {
+             // @ts-ignore
+            children: cleanHeader(children.props.children)
+        });
     }
     return children;
 };
 
+// Standardized Markdown Styles (Matches Kanban)
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-900" {...props} />,
-    a: ({node, ...props}: any) => <a className="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1 text-slate-900" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1 text-slate-900" {...props} />,
-    li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
-    h1: ({node, children, ...props}: any) => <h1 className="text-lg font-bold mt-3 mb-2 text-slate-900" {...props}>{cleanHeader(children)}</h1>,
-    h2: ({node, children, ...props}: any) => <h2 className="text-base font-bold mt-3 mb-2 text-slate-900" {...props}>{cleanHeader(children)}</h2>,
-    h3: ({node, children, ...props}: any) => <h3 className="text-sm font-bold mt-2 mb-1 text-slate-900" {...props}>{cleanHeader(children)}</h3>,
-    blockquote: ({node, ...props}: any) => <blockquote className="pl-3 text-slate-900 my-2 opacity-80" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-3 last:mb-0 text-slate-800 leading-relaxed" {...props} />,
+    a: ({node, ...props}: any) => <a className="text-indigo-600 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-3 space-y-1 text-slate-800" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-3 space-y-1 text-slate-800" {...props} />,
+    li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed" {...props} />,
+    h1: ({node, children, ...props}: any) => <h1 className="text-lg font-bold mt-4 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
+    h2: ({node, children, ...props}: any) => <h2 className="text-base font-bold mt-3 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
+    h3: ({node, children, ...props}: any) => <h3 className="text-sm font-bold mt-3 mb-1 text-slate-900 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
+    h4: ({node, children, ...props}: any) => <h4 className="text-sm font-bold mt-2 mb-1 text-slate-800" {...props}>{cleanHeader(children)}</h4>,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-indigo-200 pl-4 py-1 my-3 text-slate-600 italic bg-indigo-50/30 rounded-r-lg" {...props} />,
     strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900" {...props} />,
-    em: ({node, ...props}: any) => <em className="not-italic text-slate-900" {...props} />,
+    em: ({node, ...props}: any) => <em className="italic text-slate-800" {...props} />,
+    code: ({node, inline, className, children, ...props}: any) => {
+         return inline 
+            ? <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono text-pink-600 border border-slate-200" {...props}>{children}</code>
+            : <code className="block bg-slate-900 text-slate-50 p-3 rounded-lg text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+    }
 };
 
 const CollapsibleSection: React.FC<{
@@ -63,7 +77,7 @@ const CollapsibleSection: React.FC<{
       </button>
       {isOpen && (
         <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-1 duration-200">
-           <div className="pt-3 border-t border-slate-200/50">
+           <div className="pt-3 border-t border-slate-200/50 text-sm">
              {children}
            </div>
         </div>
