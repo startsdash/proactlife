@@ -36,6 +36,13 @@ const ai = new GoogleGenAI({ apiKey: getApiKey() });
 // Helper to check if model requires legacy/chat handling (Gemma doesn't support systemInstruction in config)
 const isGemmaModel = (model: string) => model.toLowerCase().includes('gemma');
 
+// Specific config for Gemma as requested
+const GEMMA_CONFIG = {
+  temperature: 0.85,
+  topP: 0.95,
+  topK: 40,
+};
+
 // Helper for safe JSON parsing to handle potential markdown formatting or extra text
 const parseJSON = <T>(text: string | undefined, fallback: T): T => {
   if (!text) return fallback;
@@ -82,7 +89,8 @@ export const autoTagNote = async (content: string, config: AppConfig): Promise<s
         const gemmaPrompt = `${fullPrompt}\n\n[TASK]\nAnalyze the text below and extract 1-5 relevant tags.\nText: "${content}"\n\n[OUTPUT]\nReturn ONLY raw JSON in this format: { "tags": ["tag1", "tag2"] }`;
         response = await ai.models.generateContent({
             model,
-            contents: gemmaPrompt
+            contents: gemmaPrompt,
+            config: GEMMA_CONFIG
         });
     } else {
         // Gemini Strategy: Native Config
@@ -120,7 +128,11 @@ export const findNotesByMood = async (notes: Note[], mood: string, config: AppCo
     let response;
     if (isGemmaModel(model)) {
         const gemmaPrompt = `${tool.systemPrompt}\n\nUser Mood: "${mood}"\nLibrary: ${JSON.stringify(simplifiedNotes)}\n\nReturn ONLY raw JSON: { "ids": ["id1", "id2"] }`;
-        response = await ai.models.generateContent({ model, contents: gemmaPrompt });
+        response = await ai.models.generateContent({ 
+          model, 
+          contents: gemmaPrompt,
+          config: GEMMA_CONFIG
+        });
     } else {
         response = await ai.models.generateContent({
           model,
@@ -178,7 +190,8 @@ export const analyzeSandboxItem = async (content: string, mentorId: string, conf
         
         response = await ai.models.generateContent({
             model,
-            contents: gemmaPrompt
+            contents: gemmaPrompt,
+            config: GEMMA_CONFIG
         });
     } else {
         response = await ai.models.generateContent({
@@ -231,7 +244,11 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
     
     if (isGemmaModel(model)) {
          const gemmaPrompt = `${fullPrompt}\n\n${userContent}`;
-         response = await ai.models.generateContent({ model, contents: gemmaPrompt });
+         response = await ai.models.generateContent({ 
+           model, 
+           contents: gemmaPrompt,
+           config: GEMMA_CONFIG 
+         });
     } else {
          response = await ai.models.generateContent({
           model,
@@ -265,7 +282,11 @@ export const getKanbanTherapy = async (taskContent: string, state: 'stuck' | 'co
     let response;
     if (isGemmaModel(model)) {
         const gemmaPrompt = `${fullPrompt}\n\n${userMessage}`;
-        response = await ai.models.generateContent({ model, contents: gemmaPrompt });
+        response = await ai.models.generateContent({ 
+          model, 
+          contents: gemmaPrompt,
+          config: GEMMA_CONFIG
+        });
     } else {
         response = await ai.models.generateContent({
           model,
@@ -311,7 +332,11 @@ export const generateJournalReflection = async (
     let response;
     if (isGemmaModel(model)) {
         const gemmaPrompt = `${fullPrompt}\n\n${prompt}`;
-        response = await ai.models.generateContent({ model, contents: gemmaPrompt });
+        response = await ai.models.generateContent({ 
+          model, 
+          contents: gemmaPrompt,
+          config: GEMMA_CONFIG
+        });
     } else {
         response = await ai.models.generateContent({
           model,
