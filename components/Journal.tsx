@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig } from '../types';
 import { ICON_MAP } from '../constants';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, ArrowRight } from 'lucide-react';
 
 interface Props {
   entries: JournalEntry[];
@@ -236,21 +236,29 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
     if (!task) return null;
     return (
       <div 
-        onClick={() => setViewingTask(task)}
-        className={`mt-2 mb-3 p-3 rounded-lg border text-xs flex items-center gap-3 cursor-pointer transition-all hover:shadow-md group ${task.column === 'done' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-indigo-50 border-indigo-100 text-indigo-800'}`}
+        onClick={(e) => {
+            e.stopPropagation();
+            onNavigateToTask?.(taskId);
+        }}
+        className="mt-4 flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-300 hover:shadow-sm transition-all group"
       >
-         <div className="shrink-0">
-            {task.column === 'done' ? <CheckCircle2 size={16} /> : <Circle size={16} />}
+         <div className={`shrink-0 ${task.column === 'done' ? 'text-emerald-500' : 'text-indigo-500'}`}>
+            {task.column === 'done' ? <CheckCircle2 size={20} /> : <Circle size={20} />}
          </div>
          <div className="flex-1 min-w-0">
-            <div className="font-bold uppercase tracking-wider mb-0.5 opacity-70 text-[10px]">
-               {task.column === 'done' ? 'Сделано' : 'В процессе'}
-               {task.isArchived && " (В архиве)"}
+            <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${task.column === 'done' ? 'text-emerald-600' : 'text-slate-500'}`}>
+                    {task.column === 'done' ? 'Сделано' : 'В процессе'}
+                </span>
+                <span className="text-slate-300 text-[10px]">•</span>
+                <span className="text-[10px] text-slate-400 font-mono">KANBAN</span>
             </div>
-            <p className="truncate italic font-medium">"{task.content}"</p>
+            <div className="text-sm font-medium text-slate-900 truncate">
+                {task.content}
+            </div>
          </div>
-         <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-             <Eye size={16} className="text-current opacity-50" />
+         <div className="text-slate-300 group-hover:text-indigo-500 transition-colors">
+             <Kanban size={16} />
          </div>
       </div>
     );
@@ -456,9 +464,6 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
                     <Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
                   </div>
 
-                  {/* Linked Task Context */}
-                  {entry.linkedTaskId && getTaskPreview(entry.linkedTaskId)}
-
                   {/* User Content */}
                   {isEditing ? (
                       <div className="mb-4">
@@ -482,6 +487,9 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
                       <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
                     </div>
                   )}
+
+                  {/* Linked Task Context (Mini Card) */}
+                  {entry.linkedTaskId && getTaskPreview(entry.linkedTaskId)}
 
                   {/* AI Feedback */}
                   {entry.aiFeedback && (
