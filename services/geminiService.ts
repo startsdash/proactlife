@@ -225,7 +225,7 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
   const model = author.model || DEFAULT_MODEL;
 
   // Add instruction to start with a header
-  const userContent = `Task: "${taskContent}"\n\n[INSTRUCTION]\nStart the response with a short, bold Markdown Heading (e.g. ### Title) that summarizes the challenge.`;
+  const userContent = `Task: "${taskContent}"\n\n[INSTRUCTION]\nStart the response with a short, bold Markdown Heading (e.g. ### Title) that summarizes the challenge. Do NOT put a colon at the end of the header.`;
 
   try {
     let response;
@@ -261,7 +261,7 @@ export const getKanbanTherapy = async (taskContent: string, state: 'stuck' | 'co
       : `Пользователь завершил задачу: "${taskContent}". Проведи краткую рефлексию.`;
 
     // Add instruction for header
-    userMessage += `\n\n[INSTRUCTION]\nStart the response with a short, bold Markdown Heading (e.g. ### Title) matching the context.`;
+    userMessage += `\n\n[INSTRUCTION]\nStart the response with a short, bold Markdown Heading (e.g. ### Title) matching the context. Do NOT put a colon at the end of the header.`;
 
     let response;
     if (isGemmaModel(model)) {

@@ -19,15 +19,24 @@ interface Props {
 }
 
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1 text-slate-700" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1 text-slate-700" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
-    h1: ({node, ...props}: any) => <h1 className="text-lg font-bold mt-2 mb-1 text-slate-900" {...props} />,
-    h2: ({node, ...props}: any) => <h2 className="text-base font-bold mt-2 mb-1 text-slate-800" {...props} />,
-    h3: ({node, ...props}: any) => <h3 className="text-sm font-bold mt-2 mb-1 text-slate-800" {...props} />,
-    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-indigo-300 pl-3 italic text-slate-500 my-2" {...props} />,
+    h1: ({node, children, ...props}: any) => {
+        const text = typeof children === 'string' ? children.replace(/:\s*$/, '') : children;
+        return <h1 className="text-lg font-bold mt-3 mb-2 text-slate-900" {...props}>{text}</h1>
+    },
+    h2: ({node, children, ...props}: any) => {
+        const text = typeof children === 'string' ? children.replace(/:\s*$/, '') : children;
+        return <h2 className="text-base font-bold mt-3 mb-2 text-slate-900" {...props}>{text}</h2>
+    },
+    h3: ({node, children, ...props}: any) => {
+         const text = typeof children === 'string' ? children.replace(/:\s*$/, '') : children;
+         return <h3 className="text-sm font-bold mt-2 mb-1 text-slate-900" {...props}>{text}</h3>
+    },
+    blockquote: ({node, ...props}: any) => <blockquote className="pl-3 text-slate-600 my-2" {...props} />,
     strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900" {...props} />,
 };
 
