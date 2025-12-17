@@ -16,8 +16,11 @@ const markdownComponents = {
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
+    h1: ({node, ...props}: any) => <h1 className="text-lg font-bold mt-2 mb-1 text-slate-900" {...props} />,
+    h2: ({node, ...props}: any) => <h2 className="text-base font-bold mt-2 mb-1 text-slate-800" {...props} />,
+    h3: ({node, ...props}: any) => <h3 className="text-sm font-bold mt-2 mb-1 text-slate-800" {...props} />,
     blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 pl-3 italic text-slate-500 my-2" {...props} />,
-    strong: ({node, ...props}: any) => <strong className="font-bold" {...props} />,
+    strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900" {...props} />,
 };
 
 const CollapsibleSection: React.FC<{
@@ -152,7 +155,6 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                 </div>
 
                 <div className="space-y-4">
-                    {/* 1. Main Task Content */}
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-4">
                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Задача</span>
                          <div className="text-base text-slate-800 font-medium leading-relaxed">
@@ -160,7 +162,6 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                          </div>
                     </div>
 
-                    {/* 2. Source (Description) - Collapsible */}
                     {selectedTask.description && (
                         <CollapsibleSection title="Источник" icon={<FileText size={14} />}>
                             <div className="text-sm text-slate-700 leading-relaxed">
@@ -169,26 +170,24 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                         </CollapsibleSection>
                     )}
 
-                    {/* 3. Final Challenge (Snapshot) - Collapsible */}
                     {selectedTask.activeChallenge && (
                         <CollapsibleSection title="Финальный Челлендж" icon={<Zap size={14} />}>
                             <div className={`p-3 rounded-lg border ${selectedTask.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
                                 <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${selectedTask.isChallengeCompleted ? 'text-emerald-600' : 'text-amber-600'}`}>
                                     {selectedTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
                                 </span>
-                                <div className={`text-sm leading-relaxed italic ${selectedTask.isChallengeCompleted ? 'text-emerald-800 opacity-70' : 'text-amber-900'} ${selectedTask.isChallengeCompleted ? '' : ''}`}>
+                                <div className={`text-sm leading-relaxed ${selectedTask.isChallengeCompleted ? 'text-emerald-800 opacity-70' : 'text-amber-900'}`}>
                                   <ReactMarkdown components={markdownComponents}>{selectedTask.activeChallenge}</ReactMarkdown>
                                 </div>
                             </div>
                         </CollapsibleSection>
                     )}
 
-                    {/* 4. Challenge History - Collapsible */}
                     {selectedTask.challengeHistory && selectedTask.challengeHistory.length > 0 && (
                         <CollapsibleSection title="История Челленджей" icon={<History size={14} />}>
                             <ul className="space-y-3">
                                 {selectedTask.challengeHistory.map((h, i) => (
-                                    <li key={i} className="text-xs text-slate-600 italic border-l-2 border-slate-300 pl-3 py-1">
+                                    <li key={i} className="text-sm text-slate-700 py-2 border-b border-slate-100 last:border-0">
                                         <ReactMarkdown components={markdownComponents}>{h}</ReactMarkdown>
                                     </li>
                                 ))}
@@ -196,12 +195,11 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                         </CollapsibleSection>
                     )}
                     
-                    {/* 5. Consultation History - Collapsible (MOVED TO BOTTOM) */}
                     {selectedTask.consultationHistory && selectedTask.consultationHistory.length > 0 && (
                         <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}>
                             <ul className="space-y-4">
                                 {selectedTask.consultationHistory.map((consultation, index) => (
-                                    <li key={index} className="text-xs text-slate-600 border-l-2 border-amber-300 pl-3 py-1 bg-amber-50/50 rounded-r-lg p-2">
+                                    <li key={index} className="text-sm text-slate-700 py-3 border-b border-slate-100 last:border-0">
                                         <ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown>
                                     </li>
                                 ))}
@@ -209,7 +207,6 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                         </CollapsibleSection>
                     )}
 
-                    {/* Footer Metadata */}
                     <div className="flex items-center gap-4 text-xs text-slate-400 pt-2 px-2">
                         <span className="font-mono">ID: {selectedTask.id.slice(-6)}</span>
                         <span className="flex items-center gap-1 text-emerald-600 font-medium ml-auto"><CheckCircle2 size={14}/> Завершено</span>

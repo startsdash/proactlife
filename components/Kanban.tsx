@@ -19,15 +19,16 @@ interface Props {
 }
 
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-1 last:mb-0" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
-    h1: ({node, ...props}: any) => <h1 className="text-lg font-bold mt-2 mb-1" {...props} />,
-    h2: ({node, ...props}: any) => <h2 className="text-base font-bold mt-2 mb-1" {...props} />,
+    h1: ({node, ...props}: any) => <h1 className="text-lg font-bold mt-2 mb-1 text-slate-900" {...props} />,
+    h2: ({node, ...props}: any) => <h2 className="text-base font-bold mt-2 mb-1 text-slate-800" {...props} />,
+    h3: ({node, ...props}: any) => <h3 className="text-sm font-bold mt-2 mb-1 text-slate-800" {...props} />,
     blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-indigo-300 pl-3 italic text-slate-500 my-2" {...props} />,
-    strong: ({node, ...props}: any) => <strong className="font-bold" {...props} />,
+    strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900" {...props} />,
 };
 
 const CollapsibleSection: React.FC<{
@@ -171,9 +172,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
            updateTask({ ...draggedTask, column: targetTask.column });
            return; 
       }
-
-      // If dropped in same column: Do nothing, because sort order is enforced by date.
-      // Reordering requires 'manual' mode which is removed.
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -280,32 +278,24 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
         <div className="flex-1 overflow-y-auto space-y-3 pb-20 md:pb-2 min-h-0 px-1 custom-scrollbar-light">
             {activeTasks.filter(t => t.column === col.id).map(task => {
                 
-                // --- VISUAL STATE LOGIC ---
                 const isChallengeFinished = task.isChallengeCompleted;
                 const isDoneColumn = col.id === 'done';
-                
-                // "Hide Details" logic:
-                // Hide source/challenge buttons for Done tasks, or Todo tasks with completed challenges.
-                // NOTE: We keep the Header visible for Done tasks now (per request), but hide extra blocks.
                 const hideExtraDetails = isDoneColumn || (col.id === 'todo' && isChallengeFinished);
 
                 let statusText = 'ЗАДАЧА';
                 let statusColor = 'text-slate-400';
                 let StatusIcon = null;
                 
-                // --- BORDER COLOR LOGIC ---
-                let borderClass = 'border-l-4 border-slate-300'; // Default Gray (Todo)
+                let borderClass = 'border-l-4 border-slate-300';
                 
                 if (col.id === 'done') {
-                     borderClass = 'border-l-4 border-emerald-400'; // Green
+                     borderClass = 'border-l-4 border-emerald-400';
                 }
                 else if (col.id === 'doing') {
-                     borderClass = 'border-l-4 border-indigo-400'; // Indigo (Always)
+                     borderClass = 'border-l-4 border-indigo-400';
                 }
                 
-                // Header Status Text Logic
                 if (isDoneColumn) {
-                    // For Done column, explicitly show "Task" (ЗАДАЧА) as requested
                     statusText = 'ЗАДАЧА';
                     statusColor = 'text-slate-400';
                     StatusIcon = null;
@@ -318,7 +308,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                 return (
                 <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-default relative group ${borderClass}`}>
                     
-                    {/* Header: Always visible now (for Done items it says "ЗАДАЧА") */}
                     <div className="flex justify-between items-center mb-2">
                         <span className={`text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>{statusText}</span>
                         <div className="flex items-center gap-2">
@@ -326,10 +315,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                         </div>
                     </div>
 
-                    {/* Content: Always visible */}
-                    <div className="mb-3"><div className={`text-slate-800 font-normal text-sm leading-relaxed ${task.activeChallenge && task.isChallengeCompleted ? '' : ''}`}><ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown></div></div>
+                    <div className="mb-3"><div className={`text-slate-800 font-normal text-sm leading-relaxed`}><ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown></div></div>
                     
-                    {/* DOING: Collapsed Source - Hide if Done or Completed */}
                     {!hideExtraDetails && col.id === 'doing' && task.description && (
                          <CollapsibleSection title="Источник" icon={<FileText size={12}/>} isCard>
                              <div className="text-xs text-slate-600 leading-relaxed max-h-40 overflow-y-auto custom-scrollbar-light">
@@ -338,12 +325,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                          </CollapsibleSection>
                     )}
 
-                    {/* DOING: Collapsed Challenge - Hide if Done or Completed */}
+                    {/* ACTIVE CHALLENGE DISPLAY */}
                     {!hideExtraDetails && col.id === 'doing' && task.activeChallenge && !challengeDrafts[task.id] && (
                         <CollapsibleSection title="Челлендж" icon={<Zap size={12}/>} isCard>
                             <div className={`p-2 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
                                 <div className="flex justify-between items-start gap-2">
-                                    <div className={`text-[11px] italic leading-relaxed ${task.isChallengeCompleted ? 'text-emerald-700 opacity-80' : 'text-indigo-900'} ${task.isChallengeCompleted ? '' : ''}`}>
+                                    <div className={`text-xs leading-relaxed ${task.isChallengeCompleted ? 'text-emerald-700 opacity-80' : 'text-slate-800'}`}>
                                         <ReactMarkdown components={markdownComponents}>{task.activeChallenge}</ReactMarkdown>
                                     </div>
                                     <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
@@ -362,11 +349,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                         </CollapsibleSection>
                     )}
 
-                    {/* TODO: Expanded Challenge - Hide if Done or Completed */}
                     {!hideExtraDetails && col.id === 'todo' && task.activeChallenge && !challengeDrafts[task.id] && (
                         <div className={`mt-2 mb-3 p-3 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
                             <div className="flex justify-between items-start gap-2">
-                                <div className={`text-[11px] italic leading-relaxed ${task.isChallengeCompleted ? 'text-emerald-700 opacity-80' : 'text-indigo-900'} ${task.isChallengeCompleted ? '' : ''}`}>
+                                <div className={`text-xs leading-relaxed ${task.isChallengeCompleted ? 'text-emerald-700 opacity-80' : 'text-slate-800'}`}>
                                     <ReactMarkdown components={markdownComponents}>{task.activeChallenge}</ReactMarkdown>
                                 </div>
                                 <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
@@ -384,10 +370,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                         </div>
                     )}
 
+                    {/* CHALLENGE GENERATION OUTPUT (DRAFT) */}
                     {challengeDrafts[task.id] && (
                         <div className="mt-2 mb-3 p-3 bg-amber-50 rounded-lg border border-amber-200 animate-in fade-in slide-in-from-top-2 relative">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 uppercase mb-1"><Zap size={10} /> {config.challengeAuthors[0]?.name || 'Popper'}</div>
-                            <div className="text-[11px] text-amber-900 leading-relaxed italic mb-2">
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 uppercase mb-2"><Zap size={10} /> {config.challengeAuthors[0]?.name || 'Popper'}</div>
+                            <div className="text-sm text-slate-800 leading-relaxed mb-3">
                                 <ReactMarkdown components={markdownComponents}>{challengeDrafts[task.id]}</ReactMarkdown>
                             </div>
                             <div className="flex gap-2">
@@ -397,13 +384,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                         </div>
                     )}
 
-                    {/* --- ACTION BUTTONS & NAVIGATION (FOOTER) --- */}
                     <div className="mt-auto border-t border-slate-50 pt-3 flex flex-col gap-3">
-                        
-                        {/* ROW 1: Context Specific Actions (Icons Only) - Above Navigation */}
                         <div className="flex gap-2 items-center justify-end">
-
-                           {/* --- COLUMN: TO DO --- */}
                            {col.id === 'todo' && (
                                 <button 
                                     onClick={(e) => moveToDoing(e, task)} 
@@ -414,7 +396,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                 </button>
                            )}
 
-                           {/* --- COLUMN: DOING --- */}
                            {col.id === 'doing' && (
                                <>
                                <button 
@@ -453,7 +434,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                </>
                            )}
                            
-                           {/* --- COLUMN: DONE --- */}
                            {col.id === 'done' && (
                                 <button 
                                     onClick={(e) => { 
@@ -467,7 +447,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                 </button>
                            )}
 
-                           {/* --- DELETE (ALL COLUMNS) --- */}
                            <button 
                                 onClick={(e) => { 
                                     e.stopPropagation(); 
@@ -481,7 +460,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
 
                         </div>
 
-                        {/* ROW 2: Navigation Buttons (Below Actions) */}
                         <div className="flex gap-2 items-center justify-between">
                             <div className="w-8 flex justify-start">
                                 {col.id !== 'todo' && <button onClick={(e) => moveTask(e, task, 'left')} className="p-1.5 bg-slate-100 md:hidden rounded-lg text-slate-500 border border-slate-200"><ChevronLeft size={16} /></button>}
@@ -505,7 +483,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       
       {/* FILTERS UI */}
       <div className="flex flex-wrap gap-2 mb-4 animate-in slide-in-from-top-2 shrink-0">
-         {/* Sort Button */}
          <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
              <button onClick={toggleSortOrder} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all text-slate-600 hover:bg-slate-50">
                  {sortOrder === 'desc' && <><ArrowDown size={14} /> Сначала новые</>}
@@ -513,14 +490,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
              </button>
          </div>
 
-         {/* Challenge Filter */}
          <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
             <button onClick={() => setFilterChallenge('all')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filterChallenge === 'all' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}>Все</button>
             <button onClick={() => setFilterChallenge('active')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${filterChallenge === 'active' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-indigo-500'}`}><Zap size={12}/> Активные</button>
             <button onClick={() => setFilterChallenge('completed')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${filterChallenge === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}><CheckCircle2 size={12}/> Финал</button>
          </div>
 
-         {/* Journal Filter - Simplified Toggle */}
          <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
              <button onClick={() => setFilterJournal(filterJournal === 'all' ? 'linked' : 'all')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${filterJournal === 'linked' ? 'bg-amber-50 text-amber-600 shadow-sm ring-1 ring-amber-100' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50/50'}`}><Book size={12}/> В дневнике</button>
          </div>
@@ -540,7 +515,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                 </div>
                 {activeModal.type === 'details' ? (
                      <div className="space-y-4">
-                        {/* 1. Task Content */}
                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-4">
                             <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider block mb-3">Задача</span>
                             <div className="text-base text-slate-800 font-normal leading-relaxed">
@@ -548,7 +522,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             </div>
                         </div>
 
-                        {/* 2. Source (Description) - Collapsible */}
                         {getTaskForModal()?.description && (
                             <CollapsibleSection title="Источник" icon={<FileText size={14}/>}>
                                 <div className="text-sm text-slate-700 leading-relaxed">
@@ -557,7 +530,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             </CollapsibleSection>
                         )}
                         
-                        {/* 3. Active Challenge - Collapsible */}
                         {getTaskForModal()?.activeChallenge && (
                           <CollapsibleSection 
                             title={getTaskForModal()?.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
@@ -567,19 +539,18 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                 <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${getTaskForModal()?.isChallengeCompleted ? 'text-emerald-600' : 'text-indigo-600'}`}>
                                    {getTaskForModal()?.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
                                 </span>
-                                <div className={`text-sm leading-relaxed italic ${getTaskForModal()?.isChallengeCompleted ? 'text-emerald-800 opacity-70' : 'text-indigo-900'}`}>
+                                <div className={`text-sm leading-relaxed ${getTaskForModal()?.isChallengeCompleted ? 'text-emerald-800 opacity-70' : 'text-slate-800'}`}>
                                   <ReactMarkdown components={markdownComponents}>{getTaskForModal()?.activeChallenge}</ReactMarkdown>
                                 </div>
                              </div>
                           </CollapsibleSection>
                         )}
 
-                        {/* 4. Challenge History - Collapsible */}
                         {getTaskForModal()?.challengeHistory && getTaskForModal()!.challengeHistory!.length > 0 && (
                           <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
                              <ul className="space-y-3">
                                 {getTaskForModal()!.challengeHistory!.map((challenge, index) => (
-                                   <li key={index} className="text-xs text-slate-600 italic border-l-2 border-slate-300 pl-3 py-1">
+                                   <li key={index} className="text-sm text-slate-700 py-2 border-b border-slate-100 last:border-0">
                                       <ReactMarkdown components={markdownComponents}>{challenge}</ReactMarkdown>
                                    </li>
                                 ))}
@@ -587,12 +558,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                           </CollapsibleSection>
                         )}
                         
-                        {/* 5. Consultation History - Collapsible */}
                         {getTaskForModal()?.consultationHistory && getTaskForModal()!.consultationHistory!.length > 0 && (
                           <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}>
                              <ul className="space-y-4">
                                 {getTaskForModal()!.consultationHistory!.map((consultation, index) => (
-                                   <li key={index} className="text-xs text-slate-600 border-l-2 border-amber-300 pl-3 py-1 bg-amber-50/50 rounded-r-lg p-2">
+                                   <li key={index} className="text-sm text-slate-700 py-3 border-b border-slate-100 last:border-0">
                                       <ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown>
                                    </li>
                                 ))}
@@ -608,7 +578,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             {isLoading ? (
                                 <div className="flex items-center gap-2 text-slate-500"><div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"/> ИИ думает...</div>
                             ) : (
-                                <div className="text-slate-700 leading-relaxed text-sm"><ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown></div>
+                                <div className="text-slate-800 leading-relaxed text-sm"><ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown></div>
                             )}
                         </div>
                         <div className="flex justify-end gap-2">

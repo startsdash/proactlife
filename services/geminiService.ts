@@ -224,16 +224,19 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
   const fullPrompt = `${author.systemPrompt}\n\n[CONTEXT LIBRARY]\n${config.coreLibrary}`;
   const model = author.model || DEFAULT_MODEL;
 
+  // Add instruction to start with a header
+  const userContent = `Task: "${taskContent}"\n\n[INSTRUCTION]\nStart the response with a short, bold Markdown Heading (e.g. ### Title) that summarizes the challenge.`;
+
   try {
     let response;
     
     if (isGemmaModel(model)) {
-         const gemmaPrompt = `${fullPrompt}\n\nTask: "${taskContent}"`;
+         const gemmaPrompt = `${fullPrompt}\n\n${userContent}`;
          response = await ai.models.generateContent({ model, contents: gemmaPrompt });
     } else {
          response = await ai.models.generateContent({
           model,
-          contents: `Task: "${taskContent}"`,
+          contents: userContent,
           config: { 
             systemInstruction: fullPrompt,
             responseMimeType: author.responseMimeType
@@ -253,9 +256,12 @@ export const getKanbanTherapy = async (taskContent: string, state: 'stuck' | 'co
   const model = tool.model || DEFAULT_MODEL;
 
   try {
-    const userMessage = state === 'stuck' 
+    let userMessage = state === 'stuck' 
       ? `Пользователь застрял на задаче: "${taskContent}". Дай совет или упражнение.`
       : `Пользователь завершил задачу: "${taskContent}". Проведи краткую рефлексию.`;
+
+    // Add instruction for header
+    userMessage += `\n\n[INSTRUCTION]\nStart the response with a short, bold Markdown Heading (e.g. ### Title) matching the context.`;
 
     let response;
     if (isGemmaModel(model)) {
