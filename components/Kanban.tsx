@@ -330,7 +330,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                         <CollapsibleSection title="Челлендж" icon={<Zap size={12}/>} isCard>
                             <div className={`p-2 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
                                 <div className="flex justify-between items-start gap-2">
-                                    <div className={`text-xs leading-relaxed ${task.isChallengeCompleted ? 'text-emerald-700 opacity-80' : 'text-slate-800'}`}>
+                                    <div className="text-xs leading-relaxed text-slate-900">
                                         <ReactMarkdown components={markdownComponents}>{task.activeChallenge}</ReactMarkdown>
                                     </div>
                                     <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
@@ -352,7 +352,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                     {!hideExtraDetails && col.id === 'todo' && task.activeChallenge && !challengeDrafts[task.id] && (
                         <div className={`mt-2 mb-3 p-3 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
                             <div className="flex justify-between items-start gap-2">
-                                <div className={`text-xs leading-relaxed ${task.isChallengeCompleted ? 'text-emerald-700 opacity-80' : 'text-slate-800'}`}>
+                                <div className="text-xs leading-relaxed text-slate-900">
                                     <ReactMarkdown components={markdownComponents}>{task.activeChallenge}</ReactMarkdown>
                                 </div>
                                 <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
@@ -539,7 +539,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                 <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${getTaskForModal()?.isChallengeCompleted ? 'text-emerald-600' : 'text-indigo-600'}`}>
                                    {getTaskForModal()?.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
                                 </span>
-                                <div className={`text-sm leading-relaxed ${getTaskForModal()?.isChallengeCompleted ? 'text-emerald-800 opacity-70' : 'text-slate-800'}`}>
+                                <div className="text-sm leading-relaxed text-slate-900">
                                   <ReactMarkdown components={markdownComponents}>{getTaskForModal()?.activeChallenge}</ReactMarkdown>
                                 </div>
                              </div>

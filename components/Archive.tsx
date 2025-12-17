@@ -176,7 +176,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                                 <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${selectedTask.isChallengeCompleted ? 'text-emerald-600' : 'text-amber-600'}`}>
                                     {selectedTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
                                 </span>
-                                <div className={`text-sm leading-relaxed ${selectedTask.isChallengeCompleted ? 'text-emerald-800 opacity-70' : 'text-amber-900'}`}>
+                                <div className="text-sm leading-relaxed text-slate-900">
                                   <ReactMarkdown components={markdownComponents}>{selectedTask.activeChallenge}</ReactMarkdown>
                                 </div>
                             </div>
