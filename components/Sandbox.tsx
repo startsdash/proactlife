@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Note, Task, Flashcard, AppConfig } from '../types';
 import { analyzeSandboxItem, SandboxAnalysis } from '../services/geminiService';
 import { ICON_MAP } from '../constants';
-import { CheckSquare, Library, Loader2, Quote, BrainCircuit, ArrowLeft, Tag, Archive, Trash2 } from 'lucide-react';
+import { CheckSquare, Library, Loader2, Quote, BrainCircuit, ArrowLeft, Tag, Archive, Trash2, Dumbbell } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -218,7 +217,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                                             <div className="text-sm text-slate-500 mb-1 font-medium">Вопрос:</div><div className="text-slate-800 mb-4 text-sm">{analysis.suggestedFlashcardFront}</div>
                                             <div className="text-sm text-slate-500 mb-1 font-medium">Ответ:</div><div className="text-slate-800 text-sm">{analysis.suggestedFlashcardBack}</div>
                                         </div>
-                                        <button onClick={handleAcceptCard} className="mt-auto w-full py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 font-medium text-sm flex items-center justify-center gap-2 transition-colors"><Library size={18} /> Создать навык</button>
+                                        <button onClick={handleAcceptCard} className="mt-auto w-full py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 font-medium text-sm flex items-center justify-center gap-2 transition-colors"><Dumbbell size={18} /> Создать навык</button>
                                     </div>
                                 </div>
                             </div>
