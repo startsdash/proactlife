@@ -36,12 +36,13 @@ const ai = new GoogleGenAI({ apiKey: getApiKey() });
 // Helper to check if model requires legacy/chat handling (Gemma doesn't support systemInstruction in config)
 const isGemmaModel = (model: string) => model.toLowerCase().includes('gemma');
 
-// Specific config for Gemma as requested
-const GEMMA_CONFIG = {
+// Helper to get dynamic config for Gemma to prevent determinism
+const getGemmaConfig = () => ({
   temperature: 0.85,
   topP: 0.95,
   topK: 40,
-};
+  seed: Math.floor(Math.random() * 2147483647), // Use a random seed to force variety
+});
 
 // Helper for safe JSON parsing to handle potential markdown formatting or extra text
 const parseJSON = <T>(text: string | undefined, fallback: T): T => {
@@ -90,7 +91,7 @@ export const autoTagNote = async (content: string, config: AppConfig): Promise<s
         response = await ai.models.generateContent({
             model,
             contents: gemmaPrompt,
-            config: GEMMA_CONFIG
+            config: getGemmaConfig()
         });
     } else {
         // Gemini Strategy: Native Config
@@ -131,7 +132,7 @@ export const findNotesByMood = async (notes: Note[], mood: string, config: AppCo
         response = await ai.models.generateContent({ 
           model, 
           contents: gemmaPrompt,
-          config: GEMMA_CONFIG
+          config: getGemmaConfig()
         });
     } else {
         response = await ai.models.generateContent({
@@ -191,7 +192,7 @@ export const analyzeSandboxItem = async (content: string, mentorId: string, conf
         response = await ai.models.generateContent({
             model,
             contents: gemmaPrompt,
-            config: GEMMA_CONFIG
+            config: getGemmaConfig()
         });
     } else {
         response = await ai.models.generateContent({
@@ -247,7 +248,7 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
          response = await ai.models.generateContent({ 
            model, 
            contents: gemmaPrompt,
-           config: GEMMA_CONFIG 
+           config: getGemmaConfig() 
          });
     } else {
          response = await ai.models.generateContent({
@@ -285,7 +286,7 @@ export const getKanbanTherapy = async (taskContent: string, state: 'stuck' | 'co
         response = await ai.models.generateContent({ 
           model, 
           contents: gemmaPrompt,
-          config: GEMMA_CONFIG
+          config: getGemmaConfig()
         });
     } else {
         response = await ai.models.generateContent({
@@ -335,7 +336,7 @@ export const generateJournalReflection = async (
         response = await ai.models.generateContent({ 
           model, 
           contents: gemmaPrompt,
-          config: GEMMA_CONFIG
+          config: getGemmaConfig()
         });
     } else {
         response = await ai.models.generateContent({
