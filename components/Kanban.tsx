@@ -18,26 +18,27 @@ interface Props {
   onClearInitialTask?: () => void;
 }
 
+// Helper to strip trailing colons from headers
+const cleanHeader = (children: React.ReactNode): React.ReactNode => {
+    if (typeof children === 'string') return children.replace(/:\s*$/, '');
+    if (Array.isArray(children)) {
+        return children.map((child, i) => i === children.length - 1 ? cleanHeader(child) : child);
+    }
+    return children;
+};
+
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-900" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1 text-slate-700" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1 text-slate-700" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1 text-slate-900" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1 text-slate-900" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
-    h1: ({node, children, ...props}: any) => {
-        const text = typeof children === 'string' ? children.replace(/:\s*$/, '') : children;
-        return <h1 className="text-lg font-bold mt-3 mb-2 text-slate-900" {...props}>{text}</h1>
-    },
-    h2: ({node, children, ...props}: any) => {
-        const text = typeof children === 'string' ? children.replace(/:\s*$/, '') : children;
-        return <h2 className="text-base font-bold mt-3 mb-2 text-slate-900" {...props}>{text}</h2>
-    },
-    h3: ({node, children, ...props}: any) => {
-         const text = typeof children === 'string' ? children.replace(/:\s*$/, '') : children;
-         return <h3 className="text-sm font-bold mt-2 mb-1 text-slate-900" {...props}>{text}</h3>
-    },
-    blockquote: ({node, ...props}: any) => <blockquote className="pl-3 text-slate-600 my-2" {...props} />,
+    h1: ({node, children, ...props}: any) => <h1 className="text-lg font-bold mt-3 mb-2 text-slate-900" {...props}>{cleanHeader(children)}</h1>,
+    h2: ({node, children, ...props}: any) => <h2 className="text-base font-bold mt-3 mb-2 text-slate-900" {...props}>{cleanHeader(children)}</h2>,
+    h3: ({node, children, ...props}: any) => <h3 className="text-sm font-bold mt-2 mb-1 text-slate-900" {...props}>{cleanHeader(children)}</h3>,
+    blockquote: ({node, ...props}: any) => <blockquote className="pl-3 text-slate-900 my-2 opacity-80" {...props} />,
     strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900" {...props} />,
+    em: ({node, ...props}: any) => <em className="not-italic text-slate-900" {...props} />, // Disable italics as per request
 };
 
 const CollapsibleSection: React.FC<{
@@ -383,7 +384,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                     {challengeDrafts[task.id] && (
                         <div className="mt-2 mb-3 p-3 bg-amber-50 rounded-lg border border-amber-200 animate-in fade-in slide-in-from-top-2 relative">
                             <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 uppercase mb-2"><Zap size={10} /> {config.challengeAuthors[0]?.name || 'Popper'}</div>
-                            <div className="text-sm text-slate-800 leading-relaxed mb-3">
+                            <div className="text-sm text-slate-900 leading-relaxed mb-3">
                                 <ReactMarkdown components={markdownComponents}>{challengeDrafts[task.id]}</ReactMarkdown>
                             </div>
                             <div className="flex gap-2">
@@ -559,7 +560,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                           <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
                              <ul className="space-y-3">
                                 {getTaskForModal()!.challengeHistory!.map((challenge, index) => (
-                                   <li key={index} className="text-sm text-slate-700 py-2 border-b border-slate-100 last:border-0">
+                                   <li key={index} className="text-sm text-slate-900 py-2 border-b border-slate-100 last:border-0">
                                       <ReactMarkdown components={markdownComponents}>{challenge}</ReactMarkdown>
                                    </li>
                                 ))}
@@ -571,7 +572,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                           <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}>
                              <ul className="space-y-4">
                                 {getTaskForModal()!.consultationHistory!.map((consultation, index) => (
-                                   <li key={index} className="text-sm text-slate-700 py-3 border-b border-slate-100 last:border-0">
+                                   <li key={index} className="text-sm text-slate-900 py-3 border-b border-slate-100 last:border-0">
                                       <ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown>
                                    </li>
                                 ))}
