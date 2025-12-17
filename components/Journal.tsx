@@ -23,8 +23,11 @@ const markdownComponents = {
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
-    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 pl-3 italic text-slate-500 my-2" {...props} />,
-    strong: ({node, ...props}: any) => <strong className="font-bold" {...props} />,
+    h1: ({node, ...props}: any) => <h1 className="text-lg font-bold mt-2 mb-1 text-slate-900" {...props} />,
+    h2: ({node, ...props}: any) => <h2 className="text-base font-bold mt-2 mb-1 text-slate-800" {...props} />,
+    h3: ({node, ...props}: any) => <h3 className="text-sm font-bold mt-2 mb-1 text-slate-800" {...props} />,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-indigo-300 pl-3 italic text-slate-500 my-2" {...props} />,
+    strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900" {...props} />,
 };
 
 const CollapsibleSection: React.FC<{
@@ -531,7 +534,7 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
                             <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${viewingTask.isChallengeCompleted ? 'text-emerald-600' : 'text-indigo-600'}`}>
                                {viewingTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
                             </span>
-                            <div className={`text-sm leading-relaxed italic ${viewingTask.isChallengeCompleted ? 'text-emerald-800 opacity-70' : 'text-indigo-900'}`}>
+                            <div className="text-sm leading-relaxed text-slate-900">
                               <ReactMarkdown components={markdownComponents}>{viewingTask.activeChallenge}</ReactMarkdown>
                             </div>
                          </div>
@@ -543,7 +546,7 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
                         <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
                            <ul className="space-y-3">
                               {viewingTask.challengeHistory.map((challenge, index) => (
-                                 <li key={index} className="text-xs text-slate-600 italic border-l-2 border-slate-300 pl-3 py-1">
+                                 <li key={index} className="text-sm text-slate-700 py-2 border-b border-slate-100 last:border-0">
                                     <ReactMarkdown components={markdownComponents}>{challenge}</ReactMarkdown>
                                  </li>
                               ))}
@@ -556,7 +559,7 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
                        <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}>
                            <ul className="space-y-4">
                               {viewingTask.consultationHistory.map((consultation, index) => (
-                                 <li key={index} className="text-xs text-slate-600 border-l-2 border-amber-300 pl-3 py-1 bg-amber-50/50 rounded-r-lg p-2">
+                                 <li key={index} className="text-sm text-slate-700 py-3 border-b border-slate-100 last:border-0">
                                     <ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown>
                                  </li>
                               ))}
