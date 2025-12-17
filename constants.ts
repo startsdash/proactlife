@@ -25,7 +25,7 @@ export const AVAILABLE_ICONS = Object.keys(ICON_MAP);
 export const AVAILABLE_MODELS = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Fast & Cheap)' },
   { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Fastest)' },
-  { id: 'gemma-3-27b', name: 'Gemma 3 27b' },
+  { id: 'gemma-3-27b-it', name: 'Gemma 3 27b' },
 ];
 
 export const DEFAULT_MODEL = 'gemma-3-27b';
