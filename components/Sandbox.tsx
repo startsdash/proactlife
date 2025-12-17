@@ -7,20 +7,49 @@ import { CheckSquare, Library, Loader2, Quote, BrainCircuit, ArrowLeft, Tag, Arc
 
 interface Props {
   notes: Note[];
-  config: AppConfig; // Config passed from App
+  config: AppConfig;
   onProcessNote: (noteId: string) => void;
   onAddTask: (task: Task) => void;
   onAddFlashcard: (card: Flashcard) => void;
   deleteNote: (id: string) => void;
 }
 
+// Helper to strip trailing colons from headers (Recursive) - Standardized
+const cleanHeader = (children: React.ReactNode): React.ReactNode => {
+    if (typeof children === 'string') return children.replace(/:\s*$/, '');
+    if (Array.isArray(children)) {
+        return React.Children.map(children, (child, i) => {
+             return i === React.Children.count(children) - 1 ? cleanHeader(child) : child;
+        });
+    }
+    if (React.isValidElement(children)) {
+        return React.cloneElement(children, {
+             // @ts-ignore
+            children: cleanHeader(children.props.children)
+        });
+    }
+    return children;
+};
+
+// Standardized Markdown Styles (Matches Kanban/Archive)
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 leading-relaxed" {...props} />,
+    a: ({node, ...props}: any) => <a className="text-indigo-600 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1 text-slate-700" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1 text-slate-700" {...props} />,
+    li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed" {...props} />,
+    h1: ({node, children, ...props}: any) => <h1 className="text-lg font-bold mt-4 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
+    h2: ({node, children, ...props}: any) => <h2 className="text-base font-bold mt-3 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
+    h3: ({node, children, ...props}: any) => <h3 className="text-sm font-bold mt-3 mb-1 text-slate-900 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
+    h4: ({node, children, ...props}: any) => <h4 className="text-sm font-bold mt-2 mb-1 text-slate-800" {...props}>{cleanHeader(children)}</h4>,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-indigo-200 pl-4 py-1 my-3 text-slate-600 italic bg-indigo-50/30 rounded-r-lg" {...props} />,
     strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900" {...props} />,
-    em: ({node, ...props}: any) => <em className="italic" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
-    li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
+    em: ({node, ...props}: any) => <em className="italic text-slate-800" {...props} />,
+    code: ({node, inline, className, children, ...props}: any) => {
+         return inline 
+            ? <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono text-pink-600 border border-slate-200" {...props}>{children}</code>
+            : <code className="block bg-slate-900 text-slate-50 p-3 rounded-lg text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+    }
 };
 
 const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onAddFlashcard, deleteNote }) => {
@@ -103,16 +132,15 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
 
         <div className="flex flex-1 overflow-hidden p-4 md:p-8 gap-6 relative">
             {/* Left: Incoming Queue */}
-            <div className={`${selectedNoteId ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 flex-col gap-4 overflow-y-auto pr-2 border-r-0 md:border-r border-slate-200`}>
+            <div className={`${selectedNoteId ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 flex-col gap-4 overflow-y-auto pr-2 border-r-0 md:border-r border-slate-200 custom-scrollbar-light`}>
                 <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider sticky top-0 bg-[#f8fafc] py-2 z-10">Входящие ({incomingNotes.length})</h3>
                 <div className="space-y-3 pb-20 md:pb-0">
                     {incomingNotes.map(note => (
                         <div key={note.id} onClick={() => handleSelectNote(note)} className={`p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] group relative ${selectedNoteId === note.id ? 'bg-amber-50 border-amber-300 shadow-sm' : 'bg-white border-slate-200 hover:border-amber-200 shadow-sm'}`}>
-                            <div className="text-sm text-slate-700 line-clamp-3 leading-relaxed mb-3">
-                                 {/* Simple preview without heavy markdown parsing for list items */}
-                                 {note.content}
+                            <div className="text-sm text-slate-700 line-clamp-4 leading-relaxed mb-3">
+                                 <ReactMarkdown components={markdownComponents}>{note.content}</ReactMarkdown>
                             </div>
-                            <div className="flex justify-between items-center mt-2">
+                            <div className="flex justify-between items-center mt-2 border-t border-slate-50 pt-2">
                                 <div className="flex gap-1 flex-wrap">
                                     {note.tags.slice(0, 2).map(t => (
                                         <span key={t} className="text-[10px] bg-slate-100 px-2 py-1 rounded-md text-slate-500 font-medium flex items-center gap-0.5">
@@ -144,7 +172,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
 
             {/* Right: Workbench */}
             <div className={`
-                flex-col overflow-y-auto
+                flex-col overflow-y-auto custom-scrollbar-light
                 ${selectedNoteId 
                     ? 'fixed inset-0 z-[100] bg-[#f8fafc] p-4 flex animate-in zoom-in-95 duration-200' 
                     : 'hidden'
@@ -167,7 +195,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                         <p className="text-lg font-light">Выберите заметку для анализа</p>
                     </div>
                 ) : (
-                    <div className="bg-white rounded-2xl shadow-lg md:shadow-sm border border-slate-200 p-5 md:p-8 h-full md:h-auto overflow-y-auto flex flex-col relative">
+                    <div className="bg-white rounded-2xl shadow-lg md:shadow-sm border border-slate-200 p-5 md:p-8 h-full md:h-auto overflow-y-auto flex flex-col relative custom-scrollbar-light">
                         
                         {!isAnalyzing && !analysis && (
                             <div className="mb-8 animate-in fade-in slide-in-from-top-4 mt-8 md:mt-0">
@@ -208,14 +236,14 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                                 </div>
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-10">
                                     <div className="border border-slate-200 rounded-xl p-5 hover:border-emerald-400 transition-all hover:shadow-md flex flex-col bg-white">
-                                        <div className="mb-6"><div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-2">Путь Действия</div><div className="text-slate-800 mb-4 text-sm">{analysis.suggestedTask}</div></div>
+                                        <div className="mb-6"><div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-2">Путь Действия</div><div className="text-slate-800 mb-4 text-sm"><ReactMarkdown components={markdownComponents}>{analysis.suggestedTask}</ReactMarkdown></div></div>
                                         <button onClick={handleAcceptTask} className="mt-auto w-full py-3 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 font-medium text-sm flex items-center justify-center gap-2 transition-colors"><CheckSquare size={18} /> Создать задачу</button>
                                     </div>
                                     <div className="border border-slate-200 rounded-xl p-5 hover:border-blue-400 transition-all hover:shadow-md flex flex-col bg-white">
                                         <div className="mb-6">
                                             <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2">Путь Знания</div>
-                                            <div className="text-sm text-slate-500 mb-1 font-medium">Вопрос:</div><div className="text-slate-800 mb-4 text-sm">{analysis.suggestedFlashcardFront}</div>
-                                            <div className="text-sm text-slate-500 mb-1 font-medium">Ответ:</div><div className="text-slate-800 text-sm">{analysis.suggestedFlashcardBack}</div>
+                                            <div className="text-sm text-slate-500 mb-1 font-medium">Вопрос:</div><div className="text-slate-800 mb-4 text-sm"><ReactMarkdown components={markdownComponents}>{analysis.suggestedFlashcardFront}</ReactMarkdown></div>
+                                            <div className="text-sm text-slate-500 mb-1 font-medium">Ответ:</div><div className="text-slate-800 text-sm"><ReactMarkdown components={markdownComponents}>{analysis.suggestedFlashcardBack}</ReactMarkdown></div>
                                         </div>
                                         <button onClick={handleAcceptCard} className="mt-auto w-full py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 font-medium text-sm flex items-center justify-center gap-2 transition-colors"><Dumbbell size={18} /> Создать навык</button>
                                     </div>
