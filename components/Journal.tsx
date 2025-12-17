@@ -313,7 +313,7 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
       <div className="w-full md:w-1/3 flex flex-col p-4 md:p-8 md:border-r border-b md:border-b-0 border-slate-200 bg-white md:bg-transparent shrink-0">
         <header className="mb-4 md:mb-6">
           <h1 className="text-2xl font-light text-slate-800 tracking-tight flex items-center gap-3">
-            <Book className="text-slate-400" size={28} />
+            < Book className="text-slate-400" size={28} />
             Дневник
           </h1>
           <p className="text-slate-500 mt-2 text-sm">Осмысление пути Героя.</p>
@@ -436,7 +436,7 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
         
         {displayedEntries.length === 0 ? (
            <div className="flex flex-col items-center justify-center h-full max-h-64 text-slate-300 border-2 border-dashed border-slate-200 rounded-2xl mx-auto w-full max-w-lg">
-             <Book size={48} className="mb-4 opacity-20" />
+             < Book size={48} className="mb-4 opacity-20" />
              <p className="font-medium">{searchQuery || hasActiveDateFilter ? 'Ничего не найдено' : 'Страницы пусты'}</p>
              <p className="text-xs mt-1 opacity-60">{searchQuery || hasActiveDateFilter ? 'Измените параметры поиска' : 'Начни писать свою историю.'}</p>
            </div>
@@ -553,7 +553,10 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
 
                     {/* 3. Active Challenge - Collapsible */}
                     {viewingTask.activeChallenge && (
-                      <CollapsibleSection title="Активный челлендж" icon={<Zap size={14}/>}>
+                      <CollapsibleSection 
+                        title={viewingTask.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
+                        icon={<Zap size={14}/>}
+                      >
                          <div className={`p-3 rounded-lg border ${viewingTask.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
                             <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${viewingTask.isChallengeCompleted ? 'text-emerald-600' : 'text-indigo-600'}`}>
                                {viewingTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
