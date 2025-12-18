@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Module } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Book, ArrowRight, ArrowLeft, GraduationCap, Zap, Sparkles, BrainCircuit } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Book, ArrowRight, ArrowLeft, GraduationCap, Zap, Sparkles, BrainCircuit, X } from 'lucide-react';
 
 interface Step {
   id: number;
@@ -87,7 +87,15 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
   const current = steps[currentStep];
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc] overflow-y-auto custom-scrollbar-light">
+    <div className="fixed inset-0 z-[60] md:relative md:inset-auto md:z-auto flex flex-col h-full bg-[#f8fafc] overflow-y-auto custom-scrollbar-light animate-in fade-in duration-300">
+      {/* Mobile Close Button */}
+      <button 
+        onClick={onStart}
+        className="md:hidden absolute top-6 right-6 p-2 bg-white border border-slate-200 rounded-full shadow-sm text-slate-400 z-[70]"
+      >
+        <X size={20} />
+      </button>
+
       <div className="max-w-4xl mx-auto w-full p-6 md:p-12">
         
         {/* Header */}
