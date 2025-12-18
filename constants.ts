@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AppConfig, AIToolConfig } from "./types";
 import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book } from 'lucide-react';
@@ -195,4 +194,32 @@ export const DEFAULT_CONFIG: AppConfig = {
     }
   ],
   aiTools: DEFAULT_AI_TOOLS
+};
+
+export const applyTypography = (text: string): string => {
+  if (!text) return text;
+  let res = text;
+  
+  // 1. Hyphens to Em-dashes (space - space) -> (space — space)
+  res = res.replace(/(\s)-(\s)/g, '$1—$2');
+  
+  // 2. Quotes
+  // Open quote: start of line or whitespace/punctuation opening before it
+  res = res.replace(/(^|[\s(\[{])"/g, '$1«');
+  // Close quote: everything else
+  res = res.replace(/"/g, '»');
+  
+  // 3. Nested quotes: simple one-level fix
+  // Finds «...«...»...» and converts inner to „...“
+  const nestedPattern = /«([^»]*)«([^»]*)»([^»]*)»/g;
+  let prev = '';
+  // Repeat to handle multiple/sequential nested occurrences if regex overlaps allow, 
+  // though global replace handles non-overlapping well. 
+  // Loop ensures complex cases get treated.
+  while (res !== prev) {
+      prev = res;
+      res = res.replace(nestedPattern, '«$1„$2“$3»');
+  }
+
+  return res;
 };

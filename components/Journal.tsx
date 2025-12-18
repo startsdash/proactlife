@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig } from '../types';
-import { ICON_MAP } from '../constants';
+import { ICON_MAP, applyTypography } from '../constants';
 import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban } from 'lucide-react';
 
 interface Props {
@@ -209,10 +209,13 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
   const handlePost = () => {
     if (!content.trim()) return;
 
+    // APPLY TYPOGRAPHY
+    const formattedContent = applyTypography(content);
+
     const newEntry: JournalEntry = {
       id: Date.now().toString(),
       date: Date.now(),
-      content: content,
+      content: formattedContent,
       linkedTaskId: linkedTaskId || undefined,
       // No AI feedback initially
     };
@@ -229,7 +232,10 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
 
   const saveEdit = (entry: JournalEntry) => {
     if (editContent.trim()) {
-        updateEntry({ ...entry, content: editContent });
+        // APPLY TYPOGRAPHY
+        const formattedContent = applyTypography(editContent);
+        
+        updateEntry({ ...entry, content: formattedContent });
         setEditingId(null);
         setEditContent('');
     }
