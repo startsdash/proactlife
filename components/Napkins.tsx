@@ -152,7 +152,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
                             onClick={() => addTag(input)}
                             className="w-full text-left px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2"
                         >
-                            <Plus size={14} /> Создать "{input}"
+                            <Plus size={14} /> Создать «{input}»
                         </button>
                     )}
                     {filteredSuggestions.length > 0 ? (
@@ -433,7 +433,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                              <button 
                                 onClick={(e) => { 
                                     e.stopPropagation(); 
-                                    if(window.confirm('Создать задачу и перенести заметку в Библиотеку?')) {
+                                    if(window.confirm('Создать задачу и перенести заметку в «Библиотеку»?')) {
                                         onAddTask({
                                             id: Date.now().toString(),
                                             content: note.content,
@@ -444,7 +444,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     }
                                 }} 
                                 className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-emerald-100"
-                                title="В Действия"
+                                title="В «Действия»"
                              >
                                 <Kanban size={14} />
                              </button>
@@ -452,10 +452,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                              <button 
                                 onClick={(e) => { 
                                     e.stopPropagation(); 
-                                    if(window.confirm('Поиграть в Песочнице и перенести заметку в Библиотеку?')) moveNoteToSandbox(note.id); 
+                                    if(window.confirm('Поиграть в «Песочнице» и перенести заметку в «Библиотеку»?')) moveNoteToSandbox(note.id); 
                                 }} 
                                 className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-amber-100"
-                                title="В Песочницу"
+                                title="В «Песочницу»"
                              >
                                 <Box size={14} />
                              </button>
@@ -463,10 +463,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                              <button 
                                 onClick={(e) => { 
                                     e.stopPropagation(); 
-                                    if(window.confirm('Перенести заметку в Библиотеку?')) archiveNote(note.id); 
+                                    if(window.confirm('Перенести заметку в «Библиотеку»?')) archiveNote(note.id); 
                                 }} 
                                 className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-500 hover:text-indigo-600 bg-white hover:bg-indigo-50 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-slate-200 hover:border-indigo-100" 
-                                title="В Библиотеку"
+                                title="В «Библиотеку»"
                              >
                                 <Library size={14} />
                              </button>
@@ -475,10 +475,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         <button 
                             onClick={(e) => { 
                                 e.stopPropagation(); 
-                                if(window.confirm('Вернуть заметку во Входящие?')) moveNoteToInbox(note.id); 
+                                if(window.confirm('Вернуть заметку во «Входящие»?')) moveNoteToInbox(note.id); 
                             }} 
                             className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-500 bg-slate-100 hover:bg-slate-200 px-2 md:px-3 py-1.5 rounded-lg transition-colors"
-                            title="Вернуть во Входящие"
+                            title="Вернуть во «Входящие»"
                         >
                             <RotateCcw size={14} />
                         </button>
@@ -575,7 +575,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
              <div className="flex items-center justify-between bg-purple-50 border border-purple-100 rounded-lg px-3 py-2 animate-in fade-in slide-in-from-top-1">
                  <div className="flex items-center gap-2 text-xs text-purple-800">
                      <Sparkles size={12} />
-                     <span>Найдено {aiFilteredIds.length} заметок на тему: <b>"{moodQuery}"</b></span>
+                     <span>Найдено {aiFilteredIds.length} заметок на тему: <b>«{moodQuery}»</b></span>
                  </div>
                  <button onClick={clearMoodFilter} className="text-[10px] font-bold uppercase tracking-wider text-purple-400 hover:text-purple-700 flex items-center gap-1">
                      <X size={12} /> Сброс
@@ -610,7 +610,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             {/* Input only visible if not searching/filtering or if explicit action needed */}
             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && (
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 md:p-4 shrink-0">
-                    <textarea className="w-full h-24 md:h-32 resize-none outline-none text-base text-slate-700 bg-transparent" placeholder="О чем ты думаешь? (Поддерживается Markdown)" value={input} onChange={(e) => setInput(e.target.value)} />
+                    <textarea className="w-full h-24 md:h-32 resize-none outline-none text-base text-slate-700 bg-transparent" placeholder="О чём ты думаешь? (Поддерживается Markdown)" value={input} onChange={(e) => setInput(e.target.value)} />
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 border-t border-slate-50 pt-3 gap-2">
                         <div className="w-full md:w-2/3">
                             <TagSelector 
@@ -630,7 +630,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     inboxNotes.map(note => renderNoteCard(note, false))
                 ) : (
                     <div className="col-span-1 md:col-span-2 text-center py-10 text-slate-400 text-sm">
-                        {searchQuery || activeColorFilter || aiFilteredIds ? 'Ничего не найдено' : 'Входящие пусты. Запиши что-нибудь.'}
+                        {searchQuery || activeColorFilter || aiFilteredIds ? 'Ничего не найдено' : '«Входящие» пусты. Запиши что-нибудь.'}
                     </div>
                 )}
             </div>

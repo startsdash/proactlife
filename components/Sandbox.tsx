@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Note, Task, Flashcard, AppConfig } from '../types';
@@ -91,7 +92,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
       column: 'todo',
       createdAt: Date.now()
     });
-    alert("Задача создана! Заметка осталась в Песочнице.");
+    alert("Задача создана! Заметка осталась в «Песочнице».");
   };
 
   const handleAcceptCard = () => {
@@ -103,12 +104,12 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
       level: 0,
       nextReview: Date.now()
     });
-    alert("Навык создан! Заметка осталась в Песочнице.");
+    alert("Навык создан! Заметка осталась в «Песочнице».");
   };
   
   const handleManualArchive = () => {
       if (selectedNoteId) {
-          if (window.confirm("Перенести заметку в Библиотеку?")) {
+          if (window.confirm("Перенести заметку в «Библиотеку»?")) {
             onProcessNote(selectedNoteId);
             setAnalysis(null);
             setSelectedNoteId(null);
@@ -218,7 +219,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                             <div className="flex flex-col items-center justify-center h-64 space-y-6">
                                 <Loader2 className="animate-spin text-amber-500" size={48} />
                                 <div className="text-center">
-                                    <p className="text-slate-600 font-medium">Консилиум анализирует идею...</p>
+                                    <p className="text-slate-600 font-medium">Консилиум анализирует идею…</p>
                                     <p className="text-xs text-amber-600 mt-1 font-mono uppercase tracking-wide">Mode: {currentMentor?.name}</p>
                                 </div>
                             </div>

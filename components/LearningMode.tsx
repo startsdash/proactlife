@@ -25,9 +25,9 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
   const steps: Step[] = [
     {
       id: 0,
-      title: "Этап 1: Хаос",
+      title: "Этап 1. Хаос",
       subtitle: "Салфетки (Napkins)",
-      description: "Все начинается здесь. Не фильтруйте мысли. Записывайте идеи, цитаты, инсайты или просто тревоги. Это ваше хранилище сырого материала. ИИ поможет автоматически расставить теги.",
+      description: "Всё начинается здесь. Не фильтруйте мысли. Записывайте идеи, цитаты, инсайты или просто тревоги. Это ваше хранилище сырого материала. ИИ поможет автоматически расставить теги.",
       icon: StickyNote,
       color: "bg-blue-500",
       module: Module.NAPKINS,
@@ -35,9 +35,9 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
     },
     {
       id: 1,
-      title: "Этап 2: Трансформация",
+      title: "Этап 2. Трансформация",
       subtitle: "Песочница (The Sandbox)",
-      description: "Выберите мысль из Салфеток и отправьте её в Песочницу. Здесь Консилиум ИИ-Менторов (Питерсон, Талеб, Грин и др.) поможет вам превратить хаотичную идею в четкий план действий или глубокий принцип.",
+      description: "Выберите мысль из «Салфеток» и отправьте её в «Песочницу». Здесь Консилиум ИИ-менторов (Питерсон, Талеб, Грин и др.) поможет вам превратить хаотичную идею в чёткий план действий или глубокий принцип.",
       icon: Box,
       color: "bg-amber-500",
       module: Module.SANDBOX,
@@ -45,9 +45,9 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
     },
     {
       id: 2,
-      title: "Этап 3: Путь Героя",
+      title: "Этап 3. Путь Героя",
       subtitle: "Действия (Kanban)",
-      description: "Идеи без действий мертвы. В Канбане ваши планы становятся задачами. Используйте Челленджи, чтобы бросать себе вызовы, и ИИ-терапию, если застряли. Двигайте карточки к 'Сделано'.",
+      description: "Идеи без действий мертвы. В «Канбане» ваши планы становятся задачами. Используйте Челленджи, чтобы бросать себе вызовы, и ИИ-терапию, если застряли. Двигайте карточки в колонку «Сделано».",
       icon: KanbanIcon,
       color: "bg-emerald-500",
       module: Module.KANBAN,
@@ -55,9 +55,9 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
     },
     {
       id: 3,
-      title: "Этап 4: Навыки",
+      title: "Этап 4. Навыки",
       subtitle: "Mental Gym",
-      description: "Важные принципы нужно помнить. В Песочнице вы создаете 'навыки' (флеш-карточки). Здесь вы тренируете свой мозг, чтобы новые знания стали частью вашего автоматического поведения.",
+      description: "Важные принципы нужно помнить. В «Песочнице» вы создаёте «навыки» (флеш-карточки). Здесь вы тренируете свой мозг, чтобы новые знания стали частью вашего автоматического поведения.",
       icon: Dumbbell,
       color: "bg-indigo-500",
       module: Module.MENTAL_GYM,
@@ -65,7 +65,7 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
     },
     {
       id: 4,
-      title: "Этап 5: Мудрость",
+      title: "Этап 5. Мудрость",
       subtitle: "Дневник (Journal)",
       description: "В конце дня или после задачи — рефлексируйте. Свяжите запись в дневнике с конкретной задачей. ИИ прокомментирует ваш опыт, помогая извлечь уроки из каждой победы или поражения.",
       icon: Book,
@@ -185,14 +185,14 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
            <div className="p-5 bg-white border border-slate-100 rounded-2xl flex items-start gap-4 shadow-sm">
               <Zap size={20} className="text-amber-500 shrink-0 mt-1" />
               <div>
-                <h4 className="font-bold text-slate-800 text-sm">ИИ Менторы</h4>
-                <p className="text-xs text-slate-500 leading-relaxed mt-1">Используйте разных менторов в Песочнице для разных задач.</p>
+                <h4 className="font-bold text-slate-800 text-sm">ИИ-менторы</h4>
+                <p className="text-xs text-slate-500 leading-relaxed mt-1">Используйте разных менторов в «Песочнице» для разных задач.</p>
               </div>
            </div>
            <div className="p-5 bg-white border border-slate-100 rounded-2xl flex items-start gap-4 shadow-sm">
               <BrainCircuit size={20} className="text-indigo-500 shrink-0 mt-1" />
               <div>
-                <h4 className="font-bold text-slate-800 text-sm">Нейро-тренировка</h4>
+                <h4 className="font-bold text-slate-800 text-sm">Нейротренировка</h4>
                 <p className="text-xs text-slate-500 leading-relaxed mt-1">Mental Gym помогает перепрошивать привычки мышления.</p>
               </div>
            </div>
