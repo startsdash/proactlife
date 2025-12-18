@@ -453,7 +453,7 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
                     </div>
                   </div>
                 </div>
-              ) : null}
+              )}
             </div>
           )}
           
@@ -516,7 +516,7 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
                     </div>
                   </div>
                 </div>
-              ) : null}
+              )}
             </div>
           )}
 
