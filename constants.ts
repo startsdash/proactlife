@@ -23,6 +23,7 @@ export const ICON_MAP: Record<string, React.ElementType> = {
 export const AVAILABLE_ICONS = Object.keys(ICON_MAP);
 
 export const AVAILABLE_MODELS = [
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Preview)' },
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Fast & Cheap)' },
   { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Fastest)' },
   { id: 'gemma-3-27b-it', name: 'Gemma 3 27b' },
