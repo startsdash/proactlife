@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Module, SyncStatus } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, History, Book } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, History, Book, GraduationCap } from 'lucide-react';
 
 interface Props {
   currentModule: Module;
@@ -15,6 +15,7 @@ interface Props {
 
 const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatus, onConnectDrive, isDriveConnected, isOwner }) => {
   const navItems = [
+    { id: Module.LEARNING, icon: GraduationCap, label: 'Академия' },
     { id: Module.NAPKINS, icon: StickyNote, label: 'Салфетки' },
     { id: Module.SANDBOX, icon: Box, label: 'Песочница' },
     { id: Module.MENTAL_GYM, icon: Dumbbell, label: 'Mental Gym' },

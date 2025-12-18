@@ -6,7 +6,8 @@ export enum Module {
   KANBAN = 'kanban',
   JOURNAL = 'journal',
   ARCHIVE = 'archive',
-  SETTINGS = 'settings'
+  SETTINGS = 'settings',
+  LEARNING = 'learning'
 }
 
 export interface Note {
