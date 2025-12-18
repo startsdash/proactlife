@@ -169,7 +169,6 @@ const App: React.FC = () => {
   const archiveTask = (id: string) => setData(p => ({ ...p, tasks: p.tasks.map(t => t.id === id ? { ...t, isArchived: true } : t) }));
   const restoreTask = (id: string) => setData(p => ({ ...p, tasks: p.tasks.map(t => t.id === id ? { ...t, isArchived: false, column: 'done' } : t) }));
 
-  // Fix: Added missing reorderTask implementation
   const reorderTask = (draggedId: string, targetId: string) => setData(p => {
       const tasks = [...p.tasks];
       const dIdx = tasks.findIndex(t => t.id === draggedId);
@@ -244,7 +243,7 @@ const App: React.FC = () => {
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.JOURNAL && <Journal entries={data.journal} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
       {module === Module.ARCHIVE && <Archive tasks={data.tasks} restoreTask={restoreTask} deleteTask={deleteTask} />}
-      {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} />}
+      {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => setModule(Module.NAPKINS)} />}
     </Layout>
   );
 };

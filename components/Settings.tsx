@@ -2,11 +2,12 @@
 import React, { useState } from 'react';
 import { AppConfig, Mentor, ChallengeAuthor, AIToolConfig, AccessControl } from '../types';
 import { AVAILABLE_ICONS, ICON_MAP, DEFAULT_AI_TOOLS, AVAILABLE_MODELS, DEFAULT_MODEL } from '../constants';
-import { Save, Plus, Trash2, Edit3, X, Database, Users, Zap, Bot, Cpu, FileJson, FileType, Shield, Lock, Globe, Code, Copy, Check } from 'lucide-react';
+import { Save, Plus, Trash2, Edit3, X, Database, Users, Zap, Bot, Cpu, FileJson, FileType, Shield, Lock, Globe, Code, Copy, Check, ArrowLeft, ChevronRight } from 'lucide-react';
 
 interface Props {
   config: AppConfig;
   onUpdateConfig: (config: AppConfig) => void;
+  onClose?: () => void; // Added onClose to support modal-like closing
 }
 
 // --- ACCESS CONTROL COMPONENT ---
@@ -32,8 +33,8 @@ const AccessControlEditor = ({ data, onChange }: { data: AccessControl, onChange
          <Shield size={14} className="text-indigo-600" /> Управление доступом
        </h4>
        
-       <div className="flex flex-col md:flex-row gap-4 mb-4">
-          <label className={`flex items-center gap-2 text-sm cursor-pointer p-2 rounded-lg border transition-all ${currentLevel === 'public' ? 'bg-white border-indigo-200 ring-1 ring-indigo-50 shadow-sm' : 'border-transparent hover:bg-white/50'}`}>
+       <div className="flex flex-col md:flex-row gap-2 md:gap-4 mb-4">
+          <label className={`flex items-center gap-2 text-sm cursor-pointer p-3 md:p-2 rounded-lg border transition-all ${currentLevel === 'public' ? 'bg-white border-indigo-200 ring-1 ring-indigo-50 shadow-sm' : 'border-transparent hover:bg-white/50'}`}>
              <input 
                type="radio" 
                className="accent-indigo-600"
@@ -43,7 +44,7 @@ const AccessControlEditor = ({ data, onChange }: { data: AccessControl, onChange
              <Globe size={14} className="text-emerald-500" />
              <span className="text-slate-700">Все пользователи</span>
           </label>
-          <label className={`flex items-center gap-2 text-sm cursor-pointer p-2 rounded-lg border transition-all ${currentLevel === 'owner_only' ? 'bg-white border-indigo-200 ring-1 ring-indigo-50 shadow-sm' : 'border-transparent hover:bg-white/50'}`}>
+          <label className={`flex items-center gap-2 text-sm cursor-pointer p-3 md:p-2 rounded-lg border transition-all ${currentLevel === 'owner_only' ? 'bg-white border-indigo-200 ring-1 ring-indigo-50 shadow-sm' : 'border-transparent hover:bg-white/50'}`}>
              <input 
                type="radio" 
                className="accent-indigo-600"
@@ -53,7 +54,7 @@ const AccessControlEditor = ({ data, onChange }: { data: AccessControl, onChange
              <Lock size={14} className="text-red-500" />
              <span className="text-slate-700">Только владелец</span>
           </label>
-          <label className={`flex items-center gap-2 text-sm cursor-pointer p-2 rounded-lg border transition-all ${currentLevel === 'restricted' ? 'bg-white border-indigo-200 ring-1 ring-indigo-50 shadow-sm' : 'border-transparent hover:bg-white/50'}`}>
+          <label className={`flex items-center gap-2 text-sm cursor-pointer p-3 md:p-2 rounded-lg border transition-all ${currentLevel === 'restricted' ? 'bg-white border-indigo-200 ring-1 ring-indigo-50 shadow-sm' : 'border-transparent hover:bg-white/50'}`}>
              <input 
                type="radio" 
                className="accent-indigo-600"
@@ -94,14 +95,14 @@ const AccessControlEditor = ({ data, onChange }: { data: AccessControl, onChange
   );
 };
 
-const Settings: React.FC<Props> = ({ config, onUpdateConfig }) => {
+const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
   const [activeTab, setActiveTab] = useState<'core' | 'mentors' | 'authors' | 'tools'>('core');
   
   const [localCore, setLocalCore] = useState(config.coreLibrary);
   const [mentors, setMentors] = useState<Mentor[]>(config.mentors);
   const [authors, setAuthors] = useState<ChallengeAuthor[]>(config.challengeAuthors);
   
-  // Initialize AI Tools by merging Defaults with User Config
+  // Initialize AI Tools
   const [aiTools, setAiTools] = useState<AIToolConfig[]>(() => {
     const savedTools = config.aiTools || [];
     return DEFAULT_AI_TOOLS.map(def => {
@@ -137,12 +138,8 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig }) => {
           challengeAuthors: authors,
           aiTools: aiTools
       };
-      
       const json = JSON.stringify(currentConfig, null, 2);
-      // Clean up common repetitive strings to constants if needed, or just keep raw JSON.
-      // We will export a variable declaration.
       const codeBlock = `export const DEFAULT_CONFIG: AppConfig = ${json};`;
-      
       navigator.clipboard.writeText(codeBlock).then(() => {
           setCopyStatus(true);
           setTimeout(() => setCopyStatus(false), 2000);
@@ -151,36 +148,26 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig }) => {
 
   const handleSaveMentor = () => {
     if (editingMentor) {
-      if (isNewMentor) {
-        setMentors([...mentors, editingMentor]);
-      } else {
-        setMentors(mentors.map(m => m.id === editingMentor.id ? editingMentor : m));
-      }
+      if (isNewMentor) setMentors([...mentors, editingMentor]);
+      else setMentors(mentors.map(m => m.id === editingMentor.id ? editingMentor : m));
       setEditingMentor(null);
     }
   };
 
   const deleteMentor = (id: string) => {
-    if (confirm("Удалить ментора?")) {
-      setMentors(mentors.filter(m => m.id !== id));
-    }
+    if (confirm("Удалить ментора?")) setMentors(mentors.filter(m => m.id !== id));
   };
 
   const handleSaveAuthor = () => {
     if (editingAuthor) {
-      if (isNewAuthor) {
-        setAuthors([...authors, editingAuthor]);
-      } else {
-        setAuthors(authors.map(a => a.id === editingAuthor.id ? editingAuthor : a));
-      }
+      if (isNewAuthor) setAuthors([...authors, editingAuthor]);
+      else setAuthors(authors.map(a => a.id === editingAuthor.id ? editingAuthor : a));
       setEditingAuthor(null);
     }
   };
 
   const deleteAuthor = (id: string) => {
-    if (confirm("Удалить автора?")) {
-      setAuthors(authors.filter(a => a.id !== id));
-    }
+    if (confirm("Удалить автора?")) setAuthors(authors.filter(a => a.id !== id));
   };
 
   const handleSaveTool = () => {
@@ -201,7 +188,7 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig }) => {
       <select 
         value={value || DEFAULT_MODEL} 
         onChange={(e) => onChange(e.target.value)}
-        className="w-full p-2 border rounded-lg bg-slate-50 text-sm outline-none focus:ring-2 focus:ring-indigo-100"
+        className="w-full p-3 md:p-2 border rounded-lg bg-slate-50 text-sm outline-none focus:ring-2 focus:ring-indigo-100"
       >
         {AVAILABLE_MODELS.map(m => (
           <option key={m.id} value={m.id}>{m.name}</option>
@@ -211,368 +198,329 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig }) => {
   );
 
   return (
-    <div className="h-full p-4 md:p-8 flex flex-col overflow-hidden bg-slate-50">
-      <header className="mb-6 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-light text-slate-800 tracking-tight">Настройки Владельца</h1>
-          <p className="text-slate-500 text-sm">Управление ИИ и Базой Знаний</p>
-        </div>
-        <div className="flex items-center gap-2">
-            <button 
-                onClick={handleExportCode} 
-                className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-all ${copyStatus ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
-                title="Скопировать код для constants.ts"
-            >
-                {copyStatus ? <Check size={18} /> : <Code size={18} />}
-                <span className="hidden md:inline">{copyStatus ? 'Скопировано!' : 'Код для constants.ts'}</span>
-            </button>
-            <button onClick={saveAll} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-md transition-all">
-                <Save size={18} /> Сохранить
-            </button>
-        </div>
-      </header>
+    <div className="fixed inset-0 z-[60] md:relative md:inset-auto md:z-auto flex flex-col h-full bg-slate-50 overflow-hidden animate-in fade-in duration-300">
       
-      {/* INFO BANNER */}
-      <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-4 text-xs text-blue-800 flex items-start gap-2 shrink-0">
-          <Database size={14} className="mt-0.5 shrink-0" />
-          <p>
-              <strong>Внимание:</strong> Изменения здесь сохраняются локально. Чтобы применить их для <strong>всех пользователей</strong>, 
-              используйте кнопку "Код для constants.ts" и обновите файл исходного кода приложения.
-          </p>
-      </div>
-
-      <div className="flex gap-2 mb-4 shrink-0 overflow-x-auto pb-2">
-        <button onClick={() => setActiveTab('core')} className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors whitespace-nowrap ${activeTab === 'core' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:bg-white/50'}`}>
-          <Database size={16} /> Ядро Знаний
-        </button>
-        <button onClick={() => setActiveTab('mentors')} className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors whitespace-nowrap ${activeTab === 'mentors' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:bg-white/50'}`}>
-          <Users size={16} /> Менторы
-        </button>
-        <button onClick={() => setActiveTab('authors')} className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors whitespace-nowrap ${activeTab === 'authors' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:bg-white/50'}`}>
-          <Zap size={16} /> Авторы Челленджей
-        </button>
-        <button onClick={() => setActiveTab('tools')} className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors whitespace-nowrap ${activeTab === 'tools' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:bg-white/50'}`}>
-          <Bot size={16} /> AI Генераторы
-        </button>
-      </div>
-
-      <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-        
-        {/* CORE LIBRARY TAB */}
-        {activeTab === 'core' && (
-          <div className="flex-1 p-6 flex flex-col">
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Глобальный контекст (# SYSTEM)</h3>
-            <textarea 
-              className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-xl p-4 font-mono text-sm text-slate-700 focus:ring-2 focus:ring-indigo-100 outline-none resize-none"
-              value={localCore}
-              onChange={(e) => setLocalCore(e.target.value)}
-              placeholder="Введите список книг и базовых принципов..."
-            />
+      {/* Mobile-Only Close Header */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white font-bold text-sm">L</div>
+            <span className="font-bold text-slate-800">Владелец</span>
           </div>
-        )}
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600">
+            <X size={20} />
+          </button>
+      </div>
 
-        {/* MENTORS TAB */}
-        {activeTab === 'mentors' && (
-          <div className="flex-1 flex overflow-hidden">
-            {/* Mentor List */}
-            <div className="w-1/3 border-r border-slate-100 overflow-y-auto p-4 space-y-2 bg-slate-50/50">
+      <div className="flex-1 flex flex-col h-full overflow-hidden p-4 md:p-8">
+        <header className="mb-6 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="hidden md:block">
+            <h1 className="text-2xl font-light text-slate-800 tracking-tight">Настройки Владельца</h1>
+            <p className="text-slate-500 text-sm">Управление ИИ и Базой Знаний</p>
+          </div>
+          <div className="flex items-center gap-2 w-full md:w-auto">
               <button 
-                onClick={() => {
-                  setEditingMentor({ id: Date.now().toString(), name: 'Новый Ментор', icon: 'User', color: 'text-slate-600', systemPrompt: '', model: DEFAULT_MODEL, accessLevel: 'public' });
-                  setIsNewMentor(true);
-                }}
-                className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 font-medium hover:border-indigo-300 hover:text-indigo-500 flex items-center justify-center gap-2 transition-colors"
+                  onClick={handleExportCode} 
+                  className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 md:py-2 border rounded-xl md:rounded-lg text-sm font-medium transition-all ${copyStatus ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
               >
-                <Plus size={18} /> Добавить
+                  {copyStatus ? <Check size={18} /> : <Code size={18} />}
+                  <span className="hidden md:inline">{copyStatus ? 'Скопировано!' : 'Код для constants.ts'}</span>
+                  <span className="md:hidden">Export Code</span>
               </button>
-              {mentors.map(m => (
-                <div key={m.id} onClick={() => { setEditingMentor(m); setIsNewMentor(false); }} className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-3 ${editingMentor?.id === m.id ? 'bg-white shadow border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'}`}>
-                  <div className={`p-2 rounded-lg bg-slate-50 ${m.color}`}>
-                    <RenderIcon name={m.icon} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center">
-                        <div className="font-medium text-slate-700 truncate">{m.name}</div>
-                        {m.accessLevel === 'owner_only' && <Lock size={10} className="text-red-400" />}
-                        {m.accessLevel === 'restricted' && <Users size={10} className="text-amber-400" />}
-                    </div>
-                    <div className="text-[10px] text-slate-400">{m.model || DEFAULT_MODEL}</div>
-                  </div>
-                </div>
-              ))}
+              <button onClick={saveAll} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 md:py-2 bg-indigo-600 text-white rounded-xl md:rounded-lg hover:bg-indigo-700 shadow-md transition-all">
+                  <Save size={18} /> Сохранить
+              </button>
+          </div>
+        </header>
+        
+        {/* INFO BANNER */}
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-6 text-xs text-blue-800 flex items-start gap-2 shrink-0">
+            <Database size={14} className="mt-0.5 shrink-0" />
+            <p>
+                <strong>Внимание:</strong> Изменения сохраняются локально. Для глобального применения обновите <code>constants.ts</code>.
+            </p>
+        </div>
+
+        {/* Tab Navigation - Horizontal Scroll on Mobile */}
+        <div className="flex gap-2 mb-4 shrink-0 overflow-x-auto pb-2 scrollbar-none">
+          {[
+            { id: 'core', label: 'Ядро Знаний', icon: Database },
+            { id: 'mentors', label: 'Менторы', icon: Users },
+            { id: 'authors', label: 'Авторы', icon: Zap },
+            { id: 'tools', label: 'AI Генераторы', icon: Bot },
+          ].map(tab => (
+            <button 
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                setEditingMentor(null);
+                setEditingAuthor(null);
+                setEditingTool(null);
+              }} 
+              className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-white shadow-sm border border-slate-200 text-indigo-600' : 'text-slate-500 hover:bg-white/50 border border-transparent'}`}
+            >
+              <tab.icon size={16} /> {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 bg-white rounded-3xl md:rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+          
+          {/* CORE LIBRARY TAB */}
+          {activeTab === 'core' && (
+            <div className="flex-1 p-6 flex flex-col">
+              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Глобальный контекст (# SYSTEM)</h3>
+              <textarea 
+                className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-mono text-sm text-slate-700 focus:ring-2 focus:ring-indigo-100 outline-none resize-none leading-relaxed"
+                value={localCore}
+                onChange={(e) => setLocalCore(e.target.value)}
+                placeholder="Введите список книг и базовых принципов..."
+              />
             </div>
+          )}
 
-            {/* Mentor Editor */}
-            <div className="flex-1 p-6 overflow-y-auto">
-              {editingMentor ? (
-                <div className="max-w-2xl mx-auto space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-slate-800">{isNewMentor ? 'Создание ментора' : 'Редактирование'}</h3>
-                    {!isNewMentor && (
-                      <button onClick={() => deleteMentor(editingMentor.id)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded">
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Имя</label>
-                      <input 
-                        className="w-full p-2 border rounded-lg bg-slate-50" 
-                        value={editingMentor.name} 
-                        onChange={(e) => setEditingMentor({...editingMentor, name: e.target.value})} 
-                      />
+          {/* MENTORS TAB */}
+          {activeTab === 'mentors' && (
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+              {/* List (Hide on mobile when editing) */}
+              <div className={`${editingMentor ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-slate-100 flex-col overflow-y-auto p-4 space-y-2 bg-slate-50/50`}>
+                <button 
+                  onClick={() => {
+                    setEditingMentor({ id: Date.now().toString(), name: 'Новый Ментор', icon: 'User', color: 'text-slate-600', systemPrompt: '', model: DEFAULT_MODEL, accessLevel: 'public' });
+                    setIsNewMentor(true);
+                  }}
+                  className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-medium hover:border-indigo-300 hover:text-indigo-500 flex items-center justify-center gap-2 transition-colors bg-white/50"
+                >
+                  <Plus size={18} /> Добавить
+                </button>
+                {mentors.map(m => (
+                  <div key={m.id} onClick={() => { setEditingMentor(m); setIsNewMentor(false); }} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center gap-3 ${editingMentor?.id === m.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100 hover:shadow-sm'}`}>
+                    <div className={`p-2.5 rounded-xl bg-slate-50 ${m.color}`}>
+                      <RenderIcon name={m.icon} />
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">ID (лат.)</label>
-                      <input 
-                        className="w-full p-2 border rounded-lg bg-slate-50" 
-                        value={editingMentor.id} 
-                        disabled={!isNewMentor}
-                        onChange={(e) => setEditingMentor({...editingMentor, id: e.target.value})} 
-                      />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center">
+                          <div className="font-bold text-slate-700 truncate">{m.name}</div>
+                          <ChevronRight size={14} className="text-slate-300 md:hidden" />
+                      </div>
+                      <div className="text-[10px] text-slate-400 uppercase font-mono tracking-tight">{m.model || DEFAULT_MODEL}</div>
                     </div>
                   </div>
-                  
-                  {/* MODEL SELECTION */}
-                  <ModelSelector 
-                     value={editingMentor.model} 
-                     onChange={(val) => setEditingMentor({...editingMentor, model: val})} 
-                  />
+                ))}
+              </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Иконка</label>
-                    <div className="flex flex-wrap gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                      {AVAILABLE_ICONS.map(iconName => (
-                        <button
-                          key={iconName}
-                          onClick={() => setEditingMentor({...editingMentor, icon: iconName})}
-                          className={`p-2 rounded-md transition-all ${editingMentor.icon === iconName ? 'bg-indigo-600 text-white shadow' : 'bg-white text-slate-400 hover:text-indigo-500'}`}
-                          title={iconName}
-                        >
-                          <RenderIcon name={iconName} className="w-5 h-5" />
+              {/* Editor */}
+              {editingMentor && (
+                <div className="flex-1 p-6 overflow-y-auto custom-scrollbar-light">
+                  <div className="max-w-2xl mx-auto space-y-6">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => setEditingMentor(null)} className="md:hidden p-2 -ml-2 text-slate-400">
+                          <ArrowLeft size={20} />
                         </button>
-                      ))}
+                        <h3 className="text-lg font-bold text-slate-800">{isNewMentor ? 'Новый ментор' : editingMentor.name}</h3>
+                      </div>
+                      {!isNewMentor && (
+                        <button onClick={() => deleteMentor(editingMentor.id)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-xl transition-colors">
+                          <Trash2 size={20} />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Имя</label>
+                        <input className="w-full p-3 md:p-2 border rounded-xl md:rounded-lg bg-slate-50" value={editingMentor.name} onChange={(e) => setEditingMentor({...editingMentor, name: e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">ID (лат.)</label>
+                        <input className="w-full p-3 md:p-2 border rounded-xl md:rounded-lg bg-slate-50" value={editingMentor.id} disabled={!isNewMentor} onChange={(e) => setEditingMentor({...editingMentor, id: e.target.value})} />
+                      </div>
+                    </div>
+                    
+                    <ModelSelector value={editingMentor.model} onChange={(val) => setEditingMentor({...editingMentor, model: val})} />
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Иконка</label>
+                      <div className="grid grid-cols-5 md:flex md:flex-wrap gap-2 bg-slate-50 p-3 rounded-2xl md:rounded-lg border border-slate-100">
+                        {AVAILABLE_ICONS.map(iconName => (
+                          <button
+                            key={iconName}
+                            onClick={() => setEditingMentor({...editingMentor, icon: iconName})}
+                            className={`p-3 md:p-2 rounded-xl md:rounded-md transition-all flex items-center justify-center ${editingMentor.icon === iconName ? 'bg-indigo-600 text-white shadow' : 'bg-white text-slate-400'}`}
+                          >
+                            <RenderIcon name={iconName} className="w-5 h-5" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Цвет (Tailwind Class)</label>
+                      <input className="w-full p-3 md:p-2 border rounded-xl md:rounded-lg bg-slate-50" value={editingMentor.color} onChange={(e) => setEditingMentor({...editingMentor, color: e.target.value})} placeholder="text-indigo-600" />
+                    </div>
+                    
+                    <AccessControlEditor data={editingMentor} onChange={(d) => setEditingMentor({ ...editingMentor, ...d })} />
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Системный Промпт</label>
+                      <textarea 
+                        className="w-full h-80 md:h-64 p-3 border rounded-2xl md:rounded-lg bg-slate-50 font-mono text-xs leading-relaxed outline-none"
+                        value={editingMentor.systemPrompt}
+                        onChange={(e) => setEditingMentor({...editingMentor, systemPrompt: e.target.value})}
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-6 pb-12 border-t md:pb-6">
+                      <button onClick={() => setEditingMentor(null)} className="flex-1 md:flex-none px-6 py-3 md:py-2 text-slate-500 hover:bg-slate-50 rounded-xl">Отмена</button>
+                      <button onClick={handleSaveMentor} className="flex-1 md:flex-none px-8 py-3 md:py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100">Сохранить</button>
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Цвет (Tailwind Class)</label>
-                    <input 
-                        className="w-full p-2 border rounded-lg bg-slate-50" 
-                        value={editingMentor.color} 
-                        onChange={(e) => setEditingMentor({...editingMentor, color: e.target.value})} 
-                        placeholder="text-indigo-600"
-                      />
-                  </div>
-                  
-                  {/* ACCESS CONTROL */}
-                  <AccessControlEditor 
-                    data={editingMentor} 
-                    onChange={(d) => setEditingMentor({ ...editingMentor, ...d })} 
-                  />
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1 mt-4">Системный Промпт (# SYSTEM)</label>
-                    <textarea 
-                      className="w-full h-64 p-3 border rounded-lg bg-slate-50 font-mono text-sm leading-relaxed focus:ring-2 focus:ring-indigo-100 outline-none"
-                      value={editingMentor.systemPrompt}
-                      onChange={(e) => setEditingMentor({...editingMentor, systemPrompt: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-4 border-t">
-                    <button onClick={() => setEditingMentor(null)} className="px-4 py-2 text-slate-500 hover:bg-slate-50 rounded-lg">Отмена</button>
-                    <button onClick={handleSaveMentor} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Сохранить</button>
-                  </div>
                 </div>
-              ) : (
-                <div className="h-full flex items-center justify-center text-slate-300">Выберите ментора для редактирования</div>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* AUTHORS TAB */}
-        {activeTab === 'authors' && (
-          <div className="flex-1 flex overflow-hidden">
-             <div className="w-1/3 border-r border-slate-100 overflow-y-auto p-4 space-y-2 bg-slate-50/50">
-              <button 
-                onClick={() => {
-                  setEditingAuthor({ id: Date.now().toString(), name: 'Новый Автор', systemPrompt: '', model: DEFAULT_MODEL, accessLevel: 'public' });
-                  setIsNewAuthor(true);
-                }}
-                className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 font-medium hover:border-indigo-300 hover:text-indigo-500 flex items-center justify-center gap-2 transition-colors"
-              >
-                <Plus size={18} /> Добавить
-              </button>
-              {authors.map(a => (
-                <div key={a.id} onClick={() => { setEditingAuthor(a); setIsNewAuthor(false); }} className={`p-4 rounded-xl border cursor-pointer transition-all ${editingAuthor?.id === a.id ? 'bg-white shadow border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'}`}>
+          {/* AUTHORS TAB - Same Master-Detail Optimization */}
+          {activeTab === 'authors' && (
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+               <div className={`${editingAuthor ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-slate-100 flex-col overflow-y-auto p-4 space-y-2 bg-slate-50/50`}>
+                <button 
+                  onClick={() => {
+                    setEditingAuthor({ id: Date.now().toString(), name: 'Новый Автор', systemPrompt: '', model: DEFAULT_MODEL, accessLevel: 'public' });
+                    setIsNewAuthor(true);
+                  }}
+                  className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-medium hover:border-indigo-300 hover:text-indigo-500 flex items-center justify-center gap-2 transition-colors bg-white/50"
+                >
+                  <Plus size={18} /> Добавить
+                </button>
+                {authors.map(a => (
+                  <div key={a.id} onClick={() => { setEditingAuthor(a); setIsNewAuthor(false); }} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center gap-3 ${editingAuthor?.id === a.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'}`}>
+                      <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center mb-1">
+                              <div className="font-bold text-slate-700">{a.name}</div>
+                              <ChevronRight size={14} className="text-slate-300 md:hidden" />
+                          </div>
+                          <div className="text-[10px] text-slate-400 uppercase font-mono">{a.model || DEFAULT_MODEL}</div>
+                      </div>
+                  </div>
+                ))}
+              </div>
+
+              {editingAuthor && (
+                <div className="flex-1 p-6 overflow-y-auto custom-scrollbar-light">
+                  <div className="max-w-2xl mx-auto space-y-6">
                     <div className="flex justify-between items-center">
-                        <div className="font-medium text-slate-700">{a.name}</div>
-                        {a.accessLevel === 'owner_only' && <Lock size={10} className="text-red-400" />}
-                        {a.accessLevel === 'restricted' && <Users size={10} className="text-amber-400" />}
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => setEditingAuthor(null)} className="md:hidden p-2 -ml-2 text-slate-400">
+                          <ArrowLeft size={20} />
+                        </button>
+                        <h3 className="text-lg font-bold text-slate-800">{isNewAuthor ? 'Новый автор' : editingAuthor.name}</h3>
+                      </div>
+                      {!isNewAuthor && (
+                        <button onClick={() => deleteAuthor(editingAuthor.id)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-xl">
+                          <Trash2 size={20} />
+                        </button>
+                      )}
                     </div>
-                    <div className="text-[10px] text-slate-400">{a.model || DEFAULT_MODEL}</div>
-                </div>
-              ))}
-            </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Имя</label>
+                        <input className="w-full p-3 md:p-2 border rounded-xl md:rounded-lg bg-slate-50" value={editingAuthor.name} onChange={(e) => setEditingAuthor({...editingAuthor, name: e.target.value})} />
+                    </div>
+                    
+                    <ModelSelector value={editingAuthor.model} onChange={(val) => setEditingAuthor({...editingAuthor, model: val})} />
+                    
+                    <div className="space-y-1">
+                       <label className="block text-xs font-bold text-slate-400 uppercase flex items-center gap-1">Формат вывода</label>
+                       <select value={editingAuthor.responseMimeType || 'text/plain'} onChange={(e) => setEditingAuthor({...editingAuthor, responseMimeType: e.target.value as any})} className="w-full p-3 md:p-2 border rounded-xl md:rounded-lg bg-slate-50 text-sm outline-none">
+                          <option value="text/plain">Текст (Markdown)</option>
+                          <option value="application/json">JSON (Strict)</option>
+                       </select>
+                    </div>
+                    
+                    <AccessControlEditor data={editingAuthor} onChange={(d) => setEditingAuthor({ ...editingAuthor, ...d })} />
 
-            <div className="flex-1 p-6 overflow-y-auto">
-              {editingAuthor ? (
-                <div className="max-w-2xl mx-auto space-y-6">
-                   <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-slate-800">{isNewAuthor ? 'Создание автора' : 'Редактирование'}</h3>
-                    {!isNewAuthor && (
-                      <button onClick={() => deleteAuthor(editingAuthor.id)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded">
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                  </div>
-                  <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Имя</label>
-                      <input 
-                        className="w-full p-2 border rounded-lg bg-slate-50" 
-                        value={editingAuthor.name} 
-                        onChange={(e) => setEditingAuthor({...editingAuthor, name: e.target.value})} 
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Системный Промпт</label>
+                      <textarea 
+                        className="w-full h-80 md:h-64 p-3 border rounded-2xl md:rounded-lg bg-slate-50 font-mono text-xs leading-relaxed outline-none"
+                        value={editingAuthor.systemPrompt}
+                        onChange={(e) => setEditingAuthor({...editingAuthor, systemPrompt: e.target.value})}
                       />
-                  </div>
-                  
-                  <ModelSelector 
-                     value={editingAuthor.model} 
-                     onChange={(val) => setEditingAuthor({...editingAuthor, model: val})} 
-                  />
-                  
-                  {/* Output Format Selector */}
-                  <div className="space-y-1">
-                     <label className="block text-xs font-bold text-slate-400 uppercase flex items-center gap-1">
-                        {editingAuthor.responseMimeType === 'application/json' ? <FileJson size={12}/> : <FileType size={12}/>} 
-                        Формат вывода
-                     </label>
-                     <select 
-                        value={editingAuthor.responseMimeType || 'text/plain'}
-                        onChange={(e) => setEditingAuthor({...editingAuthor, responseMimeType: e.target.value as any})}
-                        className="w-full p-2 border rounded-lg bg-slate-50 text-sm outline-none focus:ring-2 focus:ring-indigo-100"
-                     >
-                        <option value="text/plain">Текст (Markdown)</option>
-                        <option value="application/json">JSON (Strict)</option>
-                     </select>
-                  </div>
-                  
-                  {/* ACCESS CONTROL */}
-                  <AccessControlEditor 
-                    data={editingAuthor} 
-                    onChange={(d) => setEditingAuthor({ ...editingAuthor, ...d })} 
-                  />
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1 mt-4">Системный Промпт (# SYSTEM)</label>
-                    <textarea 
-                      className="w-full h-64 p-3 border rounded-lg bg-slate-50 font-mono text-sm leading-relaxed focus:ring-2 focus:ring-indigo-100 outline-none"
-                      value={editingAuthor.systemPrompt}
-                      onChange={(e) => setEditingAuthor({...editingAuthor, systemPrompt: e.target.value})}
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2 pt-4 border-t">
-                    <button onClick={() => setEditingAuthor(null)} className="px-4 py-2 text-slate-500 hover:bg-slate-50 rounded-lg">Отмена</button>
-                    <button onClick={handleSaveAuthor} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Сохранить</button>
+                    </div>
+                    <div className="flex gap-2 pt-6 pb-12 md:pb-6 border-t">
+                      <button onClick={() => setEditingAuthor(null)} className="flex-1 md:flex-none px-6 py-3 md:py-2 text-slate-500 hover:bg-slate-50 rounded-xl">Отмена</button>
+                      <button onClick={handleSaveAuthor} className="flex-1 md:flex-none px-8 py-3 md:py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Сохранить</button>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                 <div className="h-full flex items-center justify-center text-slate-300">Выберите автора челленджей</div>
-              )}
+              ) : null}
             </div>
-          </div>
-        )}
-        
-        {/* AI GENERATORS TAB (FORMERLY TOOLS) */}
-        {activeTab === 'tools' && (
-          <div className="flex-1 flex overflow-hidden">
-             <div className="w-1/3 border-r border-slate-100 overflow-y-auto p-4 space-y-2 bg-slate-50/50">
-              <div className="px-2 py-1 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Системные Генераторы</div>
-              {aiTools.map(t => (
-                <div key={t.id} onClick={() => setEditingTool(t)} className={`p-4 rounded-xl border cursor-pointer transition-all ${editingTool?.id === t.id ? 'bg-white shadow border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'}`}>
-                    <div className="flex justify-between items-center mb-1">
-                        <div className="font-medium text-slate-700 text-sm">{t.name}</div>
-                        {t.accessLevel === 'owner_only' && <Lock size={10} className="text-red-400" />}
-                        {t.accessLevel === 'restricted' && <Users size={10} className="text-amber-400" />}
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <div className="text-[10px] text-slate-400 font-mono bg-slate-50 px-1 py-0.5 rounded w-max">ID: {t.id}</div>
-                        <div className="text-[10px] text-indigo-400">{t.model || DEFAULT_MODEL}</div>
-                    </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex-1 p-6 overflow-y-auto">
-              {editingTool ? (
-                <div className="max-w-2xl mx-auto space-y-6">
-                   <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-slate-800">Настройка генератора</h3>
-                    <div className="text-xs text-slate-400 font-mono">ID: {editingTool.id}</div>
+          )}
+          
+          {/* TOOLS TAB - Same Master-Detail Optimization */}
+          {activeTab === 'tools' && (
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+               <div className={`${editingTool ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-slate-100 flex-col overflow-y-auto p-4 space-y-2 bg-slate-50/50`}>
+                <div className="px-2 py-1 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Системные Генераторы</div>
+                {aiTools.map(t => (
+                  <div key={t.id} onClick={() => setEditingTool(t)} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${editingTool?.id === t.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'}`}>
+                      <div className="flex-1 min-w-0">
+                          <div className="font-bold text-slate-700 text-sm mb-1">{t.name}</div>
+                          <div className="text-[10px] text-indigo-400 font-mono">{t.model || DEFAULT_MODEL}</div>
+                      </div>
+                      <ChevronRight size={14} className="text-slate-300 md:hidden" />
                   </div>
-                  <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Название (UI)</label>
-                      <input 
-                        className="w-full p-2 border rounded-lg bg-slate-50" 
-                        value={editingTool.name} 
-                        onChange={(e) => setEditingTool({...editingTool, name: e.target.value})} 
+                ))}
+              </div>
+
+              {editingTool && (
+                <div className="flex-1 p-6 overflow-y-auto custom-scrollbar-light">
+                  <div className="max-w-2xl mx-auto space-y-6">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => setEditingTool(null)} className="md:hidden p-2 -ml-2 text-slate-400">
+                          <ArrowLeft size={20} />
+                        </button>
+                        <h3 className="text-lg font-bold text-slate-800">{editingTool.name}</h3>
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono">ID: {editingTool.id}</div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Название (UI)</label>
+                        <input className="w-full p-3 md:p-2 border rounded-xl md:rounded-lg bg-slate-50" value={editingTool.name} onChange={(e) => setEditingTool({...editingTool, name: e.target.value})} />
+                    </div>
+                    
+                    <ModelSelector value={editingTool.model} onChange={(val) => setEditingTool({...editingTool, model: val})} />
+
+                    <div className="space-y-1">
+                       <label className="block text-xs font-bold text-slate-400 uppercase">Формат вывода</label>
+                       <select value={editingTool.responseMimeType || 'text/plain'} onChange={(e) => setEditingTool({...editingTool, responseMimeType: e.target.value as any})} className="w-full p-3 md:p-2 border rounded-xl md:rounded-lg bg-slate-50 text-sm outline-none">
+                          <option value="text/plain">Текст (Markdown)</option>
+                          <option value="application/json">JSON (Strict)</option>
+                       </select>
+                    </div>
+                    
+                    <AccessControlEditor data={editingTool} onChange={(d) => setEditingTool({ ...editingTool, ...d })} />
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Системный Промпт</label>
+                      <textarea 
+                        className="w-full h-80 md:h-64 p-3 border rounded-2xl md:rounded-lg bg-slate-50 font-mono text-xs leading-relaxed outline-none"
+                        value={editingTool.systemPrompt}
+                        onChange={(e) => setEditingTool({...editingTool, systemPrompt: e.target.value})}
                       />
-                  </div>
-                  
-                  <ModelSelector 
-                     value={editingTool.model} 
-                     onChange={(val) => setEditingTool({...editingTool, model: val})} 
-                  />
-
-                  {/* Output Format Selector */}
-                  <div className="space-y-1">
-                     <label className="block text-xs font-bold text-slate-400 uppercase flex items-center gap-1">
-                        {editingTool.responseMimeType === 'application/json' ? <FileJson size={12}/> : <FileType size={12}/>} 
-                        Формат вывода
-                     </label>
-                     <select 
-                        value={editingTool.responseMimeType || 'text/plain'}
-                        onChange={(e) => setEditingTool({...editingTool, responseMimeType: e.target.value as any})}
-                        className="w-full p-2 border rounded-lg bg-slate-50 text-sm outline-none focus:ring-2 focus:ring-indigo-100"
-                     >
-                        <option value="text/plain">Текст (Markdown)</option>
-                        <option value="application/json">JSON (Strict)</option>
-                     </select>
-                     <p className="text-[10px] text-amber-600 mt-1">
-                        * Внимание: Изменение формата для системных утилит (например, Tagger) может нарушить работу приложения, если код ожидает строгий JSON.
-                     </p>
-                  </div>
-                  
-                  {/* ACCESS CONTROL */}
-                  <AccessControlEditor 
-                    data={editingTool} 
-                    onChange={(d) => setEditingTool({ ...editingTool, ...d })} 
-                  />
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1 mt-4">Системный Промпт (# SYSTEM)</label>
-                    <p className="text-[10px] text-slate-400 mb-2">Этот текст определяет роль и поведение ИИ для данной функции.</p>
-                    <textarea 
-                      className="w-full h-64 p-3 border rounded-lg bg-slate-50 font-mono text-sm leading-relaxed focus:ring-2 focus:ring-indigo-100 outline-none"
-                      value={editingTool.systemPrompt}
-                      onChange={(e) => setEditingTool({...editingTool, systemPrompt: e.target.value})}
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2 pt-4 border-t">
-                    <button onClick={() => setEditingTool(null)} className="px-4 py-2 text-slate-500 hover:bg-slate-50 rounded-lg">Отмена</button>
-                    <button onClick={handleSaveTool} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Сохранить</button>
+                    </div>
+                    <div className="flex gap-2 pt-6 pb-12 md:pb-6 border-t">
+                      <button onClick={() => setEditingTool(null)} className="flex-1 md:flex-none px-6 py-3 md:py-2 text-slate-500 hover:bg-slate-50 rounded-xl">Отмена</button>
+                      <button onClick={handleSaveTool} className="flex-1 md:flex-none px-8 py-3 md:py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Сохранить</button>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                 <div className="h-full flex items-center justify-center text-slate-300">Выберите генератор для настройки</div>
-              )}
+              ) : null}
             </div>
-          </div>
-        )}
+          )}
 
+        </div>
       </div>
     </div>
   );
