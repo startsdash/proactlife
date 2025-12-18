@@ -15,13 +15,13 @@ interface Props {
 
 const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatus, onConnectDrive, isDriveConnected, isOwner }) => {
   const navItems = [
-    { id: Module.LEARNING, icon: GraduationCap, label: 'Академия' },
     { id: Module.NAPKINS, icon: StickyNote, label: 'Салфетки' },
     { id: Module.SANDBOX, icon: Box, label: 'Песочница' },
     { id: Module.MENTAL_GYM, icon: Dumbbell, label: 'Mental Gym' },
     { id: Module.KANBAN, icon: KanbanIcon, label: 'Действия' },
     { id: Module.JOURNAL, icon: Book, label: 'Дневник' },
     { id: Module.ARCHIVE, icon: History, label: 'Архив' },
+    { id: Module.LEARNING, icon: GraduationCap, label: 'Академия' },
   ];
 
   const getSyncIcon = () => {
