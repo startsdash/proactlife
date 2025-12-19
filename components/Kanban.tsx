@@ -449,7 +449,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                         }} 
                                         disabled={generatingChallengeFor === task.id} 
                                         className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100 transition-colors disabled:opacity-50"
-                                        title="Челлендж"
+                                        title="Челлендж (ИИ)"
                                     >
                                         <Zap size={18} className={generatingChallengeFor === task.id ? "opacity-50" : ""} />
                                     </button>

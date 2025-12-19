@@ -621,7 +621,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         <button 
                             onClick={() => setShowMoodInput(true)}
                             className={`p-2 rounded-xl border transition-all ${aiFilteredIds !== null ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-white border-slate-200 text-slate-400 hover:text-purple-500 hover:border-purple-200'}`}
-                            title="Подбор по теме (AI)"
+                            title="Подбор по теме (ИИ)"
                         >
                             <Sparkles size={18} />
                         </button>
