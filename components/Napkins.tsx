@@ -761,82 +761,97 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       
       {/* ORACLE (SERENDIPITY) MODAL */}
       {showOracle && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4">
-            <div className={`bg-gradient-to-br ${oracleVibe.color} w-full max-w-md rounded-3xl shadow-2xl p-1 overflow-hidden animate-in zoom-in-95 duration-300 relative`}>
-                <div className="bg-white/95 backdrop-blur-sm rounded-[20px] p-6 md:p-8 h-[400px] flex flex-col items-center justify-center text-center relative overflow-hidden">
-                    
-                    <button onClick={closeOracle} className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 p-2 z-20">
-                        <X size={24} />
-                    </button>
+      <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          {/* Outer Border/Gradient Container */}
+          <div className={`bg-gradient-to-br ${oracleVibe.color} w-[90vw] max-w-md rounded-3xl shadow-2xl p-1 overflow-hidden animate-in zoom-in-95 duration-300 relative flex flex-col min-h-[420px] max-h-[85vh]`}>
+              
+              {/* Inner Content Container */}
+              <div className="bg-white/95 backdrop-blur-md rounded-[20px] w-full h-full flex flex-col relative overflow-hidden flex-1">
+                  
+                  {/* Close Button - Absolute */}
+                  <button onClick={closeOracle} className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 p-2 z-20 rounded-full hover:bg-slate-100 transition-colors">
+                      <X size={24} />
+                  </button>
 
-                    {/* PHASE 1: SELECT VIBE */}
-                    {oracleState === 'select' && (
-                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full h-full flex flex-col items-center justify-center">
-                            <Quote size={48} className="text-slate-200 mb-6" />
-                            <h3 className="text-xl font-light text-slate-800 mb-2">Оракул Смыслов</h3>
-                            <p className="text-sm text-slate-500 mb-8">Какую энергию ты ищешь?</p>
-                            
-                            <div className="grid grid-cols-2 gap-4 w-full">
-                                {ORACLE_VIBES.map(vibe => (
-                                    <button 
-                                        key={vibe.id}
-                                        onClick={() => castOracleSpell(vibe)}
-                                        className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 hover:bg-white hover:shadow-lg hover:scale-105 border border-slate-100 transition-all duration-300 group"
-                                    >
-                                        <span className="text-3xl mb-2 group-hover:animate-bounce">{vibe.emoji}</span>
-                                        <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{vibe.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                  {/* Content Wrapper with Padding */}
+                  <div className="p-6 md:p-8 flex flex-col h-full">
+                      
+                      {/* PHASE 1: SELECT VIBE */}
+                      {oracleState === 'select' && (
+                          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full h-full flex flex-col items-center justify-center">
+                              <Quote size={48} className="text-slate-200 mb-6" />
+                              <h3 className="text-xl font-light text-slate-800 mb-2">Оракул Смыслов</h3>
+                              <p className="text-sm text-slate-500 mb-8">Какую энергию ты ищешь?</p>
+                              
+                              <div className="grid grid-cols-2 gap-4 w-full">
+                                  {ORACLE_VIBES.map(vibe => (
+                                      <button 
+                                          key={vibe.id}
+                                          onClick={() => castOracleSpell(vibe)}
+                                          className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 hover:bg-white hover:shadow-lg hover:scale-105 border border-slate-100 transition-all duration-300 group"
+                                      >
+                                          <span className="text-3xl mb-2 group-hover:animate-bounce">{vibe.emoji}</span>
+                                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{vibe.label}</span>
+                                      </button>
+                                  ))}
+                              </div>
+                          </div>
+                      )}
 
-                    {/* PHASE 2: THINKING/ANIMATION */}
-                    {oracleState === 'thinking' && (
-                        <div className="flex flex-col items-center justify-center animate-pulse">
-                            <div className="text-6xl mb-6 animate-spin duration-[2000ms]">{oracleVibe.emoji}</div>
-                            <p className="text-slate-500 font-medium">Связь с хаосом...</p>
-                        </div>
-                    )}
+                      {/* PHASE 2: THINKING/ANIMATION */}
+                      {oracleState === 'thinking' && (
+                          <div className="flex flex-col items-center justify-center animate-pulse h-full">
+                              <div className="text-6xl mb-6 animate-spin duration-[2000ms]">{oracleVibe.emoji}</div>
+                              <p className="text-slate-500 font-medium">Связь с хаосом...</p>
+                          </div>
+                      )}
+                      
+                      {/* PHASE 3: RESULT */}
+                      {oracleState === 'result' && oracleNote && (
+                           <div className="flex flex-col h-full animate-in zoom-in-95 duration-500">
+                               {/* Header */}
+                               <div className="shrink-0 flex items-center justify-center gap-2 mb-6 text-xs font-bold uppercase tracking-widest text-slate-400">
+                                   <span>{oracleVibe.emoji}</span>
+                                   <span>{oracleVibe.label}</span>
+                               </div>
+                               
+                               {/* Scrollable Content Area */}
+                               <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0 -mr-2 pr-4"> {/* Negative margin hack for scrollbar spacing */}
+                                  <div className="min-h-full flex flex-col justify-center">
+                                      <div className="text-lg md:text-2xl text-slate-800 font-medium leading-relaxed italic relative py-4 text-center">
+                                          <span className="text-4xl text-slate-200 font-serif absolute top-0 left-0">“</span>
+                                          <div className="relative z-10 px-2">
+                                              <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}}>{oracleNote.content}</ReactMarkdown>
+                                          </div>
+                                          <span className="text-4xl text-slate-200 font-serif absolute bottom-0 right-0">”</span>
+                                      </div>
+                                  </div>
+                               </div>
 
-                    {/* PHASE 3: RESULT */}
-                    {oracleState === 'result' && oracleNote && (
-                         <div className="w-full h-full flex flex-col animate-in zoom-in-95 duration-500">
-                             <div className="flex items-center justify-center gap-2 mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">
-                                 <span>{oracleVibe.emoji}</span>
-                                 <span>{oracleVibe.label}</span>
-                             </div>
-                             
-                             <div className="flex-1 flex items-center justify-center overflow-y-auto custom-scrollbar-light my-2">
-                                <div className="text-lg md:text-xl text-slate-800 font-medium leading-relaxed italic relative px-4">
-                                    <span className="absolute -top-4 -left-2 text-4xl text-slate-200 font-serif">“</span>
-                                    <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}}>{oracleNote.content}</ReactMarkdown>
-                                    <span className="absolute -bottom-6 -right-2 text-4xl text-slate-200 font-serif">”</span>
-                                </div>
-                             </div>
-
-                             <div className="mt-6 flex flex-col gap-3 w-full">
-                                <button 
-                                    onClick={() => {
-                                        closeOracle();
-                                        handleOpenNote(oracleNote);
-                                    }}
-                                    className={`w-full py-3 rounded-xl font-bold text-white shadow-lg bg-gradient-to-r ${oracleVibe.color} hover:opacity-90 transition-opacity flex items-center justify-center gap-2`}
-                                >
-                                    Открыть заметку <ArrowRight size={18} />
-                                </button>
-                                <button 
-                                    onClick={() => castOracleSpell(oracleVibe)}
-                                    className="text-xs font-medium text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1 py-2"
-                                >
-                                    <Shuffle size={12} /> Попробовать еще раз
-                                </button>
-                             </div>
-                         </div>
-                    )}
-                </div>
-            </div>
-        </div>
+                               {/* Footer Actions */}
+                               <div className="mt-6 flex flex-col gap-3 shrink-0">
+                                  <button 
+                                      onClick={() => {
+                                          closeOracle();
+                                          handleOpenNote(oracleNote);
+                                      }}
+                                      className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg bg-gradient-to-r ${oracleVibe.color} hover:opacity-90 transition-opacity flex items-center justify-center gap-2 active:scale-[0.98]`}
+                                  >
+                                      Открыть заметку <ArrowRight size={18} />
+                                  </button>
+                                  <button 
+                                      onClick={() => castOracleSpell(oracleVibe)}
+                                      className="text-xs font-medium text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1 py-2"
+                                  >
+                                      <Shuffle size={12} /> Попробовать еще раз
+                                  </button>
+                               </div>
+                           </div>
+                      )}
+                  </div>
+              </div>
+          </div>
+      </div>
       )}
 
       {selectedNote && (
