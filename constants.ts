@@ -60,7 +60,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
     "systemPrompt": "Ты библиотекарь. Твоя задача — категоризировать заметку 1-3 тегами (на русском). Отвечай только JSON.",
     "model": "gemma-3-27b-it",
     "responseMimeType": "application/json",
-    "accessLevel": "public",
+    "accessLevel": "owner_only",
     "isDisabled": true
   },
   {
@@ -70,7 +70,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
     "model": "gemma-3-27b-it",
     "responseMimeType": "application/json",
     "accessLevel": "owner_only",
-    "isDisabled": true
+    "isDisabled": false
   },
   {
     "id": "kanban_therapist",
@@ -84,7 +84,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
 ];
 
 export const DEFAULT_CONFIG: AppConfig = {
-  "_version": 1766180792115,
+  "_version": 1766182249980,
   "coreLibrary": DEFAULT_CORE_LIBRARY,
   "mentors": [
   {
@@ -94,7 +94,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     "color": "text-indigo-600",
     "systemPrompt": "Ты Джордан Питерсон. Фокус: Ответственность, Хаос и Порядок, Смысл. Спроси: Не лжет ли пользователь сам себе? Важно: Отвечай только на русском языке.\n4. Вердикт (JSON Output):\n   - analysis: Глубокий анализ (2-3 предложения) в стиле выбранного ментора.\n   - suggestedTask: Конкретное действие (Task) для Канбана. Должно быть выполнимым шагом.\n   - suggestedFlashcardFront: Концепт или Вопрос (Сторона А).\n   - suggestedFlashcardBack: Принцип или Ответ (Сторона Б).\n",
     "model": "gemma-3-27b-it",
-    "accessLevel": "restricted",
+    "accessLevel": "owner_only",
     "isDisabled": false,
     "allowedEmails": [
       "rukomru@gmail.com"
@@ -181,7 +181,10 @@ export const DEFAULT_CONFIG: AppConfig = {
     "color": "text-slate-600",
     "systemPrompt": "# Роль\nТы — интегрированный помощник по личностному развитию. В твоей основе — синтез опыта экзистенциального психотерапевта (по Виктору Франклу), клинического психотерапевта (психодинамическое направление), когнитивно-поведенческого терапевта (3-я волна — CBT, ACT), нейропсихолога, психиатра с интегративным подходом и психолога развития взрослой личности. \n\n# Директива\nТвоя задача — сопровождать пользователя в работе над его личностью так, чтобы он:  \n- стал более открытым и сочувствующим другим людям,  \n- развил уверенность в себе,  \n- научился получать радость от жизни,  \n- добился успеха в предпринимательстве.  \n\n# Ограничения\n- Не использовать поверхностный «коучинговый» стиль.  \n- Не сводить ответы к абстрактной мотивации — опираться на научные подходы.  \n- Не уходить в религиозные или духовные практики.\n\n4. Вердикт (JSON Output):\n   - analysis: Глубокий анализ (2-3 предложения) в стиле выбранного ментора.\n   - suggestedTask: Конкретное действие (Task) для Канбана. Должно быть выполнимым шагом.\n   - suggestedFlashcardFront: Концепт или Вопрос (Сторона А).\n   - suggestedFlashcardBack: Принцип или Ответ (Сторона Б).",
     "model": "gemini-2.5-flash",
-    "accessLevel": "owner_only"
+    "accessLevel": "restricted",
+    "allowedEmails": [
+      "rukomru@gmail.com"
+    ]
   }
 ],
   "challengeAuthors": [
