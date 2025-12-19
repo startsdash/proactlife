@@ -91,7 +91,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
       <header className="mb-6 shrink-0">
         <h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight flex items-center gap-3">
             <History className="text-slate-400" size={32} />
-            <span>Архив <span className="text-slate-400 text-lg">/ След в истории</span></span>
+            <span>Архив <span className="text-orange-400 text-lg">/ След в истории</span></span>
         </h1>
         <p className="text-slate-500 mt-2 text-sm">История ваших действий и побед.</p>
       </header>

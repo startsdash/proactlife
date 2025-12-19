@@ -59,7 +59,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
     <div className="flex flex-col h-full max-w-4xl mx-auto p-4 md:p-8 space-y-6">
        <header className="flex justify-between items-end shrink-0">
         <div>
-            <h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight">Mental Gym <span className="text-indigo-500 text-base md:text-lg">/ Тонус разума</span></h1>
+            <h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight">Mental Gym <span className="text-violet-500 text-base md:text-lg">/ Тонус разума</span></h1>
             <p className="text-slate-500 mt-2 text-sm">Закрепляй знания и тренируй гибкость ума.</p>
         </div>
       </header>
