@@ -220,6 +220,15 @@ export const requestAuth = (silent: boolean = false): Promise<void> => {
   });
 };
 
+export const signOut = () => {
+  localStorage.removeItem(STORAGE_ACCESS_TOKEN);
+  localStorage.removeItem(STORAGE_REFRESH_TOKEN);
+  localStorage.removeItem(STORAGE_TOKEN_EXPIRY);
+  if (window.gapi && window.gapi.client) {
+    window.gapi.client.setToken(null);
+  }
+};
+
 // --- API METHODS ---
 
 export const getUserProfile = async (): Promise<UserProfile | null> => {

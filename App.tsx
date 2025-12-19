@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl } from './types';
 import { loadState, saveState } from './services/storageService';
-import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile } from './services/driveService';
+import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
 import Layout from './components/Layout';
 import Napkins from './components/Napkins';
@@ -13,6 +13,7 @@ import Archive from './components/Archive';
 import Settings from './components/Settings';
 import Journal from './components/Journal';
 import LearningMode from './components/LearningMode';
+import UserSettings from './components/UserSettings';
 
 const OWNER_EMAIL = 'rukomrus@gmail.com';
 
@@ -115,6 +116,20 @@ const App: React.FC = () => {
     } finally {
         setIsLoaded(true);
     }
+  };
+
+  const handleSignOut = () => {
+    signOut();
+    setIsDriveConnected(false);
+    setSyncStatus('disconnected');
+    setHasLoadedFromCloud(false);
+    localStorage.removeItem('isGoogleAuthEnabled');
+    
+    // Revert to local state or guest state
+    // We reload state from localStorage to ensure we are consistent with "Guest Mode" on this device.
+    const localData = loadState();
+    setData(prev => ({ ...localData, user: undefined, config: prev.config }));
+    alert("Вы вышли из профиля.");
   };
 
   const triggerAutoSave = useCallback((stateToSave: AppState) => {
@@ -255,6 +270,7 @@ const App: React.FC = () => {
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.JOURNAL && <Journal entries={data.journal} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
       {module === Module.ARCHIVE && <Archive tasks={data.tasks} restoreTask={restoreTask} deleteTask={deleteTask} />}
+      {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => setModule(Module.NAPKINS)} />}
       {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => setModule(Module.NAPKINS)} />}
     </Layout>
   );

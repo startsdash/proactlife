@@ -7,7 +7,8 @@ export enum Module {
   JOURNAL = 'journal',
   ARCHIVE = 'archive',
   SETTINGS = 'settings',
-  LEARNING = 'learning'
+  LEARNING = 'learning',
+  USER_SETTINGS = 'user_settings'
 }
 
 export interface Note {
