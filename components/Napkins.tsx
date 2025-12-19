@@ -188,6 +188,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [activeColorFilter, setActiveColorFilter] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   
+  // Tag Search State
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [tagQuery, setTagQuery] = useState('');
+
   // Mood Search State
   const [showMoodInput, setShowMoodInput] = useState(false);
   const [moodQuery, setMoodQuery] = useState('');
@@ -332,19 +336,29 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   // --- FILTERING LOGIC ---
   const filterNotes = (list: Note[]) => {
     return list.filter(note => {
-      // 1. Text Search
-      const query = searchQuery.toLowerCase();
-      const matchesSearch = query === '' || 
-        note.content.toLowerCase().includes(query) || 
-        (note.tags && note.tags.some(t => t.toLowerCase().includes(query)));
+      // 1. Tag Search (Specific Mode)
+      if (showTagInput && tagQuery) {
+          const q = tagQuery.toLowerCase().replace('#', '');
+          if (!note.tags || !note.tags.some(t => t.toLowerCase().includes(q))) {
+              return false;
+          }
+      }
+
+      // 2. Text Search (Standard Mode) - Only if not in Tag Mode (or allow combined if desired, but UI implies specific modes)
+      if (!showTagInput && searchQuery) {
+          const query = searchQuery.toLowerCase();
+          const matchesSearch = note.content.toLowerCase().includes(query) || 
+            (note.tags && note.tags.some(t => t.toLowerCase().includes(query)));
+          if (!matchesSearch) return false;
+      }
       
-      // 2. Color Filter
+      // 3. Color Filter
       const matchesColor = activeColorFilter === null || note.color === activeColorFilter;
       
-      // 3. AI Mood Filter (if active)
+      // 4. AI Mood Filter (if active)
       const matchesMood = aiFilteredIds === null || aiFilteredIds.includes(note.id);
       
-      return matchesSearch && matchesColor && matchesMood;
+      return matchesColor && matchesMood;
     });
   };
 
@@ -539,6 +553,23 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                              <X size={20} />
                          </button>
                     </div>
+                ) : showTagInput ? (
+                    <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                         <div className="relative flex-1">
+                             <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500" />
+                             <input 
+                                type="text" 
+                                placeholder="Поиск по #тегам..." 
+                                value={tagQuery}
+                                onChange={(e) => setTagQuery(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 bg-indigo-50 border border-indigo-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all text-indigo-900 placeholder:text-indigo-300"
+                                autoFocus
+                            />
+                         </div>
+                         <button onClick={() => setShowTagInput(false)} className="p-2 text-slate-400 hover:text-slate-600">
+                             <X size={20} />
+                         </button>
+                    </div>
                 ) : (
                     <>
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -558,8 +589,16 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 )}
             </div>
             
-            {!showMoodInput && (
+            {!showMoodInput && !showTagInput && (
                 <>
+                    <button 
+                        onClick={() => setShowTagInput(true)}
+                        className="p-2 rounded-xl border transition-all bg-white border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200"
+                        title="Поиск по тегам"
+                    >
+                        <Hash size={18} />
+                    </button>
+
                     <button 
                         onClick={() => setShowMoodInput(true)}
                         className={`p-2 rounded-xl border transition-all ${aiFilteredIds !== null ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-white border-slate-200 text-slate-400 hover:text-purple-500 hover:border-purple-200'}`}
@@ -573,7 +612,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         className={`p-2 rounded-xl border transition-all ${showFilters || activeColorFilter ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600'}`}
                         title="Фильтр по цвету"
                     >
-                        <Filter size={18} />
+                        <Palette size={18} />
                     </button>
                 </>
             )}
@@ -617,7 +656,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       {activeTab === 'inbox' && (
         <>
             {/* Input only visible if not searching/filtering or if explicit action needed */}
-            {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && (
+            {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 md:p-4 shrink-0">
                     <textarea className="w-full h-24 md:h-32 resize-none outline-none text-base text-slate-700 bg-transparent" placeholder="О чём ты думаешь? (Поддерживается Markdown)" value={input} onChange={(e) => setInput(e.target.value)} />
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 border-t border-slate-50 pt-3 gap-2">
@@ -639,7 +678,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     inboxNotes.map(note => renderNoteCard(note, false))
                 ) : (
                     <div className="col-span-1 md:col-span-2 text-center py-10 text-slate-400 text-sm">
-                        {searchQuery || activeColorFilter || aiFilteredIds ? 'Ничего не найдено' : '«Входящие» пусты. Запиши что-нибудь.'}
+                        {searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено' : '«Входящие» пусты. Запиши что-нибудь.'}
                     </div>
                 )}
             </div>
@@ -651,7 +690,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 archivedNotes.map(note => renderNoteCard(note, true))
             ) : (
                 <div className="col-span-1 md:col-span-2 text-center py-10 text-slate-400 text-sm">
-                    {searchQuery || activeColorFilter || aiFilteredIds ? 'Ничего не найдено в библиотеке' : 'Библиотека пуста'}
+                    {searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено в библиотеке' : 'Библиотека пуста'}
                 </div>
             )}
         </div>
