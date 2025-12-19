@@ -459,7 +459,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                    <button 
                                         onClick={(e) => openTherapy(e, task)} 
                                         className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg border border-transparent hover:border-amber-100"
-                                        title="ИИ Консультант"
+                                        title="Консультант (ИИ)"
                                    >
                                        <MessageCircle size={18} /> 
                                    </button>
@@ -543,7 +543,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
         <div className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-start mb-6">
-                    <h3 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">{activeModal.type === 'details' && 'Детали задачи'}{activeModal.type !== 'details' && 'ИИ Консультация'}</h3>
+                    <h3 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+                        {activeModal.type === 'details' && 'Детали задачи'}
+                        {activeModal.type !== 'details' && 'ИИ-консультант'}
+                    </h3>
                     <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
                 </div>
                 {activeModal.type === 'details' ? (
