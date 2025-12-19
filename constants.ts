@@ -74,7 +74,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
   },
   {
     "id": "kanban_therapist",
-    "name": "ИИ Консультант",
+    "name": "ИИ-консультант",
     "systemPrompt": "Ты — мудрый наставник и терапевт продуктивности. Задача: Сгенерируй Совет путешественнику. Твоя цель — помочь пользователю преодолеть сопротивление (если задача застряла) или осознать ценность достижения (если задача выполнена). Используй принципы стоицизма и когнитивной психологии.",
     "model": "gemma-3-27b-it",
     "responseMimeType": "text/plain",
@@ -84,7 +84,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
 ];
 
 export const DEFAULT_CONFIG: AppConfig = {
-  "_version": 1766168365632,
+  "_version": 1766168365633,
   "coreLibrary": DEFAULT_CORE_LIBRARY,
   "mentors": [
   {
@@ -199,11 +199,11 @@ export const applyTypography = (text: string): string => {
   let res = text;
   
   // 1. Hyphens to Em-dashes (space - space) -> (space — space)
-  res = res.replace(/(\\s)-(\\s)/g, '$1—$2');
+  res = res.replace(/(\s)-(\s)/g, '$1—$2');
   
   // 2. Quotes
   // Open quote: start of line or whitespace/punctuation opening before it
-  res = res.replace(/(^|[\\s(\\[{])"/g, '$1«');
+  res = res.replace(/(^|[\s(\[{])"/g, '$1«');
   // Close quote: everything else
   res = res.replace(/"/g, '»');
   
