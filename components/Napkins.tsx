@@ -575,7 +575,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input 
                             type="text" 
-                            placeholder="Поиск по словам или #тегам..." 
+                            placeholder="Поиск по ключевым словам..." 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 focus:border-indigo-200 transition-all shadow-sm"
@@ -600,19 +600,19 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     </button>
 
                     <button 
-                        onClick={() => setShowMoodInput(true)}
-                        className={`p-2 rounded-xl border transition-all ${aiFilteredIds !== null ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-white border-slate-200 text-slate-400 hover:text-purple-500 hover:border-purple-200'}`}
-                        title="Подбор по настроению (AI)"
-                    >
-                        <Sparkles size={18} />
-                    </button>
-
-                    <button 
                         onClick={() => setShowFilters(!showFilters)} 
                         className={`p-2 rounded-xl border transition-all ${showFilters || activeColorFilter ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600'}`}
                         title="Фильтр по цвету"
                     >
                         <Palette size={18} />
+                    </button>
+
+                    <button 
+                        onClick={() => setShowMoodInput(true)}
+                        className={`p-2 rounded-xl border transition-all ${aiFilteredIds !== null ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-white border-slate-200 text-slate-400 hover:text-purple-500 hover:border-purple-200'}`}
+                        title="Подбор по теме (AI)"
+                    >
+                        <Sparkles size={18} />
                     </button>
                 </>
             )}
