@@ -93,7 +93,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
             <History className="text-slate-400" size={32} />
             <span>Архив <span className="text-orange-400 text-lg">/ След в истории</span></span>
         </h1>
-        <p className="text-slate-500 mt-2 text-sm">История ваших действий и побед.</p>
+        <p className="text-slate-500 mt-2 text-sm">История действий и побед.</p>
       </header>
 
       <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar-light">
@@ -143,7 +143,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                         if (window.confirm("Восстановить задачу в 'Сделано'?")) restoreTask(task.id);
                       }}
                       className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                      title="Восстановить в Сделано"
+                      title='Восстановить в "Действия"'
                    >
                       <RotateCcw size={14} /> <span className="hidden md:inline">Восстановить</span>
                    </button>
