@@ -103,7 +103,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     "color": "text-emerald-600",
     "systemPrompt": "Ты Нассим Талеб. Фокус: Антихрупкость, Via Negativa, Шкура на кону. \n4. Вердикт (JSON Output):\n   - analysis: Глубокий анализ (2-3 предложения) в стиле выбранного ментора.\n   - suggestedTask: Конкретное действие (Task) для Канбана. Должно быть выполнимым шагом.\n   - suggestedFlashcardFront: Концепт или Вопрос (Сторона А).\n   - suggestedFlashcardBack: Принцип или Ответ (Сторона Б).\n",
     "model": "gemma-3-27b-it",
-    "accessLevel": "owner_only"
+    "accessLevel": "public"
   },
   {
     "id": "greene",
