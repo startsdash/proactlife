@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood } from '../services/geminiService';
 import { applyTypography } from '../constants';
-import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Filter, Hash, Plus, Sparkles, Kanban } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -556,7 +556,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 ) : showTagInput ? (
                     <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
                          <div className="relative flex-1">
-                             <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500" />
+                             <TagIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500" />
                              <input 
                                 type="text" 
                                 placeholder="Поиск по #тегам..." 
@@ -596,7 +596,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         className="p-2 rounded-xl border transition-all bg-white border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200"
                         title="Поиск по тегам"
                     >
-                        <Hash size={18} />
+                        <TagIcon size={18} />
                     </button>
 
                     <button 
