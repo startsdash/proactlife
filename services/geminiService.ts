@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig } from "../types";
 import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL } from '../constants';
@@ -66,19 +67,19 @@ const parseJSON = <T>(text: string | undefined, fallback: T): T => {
   }
 };
 
-const getToolConfig = (id: string, config: AppConfig): AIToolConfig => {
-  return config.aiTools?.find(t => t.id === id) || 
-         DEFAULT_AI_TOOLS.find(t => t.id === id) || 
-         { 
-           id: 'default', 
-           name: 'Default Tool',
-           systemPrompt: 'You are a helpful assistant.', 
-           model: DEFAULT_MODEL 
-         };
+const getToolConfig = (id: string, config: AppConfig): AIToolConfig | undefined => {
+  // If config.aiTools is undefined (e.g. filtered out for non-owner), safe check
+  if (!config.aiTools || config.aiTools.length === 0) return undefined;
+
+  return config.aiTools.find(t => t.id === id);
 };
 
 export const autoTagNote = async (content: string, config: AppConfig): Promise<string[]> => {
   const tool = getToolConfig('tagger', config);
+  
+  // Guard: If tool not available for this user
+  if (!tool) return [];
+
   const model = tool.model || DEFAULT_MODEL;
   const fullPrompt = `${tool.systemPrompt}\n\nБаза знаний (контекст): ${config.coreLibrary}`;
 
@@ -120,6 +121,10 @@ export const autoTagNote = async (content: string, config: AppConfig): Promise<s
 
 export const findNotesByMood = async (notes: Note[], mood: string, config: AppConfig): Promise<string[]> => {
   const tool = getToolConfig('mood_matcher', config);
+  
+  // Guard: If tool not available for this user
+  if (!tool) return [];
+
   const model = tool.model || DEFAULT_MODEL;
   
   // Optimization: Send simplified objects to save context tokens
@@ -166,7 +171,28 @@ export interface SandboxAnalysis {
 }
 
 export const analyzeSandboxItem = async (content: string, mentorId: string, config: AppConfig): Promise<SandboxAnalysis> => {
+  // CRASH GUARD: If mentors array is empty (restricted access), use a fallback or return error
+  if (!config.mentors || config.mentors.length === 0) {
+      return {
+          analysis: "Доступ к менторам ограничен.",
+          suggestedTask: "Обратитесь к владельцу.",
+          suggestedFlashcardFront: "N/A",
+          suggestedFlashcardBack: "N/A"
+      };
+  }
+
   const mentor = config.mentors.find(m => m.id === mentorId) || config.mentors[0];
+  
+  // Extra safety if mentors[0] is somehow undefined despite length check
+  if (!mentor) {
+      return {
+          analysis: "Ошибка конфигурации ментора.",
+          suggestedTask: "Error",
+          suggestedFlashcardFront: "Error",
+          suggestedFlashcardBack: "Error"
+      };
+  }
+
   const model = mentor.model || DEFAULT_MODEL;
   
   // Combine Core Library with Mentor Prompt
@@ -233,6 +259,9 @@ export const analyzeSandboxItem = async (content: string, mentorId: string, conf
 };
 
 export const generateTaskChallenge = async (taskContent: string, config: AppConfig): Promise<string> => {
+  // Guard: If restricted
+  if (!config.challengeAuthors || config.challengeAuthors.length === 0) return "Функция недоступна.";
+
   const author: Partial<ChallengeAuthor> = config.challengeAuthors[0] || { systemPrompt: 'Challenge the user.', model: DEFAULT_MODEL };
   const fullPrompt = `${author.systemPrompt}\n\n[CONTEXT LIBRARY]\n${config.coreLibrary}`;
   const model = author.model || DEFAULT_MODEL;
@@ -269,6 +298,9 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
 
 export const getKanbanTherapy = async (taskContent: string, state: 'stuck' | 'completed', config: AppConfig): Promise<string> => {
   const tool = getToolConfig('kanban_therapist', config);
+  
+  if (!tool) return "Консультант недоступен в данной конфигурации.";
+
   const fullPrompt = `${tool.systemPrompt}\n\n[CONTEXT LIBRARY]\n${config.coreLibrary}`;
   const model = tool.model || DEFAULT_MODEL;
 
@@ -316,6 +348,11 @@ export const generateJournalReflection = async (
   config: AppConfig
 ): Promise<JournalReflection> => {
   try {
+    // Guard: Check mentors
+    if (!config.mentors || config.mentors.length === 0) {
+        return { feedback: "", mentorId: "system" };
+    }
+
     // Select a random mentor for variety, or use a specific strategy
     const randomMentor = config.mentors[Math.floor(Math.random() * config.mentors.length)];
     const model = randomMentor.model || DEFAULT_MODEL;
