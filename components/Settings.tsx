@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AppConfig, Mentor, ChallengeAuthor, AIToolConfig, AccessControl } from '../types';
 import { AVAILABLE_ICONS, ICON_MAP, DEFAULT_AI_TOOLS, AVAILABLE_MODELS, DEFAULT_MODEL } from '../constants';
@@ -158,15 +157,89 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
   };
 
   const handleExportCode = () => {
-      const currentConfig: AppConfig = {
-          coreLibrary: localCore,
-          mentors: mentors,
-          challengeAuthors: authors,
-          aiTools: aiTools
-      };
-      const json = JSON.stringify(currentConfig, null, 2);
-      const codeBlock = `export const DEFAULT_CONFIG: AppConfig = ${json};`;
-      navigator.clipboard.writeText(codeBlock).then(() => {
+      // Create a complete content for constants.ts
+      const fileContent = `import React from 'react';
+import { AppConfig, AIToolConfig } from "./types";
+import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book } from 'lucide-react';
+
+// --- ICON REGISTRY ---
+export const ICON_MAP: Record<string, React.ElementType> = {
+  'BrainCircuit': BrainCircuit,
+  'ShieldAlert': ShieldAlert,
+  'Crown': Crown,
+  'BookOpen': BookOpen,
+  'Shield': Shield,
+  'Scroll': Scroll,
+  'Hourglass': Hourglass,
+  'Shapes': Shapes,
+  'Zap': Zap,
+  'Search': Search,
+  'Feather': Feather,
+  'User': User,
+  'Book': Book
+};
+
+export const AVAILABLE_ICONS = Object.keys(ICON_MAP);
+
+export const AVAILABLE_MODELS = [
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Preview)' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Fast & Cheap)' },
+  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Fastest)' },
+  { id: 'gemma-3-27b-it', name: 'Gemma 3 27b' },
+];
+
+export const DEFAULT_MODEL = 'gemma-3-27b-it';
+
+// --- DEFAULTS ---
+export const DEFAULT_CORE_LIBRARY = \`${localCore.replace(/`/g, '\\`')}\`;
+
+export const BASE_OUTPUT_INSTRUCTION = \`
+4. Вердикт (JSON Output):
+   - analysis: Глубокий анализ (2–3 предложения) в стиле выбранного ментора. Соблюдай редполитику (кавычки «», тире —).
+   - suggestedTask: Конкретное действие (Task) для Канбана. Должно быть выполнимым шагом.
+   - suggestedFlashcardFront: Концепт или Вопрос (Сторона А).
+   - suggestedFlashcardBack: Принцип или Ответ (Сторона Б).
+\`;
+
+export const DEFAULT_AI_TOOLS: AIToolConfig[] = ${JSON.stringify(aiTools, null, 2)};
+
+export const DEFAULT_CONFIG: AppConfig = {
+  "coreLibrary": DEFAULT_CORE_LIBRARY,
+  "mentors": ${JSON.stringify(mentors, null, 2)},
+  "challengeAuthors": ${JSON.stringify(authors, null, 2)},
+  "aiTools": DEFAULT_AI_TOOLS
+};
+
+export const applyTypography = (text: string): string => {
+  if (!text) return text;
+  let res = text;
+  
+  // 1. Hyphens to Em-dashes (space - space) -> (space — space)
+  res = res.replace(/(\\s)-(\\s)/g, '$1—$2');
+  
+  // 2. Quotes
+  // Open quote: start of line or whitespace/punctuation opening before it
+  res = res.replace(/(^|[\\s(\\[{])"/g, '$1«');
+  // Close quote: everything else
+  res = res.replace(/"/g, '»');
+  
+  // 3. Nested quotes: simple one-level fix
+  // Finds «...«...»...» and converts inner to „...“
+  const nestedPattern = /«([^»]*)«([^»]*)»([^»]*)»/g;
+  let prev = '';
+  // Repeat to handle multiple/sequential nested occurrences if regex overlaps allow, 
+  // though global replace handles non-overlapping well. 
+  // Loop ensures complex cases get treated.
+  while (res !== prev) {
+      prev = res;
+      res = res.replace(nestedPattern, '«$1„$2“$3»');
+  }
+
+  return res;
+};
+`;
+
+      navigator.clipboard.writeText(fileContent).then(() => {
           setCopyStatus(true);
           setTimeout(() => setCopyStatus(false), 2000);
       });
