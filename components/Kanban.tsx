@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare } from 'lucide-react';
 
 interface Props {
   tasks: Task[];
@@ -89,6 +90,73 @@ const CollapsibleSection: React.FC<{
       )}
     </div>
   );
+};
+
+// --- HELPER: CHECKLIST PARSING & INTERACTIVITY ---
+const getChallengeStats = (content: string) => {
+    const total = (content.match(/-\s\[[x ]\]/g) || []).length;
+    const checked = (content.match(/-\s\[x\]/g) || []).length;
+    return { total, checked, percent: total > 0 ? Math.round((checked / total) * 100) : 0 };
+};
+
+// Interactive Challenge Renderer
+// Splits markdown by lines to render checkboxes as real buttons, preserving other markdown context
+const InteractiveChallenge: React.FC<{ 
+    content: string, 
+    onToggle: (index: number) => void 
+}> = ({ content, onToggle }) => {
+    const lines = content.split('\n');
+    let checkboxIndex = 0;
+    
+    // Group non-checkbox lines to render them as proper markdown blocks
+    const renderedParts: React.ReactNode[] = [];
+    let textBuffer = '';
+
+    const flushBuffer = (keyPrefix: string) => {
+        if (textBuffer) {
+            renderedParts.push(
+                <div key={`${keyPrefix}-md`} className="text-xs leading-relaxed text-slate-900 mb-1 last:mb-0">
+                    <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
+                </div>
+            );
+            textBuffer = '';
+        }
+    };
+
+    lines.forEach((line, i) => {
+        const match = line.match(/^(\s*)-\s\[([ x])\]\s(.*)/);
+        if (match) {
+            // It's a checkbox line
+            flushBuffer(`line-${i}`);
+            
+            const currentIdx = checkboxIndex++;
+            const isChecked = match[2] === 'x';
+            const label = match[3];
+            const indent = match[1].length * 10; // Simple indentation approximate
+
+            renderedParts.push(
+                <button 
+                    key={`cb-${i}`}
+                    onClick={(e) => { e.stopPropagation(); onToggle(currentIdx); }}
+                    className="flex items-start gap-2 w-full text-left py-1 hover:bg-black/5 rounded group px-1 mb-0.5"
+                    style={{ marginLeft: `${indent}px` }}
+                >
+                    <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 group-hover:text-indigo-400'}`}>
+                        {isChecked ? <CheckSquare size={14} /> : <Square size={14} />}
+                    </div>
+                    <span className={`text-xs ${isChecked ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
+                    </span>
+                </button>
+            );
+        } else {
+            // It's normal text
+            textBuffer += line + '\n';
+        }
+    });
+    flushBuffer('end');
+
+    return <>{renderedParts}</>;
 };
 
 const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
@@ -291,6 +359,28 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       e.stopPropagation();
       updateTask({ ...task, isChallengeCompleted: !task.isChallengeCompleted });
   };
+
+  // Toggle internal checkbox items in the challenge string
+  const toggleChallengeCheckbox = (globalIndex: number, task: Task) => {
+      if (!task.activeChallenge) return;
+      
+      const lines = task.activeChallenge.split('\n');
+      let checkboxCounter = 0;
+      
+      const newLines = lines.map(line => {
+          if (line.trim().match(/^- \[[ x]\]/)) {
+              if (checkboxCounter === globalIndex) {
+                  const isChecked = line.includes('[x]');
+                  checkboxCounter++;
+                  return line.replace(isChecked ? '[x]' : '[ ]', isChecked ? '[ ]' : '[x]');
+              }
+              checkboxCounter++;
+          }
+          return line;
+      });
+      
+      updateTask({ ...task, activeChallenge: newLines.join('\n') });
+  };
   
   const moveToDoing = (e: React.MouseEvent, task: Task) => {
       e.stopPropagation();
@@ -335,6 +425,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                     if (task.isChallengeCompleted) { statusText = 'ЧЕЛЛЕНДЖ ВЫПОЛНЕН'; statusColor = 'text-emerald-600'; StatusIcon = CheckCircle2; }
                     else { statusText = 'ЧЕЛЛЕНДЖ АКТИВЕН'; statusColor = 'text-indigo-600'; StatusIcon = Zap; }
                 }
+
+                const challengeStats = task.activeChallenge ? getChallengeStats(task.activeChallenge) : { total: 0, checked: 0, percent: 0 };
                 
                 return (
                 <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-default relative group ${borderClass}`}>
@@ -360,11 +452,31 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                     {!hideExtraDetails && col.id === 'doing' && task.activeChallenge && !challengeDrafts[task.id] && (
                         <CollapsibleSection title="Челлендж" icon={<Zap size={12}/>} isCard>
                             <div className={`p-2 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
-                                <div className="flex justify-between items-start gap-2">
-                                    <div className="text-xs leading-relaxed text-slate-900">
-                                        <ReactMarkdown components={markdownComponents}>{task.activeChallenge}</ReactMarkdown>
+                                
+                                {/* PROGRESS BAR */}
+                                {challengeStats.total > 0 && (
+                                    <div className="mb-3 mt-1 px-1">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Прогресс</span>
+                                            <span className="text-[9px] font-bold text-indigo-500">{challengeStats.percent}%</span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-slate-200/60 rounded-full overflow-hidden">
+                                            <div 
+                                                className="h-full bg-indigo-500 transition-all duration-500 rounded-full" 
+                                                style={{ width: `${challengeStats.percent}%` }} 
+                                            />
+                                        </div>
                                     </div>
-                                    <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
+                                )}
+
+                                <div className="flex justify-between items-start gap-2">
+                                    <div className="w-full">
+                                        <InteractiveChallenge 
+                                            content={task.activeChallenge} 
+                                            onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
+                                        />
+                                    </div>
+                                    <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all mt-0.5 ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
                                 </div>
                                 {task.isChallengeCompleted && hasChallengeAuthors && (
                                     <button 
@@ -382,11 +494,30 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
 
                     {!hideExtraDetails && col.id === 'todo' && task.activeChallenge && !challengeDrafts[task.id] && (
                         <div className={`mt-2 mb-3 p-3 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
-                            <div className="flex justify-between items-start gap-2">
-                                <div className="text-xs leading-relaxed text-slate-900">
-                                    <ReactMarkdown components={markdownComponents}>{task.activeChallenge}</ReactMarkdown>
+                             {/* PROGRESS BAR */}
+                             {challengeStats.total > 0 && (
+                                <div className="mb-3 mt-1 px-1">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Прогресс</span>
+                                        <span className="text-[9px] font-bold text-indigo-500">{challengeStats.percent}%</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-200/60 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full bg-indigo-500 transition-all duration-500 rounded-full" 
+                                            style={{ width: `${challengeStats.percent}%` }} 
+                                        />
+                                    </div>
                                 </div>
-                                <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
+                             )}
+
+                            <div className="flex justify-between items-start gap-2">
+                                <div className="w-full">
+                                    <InteractiveChallenge 
+                                        content={task.activeChallenge} 
+                                        onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
+                                    />
+                                </div>
+                                <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all mt-0.5 ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
                             </div>
                             {task.isChallengeCompleted && hasChallengeAuthors && (
                                 <button 
@@ -572,11 +703,36 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             icon={<Zap size={14}/>}
                           >
                              <div className={`p-3 rounded-lg border ${getTaskForModal()?.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
-                                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${getTaskForModal()?.isChallengeCompleted ? 'text-emerald-600' : 'text-indigo-600'}`}>
+                                
+                                {getChallengeStats(getTaskForModal()?.activeChallenge || '').total > 0 && (
+                                     <div className="mb-4 bg-white/50 p-2 rounded-lg">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Прогресс</span>
+                                            <span className="text-[10px] font-bold text-indigo-500">{getChallengeStats(getTaskForModal()?.activeChallenge || '').percent}%</span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-slate-200/60 rounded-full overflow-hidden">
+                                            <div 
+                                                className="h-full bg-indigo-500 transition-all duration-500 rounded-full" 
+                                                style={{ width: `${getChallengeStats(getTaskForModal()?.activeChallenge || '').percent}%` }} 
+                                            />
+                                        </div>
+                                     </div>
+                                )}
+
+                                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-2 ${getTaskForModal()?.isChallengeCompleted ? 'text-emerald-600' : 'text-indigo-600'}`}>
                                    {getTaskForModal()?.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
                                 </span>
+                                
+                                {/* INTERACTIVE CHALLENGE IN MODAL */}
                                 <div className="text-sm leading-relaxed text-slate-900">
-                                  <ReactMarkdown components={markdownComponents}>{getTaskForModal()?.activeChallenge}</ReactMarkdown>
+                                  <InteractiveChallenge 
+                                    content={getTaskForModal()?.activeChallenge || ''} 
+                                    onToggle={(idx) => {
+                                        if (getTaskForModal()) {
+                                            toggleChallengeCheckbox(idx, getTaskForModal()!);
+                                        }
+                                    }} 
+                                  />
                                 </div>
                              </div>
                           </CollapsibleSection>
