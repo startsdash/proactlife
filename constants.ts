@@ -69,8 +69,8 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
     "systemPrompt": "Ты — эмпатичный куратор архива мыслей. \n    Пользователь опишет свое настроение или состояние.\n    Твоя задача: выбрать из предоставленного списка заметок те, которые наиболее резонируют, могут помочь, утешить или дать инсайт в этом состоянии.\n    Верни только ID выбранных заметок.",
     "model": "gemma-3-27b-it",
     "responseMimeType": "application/json",
-    "accessLevel": "public",
-    "isDisabled": false
+    "accessLevel": "owner_only",
+    "isDisabled": true
   },
   {
     "id": "kanban_therapist",
@@ -84,6 +84,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
 ];
 
 export const DEFAULT_CONFIG: AppConfig = {
+  "_version": 1766168365632,
   "coreLibrary": DEFAULT_CORE_LIBRARY,
   "mentors": [
   {
@@ -103,7 +104,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     "color": "text-emerald-600",
     "systemPrompt": "Ты Нассим Талеб. Фокус: Антихрупкость, Via Negativa, Шкура на кону. \n4. Вердикт (JSON Output):\n   - analysis: Глубокий анализ (2-3 предложения) в стиле выбранного ментора.\n   - suggestedTask: Конкретное действие (Task) для Канбана. Должно быть выполнимым шагом.\n   - suggestedFlashcardFront: Концепт или Вопрос (Сторона А).\n   - suggestedFlashcardBack: Принцип или Ответ (Сторона Б).\n",
     "model": "gemma-3-27b-it",
-    "accessLevel": "public"
+    "accessLevel": "owner_only"
   },
   {
     "id": "greene",
@@ -112,7 +113,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     "color": "text-amber-600",
     "systemPrompt": "Ты Роберт Грин. Фокус: Власть, Стратегия, Социальная динамика. \n4. Вердикт (JSON Output):\n   - analysis: Глубокий анализ (2-3 предложения) в стиле выбранного ментора.\n   - suggestedTask: Конкретное действие (Task) для Канбана. Должно быть выполнимым шагом.\n   - suggestedFlashcardFront: Концепт или Вопрос (Сторона А).\n   - suggestedFlashcardBack: Принцип или Ответ (Сторона Б).\n",
     "accessLevel": "owner_only",
-    "model": "gemini-2.5-flash"
+    "model": "gemini-2.5-flash",
+    "isDisabled": true
   },
   {
     "id": "bible",
