@@ -1,3 +1,4 @@
+
 import { AppState } from "../types";
 import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS } from "../constants";
 
@@ -19,14 +20,22 @@ export const loadState = (): AppState => {
     
     const parsed = JSON.parse(stored);
 
-    // Migration: Add Config if missing
-    if (!parsed.config || !parsed.config.mentors) {
-      parsed.config = DEFAULT_CONFIG;
-    }
-
-    // Migration: Add aiTools if missing
-    if (!parsed.config.aiTools) {
-      parsed.config.aiTools = DEFAULT_AI_TOOLS;
+    // --- CONFIGURATION HYDRATION LOGIC ---
+    // If the stored config version does not match the hardcoded DEFAULT_CONFIG version,
+    // we overwrite the stored config with the code version.
+    // This ensures that when the Owner updates constants.ts, all users get the new settings immediately.
+    // Use loose comparison to handle undefined/null
+    if (parsed.config?._version !== DEFAULT_CONFIG._version) {
+        // Force update config from code
+        parsed.config = DEFAULT_CONFIG;
+    } else {
+        // Fallbacks for legacy/local state if versions match (or both undefined)
+        if (!parsed.config || !parsed.config.mentors) {
+          parsed.config = DEFAULT_CONFIG;
+        }
+        if (!parsed.config.aiTools) {
+          parsed.config.aiTools = DEFAULT_AI_TOOLS;
+        }
     }
 
     // Migration: Notes status and TAGS

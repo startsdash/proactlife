@@ -148,6 +148,7 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
 
   const saveAll = () => {
     onUpdateConfig({
+      ...config, // Keep version if exists, or allow loadState to overwrite
       coreLibrary: localCore,
       mentors: mentors,
       challengeAuthors: authors,
@@ -157,6 +158,9 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
   };
 
   const handleExportCode = () => {
+      // GENERATE VERSION TIMESTAMP
+      const version = Date.now();
+
       // Create a complete content for constants.ts
       const fileContent = `import React from 'react';
 import { AppConfig, AIToolConfig } from "./types";
@@ -204,6 +208,7 @@ export const BASE_OUTPUT_INSTRUCTION = \`
 export const DEFAULT_AI_TOOLS: AIToolConfig[] = ${JSON.stringify(aiTools, null, 2)};
 
 export const DEFAULT_CONFIG: AppConfig = {
+  "_version": ${version},
   "coreLibrary": DEFAULT_CORE_LIBRARY,
   "mentors": ${JSON.stringify(mentors, null, 2)},
   "challengeAuthors": ${JSON.stringify(authors, null, 2)},

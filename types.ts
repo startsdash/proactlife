@@ -98,6 +98,7 @@ export interface AIToolConfig extends AccessControl {
 }
 
 export interface AppConfig {
+  _version?: number; // Configuration Version Timestamp
   coreLibrary: string;
   mentors: Mentor[];
   challengeAuthors: ChallengeAuthor[];
