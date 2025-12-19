@@ -320,7 +320,7 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
         <header className="mb-4 md:mb-6">
           <h1 className="text-2xl font-light text-slate-800 tracking-tight flex items-center gap-3">
             < Book className="text-slate-400" size={28} />
-            Дневник
+            Дневник <span className="text-slate-400 text-lg">/ Хроники пути</span>
           </h1>
           <p className="text-slate-500 mt-2 text-sm">Осмысление пути Героя.</p>
         </header>

@@ -506,7 +506,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
 
   return (
     <div className="h-full p-3 md:p-8 flex flex-col overflow-hidden relative">
-      <header className="mb-4 shrink-0"><h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight">Действия <span className="text-emerald-500 text-sm md:text-lg">/ Kanban</span></h1></header>
+      <header className="mb-4 shrink-0"><h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight">Действия <span className="text-emerald-500 text-sm md:text-lg">/ От слов к делу</span></h1></header>
       
       {/* FILTERS UI */}
       <div className="flex flex-wrap gap-2 mb-4 animate-in slide-in-from-top-2 shrink-0">

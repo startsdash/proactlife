@@ -515,7 +515,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     <div className="flex flex-col h-full max-w-4xl mx-auto p-3 md:p-8 space-y-4 md:space-y-6 relative overflow-y-auto">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
         <div>
-          <h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight">Салфетки <span className="text-slate-400 text-lg">/ Napkins</span></h1>
+          <h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight">Салфетки <span className="text-slate-400 text-lg">/ Лови момент</span></h1>
           <p className="text-slate-500 mt-1 md:mt-2 text-sm">Сбрось хаос мыслей.</p>
         </div>
         <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm shrink-0 self-start md:self-auto w-full md:w-auto">

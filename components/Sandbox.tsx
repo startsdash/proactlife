@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Note, Task, Flashcard, AppConfig } from '../types';
@@ -127,7 +126,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[#f8fafc]">
         <header className={`p-4 md:p-8 pb-0 shrink-0 ${selectedNoteId ? 'hidden md:block' : 'block'}`}>
-            <h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight">Песочница <span className="text-amber-500 text-base md:text-lg">/ The Sandbox</span></h1>
+            <h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight">Песочница <span className="text-amber-500 text-base md:text-lg">/ Лаборатория смыслов</span></h1>
             <p className="text-slate-500 mt-2 text-sm md:text-base">Верстак смыслов. Преврати хаос в порядок.</p>
         </header>
 
