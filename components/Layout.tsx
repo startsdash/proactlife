@@ -147,7 +147,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     ${!isDriveConnected ? 'hover:bg-indigo-50 cursor-pointer' : 'cursor-default'}
                     ${isExpanded ? 'justify-start' : 'justify-center'}
                 `} 
-                title={!isExpanded ? "Резервное копирование" : undefined}
+                title={!isExpanded ? "Cloud" : undefined}
              >
                 <div className="relative shrink-0">
                     <Cloud size={20} className={isDriveConnected ? 'text-indigo-500' : 'text-slate-400'} />
@@ -155,8 +155,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                 </div>
                 
                 <div className={`ml-3 flex flex-col items-start overflow-hidden transition-all duration-300 ${isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 h-0'}`}>
-                    <span className="text-sm font-medium text-slate-700 whitespace-nowrap">Backup</span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wide whitespace-nowrap">{syncStatus === 'synced' ? 'Saved' : 'Connect'}</span>
+                    <span className="text-sm font-medium text-slate-700 whitespace-nowrap">Cloud</span>
                 </div>
              </button>
 
