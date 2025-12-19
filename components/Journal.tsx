@@ -267,7 +267,7 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
                {task.column === 'done' ? 'Сделано' : 'В процессе'}
                {task.isArchived && " (В архиве)"}
             </div>
-            <p className="truncate italic font-medium">"{task.content}"</p>
+            <p className="truncate font-medium text-slate-800">{task.content}</p>
          </div>
          <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
              <Eye size={16} className="text-current opacity-50" />
@@ -543,7 +543,7 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
                                     {viewingTask.isArchived && " (В архиве)"}
                             </span>
                         </div>
-                        <div className="text-base text-slate-800 font-medium leading-relaxed">
+                        <div className="text-base text-slate-800 font-normal leading-relaxed">
                             <ReactMarkdown components={markdownComponents}>{viewingTask.content}</ReactMarkdown>
                         </div>
                     </div>

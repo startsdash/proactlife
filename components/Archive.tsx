@@ -123,8 +123,8 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                   </span>
                 </div>
 
-                <div className="text-slate-700 text-sm font-medium leading-relaxed mb-4 line-clamp-4">
-                  {task.content}
+                <div className="text-slate-800 text-sm font-normal leading-relaxed mb-4 line-clamp-4">
+                  <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
                 </div>
 
                 {task.description && (
@@ -176,7 +176,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                 <div className="space-y-4">
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-4">
                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Задача</span>
-                         <div className="text-base text-slate-800 font-medium leading-relaxed">
+                         <div className="text-base text-slate-800 font-normal leading-relaxed">
                             <ReactMarkdown components={markdownComponents}>{selectedTask.content}</ReactMarkdown>
                          </div>
                     </div>
