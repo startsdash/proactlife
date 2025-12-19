@@ -1,10 +1,9 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Note, Task, Flashcard, AppConfig } from '../types';
 import { analyzeSandboxItem, SandboxAnalysis } from '../services/geminiService';
 import { ICON_MAP } from '../constants';
-import { CheckSquare, Library, Loader2, Quote, BrainCircuit, ArrowLeft, Tag, Archive, Trash2, Dumbbell, Lock } from 'lucide-react';
+import { CheckSquare, Library, Loader2, Quote, BrainCircuit, ArrowLeft, Tag, Archive, Trash2, Dumbbell } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -54,18 +53,10 @@ const markdownComponents = {
 };
 
 const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onAddFlashcard, deleteNote }) => {
-  // UseMemo to safely access the first mentor ID if available
-  const defaultMentorId = useMemo(() => config.mentors && config.mentors.length > 0 ? config.mentors[0].id : '', [config.mentors]);
-  
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<SandboxAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [mentorId, setMentorId] = useState<string>(defaultMentorId);
-
-  // Safety check: if mentors change (e.g. login/logout), update selection
-  if (config.mentors.length > 0 && (!mentorId || !config.mentors.find(m => m.id === mentorId))) {
-      setMentorId(config.mentors[0].id);
-  }
+  const [mentorId, setMentorId] = useState<string>(config.mentors[0]?.id || 'peterson');
 
   const incomingNotes = notes.filter(n => n.status === 'sandbox');
 
@@ -131,7 +122,6 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
   };
 
   const currentMentor = config.mentors.find(m => m.id === mentorId);
-  const hasMentors = config.mentors.length > 0;
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[#f8fafc]">
@@ -177,11 +167,6 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                             </div>
                         </div>
                     ))}
-                    {incomingNotes.length === 0 && (
-                        <div className="text-center py-10 text-slate-400 text-sm">
-                            Здесь пусто. Перенесите заметку из раздела «Салфетки».
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -214,28 +199,18 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                         
                         {!isAnalyzing && !analysis && (
                             <div className="mb-8 animate-in fade-in slide-in-from-top-4 mt-8 md:mt-0">
-                                {hasMentors ? (
-                                    <>
-                                        <h3 className="text-center text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">Выбери ИИ-ментора</h3>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                            {config.mentors.map(m => (
-                                                <button key={m.id} onClick={() => setMentorId(m.id)} className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${mentorId === m.id ? `bg-slate-50 border-slate-400 ring-1 ring-slate-200` : 'bg-white border-slate-100 hover:border-slate-300 hover:shadow-sm'}`}>
-                                                    <RenderIcon name={m.icon} className={`mb-2 ${mentorId === m.id ? m.color : 'text-slate-400'}`} />
-                                                    <span className={`text-xs font-medium ${mentorId === m.id ? 'text-slate-800' : 'text-slate-500'}`}>{m.name}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <button onClick={handleAnalyze} className="w-full mt-6 py-3 bg-slate-900 text-white rounded-xl font-medium text-sm hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-slate-200">
-                                            <BrainCircuit size={18} /> Начать анализ
+                                <h3 className="text-center text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">Выбери ИИ-ментора</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    {config.mentors.map(m => (
+                                        <button key={m.id} onClick={() => setMentorId(m.id)} className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${mentorId === m.id ? `bg-slate-50 border-slate-400 ring-1 ring-slate-200` : 'bg-white border-slate-100 hover:border-slate-300 hover:shadow-sm'}`}>
+                                            <RenderIcon name={m.icon} className={`mb-2 ${mentorId === m.id ? m.color : 'text-slate-400'}`} />
+                                            <span className={`text-xs font-medium ${mentorId === m.id ? 'text-slate-800' : 'text-slate-500'}`}>{m.name}</span>
                                         </button>
-                                    </>
-                                ) : (
-                                    <div className="text-center py-10">
-                                        <Lock size={48} className="mx-auto text-slate-200 mb-4" />
-                                        <h3 className="text-slate-600 font-bold">Доступ ограничен</h3>
-                                        <p className="text-sm text-slate-400 mt-2">Владелец ограничил доступ к менторам. Вы можете обрабатывать заметки вручную или связаться с владельцем.</p>
-                                    </div>
-                                )}
+                                    ))}
+                                </div>
+                                <button onClick={handleAnalyze} className="w-full mt-6 py-3 bg-slate-900 text-white rounded-xl font-medium text-sm hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-slate-200">
+                                    <BrainCircuit size={18} /> Начать анализ
+                                </button>
                             </div>
                         )}
 
@@ -244,14 +219,14 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                                 <Loader2 className="animate-spin text-amber-500" size={48} />
                                 <div className="text-center">
                                     <p className="text-slate-600 font-medium">Консилиум анализирует идею…</p>
-                                    <p className="text-xs text-amber-600 mt-1 font-mono uppercase tracking-wide">Mode: {currentMentor?.name || 'System'}</p>
+                                    <p className="text-xs text-amber-600 mt-1 font-mono uppercase tracking-wide">Mode: {currentMentor?.name}</p>
                                 </div>
                             </div>
                         ) : analysis ? (
                             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 mt-6 md:mt-0">
                                 <div className="flex justify-between items-center pr-24">
                                     <button onClick={() => setAnalysis(null)} className="text-xs text-slate-400 hover:text-slate-600 underline">Сменить ментора</button>
-                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-slate-100 ${currentMentor?.color}`}>{currentMentor?.name || 'AI'} Mode</span>
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-slate-100 ${currentMentor?.color}`}>{currentMentor?.name} Mode</span>
                                 </div>
                                 <div className="bg-slate-50 rounded-xl p-5 border-l-4 border-slate-800">
                                     <h4 className="flex items-center gap-2 text-slate-800 font-bold mb-3 text-[10px] uppercase tracking-wider"><Quote size={16} className="text-amber-600" /> Анализ смысла</h4>

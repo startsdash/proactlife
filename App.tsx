@@ -83,23 +83,12 @@ const App: React.FC = () => {
           const driveData = await loadFromDrive();
           if (driveData) {
               isHydratingRef.current = true;
-              
-              // Ensure config object exists, but do NOT overwrite empty arrays if that's what the owner intended.
               if (!driveData.config) driveData.config = DEFAULT_CONFIG;
               if (!driveData.journal) driveData.journal = [];
               
-              // Technical robustness: ensure arrays are at least empty arrays, not undefined
-              if (!driveData.config.mentors) driveData.config.mentors = []; 
-              if (!driveData.config.challengeAuthors) driveData.config.challengeAuthors = [];
-              if (!driveData.config.aiTools) driveData.config.aiTools = [];
-
               setData(prev => ({...driveData, user: prev.user})); 
               saveState(driveData);
               setTimeout(() => { isHydratingRef.current = false; }, 100);
-          } else if (isStartup) {
-              // New user (no backup file found) -> Keep default config (which is strict)
-              // But ensure local defaults are robust
-              if (!data.config.mentors) setData(prev => ({...prev, config: {...prev.config, mentors: []}}));
           }
           setHasLoadedFromCloud(true);
           setSyncStatus('synced');
@@ -218,20 +207,15 @@ const App: React.FC = () => {
 
   const visibleConfig = useMemo(() => {
     const mergeWithDefaults = <T extends { id: string }>(userItems: T[], defaultItems: T[]): T[] => {
-      const safeUserItems = userItems || [];
-      const userIds = new Set(safeUserItems.map(i => i.id));
+      const userIds = new Set(userItems.map(i => i.id));
       const missingDefaults = defaultItems.filter(d => !userIds.has(d.id));
-      return [...safeUserItems, ...missingDefaults];
+      return [...userItems, ...missingDefaults];
     };
-
-    // Ensure config exists (fallback for very early render cycles or partial state)
-    const config = data.config || DEFAULT_CONFIG;
-
     const reconciledConfig: AppConfig = {
-        ...config,
-        mentors: mergeWithDefaults(config.mentors, DEFAULT_CONFIG.mentors),
-        challengeAuthors: mergeWithDefaults(config.challengeAuthors, DEFAULT_CONFIG.challengeAuthors),
-        aiTools: mergeWithDefaults(config.aiTools, DEFAULT_CONFIG.aiTools)
+        ...data.config,
+        mentors: mergeWithDefaults(data.config.mentors, DEFAULT_CONFIG.mentors),
+        challengeAuthors: mergeWithDefaults(data.config.challengeAuthors, DEFAULT_CONFIG.challengeAuthors),
+        aiTools: mergeWithDefaults(data.config.aiTools, DEFAULT_CONFIG.aiTools)
     };
 
     // Filter Logic:

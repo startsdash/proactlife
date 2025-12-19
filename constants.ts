@@ -1,9 +1,8 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { AppConfig, AIToolConfig } from "./types";
 import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book } from 'lucide-react';
 
-export const APP_VERSION = '2.0.2';
+export const APP_VERSION = '2.0.0';
 
 // --- ICON REGISTRY ---
 export const ICON_MAP: Record<string, React.ElementType> = {
@@ -87,7 +86,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
 ];
 
 export const DEFAULT_CONFIG: AppConfig = {
-  "_version": 1766168365634,
+  "_version": 1766168365632,
   "coreLibrary": DEFAULT_CORE_LIBRARY,
   "mentors": [
   {
