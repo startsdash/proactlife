@@ -1,6 +1,6 @@
 
 import { AppState } from "../types";
-import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS } from "../constants";
+import { DEFAULT_CONFIG } from "../constants";
 
 const KEY = 'live_act_pro_db_v1';
 
@@ -20,23 +20,19 @@ export const loadState = (): AppState => {
     
     const parsed = JSON.parse(stored);
 
-    // --- CONFIGURATION HYDRATION LOGIC ---
-    // If the stored config version does not match the hardcoded DEFAULT_CONFIG version,
-    // we overwrite the stored config with the code version.
-    // This ensures that when the Owner updates constants.ts, all users get the new settings immediately.
-    // Use loose comparison to handle undefined/null
-    if (parsed.config?._version !== DEFAULT_CONFIG._version) {
-        // Force update config from code
+    // --- CONFIGURATION HYDRATION STRATEGY: CODE-FIRST ---
+    // The code in `constants.ts` (DEFAULT_CONFIG) is the Single Source of Truth for structure.
+    // If the version in code is different from the version in storage, we BLOW AWAY the stored config
+    // and replace it with the code config. This prevents "ghost" items and duplication.
+    
+    // Check if config exists or version mismatch
+    if (!parsed.config || parsed.config._version !== DEFAULT_CONFIG._version) {
+        console.log(`Config Version Mismatch or Missing. Hydrating from constants.ts (v${DEFAULT_CONFIG._version})`);
+        // Hard Reset of Configuration
         parsed.config = DEFAULT_CONFIG;
-    } else {
-        // Fallbacks for legacy/local state if versions match (or both undefined)
-        if (!parsed.config || !parsed.config.mentors) {
-          parsed.config = DEFAULT_CONFIG;
-        }
-        if (!parsed.config.aiTools) {
-          parsed.config.aiTools = DEFAULT_AI_TOOLS;
-        }
-    }
+    } 
+    // If versions match, we trust the LocalStorage (allows for local dev testing without re-pasting constantly),
+    // BUT in a production deployment, you typically bump the version in constants.ts, forcing a refresh for everyone.
 
     // Migration: Notes status and TAGS
     if (parsed.notes) {

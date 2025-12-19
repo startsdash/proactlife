@@ -83,7 +83,15 @@ const App: React.FC = () => {
           const driveData = await loadFromDrive();
           if (driveData) {
               isHydratingRef.current = true;
-              if (!driveData.config) driveData.config = DEFAULT_CONFIG;
+              
+              // CONFIG HYDRATION:
+              // Even from Drive, we respect the Code Version.
+              // If Code Version is newer, we ignore Drive Config and use Code Config.
+              if (!driveData.config || driveData.config._version !== DEFAULT_CONFIG._version) {
+                  console.log("Drive Config outdated. Using Code Config.");
+                  driveData.config = DEFAULT_CONFIG;
+              }
+
               if (!driveData.journal) driveData.journal = [];
               
               setData(prev => ({...driveData, user: prev.user})); 
@@ -212,46 +220,39 @@ const App: React.FC = () => {
   };
 
   const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
+  
+  // OWNER CHECK
   const isOwner = data.user?.email === OWNER_EMAIL;
 
   const visibleConfig = useMemo(() => {
-    const mergeWithDefaults = <T extends { id: string }>(userItems: T[], defaultItems: T[]): T[] => {
-      const userIds = new Set(userItems.map(i => i.id));
-      const missingDefaults = defaultItems.filter(d => !userIds.has(d.id));
-      return [...userItems, ...missingDefaults];
-    };
-    const reconciledConfig: AppConfig = {
-        ...data.config,
-        mentors: mergeWithDefaults(data.config.mentors, DEFAULT_CONFIG.mentors),
-        challengeAuthors: mergeWithDefaults(data.config.challengeAuthors, DEFAULT_CONFIG.challengeAuthors),
-        aiTools: mergeWithDefaults(data.config.aiTools, DEFAULT_CONFIG.aiTools)
-    };
-
-    // Filter Logic:
-    // 1. Check if disabled globally (applies to owner too in the main app, but owner sees them in Settings)
-    // 2. Check access control (Owner only vs Restricted vs Public)
-    
+    // We DO NOT merge with defaults here anymore.
+    // The data.config (hydrated in storageService) IS the single source of truth.
+    // This prevents duplication of items that exist in both Code and LocalStorage.
+    const configToFilter = data.config;
     const currentUserEmail = data.user?.email || '';
 
     const isVisible = (item: AccessControl) => {
-       // Global Soft Delete Switch: If disabled, it's hidden for EVERYONE in the main UI
+       // 1. Global Disable Switch
        if (item.isDisabled) return false;
 
-       // Access Control
-       if (isOwner) return true; // Owner sees everything that isn't disabled
+       // 2. Owner Override
+       if (isOwner) return true;
        
+       // 3. Access Level Checks for Non-Owners
        const level = item.accessLevel || 'public';
+       
        if (level === 'public') return true;
-       if (level === 'owner_only') return false;
+       if (level === 'owner_only') return false; // STRICTLY HIDDEN
        if (level === 'restricted') return item.allowedEmails?.includes(currentUserEmail) || false;
+       
        return true;
     };
 
     return {
-      ...reconciledConfig,
-      mentors: reconciledConfig.mentors.filter(isVisible),
-      challengeAuthors: reconciledConfig.challengeAuthors.filter(isVisible),
-      aiTools: reconciledConfig.aiTools.filter(isVisible),
+      ...configToFilter,
+      mentors: (configToFilter.mentors || []).filter(isVisible),
+      challengeAuthors: (configToFilter.challengeAuthors || []).filter(isVisible),
+      aiTools: (configToFilter.aiTools || []).filter(isVisible),
     };
   }, [data.config, isOwner, data.user]);
 
