@@ -670,10 +670,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                     <button 
                         onClick={startOracle}
-                        className="p-2 rounded-xl border transition-all bg-white border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200"
+                        className="group relative p-2 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200"
                         title="Оракул Смыслов"
                     >
-                        <Dices size={18} />
+                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
+                        <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+                        <Dices size={18} className="relative z-10 text-white transition-transform duration-500 group-hover:rotate-180" />
                     </button>
                 </>
             )}
