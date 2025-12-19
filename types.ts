@@ -6,7 +6,8 @@ export enum Module {
   KANBAN = 'kanban',
   JOURNAL = 'journal',
   ARCHIVE = 'archive',
-  SETTINGS = 'settings',
+  SETTINGS = 'settings', // Owner Settings
+  USER_SETTINGS = 'user_settings', // User Settings
   LEARNING = 'learning'
 }
 

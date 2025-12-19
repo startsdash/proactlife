@@ -2,6 +2,8 @@ import React from 'react';
 import { AppConfig, AIToolConfig } from "./types";
 import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book } from 'lucide-react';
 
+export const APP_VERSION = '2.0.0';
+
 // --- ICON REGISTRY ---
 export const ICON_MAP: Record<string, React.ElementType> = {
   'BrainCircuit': BrainCircuit,
