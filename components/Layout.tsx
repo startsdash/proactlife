@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, History, Book, GraduationCap, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, UserCog, Crown } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, History, Book, GraduationCap, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 interface Props {
   currentModule: Module;
@@ -139,7 +138,6 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
 
         {/* FOOTER ACTIONS */}
         <div className="p-3 space-y-2 border-t border-slate-100 bg-slate-50/30">
-             {/* BACKUP BUTTON */}
              <button 
                 onClick={!isDriveConnected ? onConnectDrive : undefined} 
                 disabled={isDriveConnected && syncStatus === 'synced'} 
@@ -161,21 +159,6 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                 </div>
              </button>
 
-             {/* USER SETTINGS (For Everyone) */}
-             <button 
-                onClick={() => setModule(Module.USER_SETTINGS)} 
-                className={`
-                    w-full flex items-center p-3 rounded-xl transition-all duration-200
-                    ${currentModule === Module.USER_SETTINGS ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:text-slate-600'}
-                    ${isExpanded ? 'justify-start' : 'justify-center'}
-                `}
-                title={!isExpanded ? "Настройки" : undefined}
-               >
-                  <Settings size={20} className="shrink-0" />
-                  <span className={`ml-3 text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0'}`}>Настройки</span>
-             </button>
-
-             {/* OWNER SETTINGS (For Owner Only, displayed below user settings) */}
              {isOwner && (
                <button 
                 onClick={() => setModule(Module.SETTINGS)} 
@@ -184,9 +167,9 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     ${currentModule === Module.SETTINGS ? 'bg-slate-100 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}
                     ${isExpanded ? 'justify-start' : 'justify-center'}
                 `}
-                title={!isExpanded ? "Владелец" : undefined}
+                title={!isExpanded ? "Настройки Владельца" : undefined}
                >
-                  <Crown size={20} className="shrink-0" />
+                  <Settings size={20} className="shrink-0" />
                   <span className={`ml-3 text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0'}`}>Владелец</span>
                </button>
              )}
