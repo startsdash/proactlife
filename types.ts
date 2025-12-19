@@ -69,6 +69,7 @@ export type AccessLevel = 'public' | 'owner_only' | 'restricted';
 export interface AccessControl {
   accessLevel?: AccessLevel;
   allowedEmails?: string[];
+  isDisabled?: boolean; // Global "Soft Delete" switch
 }
 
 export interface Mentor extends AccessControl {

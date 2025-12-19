@@ -211,20 +211,32 @@ const App: React.FC = () => {
         challengeAuthors: mergeWithDefaults(data.config.challengeAuthors, DEFAULT_CONFIG.challengeAuthors),
         aiTools: mergeWithDefaults(data.config.aiTools, DEFAULT_CONFIG.aiTools)
     };
-    if (isOwner) return reconciledConfig;
+
+    // Filter Logic:
+    // 1. Check if disabled globally (applies to owner too in the main app, but owner sees them in Settings)
+    // 2. Check access control (Owner only vs Restricted vs Public)
+    
     const currentUserEmail = data.user?.email || '';
-    const hasAccess = (item: AccessControl) => {
+
+    const isVisible = (item: AccessControl) => {
+       // Global Soft Delete Switch: If disabled, it's hidden for EVERYONE in the main UI
+       if (item.isDisabled) return false;
+
+       // Access Control
+       if (isOwner) return true; // Owner sees everything that isn't disabled
+       
        const level = item.accessLevel || 'public';
        if (level === 'public') return true;
        if (level === 'owner_only') return false;
        if (level === 'restricted') return item.allowedEmails?.includes(currentUserEmail) || false;
        return true;
     };
+
     return {
       ...reconciledConfig,
-      mentors: reconciledConfig.mentors.filter(hasAccess),
-      challengeAuthors: reconciledConfig.challengeAuthors.filter(hasAccess),
-      aiTools: reconciledConfig.aiTools.filter(hasAccess),
+      mentors: reconciledConfig.mentors.filter(isVisible),
+      challengeAuthors: reconciledConfig.challengeAuthors.filter(isVisible),
+      aiTools: reconciledConfig.aiTools.filter(isVisible),
     };
   }, [data.config, isOwner, data.user]);
 

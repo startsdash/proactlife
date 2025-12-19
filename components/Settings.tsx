@@ -2,13 +2,39 @@
 import React, { useState } from 'react';
 import { AppConfig, Mentor, ChallengeAuthor, AIToolConfig, AccessControl } from '../types';
 import { AVAILABLE_ICONS, ICON_MAP, DEFAULT_AI_TOOLS, AVAILABLE_MODELS, DEFAULT_MODEL } from '../constants';
-import { Save, Plus, Trash2, Edit3, X, Database, Users, Zap, Bot, Cpu, FileJson, FileType, Shield, Lock, Globe, Code, Copy, Check, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Save, Plus, Trash2, Edit3, X, Database, Users, Zap, Bot, Cpu, FileJson, FileType, Shield, Lock, Globe, Code, Copy, Check, ArrowLeft, ChevronRight, Eye, EyeOff } from 'lucide-react';
 
 interface Props {
   config: AppConfig;
   onUpdateConfig: (config: AppConfig) => void;
   onClose?: () => void; // Added onClose to support modal-like closing
 }
+
+// --- HELPER COMPONENT: STATUS TOGGLE ---
+const StatusToggle = ({ isDisabled, onChange }: { isDisabled?: boolean, onChange: (val: boolean) => void }) => {
+  return (
+    <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between mb-4 shadow-sm">
+        <div className="flex items-center gap-2">
+            {isDisabled ? <EyeOff size={20} className="text-slate-400" /> : <Eye size={20} className="text-emerald-500" />}
+            <div>
+                <div className="text-sm font-bold text-slate-800">{isDisabled ? 'Отключено' : 'Активно'}</div>
+                <div className="text-[10px] text-slate-500">
+                    {isDisabled ? 'Скрыто из интерфейса приложения' : 'Доступно для использования'}
+                </div>
+            </div>
+        </div>
+        <label className="relative inline-flex items-center cursor-pointer">
+            <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={!isDisabled} 
+                onChange={(e) => onChange(!e.target.checked)} 
+            />
+            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+        </label>
+    </div>
+  );
+};
 
 // --- ACCESS CONTROL COMPONENT ---
 const AccessControlEditor = ({ data, onChange }: { data: AccessControl, onChange: (d: AccessControl) => void }) => {
@@ -285,7 +311,7 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
               <div className={`${editingMentor ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-slate-100 flex-col overflow-y-auto p-4 space-y-2 bg-slate-50/50`}>
                 <button 
                   onClick={() => {
-                    setEditingMentor({ id: Date.now().toString(), name: 'Новый Ментор', icon: 'User', color: 'text-slate-600', systemPrompt: '', model: DEFAULT_MODEL, accessLevel: 'public' });
+                    setEditingMentor({ id: Date.now().toString(), name: 'Новый Ментор', icon: 'User', color: 'text-slate-600', systemPrompt: '', model: DEFAULT_MODEL, accessLevel: 'public', isDisabled: false });
                     setIsNewMentor(true);
                   }}
                   className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-medium hover:border-indigo-300 hover:text-indigo-500 flex items-center justify-center gap-2 transition-colors bg-white/50"
@@ -293,13 +319,13 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
                   <Plus size={18} /> Добавить
                 </button>
                 {mentors.map(m => (
-                  <div key={m.id} onClick={() => { setEditingMentor(m); setIsNewMentor(false); }} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center gap-3 ${editingMentor?.id === m.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100 hover:shadow-sm'}`}>
+                  <div key={m.id} onClick={() => { setEditingMentor(m); setIsNewMentor(false); }} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center gap-3 ${editingMentor?.id === m.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100 hover:shadow-sm'} ${m.isDisabled ? 'opacity-60' : ''}`}>
                     <div className={`p-2.5 rounded-xl bg-slate-50 ${m.color}`}>
                       <RenderIcon name={m.icon} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center">
-                          <div className="font-bold text-slate-700 truncate">{m.name}</div>
+                          <div className={`font-bold truncate ${m.isDisabled ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{m.name}</div>
                           <ChevronRight size={14} className="text-slate-300 md:hidden" />
                       </div>
                       <div className="text-[10px] text-slate-400 uppercase font-mono tracking-tight">{m.model || DEFAULT_MODEL}</div>
@@ -325,6 +351,8 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
                         </button>
                       )}
                     </div>
+                    
+                    <StatusToggle isDisabled={editingMentor.isDisabled} onChange={(val) => setEditingMentor({...editingMentor, isDisabled: val})} />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -386,7 +414,7 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
                <div className={`${editingAuthor ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-slate-100 flex-col overflow-y-auto p-4 space-y-2 bg-slate-50/50`}>
                 <button 
                   onClick={() => {
-                    setEditingAuthor({ id: Date.now().toString(), name: 'Новый Автор', systemPrompt: '', model: DEFAULT_MODEL, accessLevel: 'public' });
+                    setEditingAuthor({ id: Date.now().toString(), name: 'Новый Автор', systemPrompt: '', model: DEFAULT_MODEL, accessLevel: 'public', isDisabled: false });
                     setIsNewAuthor(true);
                   }}
                   className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-medium hover:border-indigo-300 hover:text-indigo-500 flex items-center justify-center gap-2 transition-colors bg-white/50"
@@ -394,10 +422,10 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
                   <Plus size={18} /> Добавить
                 </button>
                 {authors.map(a => (
-                  <div key={a.id} onClick={() => { setEditingAuthor(a); setIsNewAuthor(false); }} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center gap-3 ${editingAuthor?.id === a.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'}`}>
+                  <div key={a.id} onClick={() => { setEditingAuthor(a); setIsNewAuthor(false); }} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center gap-3 ${editingAuthor?.id === a.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'} ${a.isDisabled ? 'opacity-60' : ''}`}>
                       <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-center mb-1">
-                              <div className="font-bold text-slate-700">{a.name}</div>
+                              <div className={`font-bold ${a.isDisabled ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{a.name}</div>
                               <ChevronRight size={14} className="text-slate-300 md:hidden" />
                           </div>
                           <div className="text-[10px] text-slate-400 uppercase font-mono">{a.model || DEFAULT_MODEL}</div>
@@ -422,6 +450,9 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
                         </button>
                       )}
                     </div>
+                    
+                    <StatusToggle isDisabled={editingAuthor.isDisabled} onChange={(val) => setEditingAuthor({...editingAuthor, isDisabled: val})} />
+
                     <div>
                         <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Имя</label>
                         <input className="w-full p-3 md:p-2 border rounded-xl md:rounded-lg bg-slate-50" value={editingAuthor.name} onChange={(e) => setEditingAuthor({...editingAuthor, name: e.target.value})} />
@@ -463,9 +494,9 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
                <div className={`${editingTool ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-slate-100 flex-col overflow-y-auto p-4 space-y-2 bg-slate-50/50`}>
                 <div className="px-2 py-1 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Системные Генераторы</div>
                 {aiTools.map(t => (
-                  <div key={t.id} onClick={() => setEditingTool(t)} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${editingTool?.id === t.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'}`}>
+                  <div key={t.id} onClick={() => setEditingTool(t)} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${editingTool?.id === t.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'} ${t.isDisabled ? 'opacity-60' : ''}`}>
                       <div className="flex-1 min-w-0">
-                          <div className="font-bold text-slate-700 text-sm mb-1">{t.name}</div>
+                          <div className={`font-bold text-sm mb-1 ${t.isDisabled ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{t.name}</div>
                           <div className="text-[10px] text-indigo-400 font-mono">{t.model || DEFAULT_MODEL}</div>
                       </div>
                       <ChevronRight size={14} className="text-slate-300 md:hidden" />
@@ -485,6 +516,9 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
                       </div>
                       <div className="text-[10px] text-slate-400 font-mono">ID: {editingTool.id}</div>
                     </div>
+                    
+                    <StatusToggle isDisabled={editingTool.isDisabled} onChange={(val) => setEditingTool({...editingTool, isDisabled: val})} />
+
                     <div>
                         <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Название (UI)</label>
                         <input className="w-full p-3 md:p-2 border rounded-xl md:rounded-lg bg-slate-50" value={editingTool.name} onChange={(e) => setEditingTool({...editingTool, name: e.target.value})} />
