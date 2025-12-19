@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Note, AppConfig, Task } from '../types';
-import { findNotesByMood } from '../services/geminiService';
+import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban } from 'lucide-react';
 
@@ -220,6 +220,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       return Array.from(uniqueTagsMap.values()).sort();
   }, [notes]);
 
+  // Check Availability of Tools
+  const hasMoodMatcher = useMemo(() => config.aiTools.some(t => t.id === 'mood_matcher'), [config.aiTools]);
+  const hasTagger = useMemo(() => config.aiTools.some(t => t.id === 'tagger'), [config.aiTools]);
+
   const handleDump = async () => {
     if (!input.trim()) return;
     setIsProcessing(true);
@@ -227,13 +231,19 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     // Simulate slight delay for visual feedback
     await new Promise(resolve => setTimeout(resolve, 600));
 
+    // Auto-Tagging (Only if tool is available)
+    let autoTags: string[] = [];
+    if (hasTagger && creationTags.length === 0) {
+        autoTags = await autoTagNote(input, config);
+    }
+
     // APPLY TYPOGRAPHY
     const formattedContent = applyTypography(input);
 
     const newNote: Note = {
       id: Date.now().toString(),
       content: formattedContent,
-      tags: creationTags, // Use the array directly
+      tags: [...creationTags, ...autoTags], // Use the array directly
       createdAt: Date.now(),
       status: 'inbox',
       color: 'white',
@@ -607,13 +617,15 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         <Palette size={18} />
                     </button>
 
-                    <button 
-                        onClick={() => setShowMoodInput(true)}
-                        className={`p-2 rounded-xl border transition-all ${aiFilteredIds !== null ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-white border-slate-200 text-slate-400 hover:text-purple-500 hover:border-purple-200'}`}
-                        title="Подбор по теме (AI)"
-                    >
-                        <Sparkles size={18} />
-                    </button>
+                    {hasMoodMatcher && (
+                        <button 
+                            onClick={() => setShowMoodInput(true)}
+                            className={`p-2 rounded-xl border transition-all ${aiFilteredIds !== null ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-white border-slate-200 text-slate-400 hover:text-purple-500 hover:border-purple-200'}`}
+                            title="Подбор по теме (AI)"
+                        >
+                            <Sparkles size={18} />
+                        </button>
+                    )}
                 </>
             )}
          </div>

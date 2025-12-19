@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
@@ -105,6 +105,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
   
   // Sorting State - Removed 'manual', default is 'desc'
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
+  // Check Availability
+  const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
+  const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
 
   // Base list of active tasks (Not archived)
   const baseActiveTasks = tasks.filter(t => !t.isArchived);
@@ -362,7 +366,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                     </div>
                                     <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
                                 </div>
-                                {task.isChallengeCompleted && (
+                                {task.isChallengeCompleted && hasChallengeAuthors && (
                                     <button 
                                         onClick={(e) => generateChallenge(e, task.id, task.content)} 
                                         disabled={generatingChallengeFor === task.id}
@@ -384,7 +388,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                 </div>
                                 <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
                             </div>
-                            {task.isChallengeCompleted && (
+                            {task.isChallengeCompleted && hasChallengeAuthors && (
                                 <button 
                                     onClick={(e) => generateChallenge(e, task.id, task.content)} 
                                     disabled={generatingChallengeFor === task.id}
@@ -433,7 +437,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                     <Book size={18} />
                                </button>
 
-                               {!challengeDrafts[task.id] && (
+                               {!challengeDrafts[task.id] && hasChallengeAuthors && (
                                    <button 
                                         onClick={(e) => {
                                             if (task.activeChallenge && !task.isChallengeCompleted) {
@@ -451,13 +455,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                     </button>
                                )}
 
-                               <button 
-                                    onClick={(e) => openTherapy(e, task)} 
-                                    className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg border border-transparent hover:border-amber-100"
-                                    title="ИИ Консультант"
-                               >
-                                   <MessageCircle size={18} /> 
-                               </button>
+                               {hasKanbanTherapist && (
+                                   <button 
+                                        onClick={(e) => openTherapy(e, task)} 
+                                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg border border-transparent hover:border-amber-100"
+                                        title="ИИ Консультант"
+                                   >
+                                       <MessageCircle size={18} /> 
+                                   </button>
+                               )}
                                </>
                            )}
                            
