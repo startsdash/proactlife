@@ -454,7 +454,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                <button 
                                     onClick={(e) => openTherapy(e, task)} 
                                     className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg border border-transparent hover:border-amber-100"
-                                    title="Застрял? (ИИ Терапия)"
+                                    title="ИИ Консультант"
                                >
                                    <MessageCircle size={18} /> 
                                </button>
