@@ -94,8 +94,9 @@ const CollapsibleSection: React.FC<{
 
 // --- HELPER: CHECKLIST PARSING & INTERACTIVITY ---
 const getChallengeStats = (content: string) => {
-    const total = (content.match(/-\s\[[x ]\]/g) || []).length;
-    const checked = (content.match(/-\s\[x\]/g) || []).length;
+    // Broad regex for - [ ], * [ ], + [ ] and x or X
+    const total = (content.match(/^[\s]*[-*+]\s\[[xX ]\]/gm) || []).length;
+    const checked = (content.match(/^[\s]*[-*+]\s\[[xX]\]/gm) || []).length;
     return { total, checked, percent: total > 0 ? Math.round((checked / total) * 100) : 0 };
 };
 
@@ -124,15 +125,16 @@ const InteractiveChallenge: React.FC<{
     };
 
     lines.forEach((line, i) => {
-        const match = line.match(/^(\s*)-\s\[([ x])\]\s(.*)/);
+        // Broad regex match for line
+        const match = line.match(/^(\s*)([-*+])\s\[([ xX])\]\s(.*)/);
         if (match) {
             // It's a checkbox line
             flushBuffer(`line-${i}`);
             
             const currentIdx = checkboxIndex++;
-            const isChecked = match[2] === 'x';
-            const label = match[3];
-            const indent = match[1].length * 10; // Simple indentation approximate
+            const isChecked = match[3].toLowerCase() === 'x';
+            const label = match[4];
+            const indent = match[1].length * 6; // Indentation calculation
 
             renderedParts.push(
                 <button 
@@ -368,11 +370,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       let checkboxCounter = 0;
       
       const newLines = lines.map(line => {
-          if (line.trim().match(/^- \[[ x]\]/)) {
+          // Broad regex match
+          if (line.trim().match(/^[-*+]\s\[[xX ]\]/)) {
               if (checkboxCounter === globalIndex) {
-                  const isChecked = line.includes('[x]');
+                  const isChecked = line.toLowerCase().includes('[x]');
                   checkboxCounter++;
-                  return line.replace(isChecked ? '[x]' : '[ ]', isChecked ? '[ ]' : '[x]');
+                  return line.replace(/\[[xX ]\]/, isChecked ? '[ ]' : '[x]');
               }
               checkboxCounter++;
           }
@@ -450,46 +453,47 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
 
                     {/* ACTIVE CHALLENGE DISPLAY */}
                     {!hideExtraDetails && col.id === 'doing' && task.activeChallenge && !challengeDrafts[task.id] && (
-                        <CollapsibleSection title="Челлендж" icon={<Zap size={12}/>} isCard>
-                            <div className={`p-2 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
-                                
-                                {/* PROGRESS BAR */}
-                                {challengeStats.total > 0 && (
-                                    <div className="mb-3 mt-1 px-1">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Прогресс</span>
-                                            <span className="text-[9px] font-bold text-indigo-500">{challengeStats.percent}%</span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-slate-200/60 rounded-full overflow-hidden">
-                                            <div 
-                                                className="h-full bg-indigo-500 transition-all duration-500 rounded-full" 
-                                                style={{ width: `${challengeStats.percent}%` }} 
-                                            />
-                                        </div>
+                        <div className="mt-2 mb-2">
+                            {/* PROGRESS BAR (Moved outside collapsible) */}
+                            {challengeStats.total > 0 && (
+                                <div className="mb-2 px-1">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Прогресс</span>
+                                        <span className="text-[9px] font-bold text-indigo-500">{challengeStats.percent}%</span>
                                     </div>
-                                )}
-
-                                <div className="flex justify-between items-start gap-2">
-                                    <div className="w-full">
-                                        <InteractiveChallenge 
-                                            content={task.activeChallenge} 
-                                            onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
+                                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                                        <div 
+                                            className="h-full bg-indigo-500 transition-all duration-500 rounded-full" 
+                                            style={{ width: `${challengeStats.percent}%` }} 
                                         />
                                     </div>
-                                    <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all mt-0.5 ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
                                 </div>
-                                {task.isChallengeCompleted && hasChallengeAuthors && (
-                                    <button 
-                                        onClick={(e) => generateChallenge(e, task.id, task.content)} 
-                                        disabled={generatingChallengeFor === task.id}
-                                        className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 bg-white border border-emerald-200 text-emerald-600 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-emerald-50 disabled:opacity-70 disabled:cursor-not-allowed"
-                                    >
-                                        <RotateCw size={12} className={generatingChallengeFor === task.id ? "animate-spin" : ""} /> 
-                                        Новый челлендж
-                                    </button>
-                                )}
-                            </div>
-                        </CollapsibleSection>
+                            )}
+                            
+                            <CollapsibleSection title="Челлендж" icon={<Zap size={12}/>} isCard>
+                                <div className={`p-2 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
+                                    <div className="flex justify-between items-start gap-2">
+                                        <div className="w-full">
+                                            <InteractiveChallenge 
+                                                content={task.activeChallenge} 
+                                                onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
+                                            />
+                                        </div>
+                                        <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all mt-0.5 ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
+                                    </div>
+                                    {task.isChallengeCompleted && hasChallengeAuthors && (
+                                        <button 
+                                            onClick={(e) => generateChallenge(e, task.id, task.content)} 
+                                            disabled={generatingChallengeFor === task.id}
+                                            className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 bg-white border border-emerald-200 text-emerald-600 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-emerald-50 disabled:opacity-70 disabled:cursor-not-allowed"
+                                        >
+                                            <RotateCw size={12} className={generatingChallengeFor === task.id ? "animate-spin" : ""} /> 
+                                            Новый челлендж
+                                        </button>
+                                    )}
+                                </div>
+                            </CollapsibleSection>
+                        </div>
                     )}
 
                     {!hideExtraDetails && col.id === 'todo' && task.activeChallenge && !challengeDrafts[task.id] && (
