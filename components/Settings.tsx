@@ -349,7 +349,7 @@ export const applyTypography = (text: string): string => {
           {[
             { id: 'core', label: 'Ядро Знаний', icon: Database },
             { id: 'mentors', label: 'Менторы', icon: Users },
-            { id: 'authors', label: 'Авторы', icon: Zap },
+            { id: 'authors', label: 'Авторы челленджей', icon: Zap },
             { id: 'tools', label: 'AI Генераторы', icon: Bot },
           ].map(tab => (
             <button 
@@ -404,6 +404,13 @@ export const applyTypography = (text: string): string => {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center">
                           <div className={`font-bold truncate ${m.isDisabled ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{m.name}</div>
+                          {/* ACCESS LEVEL ICON */}
+                          <div className="ml-2 flex items-center" title={m.accessLevel || 'public'}>
+                             {m.accessLevel === 'owner_only' && <Lock size={12} className="text-red-400" />}
+                             {(m.accessLevel === 'public' || !m.accessLevel) && <Globe size={12} className="text-emerald-400" />}
+                             {m.accessLevel === 'restricted' && <Users size={12} className="text-amber-400" />}
+                          </div>
+                          <div className="flex-1" />
                           <ChevronRight size={14} className="text-slate-300 md:hidden" />
                       </div>
                       <div className="text-[10px] text-slate-400 uppercase font-mono tracking-tight">{m.model || DEFAULT_MODEL}</div>

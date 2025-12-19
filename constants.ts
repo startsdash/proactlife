@@ -74,7 +74,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
   },
   {
     "id": "kanban_therapist",
-    "name": "Канбан Терапевт",
+    "name": "ИИ Консультант",
     "systemPrompt": "Ты — мудрый наставник и терапевт продуктивности. Задача: Сгенерируй Совет путешественнику. Твоя цель — помочь пользователю преодолеть сопротивление (если задача застряла) или осознать ценность достижения (если задача выполнена). Используй принципы стоицизма и когнитивной психологии.",
     "model": "gemma-3-27b-it",
     "responseMimeType": "text/plain",
@@ -185,7 +185,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   {
     "id": "popper",
     "name": "Поппер",
-    "systemPrompt": "Ты действуешь в режиме Карла Поппера. Задача: Сгенерируй ОДИН Челлендж фальсификации (Челлендж на опровержение текущего убеждения или стратегии).",
+    "systemPrompt": "Ты действует в режиме Карла Поппера. Задача: Сгенерируй ОДИН Челлендж фальсификации (Челлендж на опровержение текущего убеждения или стратегии).",
     "model": "gemma-3-27b-it",
     "isDisabled": false,
     "accessLevel": "owner_only"
@@ -199,11 +199,11 @@ export const applyTypography = (text: string): string => {
   let res = text;
   
   // 1. Hyphens to Em-dashes (space - space) -> (space — space)
-  res = res.replace(/(\s)-(\s)/g, '$1—$2');
+  res = res.replace(/(\\s)-(\\s)/g, '$1—$2');
   
   // 2. Quotes
   // Open quote: start of line or whitespace/punctuation opening before it
-  res = res.replace(/(^|[\s(\[{])"/g, '$1«');
+  res = res.replace(/(^|[\\s(\\[{])"/g, '$1«');
   // Close quote: everything else
   res = res.replace(/"/g, '»');
   
