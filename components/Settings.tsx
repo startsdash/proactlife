@@ -511,6 +511,12 @@ export const applyTypography = (text: string): string => {
                       <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-center mb-1">
                               <div className={`font-bold ${a.isDisabled ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{a.name}</div>
+                              <div className="ml-2 flex items-center" title={a.accessLevel || 'public'}>
+                                {a.accessLevel === 'owner_only' && <Lock size={12} className="text-red-400" />}
+                                {(a.accessLevel === 'public' || !a.accessLevel) && <Globe size={12} className="text-emerald-400" />}
+                                {a.accessLevel === 'restricted' && <Users size={12} className="text-amber-400" />}
+                              </div>
+                              <div className="flex-1" />
                               <ChevronRight size={14} className="text-slate-300 md:hidden" />
                           </div>
                           <div className="text-[10px] text-slate-400 uppercase font-mono">{a.model || DEFAULT_MODEL}</div>
@@ -581,7 +587,15 @@ export const applyTypography = (text: string): string => {
                 {aiTools.map(t => (
                   <div key={t.id} onClick={() => setEditingTool(t)} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${editingTool?.id === t.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'} ${t.isDisabled ? 'opacity-60' : ''}`}>
                       <div className="flex-1 min-w-0">
-                          <div className={`font-bold text-sm mb-1 ${t.isDisabled ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{t.name}</div>
+                          <div className="flex justify-between items-center mb-1">
+                                <div className={`font-bold text-sm ${t.isDisabled ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{t.name}</div>
+                                <div className="ml-2 flex items-center" title={t.accessLevel || 'public'}>
+                                  {t.accessLevel === 'owner_only' && <Lock size={12} className="text-red-400" />}
+                                  {(t.accessLevel === 'public' || !t.accessLevel) && <Globe size={12} className="text-emerald-400" />}
+                                  {t.accessLevel === 'restricted' && <Users size={12} className="text-amber-400" />}
+                                </div>
+                                <div className="flex-1" />
+                          </div>
                           <div className="text-[10px] text-indigo-400 font-mono">{t.model || DEFAULT_MODEL}</div>
                       </div>
                       <ChevronRight size={14} className="text-slate-300 md:hidden" />
