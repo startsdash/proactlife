@@ -84,7 +84,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
 ];
 
 export const DEFAULT_CONFIG: AppConfig = {
-  "_version": 1766168365632,
+  "_version": 1766180792115,
   "coreLibrary": DEFAULT_CORE_LIBRARY,
   "mentors": [
   {
@@ -94,8 +94,11 @@ export const DEFAULT_CONFIG: AppConfig = {
     "color": "text-indigo-600",
     "systemPrompt": "Ты Джордан Питерсон. Фокус: Ответственность, Хаос и Порядок, Смысл. Спроси: Не лжет ли пользователь сам себе? Важно: Отвечай только на русском языке.\n4. Вердикт (JSON Output):\n   - analysis: Глубокий анализ (2-3 предложения) в стиле выбранного ментора.\n   - suggestedTask: Конкретное действие (Task) для Канбана. Должно быть выполнимым шагом.\n   - suggestedFlashcardFront: Концепт или Вопрос (Сторона А).\n   - suggestedFlashcardBack: Принцип или Ответ (Сторона Б).\n",
     "model": "gemma-3-27b-it",
-    "accessLevel": "owner_only",
-    "isDisabled": true
+    "accessLevel": "restricted",
+    "isDisabled": false,
+    "allowedEmails": [
+      "rukomru@gmail.com"
+    ]
   },
   {
     "id": "taleb",
@@ -199,11 +202,11 @@ export const applyTypography = (text: string): string => {
   let res = text;
   
   // 1. Hyphens to Em-dashes (space - space) -> (space — space)
-  res = res.replace(/(\\s)-(\\s)/g, '$1—$2');
+  res = res.replace(/(\s)-(\s)/g, '$1—$2');
   
   // 2. Quotes
   // Open quote: start of line or whitespace/punctuation opening before it
-  res = res.replace(/(^|[\\s(\\[{])"/g, '$1«');
+  res = res.replace(/(^|[\s(\[{])"/g, '$1«');
   // Close quote: everything else
   res = res.replace(/"/g, '»');
   
