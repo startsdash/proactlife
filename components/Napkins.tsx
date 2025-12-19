@@ -1,9 +1,10 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
-import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -26,6 +27,13 @@ const colors = [
     { id: 'blue', class: 'bg-blue-50', border: 'border-blue-100', hex: '#eff6ff' },
     { id: 'indigo', class: 'bg-indigo-50', border: 'border-indigo-100', hex: '#eef2ff' },
     { id: 'purple', class: 'bg-purple-50', border: 'border-purple-100', hex: '#faf5ff' },
+];
+
+const ORACLE_VIBES = [
+    { id: 'cosmos', emoji: '🌌', label: 'Инсайт', color: 'from-indigo-500 to-purple-600', text: 'text-indigo-100' },
+    { id: 'fire', emoji: '🔥', label: 'Энергия', color: 'from-orange-500 to-red-600', text: 'text-orange-100' },
+    { id: 'zen', emoji: '🍃', label: 'Дзен', color: 'from-emerald-500 to-teal-600', text: 'text-emerald-100' },
+    { id: 'luck', emoji: '🎲', label: 'Случай', color: 'from-slate-700 to-slate-900', text: 'text-slate-200' },
 ];
 
 // Markdown Styles for Notes
@@ -198,6 +206,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [aiFilteredIds, setAiFilteredIds] = useState<string[] | null>(null);
   const [isMoodAnalyzing, setIsMoodAnalyzing] = useState(false);
   
+  // Oracle (Serendipity) State
+  const [showOracle, setShowOracle] = useState(false);
+  const [oracleState, setOracleState] = useState<'select' | 'thinking' | 'result'>('select');
+  const [oracleVibe, setOracleVibe] = useState(ORACLE_VIBES[0]);
+  const [oracleNote, setOracleNote] = useState<Note | null>(null);
+
   // Edit State
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
@@ -273,6 +287,33 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const clearMoodFilter = () => {
       setAiFilteredIds(null);
       setMoodQuery('');
+  };
+
+  const startOracle = () => {
+      if (notes.length === 0) {
+          alert("Сначала добавь пару мыслей во Входящие или Библиотеку.");
+          return;
+      }
+      setShowOracle(true);
+      setOracleState('select');
+  };
+
+  const castOracleSpell = (vibe: typeof ORACLE_VIBES[0]) => {
+      setOracleVibe(vibe);
+      setOracleState('thinking');
+      
+      // Simulate Deep Thought / Shuffle
+      setTimeout(() => {
+          const allNotes = notes;
+          const random = allNotes[Math.floor(Math.random() * allNotes.length)];
+          setOracleNote(random);
+          setOracleState('result');
+      }, 1500);
+  };
+
+  const closeOracle = () => {
+      setShowOracle(false);
+      setTimeout(() => setOracleState('select'), 300); // Reset after close animation
   };
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -626,6 +667,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             <Sparkles size={18} />
                         </button>
                     )}
+
+                    <button 
+                        onClick={startOracle}
+                        className="p-2 rounded-xl border transition-all bg-white border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200"
+                        title="Оракул Смыслов"
+                    >
+                        <Dices size={18} />
+                    </button>
                 </>
             )}
          </div>
@@ -707,6 +756,87 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             )}
         </div>
       )}
+      
+      {/* ORACLE (SERENDIPITY) MODAL */}
+      {showOracle && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4">
+            <div className={`bg-gradient-to-br ${oracleVibe.color} w-full max-w-md rounded-3xl shadow-2xl p-1 overflow-hidden animate-in zoom-in-95 duration-300 relative`}>
+                <div className="bg-white/95 backdrop-blur-sm rounded-[20px] p-6 md:p-8 h-[400px] flex flex-col items-center justify-center text-center relative overflow-hidden">
+                    
+                    <button onClick={closeOracle} className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 p-2 z-20">
+                        <X size={24} />
+                    </button>
+
+                    {/* PHASE 1: SELECT VIBE */}
+                    {oracleState === 'select' && (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full h-full flex flex-col items-center justify-center">
+                            <Quote size={48} className="text-slate-200 mb-6" />
+                            <h3 className="text-xl font-light text-slate-800 mb-2">Оракул Смыслов</h3>
+                            <p className="text-sm text-slate-500 mb-8">Какую энергию ты ищешь?</p>
+                            
+                            <div className="grid grid-cols-2 gap-4 w-full">
+                                {ORACLE_VIBES.map(vibe => (
+                                    <button 
+                                        key={vibe.id}
+                                        onClick={() => castOracleSpell(vibe)}
+                                        className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 hover:bg-white hover:shadow-lg hover:scale-105 border border-slate-100 transition-all duration-300 group"
+                                    >
+                                        <span className="text-3xl mb-2 group-hover:animate-bounce">{vibe.emoji}</span>
+                                        <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{vibe.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PHASE 2: THINKING/ANIMATION */}
+                    {oracleState === 'thinking' && (
+                        <div className="flex flex-col items-center justify-center animate-pulse">
+                            <div className="text-6xl mb-6 animate-spin duration-[2000ms]">{oracleVibe.emoji}</div>
+                            <p className="text-slate-500 font-medium">Связь с хаосом...</p>
+                        </div>
+                    )}
+
+                    {/* PHASE 3: RESULT */}
+                    {oracleState === 'result' && oracleNote && (
+                         <div className="w-full h-full flex flex-col animate-in zoom-in-95 duration-500">
+                             <div className="flex items-center justify-center gap-2 mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">
+                                 <span>{oracleVibe.emoji}</span>
+                                 <span>{oracleVibe.label}</span>
+                             </div>
+                             
+                             <div className="flex-1 flex items-center justify-center overflow-y-auto custom-scrollbar-light my-2">
+                                <div className="text-lg md:text-xl text-slate-800 font-medium leading-relaxed italic relative px-4">
+                                    <span className="absolute -top-4 -left-2 text-4xl text-slate-200 font-serif">“</span>
+                                    <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}}>{oracleNote.content}</ReactMarkdown>
+                                    <span className="absolute -bottom-6 -right-2 text-4xl text-slate-200 font-serif">”</span>
+                                </div>
+                             </div>
+
+                             <div className="mt-6 flex flex-col gap-3 w-full">
+                                <button 
+                                    onClick={() => {
+                                        closeOracle();
+                                        handleOpenNote(oracleNote);
+                                    }}
+                                    className={`w-full py-3 rounded-xl font-bold text-white shadow-lg bg-gradient-to-r ${oracleVibe.color} hover:opacity-90 transition-opacity flex items-center justify-center gap-2`}
+                                >
+                                    Открыть заметку <ArrowRight size={18} />
+                                </button>
+                                <button 
+                                    onClick={() => castOracleSpell(oracleVibe)}
+                                    className="text-xs font-medium text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1 py-2"
+                                >
+                                    <Shuffle size={12} /> Попробовать еще раз
+                                </button>
+                             </div>
+                         </div>
+                    )}
+                </div>
+            </div>
+        </div>
+      )}
+
       {selectedNote && (
         <div className="fixed inset-0 z-50 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
             <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border ${getNoteBorderClass(selectedNote.color)} transition-colors duration-300 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
