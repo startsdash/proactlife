@@ -350,7 +350,7 @@ export const applyTypography = (text: string): string => {
             { id: 'core', label: 'Ядро Знаний', icon: Database },
             { id: 'mentors', label: 'Менторы', icon: Users },
             { id: 'authors', label: 'Авторы челленджей', icon: Zap },
-            { id: 'tools', label: 'AI Генераторы', icon: Bot },
+            { id: 'tools', label: 'Другие ИИ-генераторы', icon: Bot },
           ].map(tab => (
             <button 
               key={tab.id}
@@ -583,7 +583,7 @@ export const applyTypography = (text: string): string => {
           {activeTab === 'tools' && (
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                <div className={`${editingTool ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-slate-100 flex-col overflow-y-auto p-4 space-y-2 bg-slate-50/50`}>
-                <div className="px-2 py-1 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Системные Генераторы</div>
+                <div className="px-2 py-1 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Другие ИИ-генераторы</div>
                 {aiTools.map(t => (
                   <div key={t.id} onClick={() => setEditingTool(t)} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${editingTool?.id === t.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'} ${t.isDisabled ? 'opacity-60' : ''}`}>
                       <div className="flex-1 min-w-0">
