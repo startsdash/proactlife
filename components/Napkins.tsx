@@ -571,6 +571,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     <button 
                         onClick={() => setShowFilters(!showFilters)} 
                         className={`p-2 rounded-xl border transition-all ${showFilters || activeColorFilter ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600'}`}
+                        title="Фильтр по цвету"
                     >
                         <Filter size={18} />
                     </button>

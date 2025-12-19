@@ -468,7 +468,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                         if(window.confirm('Перенести задачу в архив?')) archiveTask(task.id); 
                                     }} 
                                     className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100 transition-colors"
-                                    title="В Архив"
+                                    title="в архив"
                                 >
                                     <History size={18} /> 
                                 </button>
