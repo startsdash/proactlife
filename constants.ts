@@ -70,7 +70,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
     "model": "gemma-3-27b-it",
     "responseMimeType": "application/json",
     "accessLevel": "public",
-    "isDisabled": true
+    "isDisabled": false
   },
   {
     "id": "kanban_therapist",
@@ -184,7 +184,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     "id": "popper",
     "name": "Поппер",
     "systemPrompt": "Ты действуешь в режиме Карла Поппера. Задача: Сгенерируй ОДИН Челлендж фальсификации (Челлендж на опровержение текущего убеждения или стратегии).",
-    "model": "gemini-3-flash-preview",
+    "model": "gemma-3-27b-it",
     "isDisabled": false,
     "accessLevel": "owner_only"
   }
