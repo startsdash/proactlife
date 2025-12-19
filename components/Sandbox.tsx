@@ -185,7 +185,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                         <span className="font-medium text-sm">Назад</span>
                      </div>
                      <button onClick={handleManualArchive} className="flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-indigo-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                        <Library size={14} /> <span className="hidden md:inline">В библиотеку</span>
+                        <Library size={14} <span className="hidden md:inline">В библиотеку</span>
                      </button>
                 </div>
 
@@ -199,7 +199,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                         
                         {!isAnalyzing && !analysis && (
                             <div className="mb-8 animate-in fade-in slide-in-from-top-4 mt-8 md:mt-0">
-                                <h3 className="text-center text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">Выберите ментора</h3>
+                                <h3 className="text-center text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">Выбери ИИ-ментора</h3>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                     {config.mentors.map(m => (
                                         <button key={m.id} onClick={() => setMentorId(m.id)} className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${mentorId === m.id ? `bg-slate-50 border-slate-400 ring-1 ring-slate-200` : 'bg-white border-slate-100 hover:border-slate-300 hover:shadow-sm'}`}>
