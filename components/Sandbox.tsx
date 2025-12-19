@@ -185,7 +185,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                         <span className="font-medium text-sm">Назад</span>
                      </div>
                      <button onClick={handleManualArchive} className="flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-indigo-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                        <Library size={14} <span className="hidden md:inline">В библиотеку</span>
+                        <Library size={14} /> <span className="hidden md:inline">В библиотеку</span>
                      </button>
                 </div>
 
