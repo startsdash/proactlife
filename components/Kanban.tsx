@@ -138,9 +138,9 @@ const ProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
 
 // --- HELPER: CHECKLIST PARSING & INTERACTIVITY ---
 const getChallengeStats = (content: string) => {
-    // Broad regex for - [ ], * [ ], + [ ] and x or X
-    const total = (content.match(/^[\s]*[-*+]\s\[[xX ]\]/gm) || []).length;
-    const checked = (content.match(/^[\s]*[-*+]\s\[[xX]\]/gm) || []).length;
+    // Broad regex for - [ ], * [ ], + [ ], 1. [ ] and x or X
+    const total = (content.match(/\[[xX ]\]/gm) || []).length;
+    const checked = (content.match(/\[[xX]\]/gm) || []).length;
     return { total, checked, percent: total > 0 ? Math.round((checked / total) * 100) : 0 };
 };
 
@@ -169,16 +169,21 @@ const InteractiveChallenge: React.FC<{
     };
 
     lines.forEach((line, i) => {
-        // Broad regex match for line
-        const match = line.match(/^(\s*)([-*+])\s\[([ xX])\]\s(.*)/);
+        // Robust regex to match checkboxes with various list styles (-, *, +, 1., or none)
+        // Group 1: Indent
+        // Group 2: Checkbox state (space, x, X)
+        // Group 3: Label content
+        const match = line.match(/^(\s*)(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
+        
         if (match) {
             // It's a checkbox line
             flushBuffer(`line-${i}`);
             
             const currentIdx = checkboxIndex++;
-            const isChecked = match[3].toLowerCase() === 'x';
-            const label = match[4];
-            const indent = match[1].length * 6; // Indentation calculation
+            const isChecked = match[2].toLowerCase() === 'x';
+            const label = match[3];
+            // Approx indentation visual
+            const indent = match[1].length * 6; 
 
             renderedParts.push(
                 <button 
@@ -414,12 +419,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       let checkboxCounter = 0;
       
       const newLines = lines.map(line => {
-          // Broad regex match
-          if (line.trim().match(/^[-*+]\s\[[xX ]\]/)) {
+          // Robust regex to match line starting with (optional bullet/number) then [ ] or [x]
+          // Matches: "- [ ]", "1. [ ]", "[ ]"
+          if (line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[[xX ]\]/)) {
               if (checkboxCounter === globalIndex) {
-                  const isChecked = line.toLowerCase().includes('[x]');
+                  // Check current state
+                  const isChecked = line.includes('[x]') || line.includes('[X]');
                   checkboxCounter++;
-                  return line.replace(/\[[xX ]\]/, isChecked ? '[ ]' : '[x]');
+                  // Replace brackets with toggled state (case-insensitive find, lowercase replace)
+                  return line.replace(/\[([ xX])\]/, isChecked ? '[ ]' : '[x]');
               }
               checkboxCounter++;
           }
