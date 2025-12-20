@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
+import MarkdownToolbar from './MarkdownToolbar';
 import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll } from 'lucide-react';
 
 interface Props {
@@ -166,6 +167,7 @@ const TaskSelect: React.FC<{
 
 const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addEntry, deleteEntry, updateEntry, addMentorAnalysis, deleteMentorAnalysis, initialTaskId, onClearInitialTask, onNavigateToTask }) => {
   const [content, setContent] = useState('');
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [linkedTaskId, setLinkedTaskId] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
@@ -367,8 +369,8 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
           <p className="text-slate-500 mt-2 text-sm">Осмысление пути Героя.</p>
         </header>
 
-        <div className="bg-white rounded-2xl md:shadow-sm md:border border-slate-200 md:p-4 flex flex-col gap-4">
-          <div>
+        <div className="bg-white rounded-2xl md:shadow-sm md:border border-slate-200 overflow-hidden flex flex-col">
+          <div className="p-4 pb-0">
             <label className="block text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1">
               <Link size={12} /> Контекст
             </label>
@@ -379,21 +381,31 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
             />
           </div>
 
-          <textarea 
-            className="w-full h-32 md:h-40 resize-none outline-none text-sm text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-200 focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:text-slate-400 font-mono" 
-            placeholder="О чем ты думаешь? Чему научило это событие? (Поддерживается Markdown)" 
-            value={content} 
-            onChange={(e) => setContent(e.target.value)} 
-          />
+          <div className="mt-4 border-t border-slate-100">
+             <MarkdownToolbar 
+                textareaRef={inputRef} 
+                value={content} 
+                onChange={setContent} 
+             />
+             <textarea 
+                ref={inputRef}
+                className="w-full h-32 md:h-40 resize-none outline-none text-sm text-slate-700 bg-slate-50 p-4 border-none focus:bg-white transition-all placeholder:text-slate-400 font-mono" 
+                placeholder="О чем ты думаешь? Чему научило это событие? (Поддерживается Markdown)" 
+                value={content} 
+                onChange={(e) => setContent(e.target.value)} 
+             />
+          </div>
           
-          <button 
-            onClick={handlePost} 
-            disabled={!content.trim()} 
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 text-sm font-medium transition-all shadow-md shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
-          >
-            <Zap size={16} className="text-amber-400" /> 
-            Записать мысль
-          </button>
+          <div className="p-4 pt-2 border-t border-slate-50">
+             <button 
+                onClick={handlePost} 
+                disabled={!content.trim()} 
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 text-sm font-medium transition-all shadow-md shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
+             >
+                <Zap size={16} className="text-amber-400" /> 
+                Записать мысль
+             </button>
+          </div>
         </div>
       </div>
 

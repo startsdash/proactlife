@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
+import MarkdownToolbar from './MarkdownToolbar';
 import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight } from 'lucide-react';
 
 interface Props {
@@ -46,6 +47,7 @@ const markdownComponents = {
     h1: ({node, ...props}: any) => <h1 className="text-lg font-bold mt-2 mb-1" {...props} />,
     h2: ({node, ...props}: any) => <h2 className="text-base font-bold mt-2 mb-1" {...props} />,
     h3: ({node, ...props}: any) => <h3 className="text-sm font-bold mt-1 mb-1" {...props} />,
+    h4: ({node, ...props}: any) => <h4 className="text-xs font-bold mt-1 mb-1 uppercase" {...props} />,
     blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 pl-3 italic text-slate-500 my-2" {...props} />,
     code: ({node, inline, className, children, ...props}: any) => {
          return inline 
@@ -185,6 +187,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
 
 const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask }) => {
   const [input, setInput] = useState('');
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   // Creation state now holds array of strings
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -577,6 +580,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
       {/* SEARCH & FILTER BAR */}
       <div className="shrink-0 flex flex-col gap-2">
+         {/* ... (Search UI remains same) ... */}
          <div className="flex gap-2">
             <div className="relative flex-1">
                 {showMoodInput ? (
@@ -720,18 +724,31 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         <>
             {/* Input only visible if not searching/filtering or if explicit action needed */}
             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 md:p-4 shrink-0">
-                    <textarea className="w-full h-24 md:h-32 resize-none outline-none text-base text-slate-700 bg-transparent" placeholder="О чём ты думаешь? (Поддерживается Markdown)" value={input} onChange={(e) => setInput(e.target.value)} />
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 border-t border-slate-50 pt-3 gap-2">
-                        <div className="w-full md:w-2/3">
-                            <TagSelector 
-                                selectedTags={creationTags} 
-                                onChange={setCreationTags} 
-                                existingTags={allExistingTags}
-                                placeholder="Добавить теги..." 
-                            />
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 shrink-0 overflow-hidden">
+                    <MarkdownToolbar 
+                        textareaRef={inputRef} 
+                        value={input} 
+                        onChange={setInput} 
+                    />
+                    <div className="p-3 md:p-4">
+                        <textarea 
+                            ref={inputRef}
+                            className="w-full h-24 md:h-32 resize-none outline-none text-base text-slate-700 bg-transparent font-mono text-sm leading-relaxed" 
+                            placeholder="О чём ты думаешь? (Поддерживается Markdown)" 
+                            value={input} 
+                            onChange={(e) => setInput(e.target.value)} 
+                        />
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 border-t border-slate-50 pt-3 gap-2">
+                            <div className="w-full md:w-2/3">
+                                <TagSelector 
+                                    selectedTags={creationTags} 
+                                    onChange={setCreationTags} 
+                                    existingTags={allExistingTags}
+                                    placeholder="Добавить теги..." 
+                                />
+                            </div>
+                            <button onClick={handleDump} disabled={isProcessing || !input.trim()} className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 text-sm font-medium h-[42px]">{isProcessing ? <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"/> : <Send size={16} />} Записать</button>
                         </div>
-                        <button onClick={handleDump} disabled={isProcessing || !input.trim()} className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 text-sm font-medium h-[42px]">{isProcessing ? <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"/> : <Send size={16} />} Записать</button>
                     </div>
                 </div>
             )}
@@ -764,7 +781,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           {/* Outer Border/Gradient Container */}
           <div className={`bg-gradient-to-br ${oracleVibe.color} w-[90vw] max-w-md rounded-3xl shadow-2xl p-1 overflow-hidden animate-in zoom-in-95 duration-300 relative flex flex-col min-h-[420px] max-h-[85vh]`}>
-              
               {/* Inner Content Container */}
               <div className="bg-white/95 backdrop-blur-md rounded-[20px] w-full h-full flex flex-col relative overflow-hidden flex-1">
                   
@@ -775,8 +791,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                   {/* Content Wrapper with Padding */}
                   <div className="p-6 md:p-8 flex flex-col h-full overflow-hidden">
-                      
-                      {/* PHASE 1: SELECT VIBE */}
+                      {/* ... (Oracle phases logic) ... */}
                       {oracleState === 'select' && (
                           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full h-full flex flex-col items-center justify-center">
                               <Quote size={48} className="text-slate-200 mb-6" />
@@ -816,7 +831,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                </div>
                                
                                {/* Scrollable Content Area */}
-                               {/* Using flex-col and m-auto ensures centering when small, scrolling when big, without clipping */}
                                <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0 pr-2">
                                   <div className="min-h-full flex flex-col">
                                       <div className="m-auto w-full py-2">
@@ -832,7 +846,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                </div>
 
                                {/* Footer Actions */}
-                               <div className="mt-6 flex flex-col gap-3 shrink-0 pt-2 border-t border-transparent"> {/* Added padding top to ensure separation */}
+                               <div className="mt-6 flex flex-col gap-3 shrink-0 pt-2 border-t border-transparent">
                                   <button 
                                       onClick={() => {
                                           closeOracle();
@@ -856,14 +870,15 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           </div>
       </div>
       )}
-
+      
+      {/* ... (Existing Modal for Edit/View) ... */}
       {selectedNote && (
         <div className="fixed inset-0 z-50 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
             <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border ${getNoteBorderClass(selectedNote.color)} transition-colors duration-300 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+                {/* ... (Existing modal content) ... */}
                 <div className="flex justify-between items-start mb-4">
                     <h3 className="text-lg font-bold flex items-center gap-3">
                         {isEditing ? 'Редактирование' : 'Детали'}
-                        {/* Pin Button */}
                         <button 
                             onClick={(e) => togglePin(e, selectedNote)}
                             className={`p-1.5 rounded-full transition-colors ${selectedNote.isPinned ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400 hover:text-indigo-500'}`}
@@ -884,6 +899,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                 {isEditing ? (
                     <div className="mb-6 space-y-3">
+                        {/* Note: In modal edit, we keep simple textarea for now or could reuse toolbar if desired, but sticking to request scope for Input areas */}
                         <textarea 
                             value={editContent}
                             onChange={(e) => setEditContent(e.target.value)}
@@ -915,8 +931,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         )}
                     </div>
                 )}
-
-                {/* Color Palette */}
+                
+                {/* ... (Footer actions) ... */}
                 <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
                     {colors.map(c => (
                         <button
