@@ -623,7 +623,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                   
                   <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar-light space-y-4">
                       {mentorAnalyses.length === 0 ? (
-                          <div className="text-center py-10 text-slate-400 text-sm">История пуста. Запустите анализ пути, чтобы сохранить результат.</div>
+                          <div className="text-center py-10 text-slate-400 text-sm">Пока здесь пусто. Посоветуйся с Наставником, чтобы начать историю.</div>
                       ) : (
                           mentorAnalyses.sort((a,b) => b.date - a.date).map(analysis => (
                               <div key={analysis.id} className="bg-slate-50 rounded-xl p-5 border border-slate-100 group">
