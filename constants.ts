@@ -219,13 +219,21 @@ export const applyTypography = (text: string): string => {
   // This avoids breaking Markdown lists which typically start with "- " at the beginning of a line.
   res = res.replace(/(\S)[ \t]+-[ \t]+/g, '$1 — ');
   
-  // 2. Quotes
+  // 2. Double Quotes (Standard)
   // Open quote: start of line or whitespace/punctuation opening before it
   res = res.replace(/(^|[\s(\[{])"/g, '$1«');
   // Close quote: everything else
   res = res.replace(/"/g, '»');
   
-  // 3. Nested quotes: simple one-level fix
+  // 3. Single Quotes (AI Russian Artifacts)
+  // Handle single quotes often used by LLMs in Russian ('слово')
+  // Open: Start of line or space/bracket before
+  res = res.replace(/(^|[\s(\[{])'/g, '$1«');
+  // Close: Single quote followed by space, punctuation, or end of string
+  // This helps avoid replacing apostrophes in the middle of words (though rare in Russian, important for safety)
+  res = res.replace(/'(?=[.,:;!?\s)\]}]|$)/g, '»');
+  
+  // 4. Nested quotes: simple one-level fix
   // Finds «...«...»...» and converts inner to „...“
   const nestedPattern = /«([^»]*)«([^»]*)»([^»]*)»/g;
   let prev = '';
