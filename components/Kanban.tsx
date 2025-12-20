@@ -18,16 +18,14 @@ interface Props {
   onClearInitialTask?: () => void;
 }
 
-// Helper to strip trailing colons from headers (Recursive for children)
+// Helper to strip trailing colons from headers
 const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     if (typeof children === 'string') return children.replace(/:\s*$/, '');
     if (Array.isArray(children)) {
         return React.Children.map(children, (child, i) => {
-             // Only clean the last element if it's a string, or clean recursively
              return i === React.Children.count(children) - 1 ? cleanHeader(child) : child;
         });
     }
-    // Handle React Elements (like strong, em inside h1)
     if (React.isValidElement(children)) {
         return React.cloneElement(children, {
              // @ts-ignore
@@ -37,25 +35,26 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     return children;
 };
 
-// Standardized Markdown Styles
+// Standardized Markdown Styles - Updated to text-sm as benchmark
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-3 last:mb-0 text-slate-800 leading-relaxed" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-slate-800 leading-relaxed" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-3 space-y-1 text-slate-800" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-3 space-y-1 text-slate-800" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-slate-800" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-slate-800" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed" {...props} />,
-    // Headers with Colon Cleaner
-    h1: ({node, children, ...props}: any) => <h1 className="text-lg font-bold mt-4 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
-    h2: ({node, children, ...props}: any) => <h2 className="text-base font-bold mt-3 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
-    h3: ({node, children, ...props}: any) => <h3 className="text-sm font-bold mt-3 mb-1 text-slate-900 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
-    h4: ({node, children, ...props}: any) => <h4 className="text-sm font-bold mt-2 mb-1 text-slate-800" {...props}>{cleanHeader(children)}</h4>,
-    blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-indigo-200 pl-4 py-1 my-3 text-slate-600 italic bg-indigo-50/30 rounded-r-lg" {...props} />,
+    // Headers scaled down slightly to match text-sm body
+    h1: ({node, children, ...props}: any) => <h1 className="text-base font-bold mt-3 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
+    h2: ({node, children, ...props}: any) => <h2 className="text-sm font-bold mt-2 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
+    h3: ({node, children, ...props}: any) => <h3 className="text-xs font-bold mt-2 mb-1 text-slate-900 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
+    h4: ({node, children, ...props}: any) => <h4 className="text-xs font-bold mt-2 mb-1 text-slate-800" {...props}>{cleanHeader(children)}</h4>,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-indigo-200 pl-4 py-1 my-2 text-sm text-slate-600 italic bg-indigo-50/30 rounded-r-lg" {...props} />,
     strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900" {...props} />,
     em: ({node, ...props}: any) => <em className="italic text-slate-800" {...props} />,
+    // Fixed CODE block to not be a black box if AI indents text
     code: ({node, inline, className, children, ...props}: any) => {
          return inline 
-            ? <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono text-pink-600 border border-slate-200" {...props}>{children}</code>
-            : <code className="block bg-slate-900 text-slate-50 p-3 rounded-lg text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+            ? <code className="bg-slate-100 px-1 py-0.5 rounded text-xs font-mono text-pink-600 border border-slate-200" {...props}>{children}</code>
+            : <code className="block bg-slate-50 text-slate-700 border border-slate-200 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     }
 };
 
@@ -95,10 +94,8 @@ const CollapsibleSection: React.FC<{
 };
 
 const ProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
-    // Determine color scheme based on progress
     const isComplete = percent === 100;
     
-    // Gradient & Shadow logic
     let barGradient = "bg-gradient-to-r from-indigo-400 to-purple-500";
     let textColor = "text-purple-600";
     let shadowClass = "shadow-purple-500/30";
@@ -128,7 +125,6 @@ const ProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
                     className={`h-full ${barGradient} transition-all duration-700 ease-out rounded-full shadow-[0_0_10px] ${shadowClass} relative`} 
                     style={{ width: `${percent}%` }} 
                 >
-                    {/* Glossy overlay */}
                     <div className="absolute top-0 left-0 w-full h-[40%] bg-white/30 rounded-t-full"></div>
                 </div>
             </div>
@@ -138,7 +134,6 @@ const ProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
 
 // --- HELPER: CHECKLIST PARSING & INTERACTIVITY ---
 const getChallengeStats = (content: string) => {
-    // Broad regex for - [ ], * [ ], + [ ], 1. [ ] and x or X
     const total = (content.match(/\[[xX ]\]/gm) || []).length;
     const checked = (content.match(/\[[xX]\]/gm) || []).length;
     return { total, checked, percent: total > 0 ? Math.round((checked / total) * 100) : 0 };
@@ -157,11 +152,15 @@ const InteractiveChallenge: React.FC<{
 
     const flushBuffer = (keyPrefix: string) => {
         if (textBuffer) {
-            renderedParts.push(
-                <div key={`${keyPrefix}-md`} className="text-xs leading-relaxed text-slate-900 mb-1 last:mb-0">
-                    <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
-                </div>
-            );
+            // Trim buffer to prevent code block interpretation of indented text
+            const trimmedBuffer = textBuffer.trim(); 
+            if (trimmedBuffer) {
+                renderedParts.push(
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 mb-1 last:mb-0">
+                        <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
+                    </div>
+                );
+            }
             textBuffer = '';
         }
     };
@@ -187,7 +186,7 @@ const InteractiveChallenge: React.FC<{
                     <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 group-hover:text-indigo-400'}`}>
                         {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                     </div>
-                    <span className={`text-xs ${isChecked ? 'text-slate-500' : 'text-slate-700'}`}>
+                    <span className={`text-sm ${isChecked ? 'text-slate-500' : 'text-slate-700'}`}>
                         <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
                     </span>
                 </button>
@@ -201,7 +200,7 @@ const InteractiveChallenge: React.FC<{
     return <>{renderedParts}</>;
 };
 
-// Static Challenge Renderer (For Drafts & History)
+// Static Challenge Renderer (For Drafts & History & Completed Final)
 const StaticChallengeRenderer: React.FC<{ 
     content: string,
     mode: 'draft' | 'history'
@@ -213,24 +212,32 @@ const StaticChallengeRenderer: React.FC<{
 
     const flushBuffer = (keyPrefix: string) => {
         if (textBuffer) {
-            renderedParts.push(
-                <div key={`${keyPrefix}-md`} className="text-xs leading-relaxed text-slate-900 mb-1 last:mb-0">
-                    <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
-                </div>
-            );
+             // Trim buffer to prevent code block interpretation of indented text
+             // This fixes the "Black Block" issue when AI indents text
+             const trimmedBuffer = textBuffer.trim();
+             if (trimmedBuffer) {
+                renderedParts.push(
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 mb-1 last:mb-0">
+                        <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
+                    </div>
+                );
+             }
             textBuffer = '';
         }
     };
 
     lines.forEach((line, i) => {
-        const match = line.match(/^(\s*)(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
+        // Trim line for regex check to handle indentation robustly
+        const match = line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
         
         if (match) {
             flushBuffer(`line-${i}`);
             
-            const isChecked = match[2].toLowerCase() === 'x';
-            const label = match[3];
-            const indent = match[1].length * 6; 
+            const isChecked = match[1].toLowerCase() === 'x';
+            const label = match[2];
+            // Calc indent roughly from original line length vs trimmed, or just default 0
+            const leadingSpaces = line.search(/\S|$/);
+            const indent = leadingSpaces * 4; 
 
             let Icon = Circle;
             let iconClass = "text-slate-300";
@@ -256,7 +263,7 @@ const StaticChallengeRenderer: React.FC<{
                     <div className={`mt-0.5 shrink-0 ${iconClass}`}>
                         <Icon size={16} />
                     </div>
-                    <span className={`text-xs text-slate-700`}>
+                    <span className={`text-sm text-slate-700`}>
                         <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
                     </span>
                 </div>
@@ -277,24 +284,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
   const [activeMobileCol, setActiveMobileCol] = useState<'todo' | 'doing' | 'done'>('todo');
   const [generatingChallengeFor, setGeneratingChallengeFor] = useState<string | null>(null);
   const [challengeDrafts, setChallengeDrafts] = useState<{[taskId: string]: string}>({});
-
-  // Filters State
   const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'completed' | 'none'>('all');
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
-  
-  // Sorting State - Removed 'manual', default is 'desc'
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
-  // Check Availability
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
 
-  // Base list of active tasks (Not archived)
   const baseActiveTasks = tasks.filter(t => !t.isArchived);
 
-  // Apply filters and sort
   const activeTasks = baseActiveTasks.filter(task => {
-      // Challenge Filter
       if (filterChallenge === 'active') {
           if (!task.activeChallenge || task.isChallengeCompleted) return false;
       }
@@ -304,21 +303,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       if (filterChallenge === 'none') {
           if (task.activeChallenge) return false;
       }
-
-      // Journal Filter
       if (filterJournal === 'linked') {
           const hasEntry = journalEntries.some(e => e.linkedTaskId === task.id);
           if (!hasEntry) return false;
       }
-
       return true;
   }).sort((a, b) => {
-      // Always sort by date now that manual is gone
-      if (sortOrder === 'desc') return b.createdAt - a.createdAt; // Newest first
-      return a.createdAt - b.createdAt; // Oldest first
+      if (sortOrder === 'desc') return b.createdAt - a.createdAt;
+      return a.createdAt - b.createdAt;
   });
 
-  // Effect to handle incoming navigation request
   useEffect(() => {
     if (initialTaskId) {
       const taskExists = tasks.some(t => t.id === initialTaskId);
@@ -335,9 +329,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     { id: 'done', title: 'Сделано', color: 'border-emerald-400' }
   ];
 
-  // --- LOGIC: RESTRICT MOVEMENT ---
   const canMoveTask = (task: Task, targetColId: string): boolean => {
-    // Если задача "В процессе" И имеет Активный Челлендж И он НЕ выполнен
     if (task.column === 'doing' && targetColId !== 'doing') {
         if (task.activeChallenge && !task.isChallengeCompleted) {
             alert('Сначала завершите активный челлендж!');
@@ -360,23 +352,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     if (!task || task.column === colId) return;
     
     if (!canMoveTask(task, colId)) return;
-
-    // Update column - position is handled by sort order
     updateTask({ ...task, column: colId as any });
   };
 
   const handleTaskDrop = (e: React.DragEvent, targetTaskId: string) => {
       e.preventDefault(); e.stopPropagation();
-
       const draggedTaskId = e.dataTransfer.getData('taskId');
       if (!draggedTaskId) return;
-      
       const draggedTask = activeTasks.find(t => t.id === draggedTaskId);
       const targetTask = activeTasks.find(t => t.id === targetTaskId);
-      
       if (!draggedTask || !targetTask) return;
-
-      // Handle column change if dropped on task in different column
       if (draggedTask.column !== targetTask.column) {
            if (!canMoveTask(draggedTask, targetTask.column)) return;
            updateTask({ ...draggedTask, column: targetTask.column });
@@ -384,9 +369,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-      e.preventDefault();
-  };
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); };
 
   const moveTask = (e: React.MouseEvent, task: Task, direction: 'left' | 'right') => {
     e.stopPropagation();
@@ -401,9 +384,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     }
   };
 
-  const toggleSortOrder = () => {
-      setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
-  };
+  const toggleSortOrder = () => { setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); };
 
   const triggerAI = async (content: string, type: 'stuck' | 'completed') => {
     setIsLoading(true);
@@ -423,10 +404,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     if (!activeModal || !aiResponse) return;
     const task = tasks.find(t => t.id === activeModal.taskId);
     if (task) {
-        updateTask({
-            ...task,
-            consultationHistory: [...(task.consultationHistory || []), aiResponse]
-        });
+        updateTask({ ...task, consultationHistory: [...(task.consultationHistory || []), aiResponse] });
         setActiveModal(null);
     }
   };
@@ -447,18 +425,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       const draft = challengeDrafts[task.id];
       if (draft) {
           const updatedTask: Task = { ...task };
-          // If in todo, move to doing automatically when accepting challenge
-          if (task.column === 'todo') {
-              updatedTask.column = 'doing';
-          }
-          
-          if (task.activeChallenge) {
-             updatedTask.challengeHistory = [...(task.challengeHistory || []), task.activeChallenge];
-          }
-          
+          if (task.column === 'todo') updatedTask.column = 'doing';
+          if (task.activeChallenge) updatedTask.challengeHistory = [...(task.challengeHistory || []), task.activeChallenge];
           updatedTask.activeChallenge = draft;
           updatedTask.isChallengeCompleted = false;
-          
           updateTask(updatedTask);
           const newDrafts = {...challengeDrafts};
           delete newDrafts[task.id];
@@ -471,29 +441,21 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       updateTask({ ...task, isChallengeCompleted: !task.isChallengeCompleted });
   };
 
-  // Toggle internal checkbox items in the challenge string
   const toggleChallengeCheckbox = (globalIndex: number, task: Task) => {
       if (!task.activeChallenge) return;
-      
       const lines = task.activeChallenge.split('\n');
       let checkboxCounter = 0;
-      
       const newLines = lines.map(line => {
-          // Robust regex to match line starting with (optional bullet/number) then [ ] or [x]
-          // Matches: "- [ ]", "1. [ ]", "[ ]"
           if (line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[[xX ]\]/)) {
               if (checkboxCounter === globalIndex) {
-                  // Check current state
                   const isChecked = line.includes('[x]') || line.includes('[X]');
                   checkboxCounter++;
-                  // Replace brackets with toggled state (case-insensitive find, lowercase replace)
                   return line.replace(/\[([ xX])\]/, isChecked ? '[ ]' : '[x]');
               }
               checkboxCounter++;
           }
           return line;
       });
-      
       updateTask({ ...task, activeChallenge: newLines.join('\n') });
   };
   
@@ -506,30 +468,23 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
   const getTaskForModal = () => tasks.find(t => t.id === activeModal?.taskId);
 
   const renderColumn = (col: typeof columns[0]) => {
-    if (!col) return null; // Safety check
+    if (!col) return null;
     
     return (
     <div key={col.id} className={`bg-slate-50/50 rounded-2xl flex flex-col h-full border-t-4 ${col.color} p-2 md:p-3 min-h-0 overflow-hidden`} onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
         <h3 className="font-semibold text-slate-600 mb-3 flex justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full">{activeTasks.filter(t => t.column === col.id).length}</span></h3>
         <div className="flex-1 overflow-y-auto space-y-3 pb-20 md:pb-2 min-h-0 px-1 custom-scrollbar-light">
             {activeTasks.filter(t => t.column === col.id).map(task => {
-                
-                const isChallengeFinished = task.isChallengeCompleted;
                 const isDoneColumn = col.id === 'done';
-                const hideExtraDetails = isDoneColumn || (col.id === 'todo' && isChallengeFinished);
+                const hideExtraDetails = isDoneColumn || (col.id === 'todo' && task.isChallengeCompleted);
 
                 let statusText = 'ЗАДАЧА';
                 let statusColor = 'text-slate-400';
                 let StatusIcon = null;
-                
                 let borderClass = 'border-l-4 border-slate-300';
                 
-                if (col.id === 'done') {
-                     borderClass = 'border-l-4 border-emerald-400';
-                }
-                else if (col.id === 'doing') {
-                     borderClass = 'border-l-4 border-indigo-400';
-                }
+                if (col.id === 'done') borderClass = 'border-l-4 border-emerald-400';
+                else if (col.id === 'doing') borderClass = 'border-l-4 border-indigo-400';
                 
                 if (isDoneColumn) {
                     statusText = 'ЗАДАЧА';
@@ -564,56 +519,29 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                          </CollapsibleSection>
                     )}
 
-                    {/* ACTIVE CHALLENGE DISPLAY */}
-                    {!hideExtraDetails && col.id === 'doing' && task.activeChallenge && !challengeDrafts[task.id] && (
-                        <div className="mt-2 mb-2">
-                            {/* PROGRESS BAR (Standardized) */}
-                            {challengeStats.total > 0 && (
-                                <ProgressBar percent={challengeStats.percent} />
-                            )}
+                    {/* ACTIVE CHALLENGE DISPLAY (CARD) */}
+                    {!hideExtraDetails && (col.id === 'doing' || col.id === 'todo') && task.activeChallenge && !challengeDrafts[task.id] && (
+                        <div className={`mt-2 mb-2 p-2 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
+                             {/* PROGRESS BAR */}
+                             {challengeStats.total > 0 && <ProgressBar percent={challengeStats.percent} />}
                             
-                            <CollapsibleSection title="Челлендж" icon={<Zap size={12}/>} isCard>
-                                <div className={`p-2 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
-                                    <div className="flex justify-between items-start gap-2">
-                                        <div className="w-full">
-                                            <InteractiveChallenge 
-                                                content={task.activeChallenge} 
-                                                onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
-                                            />
-                                        </div>
-                                        <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all mt-0.5 ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
-                                    </div>
-                                    {task.isChallengeCompleted && hasChallengeAuthors && (
-                                        <button 
-                                            onClick={(e) => generateChallenge(e, task.id, task.content)} 
-                                            disabled={generatingChallengeFor === task.id}
-                                            className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 bg-white border border-emerald-200 text-emerald-600 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-emerald-50 disabled:opacity-70 disabled:cursor-not-allowed"
-                                        >
-                                            <RotateCw size={12} className={generatingChallengeFor === task.id ? "animate-spin" : ""} /> 
-                                            Новый челлендж
-                                        </button>
-                                    )}
+                             {/* CHALLENGE CONTENT: Static if completed, Interactive if active */}
+                             {task.isChallengeCompleted ? (
+                                <div className="text-sm leading-relaxed text-slate-900">
+                                   <StaticChallengeRenderer content={task.activeChallenge} mode="history" />
                                 </div>
-                            </CollapsibleSection>
-                        </div>
-                    )}
-
-                    {!hideExtraDetails && col.id === 'todo' && task.activeChallenge && !challengeDrafts[task.id] && (
-                        <div className={`mt-2 mb-3 p-3 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
-                             {/* PROGRESS BAR (Standardized) */}
-                             {challengeStats.total > 0 && (
-                                <ProgressBar percent={challengeStats.percent} />
+                             ) : (
+                                <div className="flex justify-between items-start gap-2">
+                                    <div className="w-full">
+                                        <InteractiveChallenge 
+                                            content={task.activeChallenge} 
+                                            onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
+                                        />
+                                    </div>
+                                    <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all mt-0.5 ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
+                                </div>
                              )}
 
-                            <div className="flex justify-between items-start gap-2">
-                                <div className="w-full">
-                                    <InteractiveChallenge 
-                                        content={task.activeChallenge} 
-                                        onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
-                                    />
-                                </div>
-                                <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all mt-0.5 ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
-                            </div>
                             {task.isChallengeCompleted && hasChallengeAuthors && (
                                 <button 
                                     onClick={(e) => generateChallenge(e, task.id, task.content)} 
@@ -627,7 +555,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                         </div>
                     )}
 
-                    {/* CHALLENGE GENERATION OUTPUT (DRAFT) */}
+                    {/* DRAFT PREVIEW */}
                     {challengeDrafts[task.id] && (
                         <div className="mt-2 mb-3 p-3 bg-amber-50 rounded-lg border border-amber-200 animate-in fade-in slide-in-from-top-2 relative">
                             <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 uppercase mb-2"><Zap size={10} /> {config.challengeAuthors[0]?.name || 'Popper'}</div>
@@ -722,15 +650,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             </button>
 
                         </div>
-
                         <div className="flex gap-2 items-center justify-between">
-                            <div className="w-8 flex justify-start">
-                                {col.id !== 'todo' && <button onClick={(e) => moveTask(e, task, 'left')} className="p-1.5 bg-slate-100 md:hidden rounded-lg text-slate-500 border border-slate-200"><ChevronLeft size={16} /></button>}
-                            </div>
-                            
-                            <div className="w-8 flex justify-end">
-                                {col.id !== 'done' && <button onClick={(e) => moveTask(e, task, 'right')} className="p-1.5 bg-slate-100 md:hidden rounded-lg text-slate-500 border border-slate-200"><ChevronRight size={16} /></button>}
-                            </div>
+                            <div className="w-8 flex justify-start">{col.id !== 'todo' && <button onClick={(e) => moveTask(e, task, 'left')} className="p-1.5 bg-slate-100 md:hidden rounded-lg text-slate-500 border border-slate-200"><ChevronLeft size={16} /></button>}</div>
+                            <div className="w-8 flex justify-end">{col.id !== 'done' && <button onClick={(e) => moveTask(e, task, 'right')} className="p-1.5 bg-slate-100 md:hidden rounded-lg text-slate-500 border border-slate-200"><ChevronRight size={16} /></button>}</div>
                         </div>
                     </div>
                 </div>
@@ -744,7 +666,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     <div className="h-full p-3 md:p-8 flex flex-col overflow-hidden relative">
       <header className="mb-4 shrink-0"><h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight">Действия <span className="text-emerald-500 text-sm md:text-lg">/ От слов к делу</span></h1></header>
       
-      {/* FILTERS UI */}
       <div className="flex flex-wrap gap-2 mb-4 animate-in slide-in-from-top-2 shrink-0">
          <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
              <button onClick={toggleSortOrder} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all text-slate-600 hover:bg-slate-50">
@@ -752,13 +673,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                  {sortOrder === 'asc' && <><ArrowUp size={14} /> Сначала старые</>}
              </button>
          </div>
-
          <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
             <button onClick={() => setFilterChallenge('all')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filterChallenge === 'all' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}>Все</button>
             <button onClick={() => setFilterChallenge('active')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${filterChallenge === 'active' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-indigo-500'}`}><Zap size={12}/> Активные</button>
             <button onClick={() => setFilterChallenge('completed')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${filterChallenge === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}><CheckCircle2 size={12}/> Финал</button>
          </div>
-
          <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
              <button onClick={() => setFilterJournal(filterJournal === 'all' ? 'linked' : 'all')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${filterJournal === 'linked' ? 'bg-amber-50 text-amber-600 shadow-sm ring-1 ring-amber-100' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50/50'}`}><Book size={12}/> В дневнике</button>
          </div>
@@ -783,7 +702,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                      <div className="space-y-4">
                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-4">
                             <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider block mb-3">Задача</span>
-                            <div className="text-base text-slate-800 font-normal leading-relaxed">
+                            <div className="text-sm text-slate-800 font-normal leading-relaxed">
                                 <ReactMarkdown components={markdownComponents}>{getTaskForModal()?.content}</ReactMarkdown>
                             </div>
                         </div>
@@ -813,17 +732,23 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                    {getTaskForModal()?.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
                                 </span>
                                 
-                                {/* INTERACTIVE CHALLENGE IN MODAL (Adjusted to text-sm) */}
-                                <div className="text-sm leading-relaxed text-slate-900">
-                                  <InteractiveChallenge 
-                                    content={getTaskForModal()?.activeChallenge || ''} 
-                                    onToggle={(idx) => {
-                                        if (getTaskForModal()) {
-                                            toggleChallengeCheckbox(idx, getTaskForModal()!);
-                                        }
-                                    }} 
-                                  />
-                                </div>
+                                {/* MODAL: Interactive if active, Static if completed */}
+                                {getTaskForModal()?.isChallengeCompleted ? (
+                                    <div className="text-sm leading-relaxed text-slate-900">
+                                      <StaticChallengeRenderer content={getTaskForModal()?.activeChallenge || ''} mode="history" />
+                                    </div>
+                                ) : (
+                                    <div className="text-sm leading-relaxed text-slate-900">
+                                      <InteractiveChallenge 
+                                        content={getTaskForModal()?.activeChallenge || ''} 
+                                        onToggle={(idx) => {
+                                            if (getTaskForModal()) {
+                                                toggleChallengeCheckbox(idx, getTaskForModal()!);
+                                            }
+                                        }} 
+                                      />
+                                    </div>
+                                )}
                              </div>
                           </CollapsibleSection>
                         )}

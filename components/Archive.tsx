@@ -27,20 +27,26 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     return children;
 };
 
-// Standardized Markdown Styles (Matches Kanban)
+// Standardized Markdown Styles - Matches Kanban text-sm
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-3 last:mb-0 text-slate-800 leading-relaxed" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-slate-800 leading-relaxed" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-3 space-y-1 text-slate-800" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-3 space-y-1 text-slate-800" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-slate-800" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-slate-800" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed" {...props} />,
-    h1: ({node, children, ...props}: any) => <h1 className="text-lg font-bold mt-4 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
-    h2: ({node, children, ...props}: any) => <h2 className="text-base font-bold mt-3 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
-    h3: ({node, children, ...props}: any) => <h3 className="text-sm font-bold mt-3 mb-1 text-slate-900 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
-    h4: ({node, children, ...props}: any) => <h4 className="text-sm font-bold mt-2 mb-1 text-slate-800" {...props}>{cleanHeader(children)}</h4>,
-    blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-indigo-200 pl-4 py-1 my-3 text-slate-600 italic bg-indigo-50/30 rounded-r-lg" {...props} />,
+    h1: ({node, children, ...props}: any) => <h1 className="text-base font-bold mt-3 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
+    h2: ({node, children, ...props}: any) => <h2 className="text-sm font-bold mt-2 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
+    h3: ({node, children, ...props}: any) => <h3 className="text-xs font-bold mt-2 mb-1 text-slate-900 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
+    h4: ({node, children, ...props}: any) => <h4 className="text-xs font-bold mt-2 mb-1 text-slate-800" {...props}>{cleanHeader(children)}</h4>,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-indigo-200 pl-4 py-1 my-2 text-sm text-slate-600 italic bg-indigo-50/30 rounded-r-lg" {...props} />,
     strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900" {...props} />,
     em: ({node, ...props}: any) => <em className="italic text-slate-800" {...props} />,
+    // Code block fix
+    code: ({node, inline, className, children, ...props}: any) => {
+         return inline 
+            ? <code className="bg-slate-100 px-1 py-0.5 rounded text-xs font-mono text-pink-600 border border-slate-200" {...props}>{children}</code>
+            : <code className="block bg-slate-50 text-slate-700 border border-slate-200 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+    }
 };
 
 const CollapsibleSection: React.FC<{
@@ -87,24 +93,28 @@ const StaticChallengeRenderer: React.FC<{
 
     const flushBuffer = (keyPrefix: string) => {
         if (textBuffer) {
-            renderedParts.push(
-                <div key={`${keyPrefix}-md`} className="text-xs leading-relaxed text-slate-900 mb-1 last:mb-0">
-                    <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
-                </div>
-            );
+            const trimmedBuffer = textBuffer.trim();
+            if (trimmedBuffer) {
+                renderedParts.push(
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 mb-1 last:mb-0">
+                        <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
+                    </div>
+                );
+            }
             textBuffer = '';
         }
     };
 
     lines.forEach((line, i) => {
-        const match = line.match(/^(\s*)(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
+        const match = line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
         
         if (match) {
             flushBuffer(`line-${i}`);
             
-            const isChecked = match[2].toLowerCase() === 'x';
-            const label = match[3];
-            const indent = match[1].length * 6; 
+            const isChecked = match[1].toLowerCase() === 'x';
+            const label = match[2];
+            const leadingSpaces = line.search(/\S|$/);
+            const indent = leadingSpaces * 4; 
 
             let Icon = Circle;
             let iconClass = "text-slate-300";
@@ -130,7 +140,7 @@ const StaticChallengeRenderer: React.FC<{
                     <div className={`mt-0.5 shrink-0 ${iconClass}`}>
                         <Icon size={16} />
                     </div>
-                    <span className={`text-xs text-slate-700`}>
+                    <span className={`text-sm text-slate-700`}>
                         <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
                     </span>
                 </div>
