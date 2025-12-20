@@ -1,7 +1,8 @@
+
 import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task } from '../types';
-import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, List, Plus, Minus, MessageCircle } from 'lucide-react';
+import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, List, Plus, Minus, MessageCircle, Circle, XCircle } from 'lucide-react';
 
 interface Props {
   tasks: Task[];
@@ -72,6 +73,75 @@ const CollapsibleSection: React.FC<{
       )}
     </div>
   );
+};
+
+// Static Challenge Renderer (For History & Final)
+const StaticChallengeRenderer: React.FC<{ 
+    content: string,
+    mode: 'draft' | 'history'
+}> = ({ content, mode }) => {
+    const lines = content.split('\n');
+    
+    const renderedParts: React.ReactNode[] = [];
+    let textBuffer = '';
+
+    const flushBuffer = (keyPrefix: string) => {
+        if (textBuffer) {
+            renderedParts.push(
+                <div key={`${keyPrefix}-md`} className="text-xs leading-relaxed text-slate-900 mb-1 last:mb-0">
+                    <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
+                </div>
+            );
+            textBuffer = '';
+        }
+    };
+
+    lines.forEach((line, i) => {
+        const match = line.match(/^(\s*)(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
+        
+        if (match) {
+            flushBuffer(`line-${i}`);
+            
+            const isChecked = match[2].toLowerCase() === 'x';
+            const label = match[3];
+            const indent = match[1].length * 6; 
+
+            let Icon = Circle;
+            let iconClass = "text-slate-300";
+            
+            if (isChecked) {
+                Icon = CheckCircle2;
+                iconClass = "text-emerald-500";
+            } else if (mode === 'history') {
+                Icon = XCircle;
+                iconClass = "text-red-400";
+            } else {
+                // Draft mode, unchecked
+                Icon = Circle;
+                iconClass = "text-slate-300";
+            }
+
+            renderedParts.push(
+                <div 
+                    key={`cb-${i}`}
+                    className="flex items-start gap-2 w-full text-left py-1 px-1 mb-0.5 cursor-default"
+                    style={{ marginLeft: `${indent}px` }}
+                >
+                    <div className={`mt-0.5 shrink-0 ${iconClass}`}>
+                        <Icon size={16} />
+                    </div>
+                    <span className={`text-xs text-slate-700`}>
+                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
+                    </span>
+                </div>
+            );
+        } else {
+            textBuffer += line + '\n';
+        }
+    });
+    flushBuffer('end');
+
+    return <>{renderedParts}</>;
 };
 
 const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
@@ -176,7 +246,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                 <div className="space-y-4">
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-4">
                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Задача</span>
-                         <div className="text-base text-slate-800 font-normal leading-relaxed">
+                         <div className="text-sm text-slate-800 font-normal leading-relaxed">
                             <ReactMarkdown components={markdownComponents}>{selectedTask.content}</ReactMarkdown>
                          </div>
                     </div>
@@ -196,7 +266,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                                     {selectedTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
                                 </span>
                                 <div className="text-sm leading-relaxed text-slate-900">
-                                  <ReactMarkdown components={markdownComponents}>{selectedTask.activeChallenge}</ReactMarkdown>
+                                  <StaticChallengeRenderer content={selectedTask.activeChallenge} mode="history" />
                                 </div>
                             </div>
                         </CollapsibleSection>
@@ -204,13 +274,15 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
 
                     {selectedTask.challengeHistory && selectedTask.challengeHistory.length > 0 && (
                         <CollapsibleSection title="История Челленджей" icon={<History size={14} />}>
-                            <ul className="space-y-3">
+                            <div className="space-y-4">
                                 {selectedTask.challengeHistory.map((h, i) => (
-                                    <li key={i} className="text-sm text-slate-900 py-2 border-b border-slate-100 last:border-0">
-                                        <ReactMarkdown components={markdownComponents}>{h}</ReactMarkdown>
-                                    </li>
+                                    <div key={i} className="py-2 border-b border-slate-100 last:border-0">
+                                        <div className="text-sm leading-relaxed text-slate-900">
+                                            <StaticChallengeRenderer content={h} mode="history" />
+                                        </div>
+                                    </div>
                                 ))}
-                            </ul>
+                            </div>
                         </CollapsibleSection>
                     )}
                     

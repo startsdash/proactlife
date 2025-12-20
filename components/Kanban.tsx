@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle } from 'lucide-react';
 
 interface Props {
   tasks: Task[];
@@ -145,7 +145,6 @@ const getChallengeStats = (content: string) => {
 };
 
 // Interactive Challenge Renderer
-// Splits markdown by lines to render checkboxes as real buttons, preserving other markdown context
 const InteractiveChallenge: React.FC<{ 
     content: string, 
     onToggle: (index: number) => void 
@@ -153,7 +152,6 @@ const InteractiveChallenge: React.FC<{
     const lines = content.split('\n');
     let checkboxIndex = 0;
     
-    // Group non-checkbox lines to render them as proper markdown blocks
     const renderedParts: React.ReactNode[] = [];
     let textBuffer = '';
 
@@ -169,20 +167,14 @@ const InteractiveChallenge: React.FC<{
     };
 
     lines.forEach((line, i) => {
-        // Robust regex to match checkboxes with various list styles (-, *, +, 1., or none)
-        // Group 1: Indent
-        // Group 2: Checkbox state (space, x, X)
-        // Group 3: Label content
         const match = line.match(/^(\s*)(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
         
         if (match) {
-            // It's a checkbox line
             flushBuffer(`line-${i}`);
             
             const currentIdx = checkboxIndex++;
             const isChecked = match[2].toLowerCase() === 'x';
             const label = match[3];
-            // Approx indentation visual
             const indent = match[1].length * 6; 
 
             renderedParts.push(
@@ -193,15 +185,83 @@ const InteractiveChallenge: React.FC<{
                     style={{ marginLeft: `${indent}px` }}
                 >
                     <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 group-hover:text-indigo-400'}`}>
-                        {isChecked ? <CheckSquare size={14} /> : <Square size={14} />}
+                        {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                     </div>
-                    <span className={`text-xs ${isChecked ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                    <span className={`text-xs ${isChecked ? 'text-slate-500' : 'text-slate-700'}`}>
                         <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
                     </span>
                 </button>
             );
         } else {
-            // It's normal text
+            textBuffer += line + '\n';
+        }
+    });
+    flushBuffer('end');
+
+    return <>{renderedParts}</>;
+};
+
+// Static Challenge Renderer (For Drafts & History)
+const StaticChallengeRenderer: React.FC<{ 
+    content: string,
+    mode: 'draft' | 'history'
+}> = ({ content, mode }) => {
+    const lines = content.split('\n');
+    
+    const renderedParts: React.ReactNode[] = [];
+    let textBuffer = '';
+
+    const flushBuffer = (keyPrefix: string) => {
+        if (textBuffer) {
+            renderedParts.push(
+                <div key={`${keyPrefix}-md`} className="text-xs leading-relaxed text-slate-900 mb-1 last:mb-0">
+                    <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
+                </div>
+            );
+            textBuffer = '';
+        }
+    };
+
+    lines.forEach((line, i) => {
+        const match = line.match(/^(\s*)(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
+        
+        if (match) {
+            flushBuffer(`line-${i}`);
+            
+            const isChecked = match[2].toLowerCase() === 'x';
+            const label = match[3];
+            const indent = match[1].length * 6; 
+
+            let Icon = Circle;
+            let iconClass = "text-slate-300";
+            
+            if (isChecked) {
+                Icon = CheckCircle2;
+                iconClass = "text-emerald-500";
+            } else if (mode === 'history') {
+                Icon = XCircle;
+                iconClass = "text-red-400";
+            } else {
+                // Draft mode, unchecked
+                Icon = Circle;
+                iconClass = "text-slate-300";
+            }
+
+            renderedParts.push(
+                <div 
+                    key={`cb-${i}`}
+                    className="flex items-start gap-2 w-full text-left py-1 px-1 mb-0.5 cursor-default"
+                    style={{ marginLeft: `${indent}px` }}
+                >
+                    <div className={`mt-0.5 shrink-0 ${iconClass}`}>
+                        <Icon size={16} />
+                    </div>
+                    <span className={`text-xs text-slate-700`}>
+                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
+                    </span>
+                </div>
+            );
+        } else {
             textBuffer += line + '\n';
         }
     });
@@ -572,7 +632,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                         <div className="mt-2 mb-3 p-3 bg-amber-50 rounded-lg border border-amber-200 animate-in fade-in slide-in-from-top-2 relative">
                             <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 uppercase mb-2"><Zap size={10} /> {config.challengeAuthors[0]?.name || 'Popper'}</div>
                             <div className="text-sm text-slate-900 leading-relaxed mb-3">
-                                <ReactMarkdown components={markdownComponents}>{challengeDrafts[task.id]}</ReactMarkdown>
+                                <StaticChallengeRenderer content={challengeDrafts[task.id]} mode="draft" />
                             </div>
                             <div className="flex gap-2">
                                 <button onClick={(e) => acceptChallenge(e, task)} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold py-1.5 rounded flex items-center justify-center gap-1 shadow-sm"><Play size={10} className="fill-current" /> Принять</button>
@@ -753,7 +813,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                    {getTaskForModal()?.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
                                 </span>
                                 
-                                {/* INTERACTIVE CHALLENGE IN MODAL */}
+                                {/* INTERACTIVE CHALLENGE IN MODAL (Adjusted to text-sm) */}
                                 <div className="text-sm leading-relaxed text-slate-900">
                                   <InteractiveChallenge 
                                     content={getTaskForModal()?.activeChallenge || ''} 
@@ -770,13 +830,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
 
                         {getTaskForModal()?.challengeHistory && getTaskForModal()!.challengeHistory!.length > 0 && (
                           <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
-                             <ul className="space-y-3">
+                             <div className="space-y-4">
                                 {getTaskForModal()!.challengeHistory!.map((challenge, index) => (
-                                   <li key={index} className="text-sm text-slate-900 py-2 border-b border-slate-100 last:border-0">
-                                      <ReactMarkdown components={markdownComponents}>{challenge}</ReactMarkdown>
-                                   </li>
+                                   <div key={index} className="py-2 border-b border-slate-100 last:border-0">
+                                      <div className="text-sm leading-relaxed text-slate-900">
+                                         <StaticChallengeRenderer content={challenge} mode="history" />
+                                      </div>
+                                   </div>
                                 ))}
-                             </ul>
+                             </div>
                           </CollapsibleSection>
                         )}
                         
