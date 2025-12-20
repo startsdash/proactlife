@@ -1,18 +1,21 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { JournalEntry, Task, AppConfig } from '../types';
+import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2 } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll } from 'lucide-react';
 
 interface Props {
   entries: JournalEntry[];
+  mentorAnalyses: MentorAnalysis[];
   tasks: Task[];
   config: AppConfig;
   addEntry: (entry: JournalEntry) => void;
   deleteEntry: (id: string) => void;
   updateEntry: (entry: JournalEntry) => void;
+  addMentorAnalysis: (analysis: MentorAnalysis) => void;
+  deleteMentorAnalysis: (id: string) => void;
   initialTaskId?: string | null;
   onClearInitialTask?: () => void;
   onNavigateToTask?: (taskId: string) => void;
@@ -161,7 +164,7 @@ const TaskSelect: React.FC<{
   );
 };
 
-const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntry, updateEntry, initialTaskId, onClearInitialTask, onNavigateToTask }) => {
+const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addEntry, deleteEntry, updateEntry, addMentorAnalysis, deleteMentorAnalysis, initialTaskId, onClearInitialTask, onNavigateToTask }) => {
   const [content, setContent] = useState('');
   const [linkedTaskId, setLinkedTaskId] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
@@ -182,6 +185,9 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
   // Mentor Analysis State
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
+  
+  // Mentor History State
+  const [showHistory, setShowHistory] = useState(false);
 
   // Check if Mentor Tool is enabled
   const hasMentorTool = useMemo(() => {
@@ -333,6 +339,19 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
       setIsAnalyzing(false);
   };
 
+  const handleSaveAnalysis = () => {
+    if (analysisResult) {
+       addMentorAnalysis({
+          id: Date.now().toString(),
+          date: Date.now(),
+          content: analysisResult,
+          mentorName: 'Наставник (ИИ)'
+       });
+       alert("Анализ сохранен в Историю Наставника");
+       setAnalysisResult(null);
+    }
+  };
+
   const hasActiveDateFilter = !!dateRange.from || !!dateRange.to;
 
   return (
@@ -462,6 +481,14 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
                 </div>
 
                 {hasMentorTool && (
+                  <>
+                  <button 
+                      onClick={() => setShowHistory(true)}
+                      className="p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square bg-white border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 shadow-sm"
+                      title="История Наставника"
+                  >
+                      <Scroll size={18} />
+                  </button>
                   <button 
                       onClick={handleAnalyzePath}
                       disabled={isAnalyzing || displayedEntries.length === 0}
@@ -471,6 +498,7 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
                       {isAnalyzing ? <Loader2 size={18} className="animate-spin" /> : <Bot size={18} />}
                       <span className="hidden md:inline text-xs font-bold uppercase tracking-wide">Наставник</span>
                   </button>
+                  </>
                 )}
             </div>
         </div>
@@ -559,7 +587,7 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
         )}
       </div>
 
-      {/* ANALYSIS MODAL */}
+      {/* ANALYSIS RESULT MODAL */}
       {analysisResult && (
           <div className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setAnalysisResult(null)}>
               <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -572,8 +600,59 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
                       <ReactMarkdown components={markdownComponents}>{analysisResult}</ReactMarkdown>
                   </div>
 
-                  <div className="mt-8 flex justify-end">
-                      <button onClick={() => setAnalysisResult(null)} className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm">
+                  <div className="mt-8 flex justify-end gap-2">
+                      <button onClick={handleSaveAnalysis} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm flex items-center gap-2">
+                          <Save size={16} /> Сохранить в историю
+                      </button>
+                      <button onClick={() => setAnalysisResult(null)} className="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium text-sm">
+                          Закрыть
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* MENTOR HISTORY MODAL */}
+      {showHistory && (
+          <div className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
+              <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex justify-between items-center mb-6 shrink-0">
+                      <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Scroll className="text-indigo-600" /> История Наставника</h3>
+                      <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar-light space-y-4">
+                      {mentorAnalyses.length === 0 ? (
+                          <div className="text-center py-10 text-slate-400 italic text-sm">История пуста. Запустите анализ пути, чтобы сохранить результат.</div>
+                      ) : (
+                          mentorAnalyses.sort((a,b) => b.date - a.date).map(analysis => (
+                              <div key={analysis.id} className="bg-slate-50 rounded-xl p-5 border border-slate-100 group">
+                                  <div className="flex justify-between items-start mb-3">
+                                      <div className="flex flex-col">
+                                          <span className="text-xs font-bold text-slate-500 uppercase">{analysis.mentorName}</span>
+                                          <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-1">
+                                              <Calendar size={10} /> {new Date(analysis.date).toLocaleString()}
+                                          </span>
+                                      </div>
+                                      <button 
+                                        onClick={() => {
+                                            if (confirm("Удалить этот анализ?")) deleteMentorAnalysis(analysis.id);
+                                        }}
+                                        className="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                          <Trash2 size={16} />
+                                      </button>
+                                  </div>
+                                  <div className="text-sm text-slate-700 leading-relaxed">
+                                      <ReactMarkdown components={markdownComponents}>{analysis.content}</ReactMarkdown>
+                                  </div>
+                              </div>
+                          ))
+                      )}
+                  </div>
+                  
+                  <div className="mt-6 flex justify-end shrink-0 pt-4 border-t border-slate-50">
+                      <button onClick={() => setShowHistory(false)} className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm">
                           Закрыть
                       </button>
                   </div>

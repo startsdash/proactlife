@@ -13,6 +13,7 @@ export const loadState = (): AppState => {
       flashcards: [],
       challenges: [],
       journal: [],
+      mentorAnalyses: [],
       config: DEFAULT_CONFIG
     };
 
@@ -47,6 +48,11 @@ export const loadState = (): AppState => {
     if (!parsed.journal) {
       parsed.journal = [];
     }
+    
+    // Migration: Mentor Analyses
+    if (!parsed.mentorAnalyses) {
+      parsed.mentorAnalyses = [];
+    }
 
     return parsed;
   } catch (error) {
@@ -57,6 +63,7 @@ export const loadState = (): AppState => {
       flashcards: [],
       challenges: [],
       journal: [],
+      mentorAnalyses: [],
       config: DEFAULT_CONFIG
     };
   }

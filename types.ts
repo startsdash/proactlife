@@ -63,6 +63,13 @@ export interface JournalEntry {
   mentorId?: string;
 }
 
+export interface MentorAnalysis {
+  id: string;
+  date: number;
+  content: string;
+  mentorName: string;
+}
+
 // --- CONFIGURATION TYPES ---
 
 export type AccessLevel = 'public' | 'owner_only' | 'restricted';
@@ -117,7 +124,8 @@ export interface AppState {
   tasks: Task[];
   flashcards: Flashcard[];
   challenges: Challenge[];
-  journal: JournalEntry[]; // NEW
+  journal: JournalEntry[]; 
+  mentorAnalyses: MentorAnalysis[]; // NEW: History of Journal Analyses
   config: AppConfig; // Dynamic Configuration
   user?: UserProfile; // Current User
 }

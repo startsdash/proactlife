@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl } from './types';
+import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis } from './types';
 import { loadState, saveState } from './services/storageService';
 import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
@@ -20,7 +20,7 @@ const OWNER_EMAIL = 'rukomrus@gmail.com';
 const App: React.FC = () => {
   const [module, setModule] = useState<Module>(Module.LEARNING);
   const [data, setData] = useState<AppState>({
-    notes: [], tasks: [], flashcards: [], challenges: [], journal: [], config: DEFAULT_CONFIG
+    notes: [], tasks: [], flashcards: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG
   });
   
   const [isLoaded, setIsLoaded] = useState(false);
@@ -93,6 +93,7 @@ const App: React.FC = () => {
               }
 
               if (!driveData.journal) driveData.journal = [];
+              if (!driveData.mentorAnalyses) driveData.mentorAnalyses = [];
               
               setData(prev => ({...driveData, user: prev.user})); 
               saveState(driveData);
@@ -209,6 +210,9 @@ const App: React.FC = () => {
   const updateJournalEntry = (entry: JournalEntry) => setData(p => ({ ...p, journal: p.journal.map(j => j.id === entry.id ? entry : j) }));
   const deleteJournalEntry = (id: string) => setData(p => ({ ...p, journal: p.journal.filter(j => j.id !== id) }));
   
+  const addMentorAnalysis = (analysis: MentorAnalysis) => setData(p => ({ ...p, mentorAnalyses: [analysis, ...p.mentorAnalyses] }));
+  const deleteMentorAnalysis = (id: string) => setData(p => ({ ...p, mentorAnalyses: p.mentorAnalyses.filter(a => a.id !== id) }));
+
   const handleReflectInJournal = (taskId: string) => {
     setJournalContextTaskId(taskId);
     setModule(Module.JOURNAL);
@@ -269,7 +273,7 @@ const App: React.FC = () => {
       {module === Module.SANDBOX && <Sandbox notes={data.notes} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
       {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} />}
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
-      {module === Module.JOURNAL && <Journal entries={data.journal} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
+      {module === Module.JOURNAL && <Journal entries={data.journal} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
       {module === Module.ARCHIVE && <Archive tasks={data.tasks} restoreTask={restoreTask} deleteTask={deleteTask} />}
       {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => setModule(Module.NAPKINS)} />}
       {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => setModule(Module.NAPKINS)} />}
