@@ -482,6 +482,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                 }
 
                 const challengeStats = task.activeChallenge ? getChallengeStats(task.activeChallenge) : { total: 0, checked: 0, percent: 0 };
+                const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
                 
                 return (
                 <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-default relative group ${borderClass}`}>
@@ -596,10 +597,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                <>
                                <button 
                                     onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }}
-                                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100 transition-colors"
-                                    title="Дневник"
+                                    className={`p-2 rounded-lg border border-transparent transition-colors ${
+                                        hasJournalEntry 
+                                        ? 'text-amber-600 bg-amber-50 hover:bg-amber-100 hover:border-amber-200' 
+                                        : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-100'
+                                    }`}
+                                    title={hasJournalEntry ? "В «Дневнике»" : "В «Дневник»"}
                                >
-                                    <Book size={18} />
+                                    <Book size={18} className={hasJournalEntry ? "fill-current" : ""} />
                                </button>
 
                                {!challengeDrafts[task.id] && hasChallengeAuthors && (
