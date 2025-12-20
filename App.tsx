@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit } from './types';
+import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis } from './types';
 import { loadState, saveState } from './services/storageService';
 import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
@@ -14,7 +14,6 @@ import Settings from './components/Settings';
 import Journal from './components/Journal';
 import LearningMode from './components/LearningMode';
 import UserSettings from './components/UserSettings';
-import Rituals from './components/Rituals'; // NEW
 
 const OWNER_EMAIL = 'rukomrus@gmail.com';
 
@@ -29,11 +28,13 @@ const App: React.FC = () => {
         return tab as Module;
       }
     }
+    // Default to NAPKINS as requested
     return Module.NAPKINS;
   };
 
   const [module, setModule] = useState<Module>(getInitialModule);
   
+  // Custom Navigation Handler that syncs with Browser History
   const handleNavigate = (newModule: Module) => {
     setModule(newModule);
     const url = new URL(window.location.href);
@@ -41,12 +42,14 @@ const App: React.FC = () => {
     window.history.pushState({ module: newModule }, '', url.toString());
   };
 
+  // Listen for Browser Back/Forward buttons
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       const stateModule = event.state?.module;
       if (stateModule && Object.values(Module).includes(stateModule)) {
         setModule(stateModule);
       } else {
+        // Fallback to URL parsing or Default if state is missing
         setModule(getInitialModule());
       }
     };
@@ -58,15 +61,15 @@ const App: React.FC = () => {
   // ------------------------
 
   const [data, setData] = useState<AppState>({
-    notes: [], tasks: [], habits: [], flashcards: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG
+    notes: [], tasks: [], flashcards: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG
   });
   
   const [isLoaded, setIsLoaded] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'disconnected' | 'syncing' | 'synced' | 'error'>('disconnected');
   const [isDriveConnected, setIsDriveConnected] = useState(false);
-  const [hasLoadedFromCloud, setHasLoadedFromCloud] = useState(false);
-  const [journalContextTaskId, setJournalContextTaskId] = useState<string | null>(null);
-  const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null);
+  const [hasLoadedFromCloud, setHasLoadedFromCloud] = useState(false); // Guard state
+  const [journalContextTaskId, setJournalContextTaskId] = useState<string | null>(null); // Context for navigation (Journal)
+  const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
 
   const isHydratingRef = useRef(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,16 +83,15 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log('LIVE.ACT Pro v2.1.0 (Dark Mode Enabled)');
+    console.log('LIVE.ACT Pro v2.0.0 (Owner Mode)');
     const failSafeTimer = setTimeout(() => { if (!isLoaded) setIsLoaded(true); }, 4000);
 
     const initializeApp = async () => {
       const localData = loadState();
-      
-      // Migration for new modules
-      if (!localData.habits) localData.habits = [];
-
       setData(localData);
+      
+      // Legacy logic to force Napkins if data exists is removed 
+      // because Napkins is now the default start screen.
 
       try {
         await initGapi();
@@ -121,13 +123,16 @@ const App: React.FC = () => {
           if (driveData) {
               isHydratingRef.current = true;
               
+              // CONFIG HYDRATION:
+              // Even from Drive, we respect the Code Version.
+              // If Code Version is newer, we ignore Drive Config and use Code Config.
               if (!driveData.config || driveData.config._version !== DEFAULT_CONFIG._version) {
+                  console.log("Drive Config outdated. Using Code Config.");
                   driveData.config = DEFAULT_CONFIG;
               }
 
               if (!driveData.journal) driveData.journal = [];
               if (!driveData.mentorAnalyses) driveData.mentorAnalyses = [];
-              if (!driveData.habits) driveData.habits = []; // Migration
               
               setData(prev => ({...driveData, user: prev.user})); 
               saveState(driveData);
@@ -168,6 +173,8 @@ const App: React.FC = () => {
     setHasLoadedFromCloud(false);
     localStorage.removeItem('isGoogleAuthEnabled');
     
+    // Revert to local state or guest state
+    // We reload state from localStorage to ensure we are consistent with "Guest Mode" on this device.
     const localData = loadState();
     setData(prev => ({ ...localData, user: undefined, config: prev.config }));
     alert("Вы вышли из профиля.");
@@ -235,11 +242,6 @@ const App: React.FC = () => {
       return { ...p, tasks };
   });
 
-  // Rituals (Habits) Handlers
-  const addHabit = (h: Habit) => setData(p => ({ ...p, habits: [...p.habits, h] }));
-  const updateHabit = (h: Habit) => setData(p => ({ ...p, habits: p.habits.map(x => x.id === h.id ? h : x) }));
-  const deleteHabit = (id: string) => setData(p => ({ ...p, habits: p.habits.filter(h => h.id !== id) }));
-
   const addFlashcard = (c: Flashcard) => setData(p => ({ ...p, flashcards: [...p.flashcards, c] }));
   const deleteFlashcard = (id: string) => setData(p => ({ ...p, flashcards: p.flashcards.filter(f => f.id !== id) }));
 
@@ -262,19 +264,30 @@ const App: React.FC = () => {
 
   const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
   
+  // OWNER CHECK
   const isOwner = data.user?.email === OWNER_EMAIL;
 
   const visibleConfig = useMemo(() => {
+    // We DO NOT merge with defaults here anymore.
+    // The data.config (hydrated in storageService) IS the single source of truth.
+    // This prevents duplication of items that exist in both Code and LocalStorage.
     const configToFilter = data.config;
     const currentUserEmail = data.user?.email || '';
 
     const isVisible = (item: AccessControl) => {
+       // 1. Global Disable Switch
        if (item.isDisabled) return false;
+
+       // 2. Owner Override
        if (isOwner) return true;
+       
+       // 3. Access Level Checks for Non-Owners
        const level = item.accessLevel || 'public';
+       
        if (level === 'public') return true;
-       if (level === 'owner_only') return false;
+       if (level === 'owner_only') return false; // STRICTLY HIDDEN
        if (level === 'restricted') return item.allowedEmails?.includes(currentUserEmail) || false;
+       
        return true;
     };
 
@@ -286,7 +299,7 @@ const App: React.FC = () => {
     };
   }, [data.config, isOwner, data.user]);
 
-  if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400">Loading ProActLife...</div>;
+  if (!isLoaded) return <div className="h-screen flex items-center justify-center">Loading...</div>;
 
   return (
     <Layout 
@@ -298,7 +311,6 @@ const App: React.FC = () => {
       {module === Module.NAPKINS && <Napkins notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} />}
       {module === Module.SANDBOX && <Sandbox notes={data.notes} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
       {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} />}
-      {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.JOURNAL && <Journal entries={data.journal} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
       {module === Module.ARCHIVE && <Archive tasks={data.tasks} restoreTask={restoreTask} deleteTask={deleteTask} />}
