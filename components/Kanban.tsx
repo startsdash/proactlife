@@ -458,6 +458,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                 const isDoneColumn = col.id === 'done';
                 const hideExtraDetails = isDoneColumn || (col.id === 'todo' && isChallengeFinished);
 
+                const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
+
                 let statusText = 'ЗАДАЧА';
                 let statusColor = 'text-slate-400';
                 let StatusIcon = null;
@@ -596,8 +598,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                <>
                                <button 
                                     onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }}
-                                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100 transition-colors"
-                                    title="Дневник"
+                                    className={`p-2 rounded-lg border transition-all ${
+                                        hasJournalEntry 
+                                        ? 'text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100' 
+                                        : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border-transparent hover:border-indigo-100'
+                                    }`}
+                                    title={hasJournalEntry ? "Открыть в Дневнике" : "Создать запись в Дневнике"}
                                >
                                     <Book size={18} />
                                </button>
