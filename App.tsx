@@ -18,7 +18,48 @@ import UserSettings from './components/UserSettings';
 const OWNER_EMAIL = 'rukomrus@gmail.com';
 
 const App: React.FC = () => {
-  const [module, setModule] = useState<Module>(Module.LEARNING);
+  // --- NAVIGATION LOGIC ---
+  const getInitialModule = (): Module => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      // Validate tab against Module enum
+      if (tab && Object.values(Module).includes(tab as Module)) {
+        return tab as Module;
+      }
+    }
+    // Default to NAPKINS as requested
+    return Module.NAPKINS;
+  };
+
+  const [module, setModule] = useState<Module>(getInitialModule);
+  
+  // Custom Navigation Handler that syncs with Browser History
+  const handleNavigate = (newModule: Module) => {
+    setModule(newModule);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', newModule);
+    window.history.pushState({ module: newModule }, '', url.toString());
+  };
+
+  // Listen for Browser Back/Forward buttons
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const stateModule = event.state?.module;
+      if (stateModule && Object.values(Module).includes(stateModule)) {
+        setModule(stateModule);
+      } else {
+        // Fallback to URL parsing or Default if state is missing
+        setModule(getInitialModule());
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // ------------------------
+
   const [data, setData] = useState<AppState>({
     notes: [], tasks: [], flashcards: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG
   });
@@ -49,10 +90,8 @@ const App: React.FC = () => {
       const localData = loadState();
       setData(localData);
       
-      // If user has data, maybe start in Napkins instead of Learning
-      if (localData.notes.length > 0 || localData.tasks.length > 0) {
-          setModule(Module.NAPKINS);
-      }
+      // Legacy logic to force Napkins if data exists is removed 
+      // because Napkins is now the default start screen.
 
       try {
         await initGapi();
@@ -215,12 +254,12 @@ const App: React.FC = () => {
 
   const handleReflectInJournal = (taskId: string) => {
     setJournalContextTaskId(taskId);
-    setModule(Module.JOURNAL);
+    handleNavigate(Module.JOURNAL);
   };
   
   const handleNavigateToTask = (taskId: string) => {
     setKanbanContextTaskId(taskId);
-    setModule(Module.KANBAN);
+    handleNavigate(Module.KANBAN);
   };
 
   const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
@@ -264,19 +303,19 @@ const App: React.FC = () => {
 
   return (
     <Layout 
-        currentModule={module} setModule={setModule} syncStatus={syncStatus}
+        currentModule={module} setModule={handleNavigate} syncStatus={syncStatus}
         onConnectDrive={() => handleDriveConnect(false)} isDriveConnected={isDriveConnected}
         isOwner={isOwner}
     >
-      {module === Module.LEARNING && <LearningMode onStart={() => setModule(Module.NAPKINS)} onNavigate={setModule} />}
+      {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
       {module === Module.NAPKINS && <Napkins notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} />}
       {module === Module.SANDBOX && <Sandbox notes={data.notes} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
       {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} />}
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.JOURNAL && <Journal entries={data.journal} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
       {module === Module.ARCHIVE && <Archive tasks={data.tasks} restoreTask={restoreTask} deleteTask={deleteTask} />}
-      {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => setModule(Module.NAPKINS)} />}
-      {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => setModule(Module.NAPKINS)} />}
+      {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} />}
+      {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}
     </Layout>
   );
 };
