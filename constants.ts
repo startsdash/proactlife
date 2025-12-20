@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AppConfig, AIToolConfig } from "./types";
-import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book } from 'lucide-react';
+import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book, Flame } from 'lucide-react';
 
 // --- ICON REGISTRY ---
 export const ICON_MAP: Record<string, React.ElementType> = {
@@ -17,7 +17,8 @@ export const ICON_MAP: Record<string, React.ElementType> = {
   'Search': Search,
   'Feather': Feather,
   'User': User,
-  'Book': Book
+  'Book': Book,
+  'Flame': Flame
 };
 
 export const AVAILABLE_ICONS = Object.keys(ICON_MAP);
@@ -94,7 +95,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
 ];
 
 export const DEFAULT_CONFIG: AppConfig = {
-  "_version": 1766182249981,
+  "_version": 1766182249982,
   "coreLibrary": DEFAULT_CORE_LIBRARY,
   "mentors": [
   {
@@ -214,32 +215,14 @@ export const applyTypography = (text: string): string => {
   if (!text) return text;
   let res = text;
   
-  // 1. Hyphens to Em-dashes
-  // Rule: Replace hyphen with em-dash ONLY if it is surrounded by horizontal whitespace (spaces/tabs).
-  // This avoids breaking Markdown lists which typically start with "- " at the beginning of a line.
   res = res.replace(/(\S)[ \t]+-[ \t]+/g, '$1 — ');
-  
-  // 2. Double Quotes (Standard)
-  // Open quote: start of line or whitespace/punctuation opening before it
   res = res.replace(/(^|[\s(\[{])"/g, '$1«');
-  // Close quote: everything else
   res = res.replace(/"/g, '»');
-  
-  // 3. Single Quotes (AI Russian Artifacts)
-  // Handle single quotes often used by LLMs in Russian ('слово')
-  // Open: Start of line or space/bracket before
   res = res.replace(/(^|[\s(\[{])'/g, '$1«');
-  // Close: Single quote followed by space, punctuation, or end of string
-  // This helps avoid replacing apostrophes in the middle of words (though rare in Russian, important for safety)
   res = res.replace(/'(?=[.,:;!?\s)\]}]|$)/g, '»');
   
-  // 4. Nested quotes: simple one-level fix
-  // Finds «...«...»...» and converts inner to „...“
   const nestedPattern = /«([^»]*)«([^»]*)»([^»]*)»/g;
   let prev = '';
-  // Repeat to handle multiple/sequential nested occurrences if regex overlaps allow, 
-  // though global replace handles non-overlapping well. 
-  // Loop ensures complex cases get treated.
   while (res !== prev) {
       prev = res;
       res = res.replace(nestedPattern, '«$1„$2“$3»');

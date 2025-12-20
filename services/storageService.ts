@@ -1,4 +1,3 @@
-
 import { AppState } from "../types";
 import { DEFAULT_CONFIG } from "../constants";
 
@@ -10,6 +9,7 @@ export const loadState = (): AppState => {
     const emptyState: AppState = {
       notes: [],
       tasks: [],
+      habits: [],
       flashcards: [],
       challenges: [],
       journal: [],
@@ -53,6 +53,11 @@ export const loadState = (): AppState => {
     if (!parsed.mentorAnalyses) {
       parsed.mentorAnalyses = [];
     }
+    
+    // Migration: Habits
+    if (!parsed.habits) {
+      parsed.habits = [];
+    }
 
     return parsed;
   } catch (error) {
@@ -60,6 +65,7 @@ export const loadState = (): AppState => {
     return {
       notes: [],
       tasks: [],
+      habits: [],
       flashcards: [],
       challenges: [],
       journal: [],

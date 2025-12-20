@@ -4,6 +4,7 @@ export enum Module {
   SANDBOX = 'sandbox',
   MENTAL_GYM = 'mental_gym',
   KANBAN = 'kanban',
+  RITUALS = 'rituals', // NEW
   JOURNAL = 'journal',
   ARCHIVE = 'archive',
   SETTINGS = 'settings',
@@ -34,8 +35,22 @@ export interface Task {
   isChallengeCompleted?: boolean;
   challengeHistory?: string[];
   
-  consultationHistory?: string[]; // New: History of saved AI responses
+  consultationHistory?: string[];
   
+  isArchived?: boolean;
+}
+
+// NEW: Habit Interface for Rituals Module
+export interface Habit {
+  id: string;
+  title: string;
+  description?: string;
+  createdAt: number;
+  frequency: 'daily' | 'weekly';
+  targetDays?: number[]; // 0 = Sunday, 1 = Monday... used if frequency is weekly
+  history: number[]; // Timestamps of completion
+  streak: number;
+  color: string;
   isArchived?: boolean;
 }
 
@@ -58,7 +73,7 @@ export interface JournalEntry {
   id: string;
   date: number;
   content: string;
-  linkedTaskId?: string; // Optional link to a specific task
+  linkedTaskId?: string;
   aiFeedback?: string;
   mentorId?: string;
 }
@@ -77,36 +92,36 @@ export type AccessLevel = 'public' | 'owner_only' | 'restricted';
 export interface AccessControl {
   accessLevel?: AccessLevel;
   allowedEmails?: string[];
-  isDisabled?: boolean; // Global "Soft Delete" switch
+  isDisabled?: boolean;
 }
 
 export interface Mentor extends AccessControl {
   id: string;
   name: string;
-  icon: string; // Key for IconMap
-  color: string; // Tailwind class
-  systemPrompt: string; // # SYSTEM instruction
-  model?: string; // AI Model ID
+  icon: string;
+  color: string;
+  systemPrompt: string;
+  model?: string;
 }
 
 export interface ChallengeAuthor extends AccessControl {
   id: string;
   name: string;
   systemPrompt: string;
-  model?: string; // AI Model ID
-  responseMimeType?: 'text/plain' | 'application/json'; // Output format
+  model?: string;
+  responseMimeType?: 'text/plain' | 'application/json';
 }
 
 export interface AIToolConfig extends AccessControl {
   id: string;
   name: string;
   systemPrompt: string;
-  model?: string; // AI Model ID
-  responseMimeType?: 'text/plain' | 'application/json'; // Output format
+  model?: string;
+  responseMimeType?: 'text/plain' | 'application/json';
 }
 
 export interface AppConfig {
-  _version?: number; // Configuration Version Timestamp
+  _version?: number;
   coreLibrary: string;
   mentors: Mentor[];
   challengeAuthors: ChallengeAuthor[];
@@ -122,12 +137,13 @@ export interface UserProfile {
 export interface AppState {
   notes: Note[];
   tasks: Task[];
+  habits: Habit[]; // NEW
   flashcards: Flashcard[];
   challenges: Challenge[];
   journal: JournalEntry[]; 
-  mentorAnalyses: MentorAnalysis[]; // NEW: History of Journal Analyses
-  config: AppConfig; // Dynamic Configuration
-  user?: UserProfile; // Current User
+  mentorAnalyses: MentorAnalysis[];
+  config: AppConfig;
+  user?: UserProfile;
 }
 
 export type SyncStatus = 'disconnected' | 'syncing' | 'synced' | 'error';
