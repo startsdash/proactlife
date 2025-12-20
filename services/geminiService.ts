@@ -224,10 +224,10 @@ export const analyzeSandboxItem = async (content: string, mentorId: string, conf
     });
 
     // Apply Typography Rules
-    result.analysis = applyTypography(result.analysis);
-    result.suggestedTask = applyTypography(result.suggestedTask);
-    result.suggestedFlashcardFront = applyTypography(result.suggestedFlashcardFront);
-    result.suggestedFlashcardBack = applyTypography(result.suggestedFlashcardBack);
+    if (result.analysis) result.analysis = applyTypography(result.analysis);
+    if (result.suggestedTask) result.suggestedTask = applyTypography(result.suggestedTask);
+    if (result.suggestedFlashcardFront) result.suggestedFlashcardFront = applyTypography(result.suggestedFlashcardFront);
+    if (result.suggestedFlashcardBack) result.suggestedFlashcardBack = applyTypography(result.suggestedFlashcardBack);
 
     return result;
   } catch (e) {
@@ -269,7 +269,8 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
           }
         });
     }
-    return response.text || "Нет ответа.";
+    const text = response.text || "Нет ответа.";
+    return applyTypography(text);
   } catch (e) {
     console.error("Challenge Error:", e);
     return "Не удалось сгенерировать вызов.";
@@ -307,7 +308,8 @@ export const getKanbanTherapy = async (taskContent: string, state: 'stuck' | 'co
           }
         });
     }
-    return response.text || "Продолжай.";
+    const text = response.text || "Продолжай.";
+    return applyTypography(text);
   } catch (e) {
     console.error("Therapy Error:", e);
     return "Система поддержки недоступна.";
@@ -355,8 +357,9 @@ export const generateJournalReflection = async (
         });
     }
 
+    const feedback = response.text || "Продолжай наблюдение.";
     return {
-      feedback: response.text || "Продолжай наблюдение.",
+      feedback: applyTypography(feedback),
       mentorId: randomMentor.id
     };
   } catch (e) {

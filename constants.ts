@@ -214,10 +214,10 @@ export const applyTypography = (text: string): string => {
   if (!text) return text;
   let res = text;
   
-  // 1. Hyphens to Em-dashes (space - space) -> (space — space)
-  // Modified to avoid breaking Markdown lists (e.g. "- item" or "* - item")
-  // Only replace if preceded by a non-whitespace character
-  res = res.replace(/(\S) - /g, '$1 — ');
+  // 1. Hyphens to Em-dashes
+  // Rule: Replace hyphen with em-dash ONLY if it is surrounded by horizontal whitespace (spaces/tabs).
+  // This avoids breaking Markdown lists which typically start with "- " at the beginning of a line.
+  res = res.replace(/(\S)[ \t]+-[ \t]+/g, '$1 — ');
   
   // 2. Quotes
   // Open quote: start of line or whitespace/punctuation opening before it
