@@ -72,7 +72,7 @@ const CollapsibleSection: React.FC<{
     <div className={`${isCard ? 'bg-slate-50/80 mb-2 shadow-sm' : 'bg-slate-50 mb-3'} rounded-xl border border-slate-100 overflow-hidden`}>
       <button 
         onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} 
-        className={`w-full flex items-center justify-between ${isCard ? 'p-2' : 'p-4'} text-left hover:bg-slate-100 transition-colors`}
+        className={`w-full flex items-center justify-between ${isCard ? 'p-2' : 'p-4'} text-left hover:bg-slate-100 transition-colors active-scale`}
       >
         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
            {icon}
@@ -180,13 +180,13 @@ const InteractiveChallenge: React.FC<{
                 <button 
                     key={`cb-${i}`}
                     onClick={(e) => { e.stopPropagation(); onToggle(currentIdx); }}
-                    className="flex items-start gap-2 w-full text-left py-1 hover:bg-black/5 rounded group px-1 mb-0.5"
+                    className="flex items-start gap-2 w-full text-left py-1 hover:bg-black/5 rounded group px-1 mb-0.5 active:scale-[0.99] transition-transform"
                     style={{ marginLeft: `${indent}px` }}
                 >
-                    <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 group-hover:text-indigo-400'}`}>
+                    <div className={`mt-0.5 shrink-0 transition-transform duration-200 ${isChecked ? 'text-emerald-500 icon-pop' : 'text-slate-300 group-hover:text-indigo-400 group-active:scale-90'}`}>
                         {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                     </div>
-                    <span className={`text-sm ${isChecked ? 'text-slate-500' : 'text-slate-700'}`}>
+                    <span className={`text-sm ${isChecked ? 'text-slate-500 line-through decoration-slate-300' : 'text-slate-700'}`}>
                         <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
                     </span>
                 </button>
@@ -500,7 +500,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                 const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
                 
                 return (
-                <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-default relative group ${borderClass}`}>
+                <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-default relative group animate-pop ${borderClass}`}>
                     
                     <div className="flex justify-between items-center mb-2">
                         <span className={`text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>{statusText}</span>
@@ -542,7 +542,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                                     onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
                                                 />
                                             </div>
-                                            <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all mt-0.5 ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
+                                            <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all mt-0.5 active-scale ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
                                         </div>
                                      )}
 
@@ -550,7 +550,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                         <button 
                                             onClick={(e) => generateChallenge(e, task.id, task.content)} 
                                             disabled={generatingChallengeFor === task.id}
-                                            className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 bg-white border border-emerald-200 text-emerald-600 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-emerald-50 disabled:opacity-70 disabled:cursor-not-allowed"
+                                            className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 bg-white border border-emerald-200 text-emerald-600 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-emerald-50 disabled:opacity-70 disabled:cursor-not-allowed active-scale"
                                         >
                                             <RotateCw size={12} className={generatingChallengeFor === task.id ? "animate-spin" : ""} /> 
                                             Новый челлендж
@@ -584,8 +584,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                 <StaticChallengeRenderer content={challengeDrafts[task.id]} mode="draft" />
                             </div>
                             <div className="flex gap-2">
-                                <button onClick={(e) => acceptChallenge(e, task)} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold py-1.5 rounded flex items-center justify-center gap-1 shadow-sm"><Play size={10} className="fill-current" /> Принять</button>
-                                <button onClick={(e) => { e.stopPropagation(); const d = {...challengeDrafts}; delete d[task.id]; setChallengeDrafts(d); }} className="text-amber-400 hover:text-amber-700 px-2"><X size={14} /></button>
+                                <button onClick={(e) => acceptChallenge(e, task)} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold py-1.5 rounded flex items-center justify-center gap-1 shadow-sm active-scale"><Play size={10} className="fill-current" /> Принять</button>
+                                <button onClick={(e) => { e.stopPropagation(); const d = {...challengeDrafts}; delete d[task.id]; setChallengeDrafts(d); }} className="text-amber-400 hover:text-amber-700 px-2 active-scale"><X size={14} /></button>
                             </div>
                         </div>
                     )}
@@ -595,7 +595,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                            {col.id === 'todo' && (
                                 <button 
                                     onClick={(e) => moveToDoing(e, task)} 
-                                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100 transition-colors"
+                                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100 transition-colors active-scale"
                                     title="Поработать"
                                 >
                                     <Play size={18} className="fill-current" />
@@ -606,7 +606,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                <>
                                <button 
                                     onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }}
-                                    className={`p-2 rounded-lg border transition-colors ${
+                                    className={`p-2 rounded-lg border transition-colors active-scale ${
                                         hasJournalEntry 
                                         ? 'border-amber-200 text-amber-600 bg-amber-50 hover:bg-amber-100' 
                                         : 'border-transparent text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-100'
@@ -627,7 +627,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                             generateChallenge(e, task.id, task.content);
                                         }} 
                                         disabled={generatingChallengeFor === task.id} 
-                                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100 transition-colors disabled:opacity-50"
+                                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100 transition-colors disabled:opacity-50 active-scale"
                                         title="Челлендж (ИИ)"
                                     >
                                         <Zap size={18} className={generatingChallengeFor === task.id ? "opacity-50" : ""} />
@@ -637,7 +637,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                {hasKanbanTherapist && (
                                    <button 
                                         onClick={(e) => openTherapy(e, task)} 
-                                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg border border-transparent hover:border-amber-100"
+                                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg border border-transparent hover:border-amber-100 active-scale"
                                         title="Консультант (ИИ)"
                                    >
                                        <MessageCircle size={18} /> 
@@ -652,7 +652,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                         e.stopPropagation(); 
                                         if(window.confirm('Перенести задачу в "Архив"?')) archiveTask(task.id); 
                                     }} 
-                                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100 transition-colors"
+                                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100 transition-colors active-scale"
                                     title='В "Архив"'
                                 >
                                     <History size={18} /> 
@@ -664,7 +664,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                     e.stopPropagation(); 
                                     if(window.confirm('Удалить задачу?')) deleteTask(task.id); 
                                 }} 
-                                className="p-2 text-slate-300 hover:text-red-400 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-100 transition-colors"
+                                className="p-2 text-slate-300 hover:text-red-400 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-100 transition-colors active-scale"
                                 title="Удалить"
                             >
                                 <Trash2 size={18} />
@@ -672,8 +672,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
 
                         </div>
                         <div className="flex gap-2 items-center justify-between">
-                            <div className="w-8 flex justify-start">{col.id !== 'todo' && <button onClick={(e) => moveTask(e, task, 'left')} className="p-1.5 bg-slate-100 md:hidden rounded-lg text-slate-500 border border-slate-200"><ChevronLeft size={16} /></button>}</div>
-                            <div className="w-8 flex justify-end">{col.id !== 'done' && <button onClick={(e) => moveTask(e, task, 'right')} className="p-1.5 bg-slate-100 md:hidden rounded-lg text-slate-500 border border-slate-200"><ChevronRight size={16} /></button>}</div>
+                            <div className="w-8 flex justify-start">{col.id !== 'todo' && <button onClick={(e) => moveTask(e, task, 'left')} className="p-1.5 bg-slate-100 md:hidden rounded-lg text-slate-500 border border-slate-200 active-scale"><ChevronLeft size={16} /></button>}</div>
+                            <div className="w-8 flex justify-end">{col.id !== 'done' && <button onClick={(e) => moveTask(e, task, 'right')} className="p-1.5 bg-slate-100 md:hidden rounded-lg text-slate-500 border border-slate-200 active-scale"><ChevronRight size={16} /></button>}</div>
                         </div>
                     </div>
                 </div>
@@ -689,18 +689,18 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       
       <div className="flex flex-wrap gap-2 mb-4 animate-in slide-in-from-top-2 shrink-0">
          <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-             <button onClick={toggleSortOrder} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all text-slate-600 hover:bg-slate-50">
+             <button onClick={toggleSortOrder} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all text-slate-600 hover:bg-slate-50 active-scale">
                  {sortOrder === 'desc' && <><ArrowDown size={14} /> Сначала новые</>}
                  {sortOrder === 'asc' && <><ArrowUp size={14} /> Сначала старые</>}
              </button>
          </div>
          <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-            <button onClick={() => setFilterChallenge('all')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filterChallenge === 'all' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}>Все</button>
-            <button onClick={() => setFilterChallenge('active')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${filterChallenge === 'active' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-indigo-500'}`}><Zap size={12}/> Активные</button>
-            <button onClick={() => setFilterChallenge('completed')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${filterChallenge === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}><CheckCircle2 size={12}/> Финал</button>
+            <button onClick={() => setFilterChallenge('all')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all active-scale ${filterChallenge === 'all' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}>Все</button>
+            <button onClick={() => setFilterChallenge('active')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 active-scale ${filterChallenge === 'active' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-indigo-500'}`}><Zap size={12}/> Активные</button>
+            <button onClick={() => setFilterChallenge('completed')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 active-scale ${filterChallenge === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400 hover:text-emerald-500'}`}><CheckCircle2 size={12}/> Финал</button>
          </div>
          <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-             <button onClick={() => setFilterJournal(filterJournal === 'all' ? 'linked' : 'all')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${filterJournal === 'linked' ? 'bg-amber-50 text-amber-600 shadow-sm ring-1 ring-amber-100' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50/50'}`}><Book size={12}/> В дневнике</button>
+             <button onClick={() => setFilterJournal(filterJournal === 'all' ? 'linked' : 'all')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 active-scale ${filterJournal === 'linked' ? 'bg-amber-50 text-amber-600 shadow-sm ring-1 ring-amber-100' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50/50'}`}><Book size={12}/> В дневнике</button>
          </div>
       </div>
       
@@ -711,13 +711,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       </div>
       {activeModal && (
         <div className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-pop duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-start mb-6">
                     <h3 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
                         {activeModal.type === 'details' && 'Детали задачи'}
                         {activeModal.type !== 'details' && 'ИИ-консультант'}
                     </h3>
-                    <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+                    <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600 active-scale"><X size={24} /></button>
                 </div>
                 {activeModal.type === 'details' ? (
                      <div className="space-y-4">
@@ -813,11 +813,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                         </div>
                         <div className="flex justify-end gap-2">
                             {aiResponse && !isLoading && (
-                                <button onClick={saveTherapyResponse} className="px-4 py-2 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg font-medium border border-amber-200 flex items-center gap-2">
+                                <button onClick={saveTherapyResponse} className="px-4 py-2 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg font-medium border border-amber-200 flex items-center gap-2 active-scale">
                                     <Save size={16} /> Сохранить в историю
                                 </button>
                             )}
-                            <button onClick={() => setActiveModal(null)} className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium">
+                            <button onClick={() => setActiveModal(null)} className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium active-scale">
                                 Закрыть
                             </button>
                         </div>

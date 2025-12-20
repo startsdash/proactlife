@@ -72,7 +72,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
       {isMobile && !isExpanded && (
           <button 
             onClick={() => setIsExpanded(true)}
-            className="fixed bottom-6 left-4 z-40 p-3 bg-slate-900 text-white rounded-full shadow-lg shadow-slate-300 md:hidden animate-in zoom-in-95 duration-200 hover:bg-slate-800 active:scale-95"
+            className="fixed bottom-6 left-4 z-40 p-3 bg-slate-900 text-white rounded-full shadow-lg shadow-slate-300 md:hidden animate-in zoom-in-95 duration-200 hover:bg-slate-800 active-scale"
             title="Меню"
           >
             <Menu size={24} />
@@ -98,8 +98,8 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
         <div>
           {/* HEADER / LOGO */}
           <div className={`h-16 md:h-20 flex items-center border-b border-slate-100 transition-all duration-300 ${isExpanded ? 'px-6 justify-between' : 'justify-center px-0'}`}>
-             <div className="flex items-center overflow-hidden whitespace-nowrap">
-                <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0 transition-transform duration-300 hover:scale-105 shadow-sm shadow-slate-300">L</div>
+             <div className="flex items-center overflow-hidden whitespace-nowrap group cursor-default">
+                <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0 transition-transform duration-300 group-hover:scale-105 shadow-sm shadow-slate-300">L</div>
                 
                 {/* Text Label with Transition */}
                 <div className={`ml-3 transition-all duration-300 origin-left ${isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 hidden'}`}>
@@ -112,7 +112,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
              {isExpanded && (
                  <button 
                     onClick={() => setIsExpanded(false)} 
-                    className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                    className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors active-scale"
                  >
                     <PanelLeftClose size={18} />
                  </button>
@@ -124,7 +124,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
               <div className="w-full hidden md:flex justify-center py-2 border-b border-slate-50">
                   <button 
                     onClick={() => setIsExpanded(true)} 
-                    className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                    className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors active-scale"
                     title="Развернуть"
                   >
                     <PanelLeftOpen size={18} />
@@ -142,7 +142,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     if (isMobile) setIsExpanded(false); // Auto-close on mobile selection
                 }} 
                 className={`
-                    w-full flex items-center p-3 rounded-xl transition-all duration-200 group relative
+                    w-full flex items-center p-3 rounded-xl transition-all duration-200 group relative active-scale
                     ${currentModule === item.id ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}
                     ${isExpanded ? 'justify-start' : 'justify-center'}
                 `}
@@ -175,7 +175,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                 onClick={!isDriveConnected ? onConnectDrive : undefined} 
                 disabled={isDriveConnected && syncStatus === 'synced'} 
                 className={`
-                    w-full flex items-center p-3 rounded-xl transition-all duration-200 relative overflow-hidden
+                    w-full flex items-center p-3 rounded-xl transition-all duration-200 relative overflow-hidden active-scale
                     ${!isDriveConnected ? 'hover:bg-indigo-50 cursor-pointer' : 'cursor-default'}
                     ${isExpanded ? 'justify-start' : 'justify-center'}
                 `} 
@@ -197,7 +197,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     if (isMobile) setIsExpanded(false);
                 }} 
                 className={`
-                    w-full flex items-center p-3 rounded-xl transition-all duration-200
+                    w-full flex items-center p-3 rounded-xl transition-all duration-200 active-scale
                     ${currentModule === Module.USER_SETTINGS ? 'bg-slate-100 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}
                     ${isExpanded ? 'justify-start' : 'justify-center'}
                 `}
@@ -214,7 +214,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     if (isMobile) setIsExpanded(false);
                 }} 
                 className={`
-                    w-full flex items-center p-3 rounded-xl transition-all duration-200
+                    w-full flex items-center p-3 rounded-xl transition-all duration-200 active-scale
                     ${currentModule === Module.SETTINGS ? 'bg-slate-100 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}
                     ${isExpanded ? 'justify-start' : 'justify-center'}
                 `}
@@ -227,9 +227,12 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* MAIN CONTENT WITH PAGE TRANSITION */}
       <main className="flex-1 flex flex-col w-full relative overflow-x-hidden overflow-y-auto bg-[#f8fafc]">
-        {children}
+        {/* We use a key here to trigger the entrance animation on module change */}
+        <div key={currentModule} className="flex-1 flex flex-col min-h-0 page-enter">
+            {children}
+        </div>
       </main>
     </div>
   );
