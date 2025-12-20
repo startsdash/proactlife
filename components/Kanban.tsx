@@ -59,6 +59,8 @@ const markdownComponents = {
     }
 };
 
+// --- VISUAL COMPONENTS ---
+
 const CollapsibleSection: React.FC<{
   title: string;
   children: React.ReactNode;
@@ -90,6 +92,48 @@ const CollapsibleSection: React.FC<{
       )}
     </div>
   );
+};
+
+const ProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
+    // Determine color scheme based on progress
+    const isComplete = percent === 100;
+    
+    // Gradient & Shadow logic
+    let barGradient = "bg-gradient-to-r from-indigo-400 to-purple-500";
+    let textColor = "text-purple-600";
+    let shadowClass = "shadow-purple-500/30";
+
+    if (isComplete) {
+        barGradient = "bg-gradient-to-r from-emerald-400 to-teal-500";
+        textColor = "text-emerald-600";
+        shadowClass = "shadow-emerald-500/30";
+    } else if (percent < 30) {
+        barGradient = "bg-gradient-to-r from-blue-400 to-indigo-400";
+        textColor = "text-indigo-500";
+        shadowClass = "shadow-indigo-500/30";
+    }
+
+    return (
+        <div className="w-full px-0.5 mb-3 mt-1">
+            <div className="flex justify-between items-end mb-1.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider opacity-90 flex items-center gap-1">
+                    Прогресс
+                </span>
+                <span className={`text-[10px] font-extrabold ${textColor} transition-colors duration-500`}>
+                    {percent}%
+                </span>
+            </div>
+            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner ring-1 ring-slate-100/50">
+                <div 
+                    className={`h-full ${barGradient} transition-all duration-700 ease-out rounded-full shadow-[0_0_10px] ${shadowClass} relative`} 
+                    style={{ width: `${percent}%` }} 
+                >
+                    {/* Glossy overlay */}
+                    <div className="absolute top-0 left-0 w-full h-[40%] bg-white/30 rounded-t-full"></div>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 // --- HELPER: CHECKLIST PARSING & INTERACTIVITY ---
@@ -454,20 +498,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                     {/* ACTIVE CHALLENGE DISPLAY */}
                     {!hideExtraDetails && col.id === 'doing' && task.activeChallenge && !challengeDrafts[task.id] && (
                         <div className="mt-2 mb-2">
-                            {/* PROGRESS BAR (Moved outside collapsible) */}
+                            {/* PROGRESS BAR (Standardized) */}
                             {challengeStats.total > 0 && (
-                                <div className="mb-2 px-1">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Прогресс</span>
-                                        <span className="text-[9px] font-bold text-indigo-500">{challengeStats.percent}%</span>
-                                    </div>
-                                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                                        <div 
-                                            className="h-full bg-indigo-500 transition-all duration-500 rounded-full" 
-                                            style={{ width: `${challengeStats.percent}%` }} 
-                                        />
-                                    </div>
-                                </div>
+                                <ProgressBar percent={challengeStats.percent} />
                             )}
                             
                             <CollapsibleSection title="Челлендж" icon={<Zap size={12}/>} isCard>
@@ -498,20 +531,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
 
                     {!hideExtraDetails && col.id === 'todo' && task.activeChallenge && !challengeDrafts[task.id] && (
                         <div className={`mt-2 mb-3 p-3 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
-                             {/* PROGRESS BAR */}
+                             {/* PROGRESS BAR (Standardized) */}
                              {challengeStats.total > 0 && (
-                                <div className="mb-3 mt-1 px-1">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Прогресс</span>
-                                        <span className="text-[9px] font-bold text-indigo-500">{challengeStats.percent}%</span>
-                                    </div>
-                                    <div className="h-1.5 w-full bg-slate-200/60 rounded-full overflow-hidden">
-                                        <div 
-                                            className="h-full bg-indigo-500 transition-all duration-500 rounded-full" 
-                                            style={{ width: `${challengeStats.percent}%` }} 
-                                        />
-                                    </div>
-                                </div>
+                                <ProgressBar percent={challengeStats.percent} />
                              )}
 
                             <div className="flex justify-between items-start gap-2">
@@ -710,16 +732,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                 
                                 {getChallengeStats(getTaskForModal()?.activeChallenge || '').total > 0 && (
                                      <div className="mb-4 bg-white/50 p-2 rounded-lg">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Прогресс</span>
-                                            <span className="text-[10px] font-bold text-indigo-500">{getChallengeStats(getTaskForModal()?.activeChallenge || '').percent}%</span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-slate-200/60 rounded-full overflow-hidden">
-                                            <div 
-                                                className="h-full bg-indigo-500 transition-all duration-500 rounded-full" 
-                                                style={{ width: `${getChallengeStats(getTaskForModal()?.activeChallenge || '').percent}%` }} 
-                                            />
-                                        </div>
+                                        <ProgressBar percent={getChallengeStats(getTaskForModal()?.activeChallenge || '').percent} />
                                      </div>
                                 )}
 
