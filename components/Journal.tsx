@@ -1,9 +1,10 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig } from '../types';
 import { ICON_MAP, applyTypography } from '../constants';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban } from 'lucide-react';
+import { analyzeJournalPath } from '../services/geminiService';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2 } from 'lucide-react';
 
 interface Props {
   entries: JournalEntry[];
@@ -177,6 +178,16 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
 
   // View Task Modal State
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
+  
+  // Mentor Analysis State
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
+
+  // Check if Mentor Tool is enabled
+  const hasMentorTool = useMemo(() => {
+      const tool = config.aiTools.find(t => t.id === 'journal_mentor');
+      return tool && !tool.isDisabled;
+  }, [config.aiTools]);
 
   // Handle incoming context from Kanban
   useEffect(() => {
@@ -311,6 +322,17 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
     return sortOrder === 'desc' ? b.date - a.date : a.date - b.date;
   });
 
+  const handleAnalyzePath = async () => {
+      if (displayedEntries.length === 0) {
+          alert("Нет записей для анализа в текущем фильтре.");
+          return;
+      }
+      setIsAnalyzing(true);
+      const result = await analyzeJournalPath(displayedEntries, config);
+      setAnalysisResult(result);
+      setIsAnalyzing(false);
+  };
+
   const hasActiveDateFilter = !!dateRange.from || !!dateRange.to;
 
   return (
@@ -438,6 +460,18 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
                         </div>
                     )}
                 </div>
+
+                {hasMentorTool && (
+                  <button 
+                      onClick={handleAnalyzePath}
+                      disabled={isAnalyzing || displayedEntries.length === 0}
+                      className={`p-2 rounded-xl border transition-all h-full flex items-center justify-center gap-2 px-3 ${isAnalyzing ? 'bg-indigo-50 border-indigo-200 text-indigo-400 cursor-wait' : 'bg-white border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 shadow-sm'}`}
+                      title="Наставник (ИИ)"
+                  >
+                      {isAnalyzing ? <Loader2 size={18} className="animate-spin" /> : <Bot size={18} />}
+                      <span className="hidden md:inline text-xs font-bold uppercase tracking-wide">Наставник</span>
+                  </button>
+                )}
             </div>
         </div>
         
@@ -524,6 +558,28 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
           </div>
         )}
       </div>
+
+      {/* ANALYSIS MODAL */}
+      {analysisResult && (
+          <div className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setAnalysisResult(null)}>
+              <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex justify-between items-start mb-6">
+                      <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Bot className="text-indigo-600" /> Анализ Пути (Наставник)</h3>
+                      <button onClick={() => setAnalysisResult(null)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+                  </div>
+                  
+                  <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 text-slate-800 leading-relaxed text-sm">
+                      <ReactMarkdown components={markdownComponents}>{analysisResult}</ReactMarkdown>
+                  </div>
+
+                  <div className="mt-8 flex justify-end">
+                      <button onClick={() => setAnalysisResult(null)} className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm">
+                          Закрыть
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* VIEW TASK MODAL */}
       {viewingTask && (

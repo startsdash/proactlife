@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AppConfig, AIToolConfig } from "./types";
 import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book } from 'lucide-react';
@@ -74,8 +75,17 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
   },
   {
     "id": "kanban_therapist",
-    "name": "ИИ Консультант",
+    "name": "ИИ Консультант (Задачи)",
     "systemPrompt": "Ты — мудрый наставник и терапевт продуктивности. Задача: Сгенерируй Совет путешественнику. Твоя цель — помочь пользователю преодолеть сопротивление (если задача застряла) или осознать ценность достижения (если задача выполнена). Используй принципы стоицизма и когнитивной психологии.",
+    "model": "gemma-3-27b-it",
+    "responseMimeType": "text/plain",
+    "accessLevel": "owner_only",
+    "isDisabled": false
+  },
+  {
+    "id": "journal_mentor",
+    "name": "Наставник (Дневник)",
+    "systemPrompt": "Ты — мудрый наставник, анализирующий Путь Героя по его записям. \nТвоя задача: Проанализируй предоставленные записи дневника (хронологию, содержание, эмоциональный фон). \n1. Выяви скрытые паттерны мышления и повторяющиеся сюжеты.\n2. Оцени динамику состояния (прогресс, стагнация, регресс).\n3. Дай глубокую обратную связь и философское напутствие для следующего этапа.\nБудь проницателен, краток и конструктивен. Используй Markdown для форматирования.",
     "model": "gemma-3-27b-it",
     "responseMimeType": "text/plain",
     "accessLevel": "owner_only",
@@ -84,7 +94,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
 ];
 
 export const DEFAULT_CONFIG: AppConfig = {
-  "_version": 1766182249980,
+  "_version": 1766182249981,
   "coreLibrary": DEFAULT_CORE_LIBRARY,
   "mentors": [
   {

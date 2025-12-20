@@ -1,5 +1,6 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
-import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig } from "../types";
+import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig, JournalEntry } from "../types";
 import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL } from '../constants';
 
 // --- API Access ---
@@ -356,5 +357,48 @@ export const generateJournalReflection = async (
       feedback: "Тишина...",
       mentorId: 'system'
     };
+  }
+};
+
+export const analyzeJournalPath = async (entries: JournalEntry[], config: AppConfig): Promise<string> => {
+  const tool = getToolConfig('journal_mentor', config);
+  const model = tool.model || DEFAULT_MODEL;
+  const fullPrompt = `${tool.systemPrompt}\n\n[CONTEXT LIBRARY]\n${config.coreLibrary}`;
+
+  if (entries.length === 0) return "Записей нет. Путь еще не начат.";
+
+  // Prepare entries context (reverse chronological usually, or chronological for path analysis)
+  // Let's sort chronologically for the AI to see the timeline
+  const sortedEntries = [...entries].sort((a, b) => a.date - b.date);
+  
+  const entriesText = sortedEntries.map(e => {
+    return `[${new Date(e.date).toLocaleDateString()}] ${e.content}`;
+  }).join('\n\n---\n\n');
+
+  try {
+    let response;
+    const userRequest = `Проанализируй этот набор записей из дневника пользователя:\n\n${entriesText}`;
+
+    if (isGemmaModel(model)) {
+        const gemmaPrompt = `${fullPrompt}\n\n${userRequest}`;
+        response = await ai.models.generateContent({
+          model,
+          contents: gemmaPrompt,
+          config: getGemmaConfig()
+        });
+    } else {
+        response = await ai.models.generateContent({
+          model,
+          contents: userRequest,
+          config: {
+            systemInstruction: fullPrompt,
+            responseMimeType: tool.responseMimeType
+          }
+        });
+    }
+    return response.text || "Не удалось проанализировать Путь.";
+  } catch (error) {
+    console.error("Journal Analysis Error:", error);
+    return "Наставник временно недоступен.";
   }
 };
