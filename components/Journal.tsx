@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban as KanbanIcon, Bot, Loader2, Save, Scroll } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll } from 'lucide-react';
 
 interface Props {
   entries: JournalEntry[];
@@ -201,11 +201,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       const taskExists = tasks.some(t => t.id === initialTaskId);
       if (taskExists) {
         setLinkedTaskId(initialTaskId);
-        // NEW: Auto-fill search query with task content to ensure the user sees relevant entries immediately
-        const task = tasks.find(t => t.id === initialTaskId);
-        if (task) {
-           setSearchQuery(task.content);
-        }
         // Clear the global state so it doesn't persist on next mount if we navigate away manually
         onClearInitialTask?.();
       }
@@ -742,13 +737,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     )}
                 </div>
 
-                <div className="mt-8 flex justify-end gap-2">
-                    <button 
-                        onClick={() => onNavigateToTask && onNavigateToTask(viewingTask.id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 font-medium text-sm transition-colors"
-                    >
-                        <KanbanIcon size={16} /> Перейти к задаче
-                    </button>
+                <div className="mt-8 flex justify-end">
                     <button onClick={() => setViewingTask(null)} className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm">
                         Закрыть
                     </button>
