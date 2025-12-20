@@ -597,14 +597,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                <>
                                <button 
                                     onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }}
-                                    className={`p-2 rounded-lg border border-transparent transition-colors ${
+                                    className={`p-2 rounded-lg border transition-colors ${
                                         hasJournalEntry 
-                                        ? 'text-amber-600 bg-amber-50 hover:bg-amber-100 hover:border-amber-200' 
-                                        : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-100'
+                                        ? 'border-amber-200 text-amber-600 bg-amber-50 hover:bg-amber-100' 
+                                        : 'border-transparent text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-100'
                                     }`}
                                     title={hasJournalEntry ? "В «Дневнике»" : "В «Дневник»"}
                                >
-                                    <Book size={18} className={hasJournalEntry ? "fill-current" : ""} />
+                                    <Book size={18} />
                                </button>
 
                                {!challengeDrafts[task.id] && hasChallengeAuthors && (
