@@ -1,7 +1,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig, JournalEntry } from "../types";
-import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL } from '../constants';
+import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL, applyTypography } from '../constants';
 
 // --- API Access ---
 const getApiKey = () => {
@@ -216,12 +216,20 @@ export const analyzeSandboxItem = async (content: string, mentorId: string, conf
         });
     }
     
-    return parseJSON<SandboxAnalysis>(response.text, {
+    const result = parseJSON<SandboxAnalysis>(response.text, {
       analysis: "Сбой анализа.",
       suggestedTask: "Повторить",
       suggestedFlashcardFront: "Error",
       suggestedFlashcardBack: "Try again"
     });
+
+    // Apply Typography Rules
+    result.analysis = applyTypography(result.analysis);
+    result.suggestedTask = applyTypography(result.suggestedTask);
+    result.suggestedFlashcardFront = applyTypography(result.suggestedFlashcardFront);
+    result.suggestedFlashcardBack = applyTypography(result.suggestedFlashcardBack);
+
+    return result;
   } catch (e) {
     console.error("Analysis Error:", e);
     return {
@@ -396,7 +404,8 @@ export const analyzeJournalPath = async (entries: JournalEntry[], config: AppCon
           }
         });
     }
-    return response.text || "Не удалось проанализировать Путь.";
+    const text = response.text || "Не удалось проанализировать Путь.";
+    return applyTypography(text);
   } catch (error) {
     console.error("Journal Analysis Error:", error);
     return "Наставник временно недоступен.";
