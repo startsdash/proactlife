@@ -521,38 +521,59 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
 
                     {/* ACTIVE CHALLENGE DISPLAY (CARD) */}
                     {!hideExtraDetails && (col.id === 'doing' || col.id === 'todo') && task.activeChallenge && !challengeDrafts[task.id] && (
-                        <div className={`mt-2 mb-2 p-2 rounded-lg border transition-all ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
-                             {/* PROGRESS BAR */}
-                             {challengeStats.total > 0 && <ProgressBar percent={challengeStats.percent} />}
-                            
-                             {/* CHALLENGE CONTENT: Static if completed, Interactive if active */}
-                             {task.isChallengeCompleted ? (
-                                <div className="text-sm leading-relaxed text-slate-900">
-                                   <StaticChallengeRenderer content={task.activeChallenge} mode="history" />
-                                </div>
-                             ) : (
-                                <div className="flex justify-between items-start gap-2">
-                                    <div className="w-full">
-                                        <InteractiveChallenge 
-                                            content={task.activeChallenge} 
-                                            onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
-                                        />
-                                    </div>
-                                    <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all mt-0.5 ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
-                                </div>
-                             )}
+                        <>
+                        {/* Define Content Block */}
+                        {(() => {
+                            const content = (
+                                <div className={`p-2 rounded-lg border transition-all ${!task.isChallengeCompleted && col.id !== 'doing' ? 'mt-2 mb-2' : ''} ${task.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-indigo-50 border-indigo-100'}`}>
+                                     {/* PROGRESS BAR */}
+                                     {challengeStats.total > 0 && <ProgressBar percent={challengeStats.percent} />}
+                                    
+                                     {/* CHALLENGE CONTENT: Static if completed, Interactive if active */}
+                                     {task.isChallengeCompleted ? (
+                                        <div className="text-sm leading-relaxed text-slate-900">
+                                           <StaticChallengeRenderer content={task.activeChallenge || ''} mode="history" />
+                                        </div>
+                                     ) : (
+                                        <div className="flex justify-between items-start gap-2">
+                                            <div className="w-full">
+                                                <InteractiveChallenge 
+                                                    content={task.activeChallenge || ''} 
+                                                    onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
+                                                />
+                                            </div>
+                                            <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all mt-0.5 ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-indigo-300 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
+                                        </div>
+                                     )}
 
-                            {task.isChallengeCompleted && hasChallengeAuthors && (
-                                <button 
-                                    onClick={(e) => generateChallenge(e, task.id, task.content)} 
-                                    disabled={generatingChallengeFor === task.id}
-                                    className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 bg-white border border-emerald-200 text-emerald-600 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-emerald-50 disabled:opacity-70 disabled:cursor-not-allowed"
-                                >
-                                    <RotateCw size={12} className={generatingChallengeFor === task.id ? "animate-spin" : ""} /> 
-                                    Новый челлендж
-                                </button>
-                            )}
-                        </div>
+                                    {task.isChallengeCompleted && hasChallengeAuthors && (
+                                        <button 
+                                            onClick={(e) => generateChallenge(e, task.id, task.content)} 
+                                            disabled={generatingChallengeFor === task.id}
+                                            className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 bg-white border border-emerald-200 text-emerald-600 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-emerald-50 disabled:opacity-70 disabled:cursor-not-allowed"
+                                        >
+                                            <RotateCw size={12} className={generatingChallengeFor === task.id ? "animate-spin" : ""} /> 
+                                            Новый челлендж
+                                        </button>
+                                    )}
+                                </div>
+                            );
+
+                            // Apply Collapsible Logic based on Column
+                            if (col.id === 'doing') {
+                                return (
+                                    <div className="mt-2 mb-2">
+                                        <CollapsibleSection title={task.isChallengeCompleted ? "Челлендж (Готов)" : "Челлендж"} icon={<Zap size={12}/>} isCard>
+                                            {content}
+                                        </CollapsibleSection>
+                                    </div>
+                                );
+                            } else {
+                                // For 'todo', show expanded
+                                return <div className="mt-2 mb-2">{content}</div>;
+                            }
+                        })()}
+                        </>
                     )}
 
                     {/* DRAFT PREVIEW */}

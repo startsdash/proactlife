@@ -595,7 +595,17 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                       </CollapsibleSection>
                     )}
                      {viewingTask.challengeHistory && viewingTask.challengeHistory.length > 0 && (
-                        <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}><ul className="space-y-3">{viewingTask.challengeHistory.map((challenge, index) => (<li key={index} className="text-sm text-slate-900 py-2 border-b border-slate-100 last:border-0"><ReactMarkdown components={markdownComponents}>{challenge}</ReactMarkdown></li>))}</ul></CollapsibleSection>
+                        <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
+                            <div className="space-y-4">
+                                {viewingTask.challengeHistory.map((challenge, index) => (
+                                   <div key={index} className="py-2 border-b border-slate-100 last:border-0">
+                                      <div className="text-sm leading-relaxed text-slate-900">
+                                         <StaticChallengeRenderer content={challenge} mode="history" />
+                                      </div>
+                                   </div>
+                                ))}
+                             </div>
+                        </CollapsibleSection>
                      )}
                     {viewingTask.consultationHistory && viewingTask.consultationHistory.length > 0 && (
                        <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}><ul className="space-y-4">{viewingTask.consultationHistory.map((consultation, index) => (<li key={index} className="text-sm text-slate-900 py-3 border-b border-slate-100 last:border-0"><ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown></li>))}</ul></CollapsibleSection>
