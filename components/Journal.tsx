@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig } from '../types';
@@ -339,7 +340,7 @@ const Journal: React.FC<Props> = ({ entries, tasks, config, addEntry, deleteEntr
 
           <textarea 
             className="w-full h-32 md:h-40 resize-none outline-none text-sm text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-200 focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:text-slate-400 font-mono" 
-            placeholder="О чем ты думаешь? Чему научило это событие? (Markdown)" 
+            placeholder="О чем ты думаешь? Чему научило это событие? (Поддерживается Markdown)" 
             value={content} 
             onChange={(e) => setContent(e.target.value)} 
           />
