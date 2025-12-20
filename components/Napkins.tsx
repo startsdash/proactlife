@@ -774,7 +774,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                   </button>
 
                   {/* Content Wrapper with Padding */}
-                  <div className="p-6 md:p-8 flex flex-col h-full">
+                  <div className="p-6 md:p-8 flex flex-col h-full overflow-hidden">
                       
                       {/* PHASE 1: SELECT VIBE */}
                       {oracleState === 'select' && (
@@ -808,7 +808,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                       
                       {/* PHASE 3: RESULT */}
                       {oracleState === 'result' && oracleNote && (
-                           <div className="flex flex-col h-full animate-in zoom-in-95 duration-500">
+                           <div className="flex flex-col h-full animate-in zoom-in-95 duration-500 min-h-0">
                                {/* Header */}
                                <div className="shrink-0 flex items-center justify-center gap-2 mb-6 text-xs font-bold uppercase tracking-widest text-slate-400">
                                    <span>{oracleVibe.emoji}</span>
@@ -816,20 +816,23 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                </div>
                                
                                {/* Scrollable Content Area */}
-                               <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0 -mr-2 pr-4"> {/* Negative margin hack for scrollbar spacing */}
-                                  <div className="min-h-full flex flex-col justify-center">
-                                      <div className="text-lg md:text-2xl text-slate-800 font-medium leading-relaxed italic relative py-4 text-center">
-                                          <span className="text-4xl text-slate-200 font-serif absolute top-0 left-0">“</span>
-                                          <div className="relative z-10 px-2">
-                                              <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}}>{oracleNote.content}</ReactMarkdown>
+                               {/* Using flex-col and m-auto ensures centering when small, scrolling when big, without clipping */}
+                               <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0 pr-2">
+                                  <div className="min-h-full flex flex-col">
+                                      <div className="m-auto w-full py-2">
+                                          <div className="text-lg md:text-2xl text-slate-800 font-medium leading-relaxed italic relative py-8 text-center">
+                                              <span className="text-4xl md:text-5xl text-slate-200 font-serif absolute top-0 left-0 leading-none">“</span>
+                                              <div className="relative z-10 px-3">
+                                                  <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}}>{oracleNote.content}</ReactMarkdown>
+                                              </div>
+                                              <span className="text-4xl md:text-5xl text-slate-200 font-serif absolute bottom-0 right-0 leading-none">”</span>
                                           </div>
-                                          <span className="text-4xl text-slate-200 font-serif absolute bottom-0 right-0">”</span>
                                       </div>
                                   </div>
                                </div>
 
                                {/* Footer Actions */}
-                               <div className="mt-6 flex flex-col gap-3 shrink-0">
+                               <div className="mt-6 flex flex-col gap-3 shrink-0 pt-2 border-t border-transparent"> {/* Added padding top to ensure separation */}
                                   <button 
                                       onClick={() => {
                                           closeOracle();
