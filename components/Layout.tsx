@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, History, Book, GraduationCap, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, UserCog, Shield } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, History, Book, GraduationCap, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, UserCog, Shield, Menu } from 'lucide-react';
 
 interface Props {
   currentModule: Module;
@@ -22,8 +22,10 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      // Only set initial expansion state if strictly necessary, otherwise let user control persist?
-      // For now, auto-collapse on mobile on load to save space.
+      if (!mobile && !isExpanded) {
+          // If moving to desktop and was collapsed, ensure we stick to collapsed state (which is visible on desktop)
+          // No action needed really, Boolean(false) maps to "Icon Only" on desktop.
+      }
     };
     
     // Set initial
@@ -58,12 +60,39 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
   return (
     <div className="flex h-[100dvh] bg-[#f8fafc] text-slate-800 font-sans overflow-hidden">
       
+      {/* MOBILE BACKDROP */}
+      {isMobile && isExpanded && (
+        <div 
+            className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm md:hidden animate-in fade-in duration-200"
+            onClick={() => setIsExpanded(false)}
+        />
+      )}
+
+      {/* MOBILE OPEN BUTTON (When collapsed/hidden) */}
+      {isMobile && !isExpanded && (
+          <button 
+            onClick={() => setIsExpanded(true)}
+            className="fixed bottom-6 left-4 z-40 p-3 bg-slate-900 text-white rounded-full shadow-lg shadow-slate-300 md:hidden animate-in zoom-in-95 duration-200 hover:bg-slate-800 active:scale-95"
+            title="Меню"
+          >
+            <Menu size={24} />
+          </button>
+      )}
+
       {/* SIDEBAR */}
       <aside 
         className={`
             bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 z-50
             transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)]
-            ${isExpanded ? 'w-64' : 'w-[72px]'}
+            
+            /* Positioning: Fixed on mobile, Relative on Desktop */
+            fixed inset-y-0 left-0 h-full md:relative md:h-auto
+            
+            /* Width logic */
+            ${isExpanded ? 'w-64' : 'w-64 md:w-[72px]'}
+
+            /* Transform logic (Hide on mobile when collapsed) */
+            ${isExpanded ? 'translate-x-0 shadow-2xl md:shadow-none' : '-translate-x-full md:translate-x-0'}
         `}
       >
         <div>
@@ -79,7 +108,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                 </div>
              </div>
 
-             {/* Toggle Button (Only visible when expanded on mobile to save space, or always on desktop?) -> Let's show always but different styling */}
+             {/* Toggle Button (Visible when expanded) */}
              {isExpanded && (
                  <button 
                     onClick={() => setIsExpanded(false)} 
@@ -90,9 +119,9 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
              )}
           </div>
 
-          {/* Toggle Button for Collapsed State (Centered) */}
+          {/* Toggle Button for Collapsed State (Desktop Only - Centered) */}
           {!isExpanded && (
-              <div className="w-full flex justify-center py-2 border-b border-slate-50">
+              <div className="w-full hidden md:flex justify-center py-2 border-b border-slate-50">
                   <button 
                     onClick={() => setIsExpanded(true)} 
                     className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
@@ -108,7 +137,10 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
             {navItems.map(item => (
               <button 
                 key={item.id} 
-                onClick={() => setModule(item.id)} 
+                onClick={() => {
+                    setModule(item.id);
+                    if (isMobile) setIsExpanded(false); // Auto-close on mobile selection
+                }} 
                 className={`
                     w-full flex items-center p-3 rounded-xl transition-all duration-200 group relative
                     ${currentModule === item.id ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}
@@ -160,7 +192,10 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
              </button>
 
              <button 
-                onClick={() => setModule(Module.USER_SETTINGS)} 
+                onClick={() => {
+                    setModule(Module.USER_SETTINGS);
+                    if (isMobile) setIsExpanded(false);
+                }} 
                 className={`
                     w-full flex items-center p-3 rounded-xl transition-all duration-200
                     ${currentModule === Module.USER_SETTINGS ? 'bg-slate-100 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}
@@ -174,7 +209,10 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
 
              {isOwner && (
                <button 
-                onClick={() => setModule(Module.SETTINGS)} 
+                onClick={() => {
+                    setModule(Module.SETTINGS);
+                    if (isMobile) setIsExpanded(false);
+                }} 
                 className={`
                     w-full flex items-center p-3 rounded-xl transition-all duration-200
                     ${currentModule === Module.SETTINGS ? 'bg-slate-100 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}
