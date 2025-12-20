@@ -444,7 +444,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, note.id)}
         onClick={() => handleOpenNote(note)}
-        className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover-lift group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''} animate-pop`}
+        className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
         {/* HEADER */}
         <div className="flex justify-between items-start mb-2 relative">
@@ -493,7 +493,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         e.stopPropagation(); 
                         if(window.confirm('Вы уверены, что хотите удалить заметку?')) deleteNote(note.id); 
                     }} 
-                    className="p-2 -ml-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active-scale"
+                    className="p-2 -ml-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     title="Удалить"
                 >
                     <Trash2 size={14} />
@@ -516,7 +516,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         archiveNote(note.id);
                                     }
                                 }} 
-                                className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-emerald-100 active-scale"
+                                className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-emerald-100"
                                 title="В «Действия»"
                              >
                                 <Kanban size={14} />
@@ -527,7 +527,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     e.stopPropagation(); 
                                     if(window.confirm('Поиграть в «Песочнице» и перенести заметку в «Библиотеку»?')) moveNoteToSandbox(note.id); 
                                 }} 
-                                className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-amber-100 active-scale"
+                                className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-amber-100"
                                 title="В «Песочницу»"
                              >
                                 <Box size={14} />
@@ -538,7 +538,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     e.stopPropagation(); 
                                     if(window.confirm('Перенести заметку в «Библиотеку»?')) archiveNote(note.id); 
                                 }} 
-                                className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-500 hover:text-indigo-600 bg-white hover:bg-indigo-50 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-slate-200 hover:border-indigo-100 active-scale" 
+                                className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-500 hover:text-indigo-600 bg-white hover:bg-indigo-50 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-slate-200 hover:border-indigo-100" 
                                 title="В «Библиотеку»"
                              >
                                 <Library size={14} />
@@ -550,7 +550,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 e.stopPropagation(); 
                                 if(window.confirm('Вернуть заметку во «Входящие»?')) moveNoteToInbox(note.id); 
                             }} 
-                            className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-500 bg-slate-100 hover:bg-slate-200 px-2 md:px-3 py-1.5 rounded-lg transition-colors active-scale"
+                            className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-500 bg-slate-100 hover:bg-slate-200 px-2 md:px-3 py-1.5 rounded-lg transition-colors"
                             title="Вернуть во «Входящие»"
                         >
                             <RotateCcw size={14} />
@@ -570,8 +570,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           <p className="text-slate-500 mt-1 md:mt-2 text-sm">Сбрось хаос мыслей.</p>
         </div>
         <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm shrink-0 self-start md:self-auto w-full md:w-auto">
-            <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-2 text-sm rounded-md transition-all active-scale ${activeTab === 'inbox' ? 'bg-slate-900 text-white' : 'text-slate-500'}`}><LayoutGrid size={16} /> Входящие</button>
-            <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-2 text-sm rounded-md transition-all active-scale ${activeTab === 'library' ? 'bg-slate-100 text-slate-700' : 'text-slate-500'}`}><Library size={16} /> Библиотека</button>
+            <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-2 text-sm rounded-md transition-all ${activeTab === 'inbox' ? 'bg-slate-900 text-white' : 'text-slate-500'}`}><LayoutGrid size={16} /> Входящие</button>
+            <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-2 text-sm rounded-md transition-all ${activeTab === 'library' ? 'bg-slate-100 text-slate-700' : 'text-slate-500'}`}><Library size={16} /> Библиотека</button>
         </div>
       </header>
 
@@ -596,7 +596,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                          <button 
                              onClick={handleMoodSearch} 
                              disabled={isMoodAnalyzing || !moodQuery.trim()}
-                             className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 active-scale"
+                             className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold hover:bg-purple-700 transition-colors disabled:opacity-50"
                          >
                             {isMoodAnalyzing ? 'Думаю...' : 'Найти'}
                          </button>
@@ -644,7 +644,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <>
                     <button 
                         onClick={() => setShowTagInput(true)}
-                        className="p-2 rounded-xl border transition-all bg-white border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 active-scale"
+                        className="p-2 rounded-xl border transition-all bg-white border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200"
                         title="Поиск по тегам"
                     >
                         <TagIcon size={18} />
@@ -652,7 +652,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                     <button 
                         onClick={() => setShowFilters(!showFilters)} 
-                        className={`p-2 rounded-xl border transition-all active-scale ${showFilters || activeColorFilter ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600'}`}
+                        className={`p-2 rounded-xl border transition-all ${showFilters || activeColorFilter ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600'}`}
                         title="Фильтр по цвету"
                     >
                         <Palette size={18} />
@@ -661,7 +661,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     {hasMoodMatcher && (
                         <button 
                             onClick={() => setShowMoodInput(true)}
-                            className={`p-2 rounded-xl border transition-all active-scale ${aiFilteredIds !== null ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-white border-slate-200 text-slate-400 hover:text-purple-500 hover:border-purple-200'}`}
+                            className={`p-2 rounded-xl border transition-all ${aiFilteredIds !== null ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-white border-slate-200 text-slate-400 hover:text-purple-500 hover:border-purple-200'}`}
                             title="Подбор по теме (ИИ)"
                         >
                             <Sparkles size={18} />
@@ -670,7 +670,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                     <button 
                         onClick={startOracle}
-                        className="group relative p-2 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 active-scale"
+                        className="group relative p-2 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200"
                         title="Оракул Смыслов"
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
@@ -699,7 +699,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
              <div className="flex items-center gap-2 overflow-x-auto pb-1 animate-in slide-in-from-top-2 duration-200">
                  <button 
                     onClick={() => setActiveColorFilter(null)} 
-                    className={`px-3 py-1 text-xs font-medium rounded-full border transition-all whitespace-nowrap active-scale ${activeColorFilter === null ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                    className={`px-3 py-1 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${activeColorFilter === null ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
                  >
                     Все
                  </button>
@@ -707,7 +707,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                      <button
                         key={c.id}
                         onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)}
-                        className={`w-6 h-6 rounded-full border shadow-sm transition-transform ${activeColorFilter === c.id ? 'ring-2 ring-indigo-400 ring-offset-2 scale-110' : 'hover:scale-105 active:scale-95'}`}
+                        className={`w-6 h-6 rounded-full border shadow-sm transition-transform ${activeColorFilter === c.id ? 'ring-2 ring-indigo-400 ring-offset-2 scale-110' : 'hover:scale-105'}`}
                         style={{ backgroundColor: c.hex, borderColor: '#e2e8f0' }}
                         title={c.id}
                      />
@@ -720,7 +720,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         <>
             {/* Input only visible if not searching/filtering or if explicit action needed */}
             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 md:p-4 shrink-0 animate-pop">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 md:p-4 shrink-0">
                     <textarea className="w-full h-24 md:h-32 resize-none outline-none text-base text-slate-700 bg-transparent" placeholder="О чём ты думаешь? (Поддерживается Markdown)" value={input} onChange={(e) => setInput(e.target.value)} />
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 border-t border-slate-50 pt-3 gap-2">
                         <div className="w-full md:w-2/3">
@@ -731,7 +731,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 placeholder="Добавить теги..." 
                             />
                         </div>
-                        <button onClick={handleDump} disabled={isProcessing || !input.trim()} className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 text-sm font-medium h-[42px] active-scale transition-colors">{isProcessing ? <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"/> : <Send size={16} />} Записать</button>
+                        <button onClick={handleDump} disabled={isProcessing || !input.trim()} className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 text-sm font-medium h-[42px]">{isProcessing ? <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"/> : <Send size={16} />} Записать</button>
                     </div>
                 </div>
             )}
@@ -740,7 +740,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 {inboxNotes.length > 0 ? (
                     inboxNotes.map(note => renderNoteCard(note, false))
                 ) : (
-                    <div className="col-span-1 md:col-span-2 text-center py-10 text-slate-400 text-sm animate-in fade-in">
+                    <div className="col-span-1 md:col-span-2 text-center py-10 text-slate-400 text-sm">
                         {searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено' : '«Входящие» пусты. Запиши что-нибудь.'}
                     </div>
                 )}
@@ -752,7 +752,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             {archivedNotes.length > 0 ? (
                 archivedNotes.map(note => renderNoteCard(note, true))
             ) : (
-                <div className="col-span-1 md:col-span-2 text-center py-10 text-slate-400 text-sm animate-in fade-in">
+                <div className="col-span-1 md:col-span-2 text-center py-10 text-slate-400 text-sm">
                     {searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено в библиотеке' : 'Библиотека пуста'}
                 </div>
             )}
@@ -788,7 +788,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                       <button 
                                           key={vibe.id}
                                           onClick={() => castOracleSpell(vibe)}
-                                          className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 hover:bg-white hover:shadow-lg hover:scale-105 border border-slate-100 transition-all duration-300 group active-scale"
+                                          className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 hover:bg-white hover:shadow-lg hover:scale-105 border border-slate-100 transition-all duration-300 group"
                                       >
                                           <span className="text-3xl mb-2 group-hover:animate-bounce">{vibe.emoji}</span>
                                           <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{vibe.label}</span>
@@ -844,7 +844,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                   </button>
                                   <button 
                                       onClick={() => castOracleSpell(oracleVibe)}
-                                      className="text-xs font-medium text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1 py-2 active-scale"
+                                      className="text-xs font-medium text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1 py-2"
                                   >
                                       <Shuffle size={12} /> Попробовать еще раз
                                   </button>
@@ -859,14 +859,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
       {selectedNote && (
         <div className="fixed inset-0 z-50 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
-            <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border ${getNoteBorderClass(selectedNote.color)} transition-colors duration-300 max-h-[90vh] overflow-y-auto animate-pop`} onClick={(e) => e.stopPropagation()}>
+            <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border ${getNoteBorderClass(selectedNote.color)} transition-colors duration-300 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-start mb-4">
                     <h3 className="text-lg font-bold flex items-center gap-3">
                         {isEditing ? 'Редактирование' : 'Детали'}
                         {/* Pin Button */}
                         <button 
                             onClick={(e) => togglePin(e, selectedNote)}
-                            className={`p-1.5 rounded-full transition-colors ${selectedNote.isPinned ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400 hover:text-indigo-500 active-scale'}`}
+                            className={`p-1.5 rounded-full transition-colors ${selectedNote.isPinned ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400 hover:text-indigo-500'}`}
                             title={selectedNote.isPinned ? "Открепить" : "Закрепить сверху"}
                         >
                             <Pin size={16} fill={selectedNote.isPinned ? "currentColor" : "none"} />
@@ -874,11 +874,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     </h3>
                     <div className="flex gap-2">
                         {!isEditing && (
-                            <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-slate-700 bg-white/50 rounded hover:bg-white active-scale" title="Редактировать">
+                            <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-slate-700 bg-white/50 rounded hover:bg-white" title="Редактировать">
                                 <Edit3 size={18} />
                             </button>
                         )}
-                        <button onClick={() => setSelectedNote(null)} className="p-1.5 text-slate-400 hover:text-slate-700 bg-white/50 rounded hover:bg-white active-scale"><X size={20}/></button>
+                        <button onClick={() => setSelectedNote(null)} className="p-1.5 text-slate-400 hover:text-slate-700 bg-white/50 rounded hover:bg-white"><X size={20}/></button>
                     </div>
                 </div>
 
@@ -922,7 +922,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         <button
                             key={c.id}
                             onClick={() => setColor(c.id)}
-                            className={`w-6 h-6 rounded-full border shadow-sm transition-transform hover:scale-110 active:scale-95 ${selectedNote.color === c.id ? 'ring-2 ring-slate-400 ring-offset-2' : ''}`}
+                            className={`w-6 h-6 rounded-full border shadow-sm transition-transform hover:scale-110 ${selectedNote.color === c.id ? 'ring-2 ring-slate-400 ring-offset-2' : ''}`}
                             style={{ backgroundColor: c.hex, borderColor: '#e2e8f0' }}
                             title={c.id}
                         />
@@ -937,15 +937,15 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 setSelectedNote(null);
                             }
                         }} 
-                        className="px-4 py-2 bg-white/50 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg text-sm transition-colors border border-transparent hover:border-red-100 w-full md:w-auto active-scale"
+                        className="px-4 py-2 bg-white/50 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg text-sm transition-colors border border-transparent hover:border-red-100 w-full md:w-auto"
                     >
                         Удалить
                     </button>
                     
                     {isEditing && (
                         <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-                            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 w-full md:w-auto text-center active-scale">Отмена</button>
-                            <button onClick={handleSaveEdit} className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm flex items-center justify-center gap-2 w-full md:w-auto active-scale">
+                            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 w-full md:w-auto text-center">Отмена</button>
+                            <button onClick={handleSaveEdit} className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm flex items-center justify-center gap-2 w-full md:w-auto">
                                 <Check size={16} /> Сохранить
                             </button>
                         </div>

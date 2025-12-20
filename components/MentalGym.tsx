@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Flashcard, Task } from '../types';
 import { Dumbbell, RotateCw, Trash2, ChevronLeft, ChevronRight, BrainCircuit, Lightbulb } from 'lucide-react';
@@ -67,17 +66,17 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
 
       <div className="flex-1 flex flex-col items-center justify-center w-full min-h-0 relative">
         {flashcards.length > 0 && flashcards[currentCardIndex] ? (
-            <div className="w-full max-w-md flex flex-col gap-6 animate-pop">
+            <div className="w-full max-w-md flex flex-col gap-6">
                 
                 {/* CARD CONTAINER */}
                 <div 
-                    className="perspective-1000 w-full aspect-[3/4] cursor-pointer group relative hover-lift" 
+                    className="perspective-1000 w-full aspect-[3/4] cursor-pointer group relative" 
                     onClick={() => setIsFlipped(!isFlipped)}
                 >
                     {/* Delete Button (Visible on hover or always on mobile) */}
                     <button 
                         onClick={handleDelete}
-                        className="absolute -top-3 -right-3 z-50 p-2 bg-white text-slate-300 hover:text-red-500 border border-slate-100 rounded-full shadow-sm hover:bg-red-50 transition-colors active-scale"
+                        className="absolute -top-3 -right-3 z-50 p-2 bg-white text-slate-300 hover:text-red-500 border border-slate-100 rounded-full shadow-sm hover:bg-red-50 transition-colors"
                         title="Удалить карточку"
                     >
                         <Trash2 size={16} />
@@ -127,7 +126,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                 <div className="flex items-center justify-between px-4">
                     <button 
                         onClick={(e) => { e.stopPropagation(); changeCard('prev'); }}
-                        className="p-3 rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm active-scale"
+                        className="p-3 rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm active:scale-95"
                     >
                         <ChevronLeft size={24} />
                     </button>
@@ -138,7 +137,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
 
                     <button 
                         onClick={(e) => { e.stopPropagation(); changeCard('next'); }}
-                        className="p-3 rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm active-scale"
+                        className="p-3 rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm active:scale-95"
                     >
                         <ChevronRight size={24} />
                     </button>
@@ -146,7 +145,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
 
             </div>
         ) : (
-            <div className="text-center text-slate-400 p-10 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50 animate-pop">
+            <div className="text-center text-slate-400 p-10 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
                 <Dumbbell size={48} className="mx-auto mb-4 opacity-30" />
                 <p className="font-medium text-slate-500">Спортзал пуст</p>
                 <p className="text-sm mt-2 opacity-60 max-w-xs mx-auto">Создайте карточки навыков в Песочнице, чтобы начать тренировку.</p>
