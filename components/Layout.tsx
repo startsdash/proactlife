@@ -43,13 +43,13 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
   }, []);
 
   const navItems = [
-    { id: Module.NAPKINS, icon: StickyNote, label: 'Салфетки' },
-    { id: Module.SANDBOX, icon: Box, label: 'Песочница' },
-    { id: Module.KANBAN, icon: KanbanIcon, label: 'Действия' },
-    { id: Module.RITUALS, icon: Flame, label: 'Ритуалы' },
-    { id: Module.MENTAL_GYM, icon: Dumbbell, label: 'Mental Gym' },
-    { id: Module.JOURNAL, icon: Book, label: 'Дневник' },
-    { id: Module.ARCHIVE, icon: History, label: 'Архив' },
+    { id: Module.NAPKINS, icon: StickyNote, label: 'Инбокс' },
+    { id: Module.SANDBOX, icon: Box, label: 'Лаб' },
+    { id: Module.KANBAN, icon: KanbanIcon, label: 'Спринты' },
+    { id: Module.RITUALS, icon: Flame, label: 'Трекер' },
+    { id: Module.MENTAL_GYM, icon: Dumbbell, label: 'Скиллы' },
+    { id: Module.JOURNAL, icon: Book, label: 'Бортжурнал' },
+    { id: Module.ARCHIVE, icon: History, label: 'Зал славы' },
     { id: Module.LEARNING, icon: GraduationCap, label: 'Академия' },
   ];
 

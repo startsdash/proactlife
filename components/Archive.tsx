@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task } from '../types';
@@ -160,9 +158,9 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
       <header className="mb-6 shrink-0">
         <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-3">
             <History className="text-slate-400" size={32} />
-            <span>Архив <span className="text-orange-400 text-lg">/ След в истории</span></span>
+            <span>Зал славы <span className="text-orange-400 text-lg">/ Финиш</span></span>
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">История действий и побед.</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Выполненные миссии и закрытые гештальты</p>
       </header>
 
       <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar-light">
@@ -212,10 +210,10 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                    <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm("Восстановить задачу в Действия?")) restoreTask(task.id);
+                        if (window.confirm("Восстановить задачу в Спринты?")) restoreTask(task.id);
                       }}
                       className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                      title="Восстановить в Действия"
+                      title="Восстановить в Спринты"
                    >
                       <RotateCcw size={14} /> <span className="hidden md:inline">Восстановить</span>
                    </button>
@@ -240,68 +238,69 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
         <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedTask(null)}>
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-start mb-6">
-                    <h3 className="text-lg md:text-xl font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">Архивная задача</h3>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Детали задачи</h3>
                     <button onClick={() => setSelectedTask(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button>
                 </div>
-
+                
                 <div className="space-y-4">
-                    <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
-                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Задача</span>
-                         <div className="text-sm text-slate-800 dark:text-slate-200 font-normal leading-relaxed">
+                     <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
+                        <div className="text-sm text-slate-800 dark:text-slate-200 font-normal leading-relaxed">
                             <ReactMarkdown components={markdownComponents}>{selectedTask.content}</ReactMarkdown>
-                         </div>
-                    </div>
-
-                    {selectedTask.description && (
-                        <CollapsibleSection title="Источник" icon={<FileText size={14} />}>
+                        </div>
+                     </div>
+                     
+                     {selectedTask.description && (
+                        <CollapsibleSection title="Источник" icon={<FileText size={14}/>}>
                             <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                                <ReactMarkdown components={markdownComponents}>{selectedTask.description}</ReactMarkdown>
+                                 <ReactMarkdown components={markdownComponents}>{selectedTask.description}</ReactMarkdown>
                             </div>
                         </CollapsibleSection>
-                    )}
+                     )}
 
-                    {selectedTask.activeChallenge && (
-                        <CollapsibleSection title="Финальный Челлендж" icon={<Zap size={14} />}>
-                            <div className={`p-3 rounded-lg border ${selectedTask.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800'}`}>
-                                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${selectedTask.isChallengeCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                                    {selectedTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
-                                </span>
-                                <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
-                                  <StaticChallengeRenderer content={selectedTask.activeChallenge} mode="history" />
-                                </div>
+                     {selectedTask.activeChallenge && (
+                      <CollapsibleSection 
+                        title="Челлендж" 
+                        icon={<Zap size={14}/>}
+                      >
+                         <div className={`p-3 rounded-lg border ${selectedTask.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block mb-2 ${selectedTask.isChallengeCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>
+                               {selectedTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
+                            </span>
+                            <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
+                                <StaticChallengeRenderer content={selectedTask.activeChallenge || ''} mode="history" />
                             </div>
-                        </CollapsibleSection>
+                         </div>
+                      </CollapsibleSection>
                     )}
 
                     {selectedTask.challengeHistory && selectedTask.challengeHistory.length > 0 && (
-                        <CollapsibleSection title="История Челленджей" icon={<History size={14} />}>
-                            <div className="space-y-4">
-                                {selectedTask.challengeHistory.map((h, i) => (
-                                    <div key={i} className="py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
-                                        <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
-                                            <StaticChallengeRenderer content={h} mode="history" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CollapsibleSection>
-                    )}
-                    
-                    {selectedTask.consultationHistory && selectedTask.consultationHistory.length > 0 && (
-                        <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}>
-                            <ul className="space-y-4">
-                                {selectedTask.consultationHistory.map((consultation, index) => (
-                                    <li key={index} className="text-sm text-slate-900 dark:text-slate-200 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
-                                        <ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown>
-                                    </li>
-                                ))}
-                            </ul>
-                        </CollapsibleSection>
+                      <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
+                         <div className="space-y-4">
+                            {selectedTask.challengeHistory.map((challenge, index) => (
+                               <div key={index} className="py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                                  <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
+                                     <StaticChallengeRenderer content={challenge} mode="history" />
+                                  </div>
+                               </div>
+                            ))}
+                         </div>
+                      </CollapsibleSection>
                     )}
 
-                    <div className="mt-8 flex justify-end">
-                        <button onClick={() => setSelectedTask(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button>
-                    </div>
+                    {selectedTask.consultationHistory && selectedTask.consultationHistory.length > 0 && (
+                      <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}>
+                         <ul className="space-y-4">
+                            {selectedTask.consultationHistory.map((consultation, index) => (
+                               <li key={index} className="text-sm text-slate-900 dark:text-slate-200 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                                  <ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown>
+                               </li>
+                            ))}
+                         </ul>
+                      </CollapsibleSection>
+                    )}
+                </div>
+                <div className="mt-8 flex justify-end">
+                    <button onClick={() => setSelectedTask(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium">Закрыть</button>
                 </div>
             </div>
         </div>
@@ -309,4 +308,5 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
     </div>
   );
 };
+
 export default Archive;

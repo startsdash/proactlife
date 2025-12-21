@@ -631,10 +631,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                     <button 
                                         onClick={(e) => { 
                                             e.stopPropagation(); 
-                                            if(window.confirm('Перенести задачу в Архив?')) archiveTask(task.id); 
+                                            if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
                                         }} 
                                         className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
-                                        title="В Архив"
+                                        title="В Зал славы"
                                     >
                                         <History size={18} /> 
                                     </button>
@@ -667,7 +667,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
 
   return (
     <div className="h-full p-3 md:p-8 flex flex-col overflow-hidden relative">
-      <header className="mb-4 shrink-0"><h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Действия <span className="text-emerald-500 text-sm md:text-lg">/ От слов к делу</span></h1></header>
+      <header className="mb-4 shrink-0">
+          <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Спринты <span className="text-emerald-500 text-sm md:text-lg">/ Фокус</span></h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Меньше планирования, больше дела</p>
+      </header>
       
       <div className="flex flex-wrap gap-2 mb-4 animate-in slide-in-from-top-2 shrink-0">
          <div className="flex bg-white dark:bg-[#1e293b] p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">

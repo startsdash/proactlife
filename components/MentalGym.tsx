@@ -56,8 +56,8 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
     <div className="flex flex-col h-full max-w-4xl mx-auto p-4 md:p-8 space-y-6">
        <header className="flex justify-between items-end shrink-0">
         <div>
-            <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Mental Gym <span className="text-violet-500 text-base md:text-lg">/ Тонус разума</span></h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Закрепляй знания и тренируй гибкость ума.</p>
+            <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Скиллы <span className="text-violet-500 text-base md:text-lg">/ Level Up</span></h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Прокачай нейронные связи. Не дай инсайтам выветриться</p>
         </div>
       </header>
 
@@ -145,7 +145,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                 <EmptyState 
                     icon={Dumbbell} 
                     title="Спортзал пуст" 
-                    description="Создайте карточки навыков в «Песочнице» после анализа ИИ, чтобы начать тренировку." 
+                    description="Создайте карточки навыков в «Лабе» после анализа ИИ, чтобы начать тренировку." 
                     color="violet"
                 />
             </div>

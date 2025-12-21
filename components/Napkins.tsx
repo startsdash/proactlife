@@ -253,7 +253,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const startOracle = () => {
       if (notes.length === 0) {
-          alert("Сначала добавь пару мыслей в «Салфетки».");
+          alert("Сначала добавь пару мыслей в «Инбокс».");
           return;
       }
       setShowOracle(true);
@@ -404,8 +404,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                  <div className="flex gap-2 justify-end">
                     {!isArchived ? (
                         <>
-                             <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Действия?')) { onAddTask({ id: Date.now().toString(), content: note.content, column: 'todo', createdAt: Date.now() }); archiveNote(note.id); } }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-emerald-100 dark:border-emerald-800/50" title="В Действия"><Kanban size={14} /></button>
-                             <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Песочницу?')) moveNoteToSandbox(note.id); }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-amber-100 dark:border-amber-800/50" title="В Песочницу"><Box size={14} /></button>
+                             <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), content: note.content, column: 'todo', createdAt: Date.now() }); archiveNote(note.id); } }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-emerald-100 dark:border-emerald-800/50" title="В Спринты"><Kanban size={14} /></button>
+                             <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Лаб?')) moveNoteToSandbox(note.id); }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-amber-100 dark:border-amber-800/50" title="В Лаб"><Box size={14} /></button>
                              <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Библиотеку?')) archiveNote(note.id); }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-white dark:bg-slate-800/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-slate-200 dark:border-slate-700 hover:border-indigo-100" title="В Библиотеку"><Library size={14} /></button>
                         </>
                     ) : (
@@ -421,8 +421,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     <div className="flex flex-col h-full max-w-4xl mx-auto p-3 md:p-8 space-y-4 md:space-y-6 relative overflow-y-auto">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
         <div>
-          <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Салфетки <span className="text-blue-400 text-lg">/ Лови момент</span></h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 md:mt-2 text-sm">Сбрось хаос мыслей.</p>
+          <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Инбокс <span className="text-blue-400 text-lg">/ Входящие</span></h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 md:mt-2 text-sm">На скорости мысли. Скетчпад для твоего мозга</p>
         </div>
         <div className="flex bg-white dark:bg-[#1e293b] p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 self-start md:self-auto w-full md:w-auto">
             <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-2 text-sm rounded-md transition-all ${activeTab === 'inbox' ? 'bg-slate-900 dark:bg-indigo-600 text-white' : 'text-slate-500 dark:text-slate-400'}`}><LayoutGrid size={16} /> Входящие</button>

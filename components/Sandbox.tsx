@@ -91,7 +91,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
       column: 'todo',
       createdAt: Date.now()
     });
-    alert("Задача создана! Заметка осталась в Песочнице.");
+    alert("Задача создана! Заметка осталась в Лабе.");
   };
 
   const handleAcceptCard = () => {
@@ -103,12 +103,12 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
       level: 0,
       nextReview: Date.now()
     });
-    alert("Навык создан! Заметка осталась в Песочнице.");
+    alert("Навык создан! Заметка осталась в Лабе.");
   };
   
   const handleManualArchive = () => {
       if (selectedNoteId) {
-          if (window.confirm("Перенести заметку в Библиотеку?")) {
+          if (window.confirm("Перенести заметку в Зал славы?")) {
             onProcessNote(selectedNoteId);
             setAnalysis(null);
             setSelectedNoteId(null);
@@ -126,8 +126,8 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]">
         <header className={`p-4 md:p-8 pb-0 shrink-0 ${selectedNoteId ? 'hidden md:block' : 'block'}`}>
-            <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Песочница <span className="text-amber-500 text-base md:text-lg">/ Лаборатория смыслов</span></h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm md:text-base">Верстак смыслов. Преврати хаос в порядок.</p>
+            <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Лаб <span className="text-amber-500 text-base md:text-lg">/ Апгрейд</span></h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm md:text-base">Прогони идею через ИИ. Получи готовый план действий</p>
         </header>
 
         <div className="flex flex-1 overflow-hidden p-4 md:p-8 gap-6 relative">
@@ -139,7 +139,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                         <EmptyState 
                             icon={Box} 
                             title="Входящих нет" 
-                            description="Отправьте заметки из «Салфеток», чтобы начать работу над ними." 
+                            description="Отправьте заметки из «Инбокса», чтобы начать работу над ними." 
                             color="amber"
                         />
                     </div>
@@ -196,7 +196,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                         <span className="font-medium text-sm">Назад</span>
                      </div>
                      <button onClick={handleManualArchive} className="flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                        <Library size={14} /> <span className="hidden md:inline">В библиотеку</span>
+                        <Library size={14} /> <span className="hidden md:inline">В Зал славы</span>
                      </button>
                 </div>
 
