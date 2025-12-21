@@ -658,7 +658,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             </div>
                         </div>
                     </div>
-                )})}
+                )})
             )}
         </div>
     </div>
