@@ -6,7 +6,6 @@ import { Flame, Check, Plus, Trash2, X, Zap, Calendar, Repeat, Bell, GripVertica
 import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
 import ProgressStats from './ProgressStats';
-import confetti from 'canvas-confetti';
 
 interface Props {
   habits: Habit[];
@@ -156,8 +155,8 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     }
 
     // TRIGGER CONFETTI if completing
-    if (isNowCompleted) {
-        confetti({
+    if (isNowCompleted && window.confetti) {
+        window.confetti({
             particleCount: 100,
             spread: 70,
             origin: { y: 0.6 },

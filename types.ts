@@ -1,4 +1,9 @@
 
+declare global {
+  interface Window {
+    confetti: any;
+  }
+}
 
 export enum Module {
   NAPKINS = 'napkins',

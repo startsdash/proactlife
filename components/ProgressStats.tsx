@@ -78,14 +78,15 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
       if (timeRange === 'week') {
           // Get start of current week (Monday)
           const startOfWeek = new Date(today);
-          const day = startOfWeek.getDay() || 7; // Get current day number, convert Sun(0) to 7
-          if (day !== 1) startOfWeek.setHours(-24 * (day - 1));
-          else startOfWeek.setHours(0,0,0,0); // It is monday
+          const currentDay = startOfWeek.getDay() || 7; // 1(Mon) - 7(Sun)
+          const diffToMon = currentDay - 1;
+          startOfWeek.setDate(startOfWeek.getDate() - diffToMon);
+          startOfWeek.setHours(0,0,0,0);
 
           const days = [];
           for (let i = 0; i < 7; i++) {
               const d = new Date(startOfWeek);
-              d.setDate(d.getDate() + i);
+              d.setDate(startOfWeek.getDate() + i);
               const dStr = d.toISOString().split('T')[0];
               const count = completionsByDate[dStr] || 0;
               days.push({ 
