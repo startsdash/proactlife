@@ -14,6 +14,14 @@ interface Props {
   deleteHabit: (id: string) => void;
 }
 
+// Helper to get local date string YYYY-MM-DD
+const getLocalDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -26,7 +34,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
   const [targetCount, setTargetCount] = useState<number>(3);
   const [reminderTime, setReminderTime] = useState('');
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateKey(new Date());
 
   const requestNotificationPermission = async () => {
     const granted = await notificationService.requestPermission();
@@ -170,14 +178,14 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     checkDate.setHours(0,0,0,0);
     
     // 1. Check if "Today" contributes to streak
-    const todayFormatted = checkDate.toISOString().split('T')[0];
+    const todayFormatted = getLocalDateKey(checkDate);
     const isTodayDone = isDayCompleted(habit, todayFormatted, newHistory[todayFormatted]);
     
     let tempDate = new Date();
     tempDate.setDate(tempDate.getDate() - 1); // Start checking from yesterday
     
     while (true) {
-        const dStr = tempDate.toISOString().split('T')[0];
+        const dStr = getLocalDateKey(tempDate);
         const val = newHistory[dStr];
         if (isDayCompleted(habit, dStr, val)) {
             currentStreak++;
@@ -206,7 +214,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     const d = new Date();
     const history = habit.history || {};
     for (let i = 0; i < 7; i++) {
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = getLocalDateKey(d);
         if (history[dateStr]) count++;
         d.setDate(d.getDate() - 1);
     }

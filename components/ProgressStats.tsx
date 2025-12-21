@@ -10,10 +10,18 @@ interface Props {
 
 type TimeRange = 'week' | 'month' | 'year';
 
+// Helper to get local date string YYYY-MM-DD
+const getLocalDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const ProgressStats: React.FC<Props> = ({ habits }) => {
   const [timeRange, setTimeRange] = useState<TimeRange>('week');
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = getLocalDateKey(today);
 
   // --- DAILY RING STATS ---
   const dailyStats = useMemo(() => {
@@ -105,7 +113,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
           for (let i = 0; i < 7; i++) {
               const d = new Date(startOfWeek);
               d.setDate(startOfWeek.getDate() + i);
-              const dStr = d.toISOString().split('T')[0];
+              const dStr = getLocalDateKey(d);
               const count = completionsByDate[dStr] || 0;
               days.push({ 
                   date: d, 
@@ -153,7 +161,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
           // Days
           for(let i=1; i<=daysInMonth; i++) {
               const d = new Date(year, month, i);
-              const dStr = d.toISOString().split('T')[0];
+              const dStr = getLocalDateKey(d);
               const count = completionsByDate[dStr] || 0;
               gridCells.push({
                   date: i,
@@ -195,7 +203,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
          
          const tempDate = new Date(startDate);
          while (tempDate <= endDate) {
-             const dStr = tempDate.toISOString().split('T')[0];
+             const dStr = getLocalDateKey(tempDate);
              const count = completionsByDate[dStr] || 0;
              data.push({ date: dStr, count, intensity: getIntensity(count) });
              tempDate.setDate(tempDate.getDate() + 1);

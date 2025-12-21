@@ -1,38 +1,10 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig, JournalEntry } from "../types";
 import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL, applyTypography } from '../constants';
 
 // --- API Access ---
-const getApiKey = () => {
-  let key = '';
-
-  // 1. Try process.env (Standard/IDX/Node)
-  try {
-    if (typeof process !== 'undefined' && process.env?.API_KEY) {
-      key = process.env.API_KEY;
-    }
-  } catch (e) {}
-
-  // 2. Try import.meta.env (Vite/Vercel Client-Side)
-  if (!key) {
-    try {
-      // @ts-ignore
-      if (import.meta.env?.VITE_GEMINI_API_KEY) {
-        // @ts-ignore
-        key = import.meta.env.VITE_GEMINI_API_KEY;
-      }
-    } catch (e) {}
-  }
-
-  if (!key) {
-    console.warn("Gemini API Key is missing. AI features will not work. Ensure VITE_GEMINI_API_KEY is set in Vercel.");
-  }
-
-  return key;
-};
-
-const ai = new GoogleGenAI({ apiKey: getApiKey() });
+// The API key must be obtained exclusively from the environment variable process.env.API_KEY.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Helper to check if model requires legacy/chat handling (Gemma doesn't support systemInstruction in config)
 const isGemmaModel = (model: string) => model.toLowerCase().includes('gemma');
