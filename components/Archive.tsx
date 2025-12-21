@@ -1,5 +1,4 @@
 
-
 import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task } from '../types';
@@ -160,9 +159,9 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
       <header className="mb-6 shrink-0">
         <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-3">
             <History className="text-slate-400" size={32} />
-            <span>Архив <span className="text-orange-400 text-lg">/ След в истории</span></span>
+            <span>База <span className="text-orange-400 text-lg">/ Опыт</span></span>
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">История действий и побед.</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">История твоих побед и завершенных проектов.</p>
       </header>
 
       <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar-light">
@@ -212,10 +211,10 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                    <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm("Восстановить задачу в Действия?")) restoreTask(task.id);
+                        if (window.confirm("Восстановить задачу в Трекер?")) restoreTask(task.id);
                       }}
                       className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                      title="Восстановить в Действия"
+                      title="Восстановить в Трекер"
                    >
                       <RotateCcw size={14} /> <span className="hidden md:inline">Восстановить</span>
                    </button>
