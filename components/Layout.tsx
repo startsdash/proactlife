@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus } from '../types';
 import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, History, Book, GraduationCap, PanelLeftClose, PanelLeftOpen, Shield, Menu } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
   currentModule: Module;
@@ -58,23 +59,34 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
     <div className="flex h-[100dvh] bg-[#f8fafc] dark:bg-[#0f172a] text-slate-800 dark:text-slate-200 font-sans overflow-hidden transition-colors duration-300">
       
       {/* MOBILE BACKDROP */}
+      <AnimatePresence>
       {isMobile && isExpanded && (
-        <div 
-            className="fixed inset-0 z-40 bg-slate-900/20 dark:bg-black/50 backdrop-blur-sm md:hidden animate-in fade-in duration-200"
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40 bg-slate-900/20 dark:bg-black/50 backdrop-blur-sm md:hidden"
             onClick={() => setIsExpanded(false)}
         />
       )}
+      </AnimatePresence>
 
       {/* MOBILE OPEN BUTTON */}
+      <AnimatePresence>
       {isMobile && !isExpanded && (
-          <button 
+          <motion.button 
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
             onClick={() => setIsExpanded(true)}
-            className="fixed bottom-6 left-4 z-40 p-3 bg-slate-900 dark:bg-slate-800 text-white rounded-full shadow-lg shadow-slate-300 dark:shadow-slate-900/50 md:hidden animate-in zoom-in-95 duration-200 hover:bg-slate-800 dark:hover:bg-slate-700 active:scale-95"
+            className="fixed bottom-6 left-4 z-40 p-3 bg-slate-900 dark:bg-slate-800 text-white rounded-full shadow-lg shadow-slate-300 dark:shadow-slate-900/50 md:hidden hover:bg-slate-800 dark:hover:bg-slate-700 active:scale-95"
             title="Меню"
           >
             <Menu size={24} />
-          </button>
+          </motion.button>
       )}
+      </AnimatePresence>
 
       {/* SIDEBAR */}
       <aside 
@@ -130,7 +142,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     if (isMobile) setIsExpanded(false);
                 }} 
                 className={`
-                    w-full flex items-center p-3 rounded-xl transition-all duration-200 group relative
+                    w-full flex items-center p-3 rounded-xl transition-all duration-200 group relative overflow-hidden
                     ${currentModule === item.id 
                         ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-lg shadow-slate-200 dark:shadow-slate-900/50' 
                         : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'}
@@ -138,11 +150,21 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                 `}
                 title={!isExpanded ? item.label : undefined}
               >
-                <item.icon size={20} className={`shrink-0 transition-colors ${currentModule === item.id ? 'text-white' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-slate-200'}`} />
+                {/* Active Indicator Background */}
+                {currentModule === item.id && (
+                    <motion.div
+                        layoutId="activeNav"
+                        className="absolute inset-0 bg-slate-900 dark:bg-indigo-600 z-0 rounded-xl"
+                        initial={false}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                )}
+
+                <item.icon size={20} className={`shrink-0 transition-colors relative z-10 ${currentModule === item.id ? 'text-white' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-slate-200'}`} />
                 
                 <span 
                     className={`
-                        ml-3 font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out
+                        ml-3 font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out relative z-10
                         ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0 absolute'}
                     `}
                 >
@@ -150,7 +172,11 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                 </span>
                 
                 {!isExpanded && currentModule === item.id && (
-                    <div className="absolute right-1 top-1 w-2 h-2 bg-amber-400 rounded-full border-2 border-white dark:border-slate-900 shadow-sm" />
+                    <motion.div 
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute right-1 top-1 w-2 h-2 bg-amber-400 rounded-full border-2 border-white dark:border-slate-900 shadow-sm z-20" 
+                    />
                 )}
               </button>
             ))}
@@ -185,14 +211,17 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     if (isMobile) setIsExpanded(false);
                 }} 
                 className={`
-                    w-full flex items-center p-3 rounded-xl transition-all duration-200
-                    ${currentModule === Module.USER_SETTINGS ? 'bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}
+                    w-full flex items-center p-3 rounded-xl transition-all duration-200 relative
+                    ${currentModule === Module.USER_SETTINGS ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}
                     ${isExpanded ? 'justify-start' : 'justify-center'}
                 `}
                 title={!isExpanded ? "Настройки" : undefined}
              >
-                  <Settings size={20} className="shrink-0" />
-                  <span className={`ml-3 text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0'}`}>Настройки</span>
+                  {currentModule === Module.USER_SETTINGS && (
+                      <motion.div layoutId="activeNav" className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl" transition={{ type: "spring", stiffness: 300, damping: 30 }} />
+                  )}
+                  <Settings size={20} className="shrink-0 relative z-10" />
+                  <span className={`ml-3 text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0'}`}>Настройки</span>
              </button>
 
              {isOwner && (
@@ -202,14 +231,17 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     if (isMobile) setIsExpanded(false);
                 }} 
                 className={`
-                    w-full flex items-center p-3 rounded-xl transition-all duration-200
-                    ${currentModule === Module.SETTINGS ? 'bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}
+                    w-full flex items-center p-3 rounded-xl transition-all duration-200 relative
+                    ${currentModule === Module.SETTINGS ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}
                     ${isExpanded ? 'justify-start' : 'justify-center'}
                 `}
                 title={!isExpanded ? "Настройки Владельца" : undefined}
                >
-                  <Shield size={20} className="shrink-0" />
-                  <span className={`ml-3 text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0'}`}>Владелец</span>
+                  {currentModule === Module.SETTINGS && (
+                      <motion.div layoutId="activeNav" className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl" transition={{ type: "spring", stiffness: 300, damping: 30 }} />
+                  )}
+                  <Shield size={20} className="shrink-0 relative z-10" />
+                  <span className={`ml-3 text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0'}`}>Владелец</span>
                </button>
              )}
         </div>
@@ -217,12 +249,21 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col w-full relative overflow-x-hidden overflow-y-auto bg-[#f8fafc] dark:bg-[#0f172a] transition-colors duration-300">
-         <div 
-           key={currentModule} // Triggers animation on module change
-           className="flex-1 h-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out"
-         >
-            {children}
-         </div>
+         <AnimatePresence mode="wait">
+            <motion.div
+                key={currentModule}
+                initial={{ opacity: 0, y: 15, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: -15, filter: 'blur(10px)' }}
+                transition={{ 
+                    duration: 0.35, 
+                    ease: [0.25, 1, 0.5, 1] // Apple-like ease-out curve
+                }}
+                className="flex-1 h-full flex flex-col"
+            >
+                {children}
+            </motion.div>
+         </AnimatePresence>
       </main>
     </div>
   );
