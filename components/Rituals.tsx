@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { Habit, HabitFrequency } from '../types';
 import { notificationService } from '../services/notificationService';
@@ -121,8 +120,10 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
   };
 
   const checkHabit = (habit: Habit) => {
-    const rawVal = habit.history[todayStr];
-    const newHistory = { ...habit.history };
+    // Defensive coding for history
+    const history = habit.history || {};
+    const rawVal = history[todayStr];
+    const newHistory = { ...history };
     
     // LOGIC FOR TIMES PER DAY
     if (habit.frequency === 'times_per_day') {
@@ -155,17 +156,6 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     const todayFormatted = checkDate.toISOString().split('T')[0];
     const isTodayDone = isDayCompleted(habit, todayFormatted, newHistory[todayFormatted]);
     
-    // If today is done, streak starts at 1. If not, streak starts at 0, but we check yesterday to see if it's kept alive.
-    // Standard approach: calculate consecutive days backwards.
-    
-    // Optimization: If today is NOT done, we check if yesterday was done. 
-    // If yesterday was done, the streak is technically "active/pending" for today.
-    // However, usually "streak" number implies completed days.
-    // Let's count consecutive completed days looking backwards from today.
-    // BUT: If today is NOT completed, we still check yesterday. If yesterday IS completed, streak is alive.
-    
-    // Let's simplify: Check yesterday backwards. If today is done, add +1.
-    
     let tempDate = new Date();
     tempDate.setDate(tempDate.getDate() - 1); // Start checking from yesterday
     
@@ -188,7 +178,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
         ...habit,
         history: newHistory,
         streak: currentStreak,
-        bestStreak: Math.max(habit.bestStreak, currentStreak)
+        bestStreak: Math.max(habit.bestStreak || 0, currentStreak)
     };
 
     updateHabit(updatedHabit);
@@ -197,11 +187,10 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
   const getWeekProgress = (habit: Habit) => {
     let count = 0;
     const d = new Date();
+    const history = habit.history || {};
     for (let i = 0; i < 7; i++) {
         const dateStr = d.toISOString().split('T')[0];
-        // For 'times_per_week', we count boolean completions.
-        // For others, we assume boolean or full completion logic is handled by 'history' structure
-        if (habit.history[dateStr]) count++;
+        if (history[dateStr]) count++;
         d.setDate(d.getDate() - 1);
     }
     return count;
@@ -346,7 +335,8 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
               </div>
           ) : (
               habits.map(habit => {
-                  const todayVal = habit.history[todayStr];
+                  const history = habit.history || {};
+                  const todayVal = history[todayStr];
                   const isCompletedToday = isDayCompleted(habit, todayStr, todayVal);
                   
                   // Progress Calculation
@@ -361,11 +351,14 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                       progressPercent = Math.min(100, (count / (habit.targetCount || 1)) * 100);
                   }
 
-                  const isFire = habit.streak > 2;
+                  const streak = habit.streak || 0;
+                  const isFire = streak > 2;
                   
                   // Render Value inside circle for counters
+                  const currentCountDisplay = typeof todayVal === 'number' ? todayVal : (todayVal ? (habit.targetCount || 1) : 0);
+                  const targetDisplay = habit.targetCount || 1;
                   const countLabel = habit.frequency === 'times_per_day' 
-                    ? `${typeof todayVal === 'number' ? todayVal : (todayVal ? (habit.targetCount || 1) : 0)}/${habit.targetCount}` 
+                    ? `${currentCountDisplay}/${targetDisplay}` 
                     : null;
 
                   return (
@@ -395,11 +388,11 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                               <h3 className={`text-lg font-bold truncate transition-colors ${isCompletedToday ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-800 dark:text-slate-200'}`}>{habit.title}</h3>
                               <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
                                   <div className={`flex items-center gap-1 font-medium ${isFire ? 'text-orange-500 animate-pulse' : ''}`}>
-                                      <Flame size={12} fill={isFire ? "currentColor" : "none"} /> {habit.streak} дней
+                                      <Flame size={12} fill={isFire ? "currentColor" : "none"} /> {streak} дней
                                   </div>
                                   {habit.frequency === 'times_per_week' && (
                                       <div className="flex items-center gap-1">
-                                          <Repeat size={12} /> {getWeekProgress(habit)}/{habit.targetCount} на этой неделе
+                                          <Repeat size={12} /> {getWeekProgress(habit)}/{habit.targetCount || 1} на этой неделе
                                       </div>
                                   )}
                                   {habit.frequency === 'specific_days' && (
@@ -409,7 +402,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                                   )}
                                   {habit.frequency === 'times_per_day' && (
                                       <div className="flex items-center gap-1 text-indigo-500">
-                                          <Repeat size={12} /> Цель: {habit.targetCount} в день
+                                          <Repeat size={12} /> Цель: {habit.targetCount || 1} в день
                                       </div>
                                   )}
                               </div>

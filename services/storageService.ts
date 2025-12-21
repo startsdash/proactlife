@@ -39,7 +39,21 @@ export const loadState = (): AppState => {
 
     if (!parsed.journal) parsed.journal = [];
     if (!parsed.mentorAnalyses) parsed.mentorAnalyses = [];
-    if (!parsed.habits) parsed.habits = []; // Migration for existing users
+    
+    // Robust Habit Migration
+    if (parsed.habits) {
+        parsed.habits = parsed.habits.map((h: any) => ({
+            ...h,
+            history: h.history || {},
+            streak: typeof h.streak === 'number' ? h.streak : 0,
+            bestStreak: typeof h.bestStreak === 'number' ? h.bestStreak : 0,
+            reminders: Array.isArray(h.reminders) ? h.reminders : [],
+            targetCount: typeof h.targetCount === 'number' ? h.targetCount : 3,
+            frequency: h.frequency || 'daily'
+        }));
+    } else {
+        parsed.habits = [];
+    }
 
     return { ...emptyState, ...parsed };
   } catch (error) {
