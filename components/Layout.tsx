@@ -15,22 +15,28 @@ interface Props {
 }
 
 const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatus, onConnectDrive, isDriveConnected, isOwner }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  // FIX: Initialize state based on window width immediately to prevent "flash" of expanded sidebar on mobile
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return false;
+  });
+  
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Set initial mobile state
+    setIsMobile(window.innerWidth < 768);
+
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      if (window.innerWidth >= 768 && !isExpanded) {
-        // Keep collapsed state on desktop
+      // Auto-collapse on resize to mobile, but don't auto-expand on desktop if user collapsed it
+      if (mobile && isExpanded) {
+        setIsExpanded(false);
       }
     };
-    
-    if (window.innerWidth < 768) {
-        setIsExpanded(false);
-        setIsMobile(true);
-    }
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -57,7 +63,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
   };
 
   return (
-    <div className="flex h-[100dvh] bg-[#f8fafc] dark:bg-[#0f172a] text-slate-800 dark:text-slate-200 font-sans overflow-hidden transition-colors duration-300">
+    <div className="flex h-[100dvh] bg-[#f8fafc] dark:bg-[#0f172a] text-slate-800 dark:text-slate-200 font-sans overflow-hidden transition-colors duration-500">
       
       {/* MOBILE BACKDROP */}
       <AnimatePresence>
@@ -66,8 +72,8 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-slate-900/20 dark:bg-black/50 backdrop-blur-sm md:hidden"
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-40 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm md:hidden"
             onClick={() => setIsExpanded(false)}
         />
       )}
@@ -80,6 +86,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 260, damping: 20 }}
             onClick={() => setIsExpanded(true)}
             className="fixed bottom-6 left-4 z-40 p-3 bg-slate-900 dark:bg-slate-800 text-white rounded-full shadow-lg shadow-slate-300 dark:shadow-slate-900/50 md:hidden hover:bg-slate-800 dark:hover:bg-slate-700 active:scale-95"
             title="Меню"
@@ -93,10 +100,9 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
       <aside 
         className={`
             bg-white dark:bg-[#1e293b] border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 z-50
-            transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)]
+            transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
             fixed inset-y-0 left-0 h-full md:relative md:h-auto
-            ${isExpanded ? 'w-64' : 'w-64 md:w-[72px]'}
-            ${isExpanded ? 'translate-x-0 shadow-2xl md:shadow-none' : '-translate-x-full md:translate-x-0'}
+            ${isExpanded ? 'w-64 translate-x-0 shadow-2xl md:shadow-none' : 'w-64 md:w-[72px] -translate-x-full md:translate-x-0'}
         `}
       >
         <div>
@@ -143,7 +149,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     if (isMobile) setIsExpanded(false);
                 }} 
                 className={`
-                    w-full flex items-center p-3 rounded-xl transition-all duration-200 group relative overflow-hidden
+                    w-full flex items-center p-3 rounded-xl transition-all duration-300 group relative overflow-hidden
                     ${currentModule === item.id 
                         ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-lg shadow-slate-200 dark:shadow-slate-900/50' 
                         : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'}
@@ -157,7 +163,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                         layoutId="activeNav"
                         className="absolute inset-0 bg-slate-900 dark:bg-indigo-600 z-0 rounded-xl"
                         initial={false}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
                     />
                 )}
 
@@ -249,16 +255,16 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col w-full relative overflow-x-hidden overflow-y-auto bg-[#f8fafc] dark:bg-[#0f172a] transition-colors duration-300">
+      <main className="flex-1 flex flex-col w-full relative overflow-x-hidden overflow-y-auto bg-[#f8fafc] dark:bg-[#0f172a] transition-colors duration-500">
          <AnimatePresence mode="wait">
             <motion.div
                 key={currentModule}
-                initial={{ opacity: 0, y: 15, filter: 'blur(10px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, y: -15, filter: 'blur(10px)' }}
+                initial={{ opacity: 0, filter: 'blur(4px)', y: 5 }}
+                animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
+                exit={{ opacity: 0, filter: 'blur(2px)', y: -5 }}
                 transition={{ 
-                    duration: 0.35, 
-                    ease: [0.25, 1, 0.5, 1] // Apple-like ease-out curve
+                    duration: 0.4, 
+                    ease: [0.2, 0, 0.2, 1] // Very soft cubic bezier
                 }}
                 className="flex-1 h-full flex flex-col"
             >
