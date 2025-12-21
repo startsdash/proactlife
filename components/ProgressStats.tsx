@@ -45,6 +45,15 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
     return { completed, total, percent };
   }, [habits, todayStr]);
 
+  // --- COLOR LOGIC ---
+  const getRingColor = (p: number) => {
+      if (p === 100) return 'text-emerald-500';
+      if (p >= 66) return 'text-indigo-500';
+      if (p >= 33) return 'text-orange-500';
+      if (p > 0) return 'text-rose-500';
+      return 'text-slate-200 dark:text-slate-700'; // Empty
+  };
+
   // --- HEATMAP CALCULATION ---
   const renderHeatmap = () => {
       // Common: Map history to dates
@@ -216,6 +225,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
   const radius = 36;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (dailyStats.percent / 100) * circumference;
+  const ringColorClass = getRingColor(dailyStats.percent);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 animate-in slide-in-from-top-2">
@@ -225,7 +235,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
         <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
              <svg className="w-full h-full transform -rotate-90">
                 <circle cx="40" cy="40" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-100 dark:text-slate-800" />
-                <circle cx="40" cy="40" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className={`transition-all duration-1000 ease-out ${dailyStats.percent === 100 ? 'text-emerald-500' : 'text-orange-500'}`} />
+                <circle cx="40" cy="40" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className={`transition-all duration-1000 ease-out ${ringColorClass}`} />
              </svg>
              <div className="absolute inset-0 flex flex-col items-center justify-center">
                  <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{dailyStats.completed}/{dailyStats.total}</span>
@@ -233,10 +243,10 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
         </div>
         <div>
             <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Сегодня</div>
-            <h3 className="text-lg font-light text-slate-800 dark:text-slate-200 leading-tight">
-                {dailyStats.percent === 100 ? 'Всё выполнено!' : 'Держи ритм'}
+            <h3 className={`text-lg font-light leading-tight transition-colors duration-500 ${dailyStats.percent === 100 ? 'text-emerald-500' : 'text-slate-800 dark:text-slate-200'}`}>
+                {dailyStats.percent === 100 ? 'Всё выполнено!' : dailyStats.percent > 50 ? 'Отличный темп' : 'Начни сейчас'}
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dailyStats.percent}% плана</p>
+            <p className={`text-xs mt-1 font-medium transition-colors duration-500 ${ringColorClass}`}>{dailyStats.percent}% плана</p>
         </div>
       </div>
 

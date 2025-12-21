@@ -213,6 +213,13 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     return count;
   };
 
+  const getBarColorClass = (percent: number) => {
+      if (percent >= 100) return 'bg-emerald-500';
+      if (percent >= 66) return 'bg-indigo-500';
+      if (percent >= 33) return 'bg-orange-500';
+      return 'bg-rose-500';
+  };
+
   const daysOfWeek = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
   return (
@@ -388,7 +395,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                           {/* PROGRESS BAR BACKGROUND */}
                           <div className="absolute bottom-0 left-0 h-1 bg-slate-100 dark:bg-slate-800 w-full">
                               <motion.div 
-                                className={`h-full ${isCompletedToday ? 'bg-emerald-500' : 'bg-orange-500'}`} 
+                                className={`h-full ${getBarColorClass(progressPercent)}`}
                                 initial={{ width: 0 }}
                                 animate={{ width: `${progressPercent}%` }}
                                 transition={{ duration: 0.5 }}
