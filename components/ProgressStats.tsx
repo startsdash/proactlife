@@ -47,11 +47,20 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
 
   // --- COLOR LOGIC ---
   const getRingColor = (p: number) => {
-      if (p === 100) return 'text-emerald-500';
+      if (p >= 100) return 'text-emerald-500';
       if (p >= 66) return 'text-indigo-500';
       if (p >= 33) return 'text-orange-500';
       if (p > 0) return 'text-rose-500';
-      return 'text-slate-200 dark:text-slate-700'; // Empty
+      return 'text-slate-200 dark:text-slate-700';
+  };
+
+  const formatDate = (dateStr: string) => {
+      try {
+          const [y, m, d] = dateStr.split('-');
+          return `${d}.${m}.${y}`;
+      } catch (e) {
+          return dateStr;
+      }
   };
 
   // --- HEATMAP CALCULATION ---
@@ -112,7 +121,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
           return (
               <div className="grid grid-cols-7 gap-1 h-full">
                   {days.map((day, idx) => (
-                      <div key={day.str} className="flex flex-col gap-1 h-full">
+                      <div key={day.str} className="flex flex-col gap-1 h-full" title={`${formatDate(day.str)}: ${day.count} выполнено`}>
                           <div className={`flex-1 rounded-lg ${getColor(day.intensity)} transition-all duration-500 relative group`}>
                               {day.isToday && <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full ring-2 ring-white dark:ring-slate-900" />}
                               <div className="opacity-0 group-hover:opacity-100 absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-700 dark:text-slate-200 transition-opacity">
@@ -166,7 +175,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
                           return (
                               <div 
                                 key={cell.str} 
-                                title={`${cell.date}: ${cell.count}`}
+                                title={`${formatDate(cell.str)}: ${cell.count} выполнено`}
                                 className={`aspect-square rounded-md ${getColor(cell.intensity)} flex items-center justify-center text-[10px] ${cell.isToday ? 'ring-1 ring-orange-500 ring-offset-1 dark:ring-offset-slate-800' : ''}`}
                               >
                                   <span className={cell.intensity > 2 ? 'text-emerald-900 dark:text-emerald-100 font-bold' : 'text-slate-500 dark:text-slate-400'}>{cell.date}</span>
@@ -178,7 +187,6 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
           );
       }
 
-      // YEAR VIEW (Default existing logic)
       if (timeRange === 'year') {
          const data: { date: string; count: number; intensity: number }[] = [];
          const endDate = new Date();
@@ -210,7 +218,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
                             {week.map((day, dIdx) => (
                                 <div 
                                     key={dIdx}
-                                    title={`${day.date}: ${day.count} выполнено`}
+                                    title={`${formatDate(day.date)}: ${day.count} выполнено`}
                                     className={`w-2.5 h-2.5 rounded-sm ${getColor(day.intensity)}`}
                                 />
                             ))}

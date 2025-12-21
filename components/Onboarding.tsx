@@ -51,8 +51,9 @@ const Onboarding: React.FC<Props> = ({ onClose }) => {
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
   useEffect(() => {
-    const hasSeen = localStorage.getItem('live_act_onboarding_completed');
-    if (!hasSeen) {
+    const completed = localStorage.getItem('live_act_onboarding_completed');
+    // Only show if not completed
+    if (completed !== 'true') {
       setIsVisible(true);
     }
   }, []);
@@ -82,13 +83,13 @@ const Onboarding: React.FC<Props> = ({ onClose }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+        className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
       >
         <motion.div 
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]"
+          className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 dark:border-slate-700 flex flex-col max-h-[85vh] md:max-h-auto"
         >
           {/* Progress Bar */}
           <div className="absolute top-0 left-0 w-full h-1.5 bg-slate-100 dark:bg-slate-800 z-10">
@@ -104,7 +105,8 @@ const Onboarding: React.FC<Props> = ({ onClose }) => {
             <X size={20} />
           </button>
 
-          <div className="p-6 md:p-10 flex flex-col items-center text-center overflow-y-auto custom-scrollbar-light flex-1 min-h-[300px]">
+          {/* Scrollable Content */}
+          <div className="p-6 md:p-10 flex flex-col items-center text-center overflow-y-auto custom-scrollbar-light flex-1 min-h-0">
             <AnimatePresence mode="wait">
               <motion.div 
                 key={currentStep}
@@ -112,9 +114,9 @@ const Onboarding: React.FC<Props> = ({ onClose }) => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
-                className="flex flex-col items-center w-full my-auto"
+                className="flex flex-col items-center w-full my-auto py-4"
               >
-                <div className="mb-8 mt-4 scale-110">
+                <div className="mb-8 mt-2 scale-110">
                   {steps[currentStep].icon}
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4 tracking-tight">
@@ -127,8 +129,9 @@ const Onboarding: React.FC<Props> = ({ onClose }) => {
             </AnimatePresence>
           </div>
 
+          {/* Footer (Fixed) */}
           <div className="p-6 md:p-10 pt-0 shrink-0 bg-white dark:bg-[#1e293b] z-10 border-t border-slate-50 dark:border-slate-800/50">
-            <div className="w-full flex items-center justify-between mb-6 pt-4">
+            <div className="w-full flex items-center justify-between mb-4 pt-4">
               <button 
                 onClick={prev}
                 disabled={currentStep === 0}
@@ -155,14 +158,14 @@ const Onboarding: React.FC<Props> = ({ onClose }) => {
             </div>
 
             <div 
-                className="flex items-center justify-center gap-2 cursor-pointer group py-2"
+                className="flex items-center justify-center gap-2 cursor-pointer group py-2 select-none"
                 onClick={() => setDontShowAgain(!dontShowAgain)}
             >
                 <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${dontShowAgain ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 dark:border-slate-600 text-transparent group-hover:border-indigo-400 bg-slate-50 dark:bg-slate-800'}`}>
                     <Check size={12} strokeWidth={3} />
                 </div>
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 select-none">
-                    Больше не показывать при старте
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300">
+                    Больше не показывать
                 </span>
             </div>
           </div>
