@@ -127,7 +127,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
     <div className="flex flex-col h-full overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]">
         <header className={`p-4 md:p-8 pb-0 shrink-0 ${selectedNoteId ? 'hidden md:block' : 'block'}`}>
             <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Лаб <span className="text-amber-500 text-base md:text-lg">/ Апгрейд</span></h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm md:text-base">Прогони идею через ИИ. Получи готовый план действий</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Прогони идею через ИИ. Получи готовый план действий</p>
         </header>
 
         <div className="flex flex-1 overflow-hidden p-4 md:p-8 gap-6 relative">

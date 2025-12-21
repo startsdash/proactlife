@@ -53,15 +53,16 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
   };
 
   return (
-    <div className="flex flex-col h-full max-w-4xl mx-auto p-4 md:p-8 space-y-6">
-       <header className="flex justify-between items-end shrink-0">
+    <div className="flex flex-col h-full w-full overflow-y-auto custom-scrollbar-light">
+      <div className="flex flex-col min-h-full max-w-4xl mx-auto w-full p-4 md:p-8">
+       <header className="flex justify-between items-end shrink-0 mb-6">
         <div>
             <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Скиллы <span className="text-violet-500 text-base md:text-lg">/ Level Up</span></h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Прокачай нейронные связи. Не дай инсайтам выветриться</p>
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col items-center justify-center w-full min-h-0 relative">
+      <div className="flex-1 flex flex-col items-center justify-center w-full relative my-auto">
         {flashcards.length > 0 && flashcards[currentCardIndex] ? (
             <div className="w-full max-w-md flex flex-col gap-6">
                 
@@ -150,6 +151,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                 />
             </div>
         )}
+      </div>
       </div>
     </div>
   );
