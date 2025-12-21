@@ -6,6 +6,7 @@ import { Flame, Check, Plus, Trash2, X, Zap, Calendar, Repeat, Bell, GripVertica
 import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
 import ProgressStats from './ProgressStats';
+import confetti from 'canvas-confetti';
 
 interface Props {
   habits: Habit[];
@@ -126,6 +127,8 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     const rawVal = history[todayStr];
     const newHistory = { ...history };
     
+    let isNowCompleted = false;
+
     // LOGIC FOR TIMES PER DAY
     if (habit.frequency === 'times_per_day') {
         const target = habit.targetCount || 1;
@@ -136,7 +139,10 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
             delete newHistory[todayStr];
         } else {
             // Increment
-            newHistory[todayStr] = currentCount + 1;
+            const nextCount = currentCount + 1;
+            newHistory[todayStr] = nextCount;
+            // Check if this increment completed it
+            if (nextCount >= target) isNowCompleted = true;
         }
     } 
     // LOGIC FOR BOOLEAN HABITS
@@ -145,7 +151,18 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
             delete newHistory[todayStr];
         } else {
             newHistory[todayStr] = true;
+            isNowCompleted = true;
         }
+    }
+
+    // TRIGGER CONFETTI if completing
+    if (isNowCompleted) {
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#6366f1', '#10b981', '#f59e0b', '#ec4899']
+        });
     }
 
     // --- RECALCULATE STREAK ---
@@ -371,24 +388,46 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                       <div key={habit.id} className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4 relative overflow-hidden group">
                           {/* PROGRESS BAR BACKGROUND */}
                           <div className="absolute bottom-0 left-0 h-1 bg-slate-100 dark:bg-slate-800 w-full">
-                              <div 
-                                className={`h-full transition-all duration-1000 ${isCompletedToday ? 'bg-emerald-500' : 'bg-orange-500'}`} 
-                                style={{ width: `${progressPercent}%` }} 
+                              <motion.div 
+                                className={`h-full ${isCompletedToday ? 'bg-emerald-500' : 'bg-orange-500'}`} 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progressPercent}%` }}
+                                transition={{ duration: 0.5 }}
                               />
                           </div>
 
-                          <button 
+                          <motion.button 
+                             whileTap={{ scale: 0.9 }}
                              onClick={() => checkHabit(habit)}
-                             className={`shrink-0 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 border-4 relative overflow-hidden ${
+                             className={`shrink-0 w-14 h-14 rounded-full flex items-center justify-center border-4 relative overflow-hidden transition-all shadow-sm ${
                                  isCompletedToday 
-                                 ? 'bg-emerald-500 border-emerald-200 text-white scale-105 shadow-emerald-200 shadow-lg' 
+                                 ? 'bg-emerald-500 border-emerald-200 text-white shadow-emerald-200' 
                                  : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-300 hover:border-orange-200 hover:text-orange-400'
                              }`}
                           >
-                                {isCompletedToday ? <Check size={24} strokeWidth={3} /> : (
-                                    countLabel ? <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{countLabel}</span> : <Circle size={24} />
-                                )}
-                          </button>
+                                <AnimatePresence mode="wait">
+                                    {isCompletedToday ? (
+                                        <motion.div
+                                            key="check"
+                                            initial={{ scale: 0, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            exit={{ scale: 0, opacity: 0 }}
+                                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                        >
+                                            <Check size={24} strokeWidth={3} />
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div
+                                            key="circle"
+                                            initial={{ scale: 0, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            exit={{ scale: 0, opacity: 0 }}
+                                        >
+                                            {countLabel ? <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{countLabel}</span> : <Circle size={24} />}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                          </motion.button>
 
                           <div className="flex-1 min-w-0">
                               <h3 className={`text-lg font-bold truncate transition-colors ${isCompletedToday ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-800 dark:text-slate-200'}`}>{habit.title}</h3>
