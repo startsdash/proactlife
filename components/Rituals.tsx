@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Habit, HabitFrequency } from '../types';
 import { notificationService } from '../services/notificationService';
-import { Flame, Check, Plus, Trash2, X, Zap, Calendar, Repeat, Bell, GripVertical, CheckCircle2, Circle } from 'lucide-react';
+import { Flame, Check, Plus, Trash2, X, Zap, Calendar, Repeat, Bell, GripVertical, CheckCircle2, Circle, Edit2, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
 
@@ -14,10 +15,11 @@ interface Props {
 }
 
 const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }) => {
-  const [isAdding, setIsAdding] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [permissionGranted, setPermissionGranted] = useState(Notification.permission === 'granted');
 
-  // New Habit State
+  // Form State
   const [newTitle, setNewTitle] = useState('');
   const [frequency, setFrequency] = useState<HabitFrequency>('daily');
   const [targetDays, setTargetDays] = useState<number[]>([]); // 0-6
@@ -31,36 +33,69 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     setPermissionGranted(granted);
   };
 
-  const handleAddHabit = () => {
+  const openNewForm = () => {
+    resetForm();
+    setIsFormOpen(true);
+  };
+
+  const openEditForm = (habit: Habit) => {
+    setEditingId(habit.id);
+    setNewTitle(habit.title);
+    setFrequency(habit.frequency);
+    setTargetDays(habit.targetDays || []);
+    setTargetCount(habit.targetCount || 3);
+    setReminderTime(habit.reminders?.[0] || '');
+    setIsFormOpen(true);
+  };
+
+  const handleSaveHabit = () => {
     if (!newTitle.trim()) return;
 
-    const habit: Habit = {
-      id: Date.now().toString(),
-      title: newTitle,
-      color: 'indigo',
-      icon: 'Zap',
-      frequency,
-      targetDays: frequency === 'specific_days' ? targetDays : undefined,
-      targetCount: frequency === 'times_per_week' ? targetCount : undefined,
-      reminders: reminderTime ? [reminderTime] : [],
-      history: {},
-      streak: 0,
-      bestStreak: 0,
-      createdAt: Date.now()
-    };
-
-    addHabit(habit);
+    if (editingId) {
+        // UPDATE EXISTING
+        const existing = habits.find(h => h.id === editingId);
+        if (existing) {
+            const updated: Habit = {
+                ...existing,
+                title: newTitle,
+                frequency,
+                targetDays: frequency === 'specific_days' ? targetDays : undefined,
+                targetCount: (frequency === 'times_per_week' || frequency === 'times_per_day') ? targetCount : undefined,
+                reminders: reminderTime ? [reminderTime] : [],
+                // Preserve history and stats
+            };
+            updateHabit(updated);
+        }
+    } else {
+        // CREATE NEW
+        const habit: Habit = {
+          id: Date.now().toString(),
+          title: newTitle,
+          color: 'indigo',
+          icon: 'Zap',
+          frequency,
+          targetDays: frequency === 'specific_days' ? targetDays : undefined,
+          targetCount: (frequency === 'times_per_week' || frequency === 'times_per_day') ? targetCount : undefined,
+          reminders: reminderTime ? [reminderTime] : [],
+          history: {},
+          streak: 0,
+          bestStreak: 0,
+          createdAt: Date.now()
+        };
+        addHabit(habit);
+    }
     
     // Schedule notification if permission granted
     if (permissionGranted && reminderTime) {
         notificationService.schedule(`Пора выполнить ритуал: ${newTitle}`, "Маленькие шаги ведут к большим целям.", reminderTime);
     }
 
-    setIsAdding(false);
+    setIsFormOpen(false);
     resetForm();
   };
 
   const resetForm = () => {
+    setEditingId(null);
     setNewTitle('');
     setFrequency('daily');
     setTargetDays([]);
@@ -76,52 +111,77 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     }
   };
 
+  // Helper: Determine if a day is fully completed based on habit config
+  const isDayCompleted = (habit: Habit, dateStr: string, value: boolean | number | undefined): boolean => {
+      if (!value) return false;
+      if (habit.frequency === 'times_per_day') {
+          return (typeof value === 'number' ? value : 0) >= (habit.targetCount || 1);
+      }
+      return !!value; // For boolean habits (daily, specific_days, times_per_week tracking)
+  };
+
   const checkHabit = (habit: Habit) => {
-    const isCompleted = !!habit.history[todayStr];
-    
+    const rawVal = habit.history[todayStr];
     const newHistory = { ...habit.history };
-    if (isCompleted) {
-        delete newHistory[todayStr];
-    } else {
-        newHistory[todayStr] = true;
+    
+    // LOGIC FOR TIMES PER DAY
+    if (habit.frequency === 'times_per_day') {
+        const target = habit.targetCount || 1;
+        const currentCount = typeof rawVal === 'number' ? rawVal : (rawVal ? target : 0);
+        
+        if (currentCount >= target) {
+            // If already done, toggle off (reset to 0/undefined) to allow undoing
+            delete newHistory[todayStr];
+        } else {
+            // Increment
+            newHistory[todayStr] = currentCount + 1;
+        }
+    } 
+    // LOGIC FOR BOOLEAN HABITS
+    else {
+        if (rawVal) {
+            delete newHistory[todayStr];
+        } else {
+            newHistory[todayStr] = true;
+        }
     }
 
-    // Recalculate Streak
-    // Simple logic: consecutive days backwards from today/yesterday
+    // --- RECALCULATE STREAK ---
     let currentStreak = 0;
     let checkDate = new Date();
-    
-    // If we just unchecked today, we start checking from yesterday
-    // If we checked today, we start from today
-    // Actually, let's just iterate backwards from today
-    
-    // Normalize checkDate to midnight
     checkDate.setHours(0,0,0,0);
     
+    // 1. Check if "Today" contributes to streak
+    const todayFormatted = checkDate.toISOString().split('T')[0];
+    const isTodayDone = isDayCompleted(habit, todayFormatted, newHistory[todayFormatted]);
+    
+    // If today is done, streak starts at 1. If not, streak starts at 0, but we check yesterday to see if it's kept alive.
+    // Standard approach: calculate consecutive days backwards.
+    
+    // Optimization: If today is NOT done, we check if yesterday was done. 
+    // If yesterday was done, the streak is technically "active/pending" for today.
+    // However, usually "streak" number implies completed days.
+    // Let's count consecutive completed days looking backwards from today.
+    // BUT: If today is NOT completed, we still check yesterday. If yesterday IS completed, streak is alive.
+    
+    // Let's simplify: Check yesterday backwards. If today is done, add +1.
+    
+    let tempDate = new Date();
+    tempDate.setDate(tempDate.getDate() - 1); // Start checking from yesterday
+    
     while (true) {
-        const dateStr = checkDate.toISOString().split('T')[0];
-        if (newHistory[dateStr]) {
+        const dStr = tempDate.toISOString().split('T')[0];
+        const val = newHistory[dStr];
+        if (isDayCompleted(habit, dStr, val)) {
             currentStreak++;
-            checkDate.setDate(checkDate.getDate() - 1);
+            tempDate.setDate(tempDate.getDate() - 1);
         } else {
-            // Allow skipping "yesterday" if we just haven't done it YET today?
-            // Standard streak logic: if today is NOT done, check yesterday. 
-            // If yesterday is done, streak continues.
-            // If today IS done, streak includes today.
-            
-            // Re-eval approach:
-            // 1. Check today. If done, streak = 1 + check yesterday...
-            // 2. If today not done, check yesterday. If done, streak = 0 + check yesterday... (visual streak usually shows previous)
-            // But for simple "current streak" number:
-            
-            // Let's stick to: count consecutive completed days ending today or yesterday.
-            if (dateStr === todayStr && !isCompleted) { 
-                // If checking specifically today (which is unchecked in newHistory), skip to yesterday to see if streak is preserved
-                 checkDate.setDate(checkDate.getDate() - 1);
-                 continue;
-            }
             break;
         }
+    }
+
+    if (isTodayDone) {
+        currentStreak++;
     }
 
     const updatedHabit = {
@@ -135,11 +195,12 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
   };
 
   const getWeekProgress = (habit: Habit) => {
-    // Count completions in the last 7 days (including today)
     let count = 0;
     const d = new Date();
     for (let i = 0; i < 7; i++) {
         const dateStr = d.toISOString().split('T')[0];
+        // For 'times_per_week', we count boolean completions.
+        // For others, we assume boolean or full completion logic is handled by 'history' structure
         if (habit.history[dateStr]) count++;
         d.setDate(d.getDate() - 1);
     }
@@ -155,9 +216,9 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
           <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Ритуалы <span className="text-orange-500 text-lg">/ Системы</span></h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Мы — это то, что мы делаем постоянно.</p>
         </div>
-        {!isAdding && (
+        {!isFormOpen && (
             <button 
-                onClick={() => setIsAdding(true)} 
+                onClick={openNewForm} 
                 className="bg-slate-900 dark:bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:scale-105 transition-transform"
             >
                 <Plus size={24} />
@@ -179,9 +240,9 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
          </div>
       )}
 
-      {/* ADD HABIT FORM */}
+      {/* HABIT FORM */}
       <AnimatePresence>
-      {isAdding && (
+      {isFormOpen && (
           <motion.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -190,8 +251,8 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
           >
               <div className="bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Новый Ритуал</h3>
-                      <button onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+                      <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{editingId ? 'Редактировать Ритуал' : 'Новый Ритуал'}</h3>
+                      <button onClick={() => { setIsFormOpen(false); resetForm(); }} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
                   </div>
                   
                   <div className="space-y-4">
@@ -203,21 +264,22 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                         autoFocus
                       />
 
-                      <div className="flex flex-col md:flex-row gap-4">
-                          <div className="flex-1 space-y-2">
+                      <div className="flex flex-col gap-4">
+                          <div className="space-y-2">
                               <label className="text-xs font-bold text-slate-400 uppercase">Частота</label>
-                              <div className="flex gap-2">
-                                  <button onClick={() => setFrequency('daily')} className={`flex-1 py-2 px-3 rounded-lg border text-sm transition-colors ${frequency === 'daily' ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>Каждый день</button>
-                                  <button onClick={() => setFrequency('specific_days')} className={`flex-1 py-2 px-3 rounded-lg border text-sm transition-colors ${frequency === 'specific_days' ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>Дни недели</button>
-                                  <button onClick={() => setFrequency('times_per_week')} className={`flex-1 py-2 px-3 rounded-lg border text-sm transition-colors ${frequency === 'times_per_week' ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>X раз в нед.</button>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                  <button onClick={() => setFrequency('daily')} className={`py-2 px-3 rounded-lg border text-sm transition-colors ${frequency === 'daily' ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>Каждый день</button>
+                                  <button onClick={() => setFrequency('specific_days')} className={`py-2 px-3 rounded-lg border text-sm transition-colors ${frequency === 'specific_days' ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>Дни недели</button>
+                                  <button onClick={() => setFrequency('times_per_week')} className={`py-2 px-3 rounded-lg border text-sm transition-colors ${frequency === 'times_per_week' ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>X раз в неделю</button>
+                                  <button onClick={() => setFrequency('times_per_day')} className={`py-2 px-3 rounded-lg border text-sm transition-colors ${frequency === 'times_per_day' ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>X раз в день</button>
                               </div>
                           </div>
                           
-                          <div className="w-full md:w-1/3 space-y-2">
-                              <label className="text-xs font-bold text-slate-400 uppercase">Напоминание</label>
+                          <div className="space-y-2">
+                              <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Clock size={12}/> Напоминание</label>
                               <input 
                                 type="time" 
-                                className="w-full py-2 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm outline-none focus:border-indigo-500 dark:text-slate-200"
+                                className="w-full md:w-40 py-2 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm outline-none focus:border-indigo-500 dark:text-slate-200"
                                 value={reminderTime}
                                 onChange={(e) => setReminderTime(e.target.value)}
                               />
@@ -238,28 +300,30 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                           </div>
                       )}
 
-                      {frequency === 'times_per_week' && (
+                      {(frequency === 'times_per_week' || frequency === 'times_per_day') && (
                           <div className="pt-2">
-                              <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Сколько раз в неделю: {targetCount}</label>
+                              <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">
+                                  {frequency === 'times_per_week' ? `Сколько раз в неделю: ${targetCount}` : `Сколько раз в день: ${targetCount}`}
+                              </label>
                               <input 
                                 type="range" 
                                 min="1" 
-                                max="7" 
+                                max={frequency === 'times_per_week' ? "7" : "20"} 
                                 value={targetCount} 
                                 onChange={(e) => setTargetCount(parseInt(e.target.value))}
                                 className="w-full accent-indigo-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
                               />
-                              <div className="flex justify-between text-xs text-slate-300 mt-1"><span>1</span><span>7</span></div>
+                              <div className="flex justify-between text-xs text-slate-300 mt-1"><span>1</span><span>{frequency === 'times_per_week' ? '7' : '20'}</span></div>
                           </div>
                       )}
 
                       <div className="pt-4 flex justify-end">
                           <button 
-                            onClick={handleAddHabit}
+                            onClick={handleSaveHabit}
                             disabled={!newTitle.trim()}
                             className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors disabled:opacity-50"
                           >
-                              Создать ритуал
+                              {editingId ? 'Сохранить изменения' : 'Создать ритуал'}
                           </button>
                       </div>
                   </div>
@@ -269,7 +333,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
       </AnimatePresence>
 
       <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar-light space-y-3">
-          {habits.length === 0 && !isAdding ? (
+          {habits.length === 0 && !isFormOpen ? (
               <div className="py-10">
                   <EmptyState 
                     icon={Flame} 
@@ -277,40 +341,54 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                     description="Создайте полезную привычку, чтобы начать стрик." 
                     color="orange"
                     actionLabel="Создать первый ритуал"
-                    onAction={() => setIsAdding(true)}
+                    onAction={openNewForm}
                   />
               </div>
           ) : (
               habits.map(habit => {
-                  const isCompletedToday = !!habit.history[todayStr];
-                  const weekProgress = getWeekProgress(habit);
+                  const todayVal = habit.history[todayStr];
+                  const isCompletedToday = isDayCompleted(habit, todayStr, todayVal);
                   
+                  // Progress Calculation
                   let progressPercent = 0;
-                  if (habit.frequency === 'daily') progressPercent = isCompletedToday ? 100 : 0; // Simple logic
-                  else if (habit.frequency === 'times_per_week') progressPercent = Math.min(100, (weekProgress / (habit.targetCount || 1)) * 100);
-                  // Specific days logic omitted for brevity, assumed daily check is key
-                  
+                  if (habit.frequency === 'daily' || habit.frequency === 'specific_days') {
+                      progressPercent = isCompletedToday ? 100 : 0;
+                  } else if (habit.frequency === 'times_per_week') {
+                      const weekProgress = getWeekProgress(habit);
+                      progressPercent = Math.min(100, (weekProgress / (habit.targetCount || 1)) * 100);
+                  } else if (habit.frequency === 'times_per_day') {
+                      const count = typeof todayVal === 'number' ? todayVal : (todayVal ? (habit.targetCount || 1) : 0);
+                      progressPercent = Math.min(100, (count / (habit.targetCount || 1)) * 100);
+                  }
+
                   const isFire = habit.streak > 2;
+                  
+                  // Render Value inside circle for counters
+                  const countLabel = habit.frequency === 'times_per_day' 
+                    ? `${typeof todayVal === 'number' ? todayVal : (todayVal ? (habit.targetCount || 1) : 0)}/${habit.targetCount}` 
+                    : null;
 
                   return (
                       <div key={habit.id} className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4 relative overflow-hidden group">
-                          {/* PROGRESS BAR BACKGROUND (Optional subtle indication) */}
+                          {/* PROGRESS BAR BACKGROUND */}
                           <div className="absolute bottom-0 left-0 h-1 bg-slate-100 dark:bg-slate-800 w-full">
                               <div 
                                 className={`h-full transition-all duration-1000 ${isCompletedToday ? 'bg-emerald-500' : 'bg-orange-500'}`} 
-                                style={{ width: `${habit.frequency === 'times_per_week' ? progressPercent : (isCompletedToday ? 100 : 0)}%` }} 
+                                style={{ width: `${progressPercent}%` }} 
                               />
                           </div>
 
                           <button 
                              onClick={() => checkHabit(habit)}
-                             className={`shrink-0 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 border-4 ${
+                             className={`shrink-0 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 border-4 relative overflow-hidden ${
                                  isCompletedToday 
                                  ? 'bg-emerald-500 border-emerald-200 text-white scale-105 shadow-emerald-200 shadow-lg' 
                                  : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-300 hover:border-orange-200 hover:text-orange-400'
                              }`}
                           >
-                              {isCompletedToday ? <Check size={28} strokeWidth={3} /> : <Circle size={28} />}
+                                {isCompletedToday ? <Check size={24} strokeWidth={3} /> : (
+                                    countLabel ? <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{countLabel}</span> : <Circle size={24} />
+                                )}
                           </button>
 
                           <div className="flex-1 min-w-0">
@@ -321,7 +399,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                                   </div>
                                   {habit.frequency === 'times_per_week' && (
                                       <div className="flex items-center gap-1">
-                                          <Repeat size={12} /> {weekProgress}/{habit.targetCount} на этой неделе
+                                          <Repeat size={12} /> {getWeekProgress(habit)}/{habit.targetCount} на этой неделе
                                       </div>
                                   )}
                                   {habit.frequency === 'specific_days' && (
@@ -329,12 +407,22 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                                           <Calendar size={12} /> По дням
                                       </div>
                                   )}
+                                  {habit.frequency === 'times_per_day' && (
+                                      <div className="flex items-center gap-1 text-indigo-500">
+                                          <Repeat size={12} /> Цель: {habit.targetCount} в день
+                                      </div>
+                                  )}
                               </div>
                           </div>
                           
-                          <button onClick={() => { if(confirm("Удалить ритуал?")) deleteHabit(habit.id); }} className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-opacity">
-                              <Trash2 size={18} />
-                          </button>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => openEditForm(habit)} className="p-2 text-slate-300 hover:text-indigo-500 transition-colors" title="Редактировать">
+                                  <Edit2 size={18} />
+                              </button>
+                              <button onClick={() => { if(confirm("Удалить ритуал?")) deleteHabit(habit.id); }} className="p-2 text-slate-300 hover:text-red-500 transition-colors" title="Удалить">
+                                  <Trash2 size={18} />
+                              </button>
+                          </div>
                       </div>
                   );
               })

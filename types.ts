@@ -1,4 +1,5 @@
 
+
 export enum Module {
   NAPKINS = 'napkins',
   SANDBOX = 'sandbox',
@@ -50,7 +51,7 @@ export interface Flashcard {
 
 // --- HABITS / RITUALS TYPES ---
 
-export type HabitFrequency = 'daily' | 'specific_days' | 'times_per_week';
+export type HabitFrequency = 'daily' | 'specific_days' | 'times_per_week' | 'times_per_day';
 
 export interface Habit {
   id: string;
@@ -61,11 +62,12 @@ export interface Habit {
   
   frequency: HabitFrequency;
   targetDays?: number[]; // 0 = Sunday, 1 = Monday, etc. (for 'specific_days')
-  targetCount?: number; // e.g. 3 times per week (for 'times_per_week')
+  targetCount?: number; // used for 'times_per_week' AND 'times_per_day'
   
   reminders: string[]; // ["09:00", "20:00"]
   
-  history: Record<string, boolean>; // "YYYY-MM-DD" -> true
+  // Updated to support numbers for 'times_per_day' logic (count)
+  history: Record<string, boolean | number>; // "YYYY-MM-DD" -> true OR count
   streak: number;
   bestStreak: number;
   
