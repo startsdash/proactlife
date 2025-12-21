@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task } from '../types';
@@ -211,7 +212,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                    <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm("Восстановить задачу в Сделано?")) restoreTask(task.id);
+                        if (window.confirm("Восстановить задачу в Действия?")) restoreTask(task.id);
                       }}
                       className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
                       title="Восстановить в Действия"
