@@ -15,11 +15,34 @@
     <meta name="theme-color" content="#f8fafc">
     
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              slate: {
+                850: '#1e293b', // Custom depth
+                950: '#020617', // Deepest
+              }
+            }
+          }
+        }
+      }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
       body {
         font-family: 'Inter', sans-serif;
         background-color: #f8fafc;
+      }
+      
+      /* Dark mode body override handled by tailwind class on html/body */
+      .dark body {
+        background-color: #0f172a;
       }
       
       /* Custom scrollbar for minimalist look */
@@ -41,6 +64,14 @@
       ::-webkit-scrollbar-thumb:hover {
         background-color: #94a3b8; /* slate-400 */
       }
+      
+      .dark ::-webkit-scrollbar-thumb {
+        background-color: #475569; /* slate-600 */
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background-color: #64748b; /* slate-500 */
+      }
+
       ::-webkit-scrollbar-corner {
         background: transparent;
       }
@@ -76,7 +107,7 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://apis.google.com/js/api.js" async defer></script>
 </head>
-  <body>
+  <body class="transition-colors duration-300">
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
   </body>

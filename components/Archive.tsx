@@ -1,8 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task } from '../types';
 import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, List, Plus, Minus, MessageCircle, Circle, XCircle } from 'lucide-react';
+import EmptyState from './EmptyState';
 
 interface Props {
   tasks: Task[];
@@ -10,7 +10,6 @@ interface Props {
   deleteTask: (id: string) => void;
 }
 
-// Helper to strip trailing colons from headers (Recursive)
 const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     if (typeof children === 'string') return children.replace(/:\s*$/, '');
     if (Array.isArray(children)) {
@@ -27,25 +26,23 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     return children;
 };
 
-// Standardized Markdown Styles - Matches Kanban text-sm
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-slate-800 leading-relaxed" {...props} />,
-    a: ({node, ...props}: any) => <a className="text-indigo-600 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-slate-800" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-slate-800" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-slate-800 dark:text-slate-300 leading-relaxed" {...props} />,
+    a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-slate-800 dark:text-slate-300" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-slate-800 dark:text-slate-300" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed" {...props} />,
-    h1: ({node, children, ...props}: any) => <h1 className="text-base font-bold mt-3 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
-    h2: ({node, children, ...props}: any) => <h2 className="text-sm font-bold mt-2 mb-2 text-slate-900 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
-    h3: ({node, children, ...props}: any) => <h3 className="text-xs font-bold mt-2 mb-1 text-slate-900 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
-    h4: ({node, children, ...props}: any) => <h4 className="text-xs font-bold mt-2 mb-1 text-slate-800" {...props}>{cleanHeader(children)}</h4>,
-    blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-indigo-200 pl-4 py-1 my-2 text-sm text-slate-600 italic bg-indigo-50/30 rounded-r-lg" {...props} />,
-    strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900" {...props} />,
-    em: ({node, ...props}: any) => <em className="italic text-slate-800" {...props} />,
-    // Code block fix
+    h1: ({node, children, ...props}: any) => <h1 className="text-base font-bold mt-3 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
+    h2: ({node, children, ...props}: any) => <h2 className="text-sm font-bold mt-2 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
+    h3: ({node, children, ...props}: any) => <h3 className="text-xs font-bold mt-2 mb-1 text-slate-900 dark:text-slate-100 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
+    h4: ({node, children, ...props}: any) => <h4 className="text-xs font-bold mt-2 mb-1 text-slate-800 dark:text-slate-200" {...props}>{cleanHeader(children)}</h4>,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-indigo-200 dark:border-indigo-800 pl-4 py-1 my-2 text-sm text-slate-600 dark:text-slate-400 italic bg-indigo-50/30 dark:bg-indigo-900/20 rounded-r-lg" {...props} />,
+    strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900 dark:text-slate-100" {...props} />,
+    em: ({node, ...props}: any) => <em className="italic text-slate-800 dark:text-slate-200" {...props} />,
     code: ({node, inline, className, children, ...props}: any) => {
          return inline 
-            ? <code className="bg-slate-100 px-1 py-0.5 rounded text-xs font-mono text-pink-600 border border-slate-200" {...props}>{children}</code>
-            : <code className="block bg-slate-50 text-slate-700 border border-slate-200 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+            ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400 border border-slate-200 dark:border-slate-700" {...props}>{children}</code>
+            : <code className="block bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     }
 };
 
@@ -57,10 +54,10 @@ const CollapsibleSection: React.FC<{
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden mb-3">
+    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden mb-3">
       <button 
         onClick={() => setIsOpen(!isOpen)} 
-        className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-100 transition-colors"
+        className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
       >
         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
            {icon}
@@ -72,7 +69,7 @@ const CollapsibleSection: React.FC<{
       </button>
       {isOpen && (
         <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-1 duration-200">
-           <div className="pt-3 border-t border-slate-200/50 text-sm">
+           <div className="pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-sm">
              {children}
            </div>
         </div>
@@ -81,13 +78,11 @@ const CollapsibleSection: React.FC<{
   );
 };
 
-// Static Challenge Renderer (For History & Final)
 const StaticChallengeRenderer: React.FC<{ 
     content: string,
     mode: 'draft' | 'history'
 }> = ({ content, mode }) => {
     const lines = content.split('\n');
-    
     const renderedParts: React.ReactNode[] = [];
     let textBuffer = '';
 
@@ -96,7 +91,7 @@ const StaticChallengeRenderer: React.FC<{
             const trimmedBuffer = textBuffer.trim();
             if (trimmedBuffer) {
                 renderedParts.push(
-                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 mb-1 last:mb-0">
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 dark:text-slate-200 mb-1 last:mb-0">
                         <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
                     </div>
                 );
@@ -107,18 +102,14 @@ const StaticChallengeRenderer: React.FC<{
 
     lines.forEach((line, i) => {
         const match = line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
-        
         if (match) {
             flushBuffer(`line-${i}`);
-            
             const isChecked = match[1].toLowerCase() === 'x';
             const label = match[2];
             const leadingSpaces = line.search(/\S|$/);
             const indent = leadingSpaces * 4; 
-
             let Icon = Circle;
-            let iconClass = "text-slate-300";
-            
+            let iconClass = "text-slate-300 dark:text-slate-600";
             if (isChecked) {
                 Icon = CheckCircle2;
                 iconClass = "text-emerald-500";
@@ -126,11 +117,9 @@ const StaticChallengeRenderer: React.FC<{
                 Icon = XCircle;
                 iconClass = "text-red-400";
             } else {
-                // Draft mode, unchecked
                 Icon = Circle;
-                iconClass = "text-slate-300";
+                iconClass = "text-slate-300 dark:text-slate-600";
             }
-
             renderedParts.push(
                 <div 
                     key={`cb-${i}`}
@@ -140,7 +129,7 @@ const StaticChallengeRenderer: React.FC<{
                     <div className={`mt-0.5 shrink-0 ${iconClass}`}>
                         <Icon size={16} />
                     </div>
-                    <span className={`text-sm text-slate-700`}>
+                    <span className={`text-sm text-slate-700 dark:text-slate-300`}>
                         <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
                     </span>
                 </div>
@@ -150,7 +139,6 @@ const StaticChallengeRenderer: React.FC<{
         }
     });
     flushBuffer('end');
-
     return <>{renderedParts}</>;
 };
 
@@ -161,7 +149,6 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
       console.log("Archive Component Mounted");
   }, []);
 
-  // Filter only archived tasks and sort by newest first
   const archivedTasks = tasks
     .filter(t => t.isArchived)
     .sort((a, b) => b.createdAt - a.createdAt);
@@ -169,19 +156,22 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
   return (
     <div className="h-full p-4 md:p-8 flex flex-col overflow-hidden relative">
       <header className="mb-6 shrink-0">
-        <h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight flex items-center gap-3">
+        <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-3">
             <History className="text-slate-400" size={32} />
             <span>Архив <span className="text-orange-400 text-lg">/ След в истории</span></span>
         </h1>
-        <p className="text-slate-500 mt-2 text-sm">История действий и побед.</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">История действий и побед.</p>
       </header>
 
       <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar-light">
         {archivedTasks.length === 0 ? (
-          <div className="h-64 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
-            <History size={48} className="mb-4 opacity-20" />
-            <p>Архив пуст</p>
-            <p className="text-sm opacity-60">Выполненные задачи появятся здесь после архивации.</p>
+          <div className="py-10">
+              <EmptyState 
+                  icon={History} 
+                  title="Архив пуст" 
+                  description="Здесь будут храниться завершенные и удаленные задачи." 
+                  color="orange"
+              />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -189,13 +179,13 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
               <div 
                 key={task.id} 
                 onClick={() => setSelectedTask(task)}
-                className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative group cursor-pointer"
+                className="bg-white dark:bg-[#1e293b] p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow relative group cursor-pointer"
               >
                 <div className="flex justify-between items-start mb-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md flex items-center gap-1 hidden md:inline-flex">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md flex items-center gap-1 hidden md:inline-flex">
                     <CheckCircle2 size={12} /> Завершено
                   </span>
-                   <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md flex items-center gap-1 md:hidden">
+                   <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md flex items-center gap-1 md:hidden">
                     <CheckCircle2 size={12} />
                   </span>
                   <span className="text-[10px] text-slate-400 flex items-center gap-1">
@@ -203,26 +193,26 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                   </span>
                 </div>
 
-                <div className="text-slate-800 text-sm font-normal leading-relaxed mb-4 line-clamp-4">
+                <div className="text-slate-800 dark:text-slate-200 text-sm font-normal leading-relaxed mb-4 line-clamp-4">
                   <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
                 </div>
 
                 {task.description && (
-                  <div className="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                  <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700">
                     <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase font-bold mb-1">
                       <FileText size={10} /> Источник
                     </div>
-                    <p className="text-xs text-slate-500 line-clamp-2">{task.description}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{task.description}</p>
                   </div>
                 )}
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-slate-50">
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-50 dark:border-slate-700">
                    <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         if (window.confirm("Восстановить задачу в 'Сделано'?")) restoreTask(task.id);
                       }}
-                      className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
                       title='Восстановить в "Действия"'
                    >
                       <RotateCcw size={14} /> <span className="hidden md:inline">Восстановить</span>
@@ -232,7 +222,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                         e.stopPropagation();
                         if (window.confirm("Удалить задачу из истории навсегда?")) deleteTask(task.id);
                       }}
-                      className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="Удалить навсегда"
                    >
                       <Trash2 size={14} /> <span className="hidden md:inline">Удалить</span>
@@ -244,26 +234,25 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
         )}
       </div>
 
-      {/* TASK DETAILS MODAL */}
       {selectedTask && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedTask(null)}>
-            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedTask(null)}>
+            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-start mb-6">
-                    <h3 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">Архивная задача</h3>
-                    <button onClick={() => setSelectedTask(null)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+                    <h3 className="text-lg md:text-xl font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">Архивная задача</h3>
+                    <button onClick={() => setSelectedTask(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button>
                 </div>
 
                 <div className="space-y-4">
-                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-4">
+                    <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Задача</span>
-                         <div className="text-sm text-slate-800 font-normal leading-relaxed">
+                         <div className="text-sm text-slate-800 dark:text-slate-200 font-normal leading-relaxed">
                             <ReactMarkdown components={markdownComponents}>{selectedTask.content}</ReactMarkdown>
                          </div>
                     </div>
 
                     {selectedTask.description && (
                         <CollapsibleSection title="Источник" icon={<FileText size={14} />}>
-                            <div className="text-sm text-slate-700 leading-relaxed">
+                            <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                                 <ReactMarkdown components={markdownComponents}>{selectedTask.description}</ReactMarkdown>
                             </div>
                         </CollapsibleSection>
@@ -271,11 +260,11 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
 
                     {selectedTask.activeChallenge && (
                         <CollapsibleSection title="Финальный Челлендж" icon={<Zap size={14} />}>
-                            <div className={`p-3 rounded-lg border ${selectedTask.isChallengeCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
-                                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${selectedTask.isChallengeCompleted ? 'text-emerald-600' : 'text-amber-600'}`}>
+                            <div className={`p-3 rounded-lg border ${selectedTask.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800'}`}>
+                                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${selectedTask.isChallengeCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
                                     {selectedTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
                                 </span>
-                                <div className="text-sm leading-relaxed text-slate-900">
+                                <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
                                   <StaticChallengeRenderer content={selectedTask.activeChallenge} mode="history" />
                                 </div>
                             </div>
@@ -286,8 +275,8 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                         <CollapsibleSection title="История Челленджей" icon={<History size={14} />}>
                             <div className="space-y-4">
                                 {selectedTask.challengeHistory.map((h, i) => (
-                                    <div key={i} className="py-2 border-b border-slate-100 last:border-0">
-                                        <div className="text-sm leading-relaxed text-slate-900">
+                                    <div key={i} className="py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                                        <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
                                             <StaticChallengeRenderer content={h} mode="history" />
                                         </div>
                                     </div>
@@ -300,7 +289,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                         <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}>
                             <ul className="space-y-4">
                                 {selectedTask.consultationHistory.map((consultation, index) => (
-                                    <li key={index} className="text-sm text-slate-900 py-3 border-b border-slate-100 last:border-0">
+                                    <li key={index} className="text-sm text-slate-900 dark:text-slate-200 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
                                         <ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown>
                                     </li>
                                 ))}
@@ -308,37 +297,9 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                         </CollapsibleSection>
                     )}
 
-                    <div className="flex items-center gap-4 text-xs text-slate-400 pt-2 px-2">
-                        <span className="font-mono">ID: {selectedTask.id.slice(-6)}</span>
-                        <span className="flex items-center gap-1 text-emerald-600 font-medium ml-auto"><CheckCircle2 size={14}/> Завершено</span>
+                    <div className="mt-8 flex justify-end">
+                        <button onClick={() => setSelectedTask(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button>
                     </div>
-                </div>
-
-                <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-50">
-                    <button 
-                        onClick={() => {
-                            if (window.confirm("Восстановить задачу в 'Сделано'?")) {
-                                restoreTask(selectedTask.id);
-                                setSelectedTask(null);
-                            }
-                        }}
-                        className="px-3 py-2 md:px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg flex items-center gap-2 border border-transparent hover:border-slate-200 transition-colors"
-                        title="Восстановить"
-                    >
-                        <RotateCcw size={16} /> <span className="hidden md:inline">Восстановить</span>
-                    </button>
-                     <button 
-                        onClick={() => {
-                            if (window.confirm("Удалить задачу из истории навсегда?")) {
-                                deleteTask(selectedTask.id);
-                                setSelectedTask(null);
-                            }
-                        }}
-                        className="px-3 py-2 md:px-4 text-sm font-medium text-red-500 hover:bg-red-50 rounded-lg flex items-center gap-2 border border-transparent hover:border-red-100 transition-colors"
-                        title="Удалить"
-                    >
-                        <Trash2 size={16} /> <span className="hidden md:inline">Удалить</span>
-                    </button>
                 </div>
             </div>
         </div>
@@ -346,5 +307,4 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
     </div>
   );
 };
-
 export default Archive;

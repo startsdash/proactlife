@@ -18,6 +18,27 @@ import UserSettings from './components/UserSettings';
 const OWNER_EMAIL = 'rukomrus@gmail.com';
 
 const App: React.FC = () => {
+  // --- THEME LOGIC ---
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('theme');
+        return (saved === 'dark' || saved === 'light') ? saved : 'light';
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+        root.classList.add('dark');
+    } else {
+        root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
+
   // --- NAVIGATION LOGIC ---
   const getInitialModule = (): Module => {
     if (typeof window !== 'undefined') {
@@ -90,9 +111,6 @@ const App: React.FC = () => {
       const localData = loadState();
       setData(localData);
       
-      // Legacy logic to force Napkins if data exists is removed 
-      // because Napkins is now the default start screen.
-
       try {
         await initGapi();
         await initGis(() => {});
@@ -123,9 +141,6 @@ const App: React.FC = () => {
           if (driveData) {
               isHydratingRef.current = true;
               
-              // CONFIG HYDRATION:
-              // Even from Drive, we respect the Code Version.
-              // If Code Version is newer, we ignore Drive Config and use Code Config.
               if (!driveData.config || driveData.config._version !== DEFAULT_CONFIG._version) {
                   console.log("Drive Config outdated. Using Code Config.");
                   driveData.config = DEFAULT_CONFIG;
@@ -173,8 +188,6 @@ const App: React.FC = () => {
     setHasLoadedFromCloud(false);
     localStorage.removeItem('isGoogleAuthEnabled');
     
-    // Revert to local state or guest state
-    // We reload state from localStorage to ensure we are consistent with "Guest Mode" on this device.
     const localData = loadState();
     setData(prev => ({ ...localData, user: undefined, config: prev.config }));
     alert("Вы вышли из профиля.");
@@ -264,30 +277,19 @@ const App: React.FC = () => {
 
   const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
   
-  // OWNER CHECK
   const isOwner = data.user?.email === OWNER_EMAIL;
 
   const visibleConfig = useMemo(() => {
-    // We DO NOT merge with defaults here anymore.
-    // The data.config (hydrated in storageService) IS the single source of truth.
-    // This prevents duplication of items that exist in both Code and LocalStorage.
     const configToFilter = data.config;
     const currentUserEmail = data.user?.email || '';
 
     const isVisible = (item: AccessControl) => {
-       // 1. Global Disable Switch
        if (item.isDisabled) return false;
-
-       // 2. Owner Override
        if (isOwner) return true;
-       
-       // 3. Access Level Checks for Non-Owners
        const level = item.accessLevel || 'public';
-       
        if (level === 'public') return true;
-       if (level === 'owner_only') return false; // STRICTLY HIDDEN
+       if (level === 'owner_only') return false; 
        if (level === 'restricted') return item.allowedEmails?.includes(currentUserEmail) || false;
-       
        return true;
     };
 
@@ -299,7 +301,7 @@ const App: React.FC = () => {
     };
   }, [data.config, isOwner, data.user]);
 
-  if (!isLoaded) return <div className="h-screen flex items-center justify-center">Loading...</div>;
+  if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a] text-slate-800 dark:text-slate-200">Loading...</div>;
 
   return (
     <Layout 
@@ -314,7 +316,7 @@ const App: React.FC = () => {
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.JOURNAL && <Journal entries={data.journal} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
       {module === Module.ARCHIVE && <Archive tasks={data.tasks} restoreTask={restoreTask} deleteTask={deleteTask} />}
-      {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} />}
+      {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
       {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}
     </Layout>
   );
