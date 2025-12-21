@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis } from './types';
+import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit } from './types';
 import { loadState, saveState } from './services/storageService';
 import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
@@ -9,6 +9,7 @@ import Napkins from './components/Napkins';
 import Sandbox from './components/Sandbox';
 import MentalGym from './components/MentalGym';
 import Kanban from './components/Kanban';
+import Rituals from './components/Rituals';
 import Archive from './components/Archive';
 import Settings from './components/Settings';
 import Journal from './components/Journal';
@@ -82,7 +83,7 @@ const App: React.FC = () => {
   // ------------------------
 
   const [data, setData] = useState<AppState>({
-    notes: [], tasks: [], flashcards: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG
+    notes: [], tasks: [], flashcards: [], habits: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG
   });
   
   const [isLoaded, setIsLoaded] = useState(false);
@@ -148,6 +149,7 @@ const App: React.FC = () => {
 
               if (!driveData.journal) driveData.journal = [];
               if (!driveData.mentorAnalyses) driveData.mentorAnalyses = [];
+              if (!driveData.habits) driveData.habits = [];
               
               setData(prev => ({...driveData, user: prev.user})); 
               saveState(driveData);
@@ -258,6 +260,10 @@ const App: React.FC = () => {
   const addFlashcard = (c: Flashcard) => setData(p => ({ ...p, flashcards: [...p.flashcards, c] }));
   const deleteFlashcard = (id: string) => setData(p => ({ ...p, flashcards: p.flashcards.filter(f => f.id !== id) }));
 
+  const addHabit = (h: Habit) => setData(p => ({ ...p, habits: [...p.habits, h] }));
+  const updateHabit = (h: Habit) => setData(p => ({ ...p, habits: p.habits.map(x => x.id === h.id ? h : x) }));
+  const deleteHabit = (id: string) => setData(p => ({ ...p, habits: p.habits.filter(h => h.id !== id) }));
+
   const addJournalEntry = (entry: JournalEntry) => setData(p => ({ ...p, journal: [...p.journal, entry] }));
   const updateJournalEntry = (entry: JournalEntry) => setData(p => ({ ...p, journal: p.journal.map(j => j.id === entry.id ? entry : j) }));
   const deleteJournalEntry = (id: string) => setData(p => ({ ...p, journal: p.journal.filter(j => j.id !== id) }));
@@ -312,8 +318,9 @@ const App: React.FC = () => {
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
       {module === Module.NAPKINS && <Napkins notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} />}
       {module === Module.SANDBOX && <Sandbox notes={data.notes} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
-      {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} />}
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
+      {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
+      {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} />}
       {module === Module.JOURNAL && <Journal entries={data.journal} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
       {module === Module.ARCHIVE && <Archive tasks={data.tasks} restoreTask={restoreTask} deleteTask={deleteTask} />}
       {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
