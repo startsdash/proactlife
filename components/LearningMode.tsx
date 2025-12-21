@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { Module } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Book, ArrowRight, ArrowLeft, X } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Book, ArrowRight, ArrowLeft, GraduationCap, Zap, Sparkles, BrainCircuit, X } from 'lucide-react';
 
 interface Step {
   id: number;
@@ -25,52 +26,52 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
     {
       id: 0,
       title: "Этап 1. Хаос",
-      subtitle: "Инбокс",
+      subtitle: "Салфетки",
       description: "Всё начинается здесь. Не фильтруйте мысли. Записывайте идеи, цитаты, инсайты или просто тревоги. Это ваше хранилище сырого материала.",
       icon: StickyNote,
       color: "bg-blue-500",
       module: Module.NAPKINS,
-      actionLabel: "К Инбоксу"
+      actionLabel: "К Салфеткам"
     },
     {
       id: 1,
       title: "Этап 2. Трансформация",
-      subtitle: "Разбор",
-      description: "Выберите мысль из «Инбокса» и отправьте её в «Разбор». Здесь Консилиум ИИ-менторов (Питерсон, Талеб, Грин и др.) поможет вам превратить хаотичную идею в чёткий план действий или глубокий принцип.",
+      subtitle: "Песочница",
+      description: "Выберите мысль из «Салфеток» и отправьте её в «Песочницу». Здесь Консилиум ИИ-менторов (Питерсон, Талеб, Грин и др.) поможет вам превратить хаотичную идею в чёткий план действий или глубокий принцип.",
       icon: Box,
       color: "bg-amber-500",
       module: Module.SANDBOX,
-      actionLabel: "В Разбор"
+      actionLabel: "В Песочницу"
     },
     {
       id: 2,
       title: "Этап 3. От слов к делу",
-      subtitle: "Трекер",
-      description: "Идеи без действий мертвы. В «Трекере» ваши планы становятся задачами. Используйте Челленджи, чтобы бросать себе вызовы, и ИИ-терапию, если застряли. Двигайте карточки в колонку «Сделано».",
+      subtitle: "Действия",
+      description: "Идеи без действий мертвы. В «Канбане» ваши планы становятся задачами. Используйте Челленджи, чтобы бросать себе вызовы, и ИИ-терапию, если застряли. Двигайте карточки в колонку «Сделано».",
       icon: KanbanIcon,
       color: "bg-emerald-500",
       module: Module.KANBAN,
-      actionLabel: "В Трекер"
+      actionLabel: "К Действиям"
     },
     {
       id: 3,
       title: "Этап 4. Навыки",
-      subtitle: "Нейро",
-      description: "Важные принципы нужно помнить. В «Разборе» вы создаёте «навыки» (флеш-карточки). Здесь вы тренируете свой мозг, чтобы новые знания стали частью вашего автоматического поведения.",
+      subtitle: "Mental Gym",
+      description: "Важные принципы нужно помнить. В «Песочнице» вы создаёте «навыки» (флеш-карточки). Здесь вы тренируете свой мозг, чтобы новые знания стали частью вашего автоматического поведения.",
       icon: Dumbbell,
       color: "bg-indigo-500",
       module: Module.MENTAL_GYM,
-      actionLabel: "В Нейро"
+      actionLabel: "В Спортзал"
     },
     {
       id: 4,
       title: "Этап 5. Путь",
-      subtitle: "Хроника",
-      description: "В конце дня или после задачи — рефлексируйте. Свяжите запись в хронике с конкретной задачей. ИИ прокомментирует ваш опыт, помогая извлечь уроки из каждой победы или поражения.",
+      subtitle: "Дневник",
+      description: "В конце дня или после задачи — рефлексируйте. Свяжите запись в дневнике с конкретной задачей. ИИ прокомментирует ваш опыт, помогая извлечь уроки из каждой победы или поражения.",
       icon: Book,
       color: "bg-slate-800",
       module: Module.JOURNAL,
-      actionLabel: "В Хронику"
+      actionLabel: "В Дневник"
     }
   ];
 
@@ -86,78 +87,123 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
   const current = steps[currentStep];
 
   return (
-    <div className="fixed inset-0 z-[60] md:relative md:inset-auto md:z-auto flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-y-auto custom-scrollbar-light animate-in fade-in duration-300 p-6 md:p-12">
+    <div className="fixed inset-0 z-[60] md:relative md:inset-auto md:z-auto flex flex-col h-full bg-[#f8fafc] overflow-y-auto custom-scrollbar-light animate-in fade-in duration-300">
       {/* Mobile Close Button */}
       <button 
         onClick={onStart}
-        className="md:hidden absolute top-6 right-6 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm text-slate-400 z-[70]"
+        className="md:hidden absolute top-6 right-6 p-2 bg-white border border-slate-200 rounded-full shadow-sm text-slate-400 z-[70]"
       >
         <X size={20} />
       </button>
 
-      <div className="max-w-4xl mx-auto w-full h-full flex flex-col items-center justify-center min-h-[500px]">
-         
-         {/* HEADER */}
-         <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-5xl font-light text-slate-800 dark:text-slate-100 mb-4 tracking-tight">Академия <span className="font-bold text-indigo-600 dark:text-indigo-400">Live.Act</span></h2>
-            <p className="text-lg text-slate-500 dark:text-slate-400">Как работает система продуктивности</p>
-         </div>
+      <div className="max-w-4xl mx-auto w-full p-6 md:p-12">
+        
+        {/* Header */}
+        <header className="flex items-center gap-4 mb-12">
+           <div className="p-3 bg-slate-900 rounded-2xl text-white shadow-lg shadow-slate-200">
+              <GraduationCap size={32} />
+           </div>
+           <div>
+              <h1 className="text-3xl font-light text-slate-800 tracking-tight">Академия Пути</h1>
+              <p className="text-slate-500 text-sm">Методология эффективной работы над собой.</p>
+           </div>
+        </header>
 
-         {/* CARD */}
-         <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-xl border border-slate-100 dark:border-slate-700 w-full max-w-2xl overflow-hidden relative flex flex-col md:flex-row">
-            
-            {/* LEFT: VISUAL */}
-            <div className={`${current.color} p-8 md:w-1/3 flex items-center justify-center relative overflow-hidden transition-colors duration-500`}>
-                 <div className="absolute inset-0 bg-black/10" />
-                 <current.icon size={80} className="text-white relative z-10 drop-shadow-md" strokeWidth={1.5} />
-            </div>
-
-            {/* RIGHT: CONTENT */}
-            <div className="p-8 md:p-10 md:w-2/3 flex flex-col">
-                <div className="flex-1">
-                    <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">{current.subtitle}</div>
-                    <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-4">{current.title}</h3>
-                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                        {current.description}
-                    </p>
+        {/* Progress Bar */}
+        <div className="relative mb-16 px-4">
+           <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-200 -translate-y-1/2 rounded-full" />
+           <div 
+             className="absolute top-1/2 left-0 h-1 bg-slate-900 -translate-y-1/2 transition-all duration-500 rounded-full" 
+             style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
+           />
+           <div className="relative flex justify-between">
+              {steps.map((s, idx) => (
+                <div 
+                  key={s.id} 
+                  className={`w-10 h-10 rounded-full flex items-center justify-center border-4 transition-all duration-300 ${
+                    idx <= currentStep ? 'bg-slate-900 border-slate-900 text-white scale-110' : 'bg-white border-slate-200 text-slate-300'
+                  }`}
+                >
+                  <s.icon size={16} />
                 </div>
+              ))}
+           </div>
+        </div>
 
-                <div className="mt-8 flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-700">
-                    <div className="flex gap-2">
-                        {steps.map((s, idx) => (
-                            <div 
-                                key={s.id} 
-                                className={`h-2 rounded-full transition-all duration-300 ${idx === currentStep ? `w-8 ${current.color.replace('bg-', 'bg-')}` : 'w-2 bg-slate-200 dark:bg-slate-700'}`}
-                            />
-                        ))}
-                    </div>
+        {/* Content Card */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+           <div className={`h-2 ${current.color} transition-colors duration-500`} />
+           <div className="p-8 md:p-12 flex flex-col md:flex-row gap-10 items-center">
+              
+              <div className={`shrink-0 w-32 h-32 md:w-48 md:h-48 rounded-3xl ${current.color} flex items-center justify-center text-white shadow-2xl transition-all duration-500`}>
+                 <current.icon size={currentStep === 4 ? 64 : 80} strokeWidth={1} />
+              </div>
+
+              <div className="flex-1 space-y-6 text-center md:text-left">
+                 <div className="space-y-1">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{current.title}</span>
+                    <h2 className="text-2xl md:text-4xl font-bold text-slate-900 tracking-tight">{current.subtitle}</h2>
+                 </div>
+                 <p className="text-slate-600 text-lg leading-relaxed font-light">
+                    {current.description}
+                 </p>
+                 
+                 <div className="flex flex-col md:flex-row items-center gap-4 pt-4">
+                    <button 
+                      onClick={() => onNavigate(current.module)}
+                      className={`w-full md:w-auto px-6 py-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium transition-all flex items-center justify-center gap-2 group`}
+                    >
+                       Попробовать <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
                     
-                    <div className="flex gap-3">
+                    <div className="hidden md:block flex-1" />
+
+                    <div className="flex gap-2 w-full md:w-auto">
+                        {currentStep > 0 && (
+                          <button 
+                            onClick={prev}
+                            className="flex-1 md:flex-none p-3 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all"
+                          >
+                             <ArrowLeft size={24} />
+                          </button>
+                        )}
                         <button 
-                            onClick={prev} 
-                            disabled={currentStep === 0}
-                            className={`p-3 rounded-full border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed`}
+                          onClick={next}
+                          className="flex-[2] md:flex-none px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg flex items-center justify-center gap-2"
                         >
-                            <ArrowLeft size={20} />
-                        </button>
-                        <button 
-                            onClick={next} 
-                            className={`px-6 py-3 rounded-full text-white font-medium flex items-center gap-2 transition-all hover:opacity-90 active:scale-95 shadow-lg ${current.color}`}
-                        >
-                            {currentStep === steps.length - 1 ? "Начать работу" : "Далее"}
-                            <ArrowRight size={20} />
+                           {currentStep === steps.length - 1 ? "Начать Путь" : "Далее"} 
+                           {currentStep < steps.length - 1 && <ArrowRight size={20} />}
                         </button>
                     </div>
-                </div>
-            </div>
-         </div>
-         
-         <div className="mt-8">
-             <button onClick={onStart} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-medium">
-                 Пропустить обучение
-             </button>
-         </div>
+                 </div>
+              </div>
+           </div>
+        </div>
 
+        {/* Footer Hints */}
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+           <div className="p-5 bg-white border border-slate-100 rounded-2xl flex items-start gap-4 shadow-sm">
+              <Zap size={20} className="text-amber-500 shrink-0 mt-1" />
+              <div>
+                <h4 className="font-bold text-slate-800 text-sm">ИИ-менторы</h4>
+                <p className="text-xs text-slate-500 leading-relaxed mt-1">Используйте разных менторов в «Песочнице» для разных задач.</p>
+              </div>
+           </div>
+           <div className="p-5 bg-white border border-slate-100 rounded-2xl flex items-start gap-4 shadow-sm">
+              <BrainCircuit size={20} className="text-indigo-500 shrink-0 mt-1" />
+              <div>
+                <h4 className="font-bold text-slate-800 text-sm">Нейротренировка</h4>
+                <p className="text-xs text-slate-500 leading-relaxed mt-1">Mental Gym помогает перепрошивать привычки мышления.</p>
+              </div>
+           </div>
+           <div className="p-5 bg-white border border-slate-100 rounded-2xl flex items-start gap-4 shadow-sm">
+              <Sparkles size={20} className="text-emerald-500 shrink-0 mt-1" />
+              <div>
+                <h4 className="font-bold text-slate-800 text-sm">Смысл в Действии</h4>
+                <p className="text-xs text-slate-500 leading-relaxed mt-1">Челленджи превращают рутину в увлекательный квест.</p>
+              </div>
+           </div>
+        </div>
       </div>
     </div>
   );
