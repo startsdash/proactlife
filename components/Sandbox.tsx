@@ -91,7 +91,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
       column: 'todo',
       createdAt: Date.now()
     });
-    alert("Задача создана! Заметка осталась в «Песочнице».");
+    alert("Задача создана! Заметка осталась в Песочнице.");
   };
 
   const handleAcceptCard = () => {
@@ -103,12 +103,12 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
       level: 0,
       nextReview: Date.now()
     });
-    alert("Навык создан! Заметка осталась в «Песочнице».");
+    alert("Навык создан! Заметка осталась в Песочнице.");
   };
   
   const handleManualArchive = () => {
       if (selectedNoteId) {
-          if (window.confirm("Перенести заметку в «Библиотеку»?")) {
+          if (window.confirm("Перенести заметку в Библиотеку?")) {
             onProcessNote(selectedNoteId);
             setAnalysis(null);
             setSelectedNoteId(null);

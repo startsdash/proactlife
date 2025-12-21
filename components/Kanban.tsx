@@ -592,7 +592,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                             ? 'border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40' 
                                             : 'border-transparent text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-100'
                                         }`}
-                                        title={hasJournalEntry ? "В «Дневнике»" : "В «Дневник»"}
+                                        title={hasJournalEntry ? "В Дневнике" : "В Дневник"}
                                    >
                                         <Book size={18} />
                                    </button>
@@ -631,10 +631,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                     <button 
                                         onClick={(e) => { 
                                             e.stopPropagation(); 
-                                            if(window.confirm('Перенести задачу в "Архив"?')) archiveTask(task.id); 
+                                            if(window.confirm('Перенести задачу в Архив?')) archiveTask(task.id); 
                                         }} 
                                         className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
-                                        title='В "Архив"'
+                                        title="В Архив"
                                     >
                                         <History size={18} /> 
                                     </button>

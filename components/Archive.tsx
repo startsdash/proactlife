@@ -211,10 +211,10 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                    <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm("Восстановить задачу в 'Сделано'?")) restoreTask(task.id);
+                        if (window.confirm("Восстановить задачу в Сделано?")) restoreTask(task.id);
                       }}
                       className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                      title='Восстановить в "Действия"'
+                      title="Восстановить в Действия"
                    >
                       <RotateCcw size={14} /> <span className="hidden md:inline">Восстановить</span>
                    </button>
