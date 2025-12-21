@@ -231,8 +231,8 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
   const daysOfWeek = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
   return (
-    <div className="h-full p-4 md:p-8 flex flex-col overflow-hidden relative">
-      <header className="mb-6 shrink-0 flex justify-between items-end">
+    <div className="h-full overflow-y-auto custom-scrollbar-light p-4 md:p-8 relative">
+      <header className="mb-6 flex justify-between items-end">
         <div>
           <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Ритуалы <span className="text-orange-500 text-lg">/ Системы</span></h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Мы — это то, что мы делаем постоянно.</p>
@@ -358,7 +358,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
       )}
       </AnimatePresence>
 
-      <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar-light space-y-3">
+      <div className="space-y-3 pb-20">
           {habits.length === 0 && !isFormOpen ? (
               <div className="py-10">
                   <EmptyState 

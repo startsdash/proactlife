@@ -180,7 +180,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
           }
 
           return (
-              <div className="h-full flex flex-col pb-2"> {/* Added pb-2 for air at bottom */}
+              <div className="h-full flex flex-col pb-4"> {/* Increased from pb-2 to pb-4 for more air */}
                   <div className="grid grid-cols-7 gap-1 mb-2">
                      {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(d => <div key={d} className="text-center text-[9px] text-slate-400 uppercase">{d}</div>)}
                   </div>
