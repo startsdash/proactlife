@@ -5,7 +5,7 @@ import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
-import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -31,10 +31,10 @@ const colors = [
 ];
 
 const ORACLE_VIBES = [
-    { id: 'cosmos', emoji: '🌌', label: 'Инсайт', color: 'from-indigo-500 to-purple-600', text: 'text-indigo-100' },
-    { id: 'fire', emoji: '🔥', label: 'Энергия', color: 'from-orange-500 to-red-600', text: 'text-orange-100' },
-    { id: 'zen', emoji: '🍃', label: 'Дзен', color: 'from-emerald-500 to-teal-600', text: 'text-emerald-100' },
-    { id: 'luck', emoji: '🎲', label: 'Случай', color: 'from-slate-700 to-slate-900', text: 'text-slate-200' },
+    { id: 'cosmos', icon: Orbit, label: 'Инсайт', color: 'from-indigo-500 to-purple-600', text: 'text-indigo-100' },
+    { id: 'fire', icon: Flame, label: 'Энергия', color: 'from-orange-500 to-red-600', text: 'text-orange-100' },
+    { id: 'zen', icon: Waves, label: 'Дзен', color: 'from-emerald-500 to-teal-600', text: 'text-emerald-100' },
+    { id: 'luck', icon: Clover, label: 'Случай', color: 'from-slate-700 to-slate-900', text: 'text-slate-200' },
 ];
 
 // Markdown Styles for Notes
@@ -553,7 +553,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                               <div className="grid grid-cols-2 gap-4 w-full">
                                   {ORACLE_VIBES.map(vibe => (
                                       <button key={vibe.id} onClick={() => castOracleSpell(vibe)} className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 hover:shadow-lg hover:scale-105 border border-slate-100 dark:border-slate-700 transition-all duration-300 group">
-                                          <span className="text-3xl mb-2 group-hover:animate-bounce">{vibe.emoji}</span>
+                                          <vibe.icon size={32} strokeWidth={1.5} className="mb-3 text-slate-600 dark:text-slate-300 group-hover:scale-110 transition-transform duration-300" />
                                           <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">{vibe.label}</span>
                                       </button>
                                   ))}
@@ -562,13 +562,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                       )}
                       {oracleState === 'thinking' && (
                           <div className="flex flex-col items-center justify-center animate-pulse h-full">
-                              <div className="text-6xl mb-6 animate-spin duration-[2000ms]">{oracleVibe.emoji}</div>
+                              <oracleVibe.icon size={64} strokeWidth={1} className="mb-6 animate-pulse text-slate-700 dark:text-slate-300" />
                               <p className="text-slate-500 dark:text-slate-400 font-medium">Связь с хаосом...</p>
                           </div>
                       )}
                       {oracleState === 'result' && oracleNote && (
                            <div className="flex flex-col h-full animate-in zoom-in-95 duration-500 min-h-0">
-                               <div className="shrink-0 flex items-center justify-center gap-2 mb-6 text-xs font-bold uppercase tracking-widest text-slate-400"><span>{oracleVibe.emoji}</span><span>{oracleVibe.label}</span></div>
+                               <div className="shrink-0 flex items-center justify-center gap-2 mb-6 text-xs font-bold uppercase tracking-widest text-slate-400"><oracleVibe.icon size={14} /><span>{oracleVibe.label}</span></div>
                                <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0 pr-2">
                                   <div className="min-h-full flex flex-col">
                                       <div className="m-auto w-full py-2">
