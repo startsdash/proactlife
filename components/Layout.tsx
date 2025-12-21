@@ -120,7 +120,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
              {isExpanded && (
                  <button 
                     onClick={() => setIsExpanded(false)} 
-                    className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-100/10 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                  >
                     <PanelLeftClose size={18} />
                  </button>
@@ -131,7 +131,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
               <div className="w-full hidden md:flex justify-center py-2 border-b border-slate-50 dark:border-slate-800">
                   <button 
                     onClick={() => setIsExpanded(true)} 
-                    className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-100/10 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                     title="Развернуть"
                   >
                     <PanelLeftOpen size={18} />
@@ -257,8 +257,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
       </aside>
 
       {/* MAIN CONTENT */}
-      {/* UPDATE: Set overflow-hidden to main, allowing children to manage their own scrolling height. 
-          This fixes issue where children with h-full (like Rituals) wouldn't show scrollbars. */}
+      {/* ADDED min-h-0 to child motion.div to prevent flex overflow issues */}
       <main className="flex-1 flex flex-col w-full relative overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] transition-colors duration-500">
          <AnimatePresence mode="wait">
             <motion.div
@@ -270,7 +269,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     duration: 0.4, 
                     ease: [0.2, 0, 0.2, 1] // Very soft cubic bezier
                 }}
-                className="flex-1 h-full flex flex-col"
+                className="flex-1 min-h-0 flex flex-col"
             >
                 {children}
             </motion.div>
