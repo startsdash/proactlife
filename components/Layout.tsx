@@ -99,14 +99,14 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
       {/* SIDEBAR */}
       <aside 
         className={`
-            bg-white dark:bg-[#1e293b] border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 z-50
+            bg-white dark:bg-[#1e293b] border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-50
             transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
             fixed inset-y-0 left-0 h-full md:relative md:h-auto
             ${isExpanded ? 'w-64 translate-x-0 shadow-2xl md:shadow-none' : 'w-64 md:w-[72px] -translate-x-full md:translate-x-0'}
         `}
       >
-        <div>
-          {/* HEADER / LOGO */}
+        {/* HEADER / LOGO (Fixed Top) */}
+        <div className="shrink-0">
           <div className={`h-16 md:h-20 flex items-center border-b border-slate-100 dark:border-slate-700/50 transition-all duration-300 ${isExpanded ? 'px-6 justify-between' : 'justify-center px-0'}`}>
              <div className="flex items-center overflow-hidden whitespace-nowrap">
                 <div className="w-8 h-8 bg-slate-900 dark:bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0 transition-transform duration-300 hover:scale-105 shadow-sm shadow-slate-300 dark:shadow-none">L</div>
@@ -138,8 +138,10 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                   </button>
               </div>
           )}
+        </div>
 
-          {/* NAV ITEMS */}
+        {/* NAV ITEMS (Scrollable Middle) */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0">
           <nav className="p-3 space-y-2 mt-2">
             {navItems.map(item => (
               <button 
@@ -190,8 +192,8 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
           </nav>
         </div>
 
-        {/* FOOTER ACTIONS */}
-        <div className="p-3 space-y-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20">
+        {/* FOOTER ACTIONS (Fixed Bottom) */}
+        <div className="shrink-0 p-3 space-y-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20">
              <button 
                 onClick={!isDriveConnected ? onConnectDrive : undefined} 
                 disabled={isDriveConnected && syncStatus === 'synced'} 
@@ -255,7 +257,9 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col w-full relative overflow-x-hidden overflow-y-auto bg-[#f8fafc] dark:bg-[#0f172a] transition-colors duration-500">
+      {/* UPDATE: Set overflow-hidden to main, allowing children to manage their own scrolling height. 
+          This fixes issue where children with h-full (like Rituals) wouldn't show scrollbars. */}
+      <main className="flex-1 flex flex-col w-full relative overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] transition-colors duration-500">
          <AnimatePresence mode="wait">
             <motion.div
                 key={currentModule}
