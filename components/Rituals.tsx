@@ -5,6 +5,7 @@ import { notificationService } from '../services/notificationService';
 import { Flame, Check, Plus, Trash2, X, Zap, Calendar, Repeat, Bell, GripVertical, CheckCircle2, Circle, Edit2, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
+import ProgressStats from './ProgressStats';
 
 interface Props {
   habits: Habit[];
@@ -214,6 +215,11 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
             </button>
         )}
       </header>
+
+      {/* PROGRESS VISUALIZATION */}
+      {habits.length > 0 && !isFormOpen && (
+          <ProgressStats habits={habits} />
+      )}
 
       {/* NOTIFICATION BANNER */}
       {!permissionGranted && (

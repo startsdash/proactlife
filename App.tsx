@@ -15,6 +15,7 @@ import Settings from './components/Settings';
 import Journal from './components/Journal';
 import LearningMode from './components/LearningMode';
 import UserSettings from './components/UserSettings';
+import Onboarding from './components/Onboarding';
 
 const OWNER_EMAIL = 'rukomrus@gmail.com';
 
@@ -55,6 +56,7 @@ const App: React.FC = () => {
   };
 
   const [module, setModule] = useState<Module>(getInitialModule);
+  const [showOnboarding, setShowOnboarding] = useState(true);
   
   // Custom Navigation Handler that syncs with Browser History
   const handleNavigate = (newModule: Module) => {
@@ -315,6 +317,7 @@ const App: React.FC = () => {
         onConnectDrive={() => handleDriveConnect(false)} isDriveConnected={isDriveConnected}
         isOwner={isOwner}
     >
+      <Onboarding onClose={() => setShowOnboarding(false)} />
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
       {module === Module.NAPKINS && <Napkins notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} />}
       {module === Module.SANDBOX && <Sandbox notes={data.notes} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
