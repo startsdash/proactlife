@@ -188,10 +188,15 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
                       {gridCells.map((day, idx) => {
                           if (!day) return <div key={`empty-${idx}`} />;
                           
-                          // Circular Progress Logic for Month View
-                          const radius = 10;
+                          // Circular Progress Logic for Month View using ViewBox
+                          const viewBoxSize = 24;
+                          const strokeWidth = 3;
+                          const radius = 9; // (24 - 2*3)/2 + margin adjustments, let's keep it safe inside
+                          const cx = 12;
+                          const cy = 12;
                           const circ = 2 * Math.PI * radius;
                           const offset = circ - (day.percentage / 100) * circ;
+                          
                           let strokeColor = "text-slate-300 dark:text-slate-600";
                           if (day.percentage > 0) strokeColor = "text-rose-400";
                           if (day.percentage >= 30) strokeColor = "text-orange-400";
@@ -209,11 +214,11 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
                                   </div>
 
                                   <div className="relative w-5 h-5 md:w-6 md:h-6 flex items-center justify-center">
-                                      {/* Mini Circular Progress */}
+                                      {/* Mini Circular Progress with ViewBox */}
                                       {day.percentage > 0 && (
-                                          <svg className="absolute inset-0 w-full h-full transform -rotate-90">
-                                              <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="3" fill="transparent" className="text-slate-200 dark:text-slate-700 opacity-30" />
-                                              <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="3" fill="transparent" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" className={`${strokeColor} transition-all duration-300`} />
+                                          <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`}>
+                                              <circle cx={cx} cy={cy} r={radius} stroke="currentColor" strokeWidth={strokeWidth} fill="transparent" className="text-slate-200 dark:text-slate-700 opacity-30" />
+                                              <circle cx={cx} cy={cy} r={radius} stroke="currentColor" strokeWidth={strokeWidth} fill="transparent" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" className={`${strokeColor} transition-all duration-300`} />
                                           </svg>
                                       )}
                                       <span className={`text-[9px] md:text-[10px] font-medium z-10 ${day.isToday ? 'text-orange-600 dark:text-orange-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>{day.date.getDate()}</span>

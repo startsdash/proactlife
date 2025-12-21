@@ -111,7 +111,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
              <div className="flex items-center overflow-hidden whitespace-nowrap">
                 <div className="w-8 h-8 bg-slate-900 dark:bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0 transition-transform duration-300 hover:scale-105 shadow-sm shadow-slate-300 dark:shadow-none">L</div>
                 
-                <div className={`ml-3 transition-all duration-300 origin-left ${isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 hidden'}`}>
+                <div className={`transition-all duration-300 origin-left overflow-hidden ${isExpanded ? 'opacity-100 w-auto ml-3' : 'opacity-0 w-0 ml-0'}`}>
                     <div className="font-bold text-lg tracking-tight text-slate-900 dark:text-slate-100 leading-none">LIVE.ACT</div>
                     <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono tracking-wider mt-0.5">PRO v2.0</div>
                 </div>
@@ -171,8 +171,8 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                 
                 <span 
                     className={`
-                        ml-3 font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out relative z-10
-                        ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0 absolute'}
+                        font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out relative z-10
+                        ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 ml-0 absolute'}
                     `}
                 >
                     {item.label}
@@ -207,7 +207,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     <div className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 rounded-full ring-2 ring-white dark:ring-slate-800">{getSyncIcon()}</div>
                 </div>
                 
-                <div className={`ml-3 flex flex-col items-start overflow-hidden transition-all duration-300 ${isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 h-0'}`}>
+                <div className={`flex flex-col items-start overflow-hidden transition-all duration-300 ${isExpanded ? 'opacity-100 w-auto ml-3' : 'opacity-0 w-0 h-0 ml-0'}`}>
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">Облако</span>
                 </div>
              </button>
@@ -228,7 +228,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                       <motion.div layoutId="activeNav" className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl" transition={{ type: "spring", stiffness: 300, damping: 30 }} />
                   )}
                   <Settings size={20} className="shrink-0 relative z-10" />
-                  <span className={`ml-3 text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0'}`}>Настройки</span>
+                  <span className={`text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 ml-0'}`}>Настройки</span>
              </button>
 
              {isOwner && (
@@ -248,7 +248,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                       <motion.div layoutId="activeNav" className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl" transition={{ type: "spring", stiffness: 300, damping: 30 }} />
                   )}
                   <Shield size={20} className="shrink-0 relative z-10" />
-                  <span className={`ml-3 text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0'}`}>Владелец</span>
+                  <span className={`text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 ml-0'}`}>Владелец</span>
                </button>
              )}
         </div>
