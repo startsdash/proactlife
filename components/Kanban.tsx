@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
 import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon } from 'lucide-react';
 import EmptyState from './EmptyState';
+import { Tooltip } from './Tooltip';
 
 interface Props {
   tasks: Task[];
@@ -579,82 +581,88 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                         <div className="mt-auto border-t border-slate-50 dark:border-slate-700 pt-3 flex flex-col gap-3">
                             <div className="flex gap-2 items-center justify-end">
                                {col.id === 'todo' && (
-                                    <button 
-                                        onClick={(e) => moveToDoing(e, task)} 
-                                        className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
-                                        title="Поработать"
-                                    >
-                                        <Play size={18} className="fill-current" />
-                                    </button>
+                                    <Tooltip content="Поработать" color="indigo">
+                                        <button 
+                                            onClick={(e) => moveToDoing(e, task)} 
+                                            className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
+                                        >
+                                            <Play size={18} className="fill-current" />
+                                        </button>
+                                    </Tooltip>
                                )}
 
                                {col.id === 'doing' && (
                                    <>
-                                   <button 
-                                        onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }}
-                                        className={`p-2 rounded-lg border transition-colors ${
-                                            hasJournalEntry 
-                                            ? 'border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40' 
-                                            : 'border-transparent text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-100'
-                                        }`}
-                                        title={hasJournalEntry ? "В Дневнике" : "В Дневник"}
-                                   >
-                                        <Book size={18} />
-                                   </button>
+                                   <Tooltip content={hasJournalEntry ? "В Дневнике" : "В Дневник"} color="amber">
+                                       <button 
+                                            onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }}
+                                            className={`p-2 rounded-lg border transition-colors ${
+                                                hasJournalEntry 
+                                                ? 'border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40' 
+                                                : 'border-transparent text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-100'
+                                            }`}
+                                       >
+                                            <Book size={18} />
+                                       </button>
+                                   </Tooltip>
 
                                    {!challengeDrafts[task.id] && hasChallengeAuthors && (
-                                       <button 
-                                            onClick={(e) => {
-                                                if (task.activeChallenge && !task.isChallengeCompleted) {
-                                                    e.stopPropagation();
-                                                    alert("Необходимо завершить активный челлендж");
-                                                    return;
-                                                }
-                                                generateChallenge(e, task.id, task.content);
-                                            }} 
-                                            disabled={generatingChallengeFor === task.id} 
-                                            className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors disabled:opacity-50"
-                                            title="Челлендж (ИИ)"
-                                        >
-                                            <Zap size={18} className={generatingChallengeFor === task.id ? "opacity-50" : ""} />
-                                        </button>
+                                       <Tooltip content="Челлендж (ИИ)" color="indigo">
+                                           <button 
+                                                onClick={(e) => {
+                                                    if (task.activeChallenge && !task.isChallengeCompleted) {
+                                                        e.stopPropagation();
+                                                        alert("Необходимо завершить активный челлендж");
+                                                        return;
+                                                    }
+                                                    generateChallenge(e, task.id, task.content);
+                                                }} 
+                                                disabled={generatingChallengeFor === task.id} 
+                                                className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors disabled:opacity-50"
+                                           >
+                                                <Zap size={18} className={generatingChallengeFor === task.id ? "opacity-50" : ""} />
+                                            </button>
+                                       </Tooltip>
                                    )}
 
                                    {hasKanbanTherapist && (
-                                       <button 
-                                            onClick={(e) => openTherapy(e, task)} 
-                                            className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg border border-transparent hover:border-amber-100 dark:hover:border-amber-800"
-                                            title="Консультант (ИИ)"
-                                       >
-                                           <MessageCircle size={18} /> 
-                                       </button>
+                                       <Tooltip content="Консультант (ИИ)" color="amber">
+                                           <button 
+                                                onClick={(e) => openTherapy(e, task)} 
+                                                className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg border border-transparent hover:border-amber-100 dark:hover:border-amber-800"
+                                           >
+                                               <MessageCircle size={18} /> 
+                                           </button>
+                                       </Tooltip>
                                    )}
                                    </>
                                )}
                                
                                {col.id === 'done' && (
-                                    <button 
-                                        onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
-                                        }} 
-                                        className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
-                                        title="В Зал славы"
-                                    >
-                                        <History size={18} /> 
-                                    </button>
+                                    <Tooltip content="В Зал славы" color="indigo">
+                                        <button 
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
+                                            }} 
+                                            className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
+                                        >
+                                            <History size={18} /> 
+                                        </button>
+                                    </Tooltip>
                                )}
 
-                               <button 
-                                    onClick={(e) => { 
-                                        e.stopPropagation(); 
-                                        if(window.confirm('Удалить задачу?')) deleteTask(task.id); 
-                                    }} 
-                                    className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg border border-transparent hover:border-red-100 dark:hover:border-red-800 transition-colors"
-                                    title="Удалить"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
+                               <Tooltip content="Удалить" color="red">
+                                   <button 
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            if(window.confirm('Удалить задачу?')) deleteTask(task.id); 
+                                        }} 
+                                        className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg border border-transparent hover:border-red-100 dark:hover:border-red-800 transition-colors"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                               </Tooltip>
 
                             </div>
                             <div className="flex gap-2 items-center justify-between">
