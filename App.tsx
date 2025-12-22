@@ -221,6 +221,7 @@ const App: React.FC = () => {
     const originalNote = p.notes.find(n => n.id === id);
     if (!originalNote) return p;
     // Don't modify original note status - just clone it to sandbox
+    // This allows the user to keep the note in Inbox while working on it in Hub
     const sandboxClone: Note = {
       ...originalNote,
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
