@@ -1,4 +1,3 @@
-
 import { AppState, UserProfile } from "../types";
 
 declare global {
@@ -12,15 +11,34 @@ let CLIENT_ID = '';
 let API_KEY = '';
 let CLIENT_SECRET = '';
 
-// Safe environment variable loader
+// --- ENVIRONMENT VARIABLE LOADING ---
+// Priority 1: Vite (import.meta.env)
 try {
-  // Use process.env which is polyfilled in index.html
-  if (typeof process !== 'undefined' && process.env) {
-      CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || '';
-      API_KEY = process.env.VITE_GOOGLE_API_KEY || '';
-      CLIENT_SECRET = process.env.VITE_GOOGLE_CLIENT_SECRET || '';
+  // @ts-ignore
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    // @ts-ignore
+    CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+    // @ts-ignore
+    API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || '';
+    // @ts-ignore
+    CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '';
   }
 } catch (e) {}
+
+// Priority 2: Process Env (Fallback)
+if (!CLIENT_ID || !API_KEY) {
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || CLIENT_ID;
+      API_KEY = process.env.VITE_GOOGLE_API_KEY || API_KEY;
+      CLIENT_SECRET = process.env.VITE_GOOGLE_CLIENT_SECRET || CLIENT_SECRET;
+    }
+  } catch (e) {}
+}
+
+if (!CLIENT_ID || !API_KEY) {
+  console.error("LIVE.ACT PRO: Missing Google Configuration! Check VITE_GOOGLE_CLIENT_ID and VITE_GOOGLE_API_KEY.");
+}
 
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
 const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
@@ -153,7 +171,10 @@ export const restoreSession = (): boolean => {
 };
 
 export const initGapi = async (): Promise<void> => {
-  if (!CLIENT_ID || !API_KEY) return;
+  if (!CLIENT_ID || !API_KEY) {
+    console.warn("Skipping GAPI init: No credentials");
+    return;
+  }
   await waitForGlobal('gapi');
   return new Promise((resolve) => {
     window.gapi.load('client', async () => {
@@ -172,7 +193,10 @@ export const initGapi = async (): Promise<void> => {
 };
 
 export const initGis = async (onTokenReceived: () => void): Promise<void> => {
-  if (!CLIENT_ID) return;
+  if (!CLIENT_ID) {
+    console.warn("Skipping GIS init: No Client ID");
+    return;
+  }
   await waitForGlobal('google');
   
   // Use initCodeClient for Authorization Code Flow
