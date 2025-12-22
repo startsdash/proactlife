@@ -277,15 +277,27 @@ export const saveToDrive = async (state: AppState): Promise<void> => {
   }
 
   const fileContent = JSON.stringify(state);
-  const file = new Blob([fileContent], { type: 'application/json' });
-  const metadata = { name: BACKUP_FILENAME, mimeType: 'application/json' };
+  const metadata = {
+    name: BACKUP_FILENAME,
+    mimeType: 'application/json'
+  };
   
   // Ensure we get the latest token (it might have been refreshed in ensureValidToken)
   const accessToken = window.gapi.client.getToken().access_token;
   
-  const form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-  form.append('file', file);
+  // Manual Multipart/Related Construction to avoid FormData (multipart/form-data) issues with Drive API
+  const boundary = '-------314159265358979323846';
+  const delimiter = "\r\n--" + boundary + "\r\n";
+  const close_delim = "\r\n--" + boundary + "--";
+
+  const multipartRequestBody =
+      delimiter +
+      'Content-Type: application/json\r\n\r\n' +
+      JSON.stringify(metadata) +
+      delimiter +
+      'Content-Type: application/json\r\n\r\n' +
+      fileContent +
+      close_delim;
   
   const url = existingFile 
     ? `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=multipart`
@@ -293,10 +305,18 @@ export const saveToDrive = async (state: AppState): Promise<void> => {
   
   const response = await fetch(url, {
     method: existingFile ? 'PATCH' : 'POST',
-    headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
-    body: form,
+    headers: new Headers({ 
+        'Authorization': 'Bearer ' + accessToken,
+        'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+    }),
+    body: multipartRequestBody,
   });
-  if (!response.ok) throw new Error("Upload failed");
+
+  if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Drive Upload Error:", errorText);
+      throw new Error(`Upload failed: ${response.status}`);
+  }
 };
 
 export const loadFromDrive = async (): Promise<AppState | null> => {
