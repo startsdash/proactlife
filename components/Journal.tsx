@@ -380,7 +380,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const hasActiveDateFilter = !!dateRange.from || !!dateRange.to;
 
   return (
-    <div className="flex flex-col md:flex-row h-auto md:h-full md:overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]">
+    <div className="flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] custom-scrollbar-light">
       <div className="w-full md:w-1/3 flex flex-col p-4 md:p-8 md:border-r border-b md:border-b-0 border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1e293b] md:bg-transparent shrink-0">
         <header className="mb-4 md:mb-6">
           <h1 className="text-2xl font-light text-slate-800 dark:text-slate-200 tracking-tight">
