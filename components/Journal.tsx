@@ -372,7 +372,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
           content: analysisResult,
           mentorName: 'Наставник (ИИ)'
        });
-       alert('Сохранено в "Историю Наставника"');
+       alert('Сохранено в Историю Наставника');
        setAnalysisResult(null);
     }
   };
