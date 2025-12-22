@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll, XCircle } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll, XCircle, Send } from 'lucide-react';
 import EmptyState from './EmptyState';
 
 interface Props {
@@ -372,7 +372,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
           content: analysisResult,
           mentorName: 'Наставник (ИИ)'
        });
-       alert('Анализ сохранен в "Историю Наставника"');
+       alert('Сохранено в "Историю Наставника"');
        setAnalysisResult(null);
     }
   };
@@ -406,7 +406,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
             disabled={!content.trim()} 
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 text-sm font-medium transition-all shadow-md shadow-slate-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
           >
-            <Zap size={16} className="text-amber-400" /> 
+            <Send size={16} /> 
             Записать мысль
           </button>
         </div>

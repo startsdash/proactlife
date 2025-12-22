@@ -308,7 +308,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
   const canMoveTask = (task: Task, targetColId: string): boolean => {
     if (task.column === 'doing' && targetColId !== 'doing') {
         if (task.activeChallenge && !task.isChallengeCompleted) {
-            alert('Сначала завершите активный челлендж!');
+            alert('Необходимо завершить активный челлендж');
             return false;
         }
     }
@@ -381,6 +381,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     const task = tasks.find(t => t.id === activeModal.taskId);
     if (task) {
         updateTask({ ...task, consultationHistory: [...(task.consultationHistory || []), aiResponse] });
+        alert("Сохранено в Историю консультаций");
         setActiveModal(null);
     }
   };
@@ -606,7 +607,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                             onClick={(e) => {
                                                 if (task.activeChallenge && !task.isChallengeCompleted) {
                                                     e.stopPropagation();
-                                                    alert("Сначала завершите активный челлендж!");
+                                                    alert("Необходимо завершить активный челлендж");
                                                     return;
                                                 }
                                                 generateChallenge(e, task.id, task.content);
