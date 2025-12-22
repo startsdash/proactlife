@@ -1,11 +1,27 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig, JournalEntry } from "../types";
 import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL, applyTypography, BASE_OUTPUT_INSTRUCTION } from '../constants';
 
 // --- API Access ---
-// The API key must be obtained exclusively from the environment variable process.env.API_KEY.
-// We provide a fallback to prevent runtime crashes if env is missing during initialization.
-const apiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : '';
+// Safely obtain API key to prevent "Uncaught ReferenceError: process is not defined"
+const getApiKey = (): string => {
+  try {
+    // Check global process (bundlers often replace this)
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+      return process.env.API_KEY;
+    }
+    // Check manual window polyfill
+    if (typeof window !== 'undefined' && (window as any).process?.env?.API_KEY) {
+      return (window as any).process.env.API_KEY;
+    }
+  } catch (e) {
+    console.warn("Error reading API key:", e);
+  }
+  return '';
+};
+
+const apiKey = getApiKey();
 const ai = new GoogleGenAI({ apiKey: apiKey || 'MISSING_KEY' });
 
 // Helper to check if model requires legacy/chat handling (Gemma doesn't support systemInstruction in config)
