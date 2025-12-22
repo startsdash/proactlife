@@ -20,9 +20,11 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
     const strokeWidth = 5;
     
     // Calculate dot positions based on value (0-100 mapping to circle perimeter)
-    // -90deg is top. We map 0..100 to 0..360deg for the dot position visually.
+    // SVG Circle starts at 3 o'clock (0 deg).
+    // We want start at 6 o'clock (90 deg) and go clockwise.
     const getDotPos = (cx: number, cy: number, radius: number, val: number) => {
-        const angle = (val / 100) * 360 - 90;
+        // 90 deg is bottom. 
+        const angle = (val / 100) * 360 + 90;
         const rad = angle * (Math.PI / 180);
         return {
             x: cx + radius * Math.cos(rad),
@@ -40,6 +42,10 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
                 
                 {/* Growth (Bottom Left) - Emerald */}
                 <g>
+                    {/* Background Circle */}
+                    <circle cx="65" cy="140" r={r} fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-100 dark:text-slate-700" />
+                    
+                    {/* Progress Circle - Rotated 90deg to start at bottom */}
                     <motion.circle 
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={{ pathLength: 1, opacity: 1 }}
@@ -47,8 +53,12 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
                         cx="65" cy="140" r={r} 
                         fill="none" stroke="#10b981" strokeWidth={strokeWidth} 
                         className="opacity-90"
+                        strokeDasharray="1 1"
+                        transform="rotate(90 65 140)"
                     />
                     <text x="65" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#10b981" className="uppercase tracking-widest pointer-events-none">РОСТ</text>
+                    
+                    {/* Dot Indicator */}
                     <motion.circle 
                         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5 }}
                         cx={growthPos.x} cy={growthPos.y} r="3" fill="white" stroke="#10b981" strokeWidth="2" 
@@ -57,6 +67,7 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
 
                 {/* Relationships (Bottom Right) - Rose/Pink */}
                 <g>
+                    <circle cx="135" cy="140" r={r} fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-100 dark:text-slate-700" />
                     <motion.circle 
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={{ pathLength: 1, opacity: 1 }}
@@ -64,6 +75,7 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
                         cx="135" cy="140" r={r} 
                         fill="none" stroke="#f43f5e" strokeWidth={strokeWidth} 
                         className="opacity-90"
+                        transform="rotate(90 135 140)"
                     />
                     <text x="135" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#f43f5e" className="uppercase tracking-widest pointer-events-none">ЛЮДИ</text>
                     <motion.circle 
@@ -74,6 +86,7 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
 
                 {/* Productivity (Top) - Indigo */}
                 <g>
+                    <circle cx="100" cy="80" r={r} fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-100 dark:text-slate-700" />
                     <motion.circle 
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={{ pathLength: 1, opacity: 1 }}
@@ -81,6 +94,7 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
                         cx="100" cy="80" r={r} 
                         fill="none" stroke="#6366f1" strokeWidth={strokeWidth} 
                         className="opacity-90"
+                        transform="rotate(90 100 80)"
                     />
                     <text x="100" y="80" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#6366f1" className="uppercase tracking-widest pointer-events-none">ДЕЛО</text>
                     <motion.circle 
@@ -184,24 +198,32 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = fal
     );
 };
 
-// 3. Simple Bar Chart
-const BarChart = ({ data, labels, color = 'bg-emerald-400' }: { data: number[], labels: string[], color?: string }) => {
+// 3. Simple Bar Chart (Modified for Per-Bar Colors and Opacity)
+const BarChart = ({ data, labels, colors, color }: { data: number[], labels: string[], colors?: string[], color?: string }) => {
     const max = Math.max(...data, 1);
+    
     return (
         <div className="flex items-end justify-between h-24 gap-2 w-full">
-            {data.map((val, i) => (
-                <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group">
-                    <div className="relative w-full flex items-end justify-center h-full">
-                         <motion.div 
-                            initial={{ height: 0 }}
-                            animate={{ height: `${(val / max) * 100}%` }}
-                            transition={{ duration: 0.5, delay: i * 0.05 }}
-                            className={`w-full max-w-[20px] rounded-t-sm ${color} opacity-80 group-hover:opacity-100 transition-opacity`}
-                         />
+            {data.map((val, i) => {
+                const barColor = colors?.[i] || color || 'bg-emerald-400';
+                // Dynamic opacity: Min 0.3, Max 1.0 based on value height
+                const opacity = 0.3 + (val / max) * 0.7; 
+                
+                return (
+                    <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group">
+                        <div className="relative w-full flex items-end justify-center h-full">
+                             <motion.div 
+                                initial={{ height: 0 }}
+                                animate={{ height: `${(val / max) * 100}%` }}
+                                transition={{ duration: 0.5, delay: i * 0.05 }}
+                                className={`w-full max-w-[20px] rounded-t-sm ${barColor} group-hover:opacity-100 transition-opacity`}
+                                style={{ opacity }}
+                             />
+                        </div>
+                        <span className="text-[9px] text-slate-400 mt-2 uppercase font-mono">{labels[i]}</span>
                     </div>
-                    <span className="text-[9px] text-slate-400 mt-2 uppercase font-mono">{labels[i]}</span>
-                </div>
-            ))}
+                );
+            })}
         </div>
     );
 };
@@ -592,7 +614,11 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
                  <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Баланс сфер</span>
              </div>
              <div className="flex-1 flex items-end">
-                 <BarChart data={balanceData} labels={['Дело', 'Рост', 'Люди']} color="bg-emerald-400" />
+                 <BarChart 
+                    data={balanceData} 
+                    labels={['Дело', 'Рост', 'Люди']} 
+                    colors={['bg-indigo-500', 'bg-emerald-500', 'bg-rose-500']} 
+                 />
              </div>
         </motion.div>
 
