@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task } from '../types';
-import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, List, Plus, Minus, MessageCircle, Circle, XCircle, Trophy } from 'lucide-react';
+import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, MessageCircle, Circle, XCircle, Trophy, Minus, Plus } from 'lucide-react';
 import EmptyState from './EmptyState';
 
 interface Props {
@@ -149,20 +149,6 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
     .filter(t => t.isArchived)
     .sort((a, b) => b.createdAt - a.createdAt);
 
-  useEffect(() => {
-      if (archivedTasks.length === 0 && window.confetti) {
-          const timer = setTimeout(() => {
-              window.confetti({
-                  particleCount: 80,
-                  spread: 60,
-                  origin: { y: 0.7 },
-                  colors: ['#fbbf24', '#f59e0b', '#d97706']
-              });
-          }, 300);
-          return () => clearTimeout(timer);
-      }
-  }, [archivedTasks.length]);
-
   return (
     <div className="h-full p-4 md:p-8 flex flex-col overflow-hidden relative">
       <header className="mb-6 shrink-0">
@@ -178,7 +164,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
               <EmptyState 
                   icon={Trophy} 
                   title="Все впереди!" 
-                  description="Немного конфетти для мотивации" 
+                  description="Заверши первую миссию, чтобы начать историю побед" 
                   color="amber"
               />
           </div>

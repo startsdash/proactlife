@@ -61,9 +61,9 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col items-center justify-center w-full relative my-auto pb-6 md:pb-16">
+      <div className="flex-1 flex flex-col items-center justify-center w-full relative my-auto pb-8 md:pb-32">
         {flashcards.length > 0 && flashcards[currentCardIndex] ? (
-            <div className="w-full max-w-md md:max-w-sm flex flex-col gap-6 md:gap-4">
+            <div className="w-full max-w-md md:max-w-xs flex flex-col gap-6 md:gap-4">
                 
                 {/* CARD CONTAINER */}
                 <div 
@@ -87,7 +87,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                             </div>
                             
                             <div className="flex-1 flex items-center justify-center overflow-y-auto w-full custom-scrollbar-light">
-                                <p className="text-lg md:text-xl font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
+                                <p className="text-lg md:text-lg font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
                                     {flashcards[currentCardIndex].front}
                                 </p>
                             </div>
@@ -105,7 +105,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
 
                             <div className="flex-1 flex items-center justify-center w-full overflow-hidden">
                                  <div className="w-full overflow-y-auto max-h-full pr-1 custom-scrollbar-light">
-                                    <p className="text-lg md:text-xl leading-relaxed font-light">
+                                    <p className="text-lg md:text-lg leading-relaxed font-light">
                                         {flashcards[currentCardIndex].back}
                                     </p>
                                  </div>
