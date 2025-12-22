@@ -58,7 +58,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
        <header className="flex justify-between items-end shrink-0 mb-6">
         <div>
             <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Скиллы</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Прокачай нейронные связи. Не дай инсайтам выветриться</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Тонус мозга</p>
         </div>
       </header>
 

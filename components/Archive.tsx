@@ -160,7 +160,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
             <History className="text-slate-400" size={32} />
             <span>Зал славы</span>
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Выполненные миссии и закрытые гештальты</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Выполненные миссии</p>
       </header>
 
       <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar-light">

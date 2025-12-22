@@ -668,7 +668,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     <div className="h-full p-3 md:p-8 flex flex-col overflow-hidden relative">
       <header className="mb-4 shrink-0">
           <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Спринты</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Меньше планирования, больше дела</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Фокус на главном</p>
       </header>
       
       <div className="flex flex-wrap gap-2 mb-4 animate-in slide-in-from-top-2 shrink-0">

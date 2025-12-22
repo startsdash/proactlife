@@ -235,7 +235,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
       <header className="mb-6 flex justify-between items-end">
         <div>
           <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Трекер</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Настрой автопилот полезных привычек</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Автопилот полезных привычек</p>
         </div>
         {!isFormOpen && (
             <button 
