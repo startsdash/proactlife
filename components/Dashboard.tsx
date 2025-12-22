@@ -63,7 +63,7 @@ const EnergyVennDiagram = ({ physical, mind, social }: { physical: number, mind:
 };
 
 // 2. Smooth Area Chart (Spline)
-const SmoothAreaChart = ({ data, color = '#6366f1', height = 60 }: { data: number[], color?: string, height?: number }) => {
+const SmoothAreaChart = ({ data, color = '#6366f1', height = 60, showAxes = false }: { data: number[], color?: string, height?: number, showAxes?: boolean }) => {
     if (data.length < 2) return null;
     const max = Math.max(...data, 1);
     const width = 100;
@@ -88,31 +88,49 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 60 }: { data: numbe
     const fillPath = `${pathData} L ${width},${height} L 0,${height} Z`;
 
     return (
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible preserve-3d">
-            <defs>
-                <linearGradient id={`grad-${color}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={color} stopOpacity="0.2" />
-                    <stop offset="100%" stopColor={color} stopOpacity="0" />
-                </linearGradient>
-            </defs>
-            <motion.path 
-                initial={{ d: `M 0,${height} L ${width},${height} L 0,${height} Z` }}
-                animate={{ d: fillPath }}
-                transition={{ duration: 0.8 }}
-                fill={`url(#grad-${color})`} 
-            />
-            <motion.path
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 1 }}
-                d={pathData}
-                fill="none"
-                stroke={color}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
+        <div className="w-full h-full relative">
+            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible preserve-3d">
+                <defs>
+                    <linearGradient id={`grad-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+                        <stop offset="100%" stopColor={color} stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+                
+                {/* Axis Lines if requested */}
+                {showAxes && (
+                    <>
+                        <line x1="0" y1={height} x2={width} y2={height} stroke="#e2e8f0" strokeWidth="0.5" className="dark:stroke-slate-700" />
+                        <line x1="0" y1="0" x2="0" y2={height} stroke="#e2e8f0" strokeWidth="0.5" className="dark:stroke-slate-700" />
+                    </>
+                )}
+
+                <motion.path 
+                    initial={{ d: `M 0,${height} L ${width},${height} L 0,${height} Z` }}
+                    animate={{ d: fillPath }}
+                    transition={{ duration: 0.8 }}
+                    fill={`url(#grad-${color.replace('#', '')})`} 
+                />
+                <motion.path
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 1 }}
+                    d={pathData}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+            </svg>
+            {showAxes && (
+                <div className="flex justify-between text-[8px] text-slate-300 mt-1 font-mono uppercase w-full absolute top-full left-0">
+                    <span>00:00</span>
+                    <span>12:00</span>
+                    <span>23:59</span>
+                </div>
+            )}
+        </div>
     );
 };
 
@@ -182,7 +200,7 @@ const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], label
     
     return (
         <div className="w-full h-full flex items-center justify-center relative">
-            <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-[220px]">
+            <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-[180px]">
                 {/* Grid */}
                 {gridLevels.map((level, idx) => {
                     const gridPoints = Array.from({ length: count }).map((_, i) => {
@@ -333,8 +351,13 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[]) => {
         }
 
         // 4. Activity Chronotype (Radar Chart Data)
-        // Aggregate activity into 8 buckets (3-hour intervals)
-        const buckets = new Array(8).fill(0); // 00-03, 03-06, 06-09, 09-12, 12-15, 15-18, 18-21, 21-24
+        // Aggregate activity into 24 hour buckets for Area Chart
+        const hoursDistribution = new Array(24).fill(0);
+        notes.forEach(n => hoursDistribution[new Date(n.createdAt).getHours()]++);
+        tasks.forEach(t => hoursDistribution[new Date(t.createdAt).getHours()]++);
+
+        // Aggregate activity into 8 buckets (3-hour intervals) for Radar Chart
+        const buckets = new Array(8).fill(0); // 00-03, 03-06, ...
         
         const addToBucket = (timestamp: number) => {
             const hour = new Date(timestamp).getHours();
@@ -344,15 +367,6 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[]) => {
 
         notes.forEach(n => addToBucket(n.createdAt));
         tasks.forEach(t => addToBucket(t.createdAt));
-        
-        // Rotate buckets so the chart starts naturally (00 at top or 12 at bottom?)
-        // Chart starts at -90deg (Top). Let's map standard clock positions.
-        // 00h (Top) -> Index 0.
-        // RadarChart draws index 0 at top.
-        // Index 0 (00-03) -> Top.
-        // Index 1 (03-06) -> Top-Right.
-        // Index 2 (06-09) -> Right.
-        // ...
         
         const bucketLabels = ['00', '03', '06', '09', '12', '15', '18', '21'];
         // Ensure at least some value for visualization if empty
@@ -378,14 +392,14 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[]) => {
         });
         const balanceData = [tagCounts.work, tagCounts.health, tagCounts.learn, tagCounts.soul];
 
-        return { vennData, energyLabel, notesHistory, habitGrid, radarData, bucketLabels, monthlyActivity, monthLabels, balanceData };
+        return { vennData, energyLabel, notesHistory, habitGrid, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData };
     }, [notes, tasks, habits]);
 };
 
 // --- MAIN DASHBOARD COMPONENT ---
 
 const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate }) => {
-  const { vennData, energyLabel, notesHistory, habitGrid, radarData, bucketLabels, monthlyActivity, monthLabels, balanceData } = useDashboardStats(notes, tasks, habits);
+  const { vennData, energyLabel, notesHistory, habitGrid, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData } = useDashboardStats(notes, tasks, habits);
 
   // Active Challenges
   const activeChallenges = tasks.filter(t => t.activeChallenge && !t.isChallengeCompleted).slice(0, 3);
@@ -452,16 +466,24 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
              </div>
         </motion.div>
 
-        {/* 4. CHRONOTYPE ACTIVITY (Radar Chart) */}
+        {/* 4. CHRONOTYPE ACTIVITY (Split Card: Area + Radar) */}
         <motion.div className="md:col-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-4">
                 <Clock size={16} className="text-slate-400" />
                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Хронотип активности</span>
             </div>
-            <div className="flex-1 h-48 w-full flex items-center justify-center">
-                <RadarChart data={radarData} labels={bucketLabels} color="#6366f1" />
+            <div className="flex-1 flex flex-col md:flex-row gap-6 items-center">
+                {/* Left: Area Chart (Hourly Flow) */}
+                <div className="flex-1 w-full h-40 relative">
+                     <SmoothAreaChart data={hoursDistribution} color="#94a3b8" height={100} showAxes={true} />
+                </div>
+
+                {/* Right: Radar Chart (Peak Focus) */}
+                <div className="flex-1 w-full h-48 flex flex-col items-center justify-center relative">
+                    <RadarChart data={radarData} labels={bucketLabels} color="#6366f1" />
+                    <div className="text-center text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">Peak Focus Hours</div>
+                </div>
             </div>
-            <div className="text-center text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">Peak Focus Hours</div>
         </motion.div>
 
         {/* 5. CHALLENGES (Tall Dark Card - Right) */}
