@@ -62,72 +62,91 @@ const EnergyVennDiagram = ({ physical, mind, social }: { physical: number, mind:
     );
 };
 
-// 2. Smooth Area Chart (Spline)
-const SmoothAreaChart = ({ data, color = '#6366f1', height = 60, showAxes = false }: { data: number[], color?: string, height?: number, showAxes?: boolean }) => {
+// 2. Smooth Area Chart (Spline) - Enhanced
+const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = false }: { data: number[], color?: string, height?: number, showAxes?: boolean }) => {
     if (data.length < 2) return null;
     const max = Math.max(...data, 1);
-    const width = 100;
     
-    // Simple Catmull-Rom or Bezier approximation logic for SVG path
+    // Layout config
+    const viewBoxWidth = 300;
+    const viewBoxHeight = 100;
+    const paddingX = 0;
+    const paddingY = 5;
+    const chartHeight = viewBoxHeight - paddingY * 2;
+    
+    // Points generation
     const points = data.map((val, i) => {
-        const x = (i / (data.length - 1)) * width;
-        const y = height - (val / max) * (height * 0.8) - 5; // padding
+        const x = paddingX + (i / (data.length - 1)) * (viewBoxWidth - paddingX * 2);
+        const y = viewBoxHeight - paddingY - (val / max) * chartHeight;
         return [x, y];
     });
 
+    // Catmull-Rom to Bezier conversion for smooth spline
     const pathData = points.reduce((acc, [x, y], i, arr) => {
         if (i === 0) return `M ${x},${y}`;
         const [prevX, prevY] = arr[i - 1];
-        const cp1x = prevX + (x - prevX) / 2;
+        // Control points
+        const cp1x = prevX + (x - prevX) / 3;
         const cp1y = prevY;
-        const cp2x = prevX + (x - prevX) / 2;
+        const cp2x = prevX + (x - prevX) * 2 / 3;
         const cp2y = y;
         return `${acc} C ${cp1x},${cp1y} ${cp2x},${cp2y} ${x},${y}`;
     }, "");
 
-    const fillPath = `${pathData} L ${width},${height} L 0,${height} Z`;
+    const fillPath = `${pathData} L ${viewBoxWidth - paddingX},${viewBoxHeight} L ${paddingX},${viewBoxHeight} Z`;
 
     return (
-        <div className="w-full h-full relative">
-            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible preserve-3d">
-                <defs>
-                    <linearGradient id={`grad-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={color} stopOpacity="0.2" />
-                        <stop offset="100%" stopColor={color} stopOpacity="0" />
-                    </linearGradient>
-                </defs>
-                
-                {/* Axis Lines if requested */}
+        <div className="w-full h-full relative flex flex-col">
+            {/* Chart Area */}
+            <div className="flex-1 relative w-full h-full">
                 {showAxes && (
-                    <>
-                        <line x1="0" y1={height} x2={width} y2={height} stroke="#e2e8f0" strokeWidth="0.5" className="dark:stroke-slate-700" />
-                        <line x1="0" y1="0" x2="0" y2={height} stroke="#e2e8f0" strokeWidth="0.5" className="dark:stroke-slate-700" />
-                    </>
+                    <div className="absolute top-0 left-0 text-[9px] text-slate-400 font-mono opacity-70">{max.toFixed(1)}</div>
                 )}
+                
+                <svg viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id={`grad-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+                            <stop offset="100%" stopColor={color} stopOpacity="0" />
+                        </linearGradient>
+                    </defs>
+                    
+                    {/* Grid Lines */}
+                    {showAxes && (
+                        <g className="text-slate-200 dark:text-slate-700/50">
+                            <line x1="0" y1={viewBoxHeight} x2={viewBoxWidth} y2={viewBoxHeight} stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
+                            <line x1="0" y1={viewBoxHeight * 0.66} x2={viewBoxWidth} y2={viewBoxHeight * 0.66} stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
+                            <line x1="0" y1={viewBoxHeight * 0.33} x2={viewBoxWidth} y2={viewBoxHeight * 0.33} stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
+                        </g>
+                    )}
 
-                <motion.path 
-                    initial={{ d: `M 0,${height} L ${width},${height} L 0,${height} Z` }}
-                    animate={{ d: fillPath }}
-                    transition={{ duration: 0.8 }}
-                    fill={`url(#grad-${color.replace('#', '')})`} 
-                />
-                <motion.path
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 1 }}
-                    d={pathData}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                />
-            </svg>
+                    <motion.path 
+                        initial={{ d: `M ${paddingX},${viewBoxHeight} L ${viewBoxWidth},${viewBoxHeight} L ${viewBoxWidth},${viewBoxHeight} L ${paddingX},${viewBoxHeight} Z` }}
+                        animate={{ d: fillPath }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        fill={`url(#grad-${color.replace('#', '')})`} 
+                    />
+                    <motion.path
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        d={pathData}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                </svg>
+            </div>
+            
+            {/* X Axis Labels */}
             {showAxes && (
-                <div className="flex justify-between text-[8px] text-slate-300 mt-1 font-mono uppercase w-full absolute top-full left-0">
-                    <span>00:00</span>
-                    <span>12:00</span>
-                    <span>23:59</span>
+                <div className="flex justify-between text-[8px] text-slate-400 mt-2 font-mono uppercase w-full px-1 opacity-70">
+                    <span>03:00</span>
+                    <span>09:00</span>
+                    <span>15:00</span>
+                    <span>21:00</span>
                 </div>
             )}
         </div>
