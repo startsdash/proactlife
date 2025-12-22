@@ -11,6 +11,14 @@ interface Props {
   onNavigate: (module: Module) => void;
 }
 
+// --- HELPER ---
+const getLocalDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 // --- SVG VISUALIZATION COMPONENTS ---
 
 // 1. Energy Venn Diagram (Updated Spheres: Productivity, Growth, Relationships)
@@ -228,23 +236,39 @@ const BarChart = ({ data, labels, colors, color }: { data: number[], labels: str
     );
 };
 
-// 4. Waffle Grid (Heatmap style)
-const WaffleGrid = ({ data }: { data: boolean[] }) => {
-    // Show last 60 days approx (5 rows x 12 cols or similar)
-    const displayData = data.slice(-56); // 8 weeks * 7 days
-    const paddedData = [...Array(56 - displayData.length).fill(false), ...displayData];
-    
+// 4. Weekly Habit Rhythm (Heatmap Style)
+const WeeklyHabitRhythm = ({ data }: { data: { label: string, percent: number, isToday: boolean }[] }) => {
     return (
-        <div className="grid grid-rows-4 grid-flow-col gap-1.5 h-full content-center">
-            {paddedData.map((active, i) => (
-                <motion.div 
-                    key={i}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: i * 0.005 }}
-                    className={`w-3 h-3 md:w-4 md:h-4 rounded-sm ${active ? 'bg-indigo-500' : 'bg-slate-100 dark:bg-slate-800'}`}
-                />
-            ))}
+        <div className="flex items-end justify-between h-full gap-2 w-full px-2">
+            {data.map((day, i) => {
+                // Color Logic: Orange (Flame) theme
+                const intensity = Math.max(0.1, day.percent / 100);
+                const isZero = day.percent === 0;
+                
+                return (
+                    <div key={i} className="flex flex-col items-center justify-end flex-1 h-full gap-2 group cursor-default">
+                        <div className="relative w-full flex-1 flex items-end justify-center bg-slate-50 dark:bg-slate-800/50 rounded-lg overflow-hidden">
+                             <motion.div 
+                                initial={{ height: 0 }}
+                                animate={{ height: `${day.percent}%` }}
+                                transition={{ duration: 0.5, delay: i * 0.05, type: 'spring' }}
+                                className={`w-full rounded-t-sm ${isZero ? 'bg-transparent' : 'bg-gradient-to-t from-orange-400 to-amber-300'}`}
+                                style={{ opacity: isZero ? 0 : 0.6 + intensity * 0.4 }}
+                             />
+                             {/* Tooltip on Hover */}
+                             <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold bg-black text-white px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10">
+                                 {Math.round(day.percent)}%
+                             </div>
+                        </div>
+                        <div className="text-center">
+                            <span className={`text-[9px] uppercase font-bold tracking-wider ${day.isToday ? 'text-orange-500' : 'text-slate-400'}`}>
+                                {day.label}
+                            </span>
+                            {day.isToday && <div className="w-1 h-1 bg-orange-500 rounded-full mx-auto mt-0.5" />}
+                        </div>
+                    </div>
+                );
+            })}
         </div>
     );
 };
@@ -355,6 +379,7 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
     return useMemo(() => {
         const today = new Date();
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+        const todayStr = getLocalDateKey(today);
         
         let productivity = 10, growth = 10, relationships = 10;
         
@@ -431,15 +456,55 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
              notesHistory.push(count);
         }
 
-        // 3. Habit Grid (Last 56 days boolean map)
-        const habitGrid: boolean[] = [];
-        for (let i = 55; i >= 0; i--) {
-            const d = new Date(today);
-            d.setDate(d.getDate() - i);
-            const key = d.toISOString().split('T')[0];
-            // True if ANY habit was done that day
-            const anyDone = habits.some(h => !!h.history[key]);
-            habitGrid.push(anyDone);
+        // 3. Weekly Habit Rhythm (Current Week Heatmap)
+        const getMonday = (d: Date) => {
+            const date = new Date(d);
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(date.setDate(diff));
+        };
+        const monday = getMonday(new Date(today));
+        const weeklyHabitStats = [];
+        
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            const dStr = getLocalDateKey(d);
+            const dayIndex = d.getDay(); // 0-6
+
+            let potential = 0;
+            let completedValue = 0;
+
+            habits.forEach(h => {
+                // Check if active for this day
+                let applies = false;
+                if (h.frequency === 'daily') applies = true;
+                else if (h.frequency === 'specific_days') applies = h.targetDays?.includes(dayIndex) ?? false;
+                else if (h.frequency === 'times_per_week') applies = true;
+                else if (h.frequency === 'times_per_day') applies = true;
+
+                // Don't count if created after this date
+                if (h.createdAt > d.getTime() + 86400000) applies = false;
+
+                if (applies) {
+                    potential++;
+                    const val = h.history[dStr];
+                    if (val) {
+                        if (typeof val === 'boolean') {
+                            completedValue += 1;
+                        } else if (typeof val === 'number') {
+                            const target = h.targetCount || 1;
+                            completedValue += Math.min(1, val / target);
+                        }
+                    }
+                }
+            });
+
+            weeklyHabitStats.push({ 
+                label: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'][i], 
+                percent: potential > 0 ? (completedValue / potential) * 100 : 0,
+                isToday: dStr === todayStr
+            });
         }
 
         // 4. Activity Chronotype (Radar Chart Data)
@@ -473,14 +538,14 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         // Scale down for bar chart visualization if needed, or use raw scores relative to each other
         const balanceData = [productivity, growth, relationships];
 
-        return { vennData, energyLabel, notesHistory, habitGrid, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData };
+        return { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData };
     }, [notes, tasks, habits, journal]);
 };
 
 // --- MAIN DASHBOARD COMPONENT ---
 
 const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate }) => {
-  const { vennData, energyLabel, notesHistory, habitGrid, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData } = useDashboardStats(notes, tasks, habits, journal);
+  const { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData } = useDashboardStats(notes, tasks, habits, journal);
 
   // Active Challenges
   const activeChallenges = tasks.filter(t => t.activeChallenge && !t.isChallengeCompleted).slice(0, 3);
@@ -520,11 +585,11 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-2">
                     <Flame size={16} className="text-orange-500" />
-                    <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Ритм привычек</span>
+                    <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Ритм привычек (Неделя)</span>
                 </div>
             </div>
-            <div className="flex-1 w-full flex items-center justify-center">
-                <WaffleGrid data={habitGrid} />
+            <div className="flex-1 w-full h-32 flex items-center justify-center">
+                <WeeklyHabitRhythm data={weeklyHabitStats} />
             </div>
         </motion.div>
 
