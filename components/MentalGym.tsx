@@ -61,7 +61,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col items-center justify-center w-full relative my-auto">
+      <div className="flex-1 flex flex-col items-center justify-center w-full relative my-auto pb-6 md:pb-16">
         {flashcards.length > 0 && flashcards[currentCardIndex] ? (
             <div className="w-full max-w-md md:max-w-sm flex flex-col gap-6 md:gap-4">
                 
