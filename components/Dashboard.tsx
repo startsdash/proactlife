@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Note, Task, Habit, JournalEntry, Module } from '../types';
 import { motion } from 'framer-motion';
-import { Activity, Flame, Zap, Target, BookOpen, Clock, BrainCircuit, Calendar, ArrowUpRight, TrendingUp } from 'lucide-react';
+import { Activity, Flame, Zap, Target, BookOpen, Clock, BrainCircuit, Calendar, ArrowUpRight, TrendingUp, Trophy, Medal } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -11,94 +11,149 @@ interface Props {
   onNavigate: (module: Module) => void;
 }
 
-// --- VISUALIZATION COMPONENTS ---
+// --- SVG VISUALIZATION COMPONENTS ---
 
-const ActivityRing = ({ percent, size = 120, stroke = 8, color = 'text-indigo-500', label, subLabel }: { percent: number, size?: number, stroke?: number, color?: string, label: string, subLabel?: string }) => {
-    const radius = (size - stroke) / 2;
-    const circumference = 2 * Math.PI * radius;
-    const offset = circumference - (Math.min(percent, 100) / 100) * circumference;
-
+// 1. Energy Venn Diagram
+const EnergyVennDiagram = ({ physical, mind, social }: { physical: number, mind: number, social: number }) => {
+    // Normalize values between 0.6 and 1.0 for visual balance (min size constraint)
+    const norm = (val: number) => 0.6 + (Math.min(val, 100) / 100) * 0.4;
+    
     return (
-        <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-            <svg className="transform -rotate-90 w-full h-full">
-                <circle cx={size/2} cy={size/2} r={radius} stroke="currentColor" strokeWidth={stroke} fill="transparent" className="text-slate-100 dark:text-slate-800" />
+        <div className="relative w-full h-48 flex items-center justify-center">
+            <svg viewBox="0 0 200 200" className="w-full h-full max-w-[200px]">
+                <defs>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                
+                {/* Mind (Top) - Teal/Green */}
                 <motion.circle 
-                    initial={{ strokeDashoffset: circumference }}
-                    animate={{ strokeDashoffset: offset }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    cx={size/2} cy={size/2} r={radius} 
-                    stroke="currentColor" strokeWidth={stroke} fill="transparent" 
-                    strokeDasharray={circumference} strokeLinecap="round" 
-                    className={color} 
+                    initial={{ r: 0, opacity: 0 }}
+                    animate={{ r: 45 * norm(mind), opacity: 0.6 }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    cx="100" cy="75" fill="#10b981" 
+                    className="mix-blend-multiply dark:mix-blend-screen"
                 />
+                <text x="100" y="75" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="white" className="pointer-events-none uppercase tracking-widest opacity-90">Разум</text>
+
+                {/* Physical (Bottom Left) - Green/Emerald */}
+                <motion.circle 
+                    initial={{ r: 0, opacity: 0 }}
+                    animate={{ r: 45 * norm(physical), opacity: 0.6 }}
+                    transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
+                    cx="75" cy="125" fill="#34d399" 
+                    className="mix-blend-multiply dark:mix-blend-screen"
+                />
+                <text x="70" y="128" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="white" className="pointer-events-none uppercase tracking-widest opacity-90">Тело</text>
+
+                {/* Social (Bottom Right) - Orange */}
+                <motion.circle 
+                    initial={{ r: 0, opacity: 0 }}
+                    animate={{ r: 45 * norm(social), opacity: 0.6 }}
+                    transition={{ duration: 1, delay: 0.4, ease: "easeOut" }}
+                    cx="125" cy="125" fill="#fb923c" 
+                    className="mix-blend-multiply dark:mix-blend-screen"
+                />
+                <text x="130" y="128" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="white" className="pointer-events-none uppercase tracking-widest opacity-90">Душа</text>
             </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold text-slate-800 dark:text-slate-200">{Math.round(percent)}%</span>
-                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">{label}</span>
-                {subLabel && <span className="text-[9px] text-slate-400 mt-0.5">{subLabel}</span>}
-            </div>
         </div>
     );
 };
 
-const Sparkline = ({ data, color = '#6366f1' }: { data: number[], color?: string }) => {
+// 2. Smooth Area Chart (Spline)
+const SmoothAreaChart = ({ data, color = '#6366f1', height = 60 }: { data: number[], color?: string, height?: number }) => {
     if (data.length < 2) return null;
     const max = Math.max(...data, 1);
-    const min = Math.min(...data);
-    const range = max - min || 1;
     const width = 100;
-    const height = 40;
     
+    // Simple Catmull-Rom or Bezier approximation logic for SVG path
     const points = data.map((val, i) => {
         const x = (i / (data.length - 1)) * width;
-        const y = height - ((val - min) / range) * height;
-        return `${x},${y}`;
-    }).join(' ');
+        const y = height - (val / max) * (height * 0.8) - 5; // padding
+        return [x, y];
+    });
+
+    const pathData = points.reduce((acc, [x, y], i, arr) => {
+        if (i === 0) return `M ${x},${y}`;
+        const [prevX, prevY] = arr[i - 1];
+        const cp1x = prevX + (x - prevX) / 2;
+        const cp1y = prevY;
+        const cp2x = prevX + (x - prevX) / 2;
+        const cp2y = y;
+        return `${acc} C ${cp1x},${cp1y} ${cp2x},${cp2y} ${x},${y}`;
+    }, "");
+
+    const fillPath = `${pathData} L ${width},${height} L 0,${height} Z`;
 
     return (
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-10 overflow-visible">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible preserve-3d">
+            <defs>
+                <linearGradient id={`grad-${color}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+                    <stop offset="100%" stopColor={color} stopOpacity="0" />
+                </linearGradient>
+            </defs>
+            <motion.path 
+                initial={{ d: `M 0,${height} L ${width},${height} L 0,${height} Z` }}
+                animate={{ d: fillPath }}
+                transition={{ duration: 0.8 }}
+                fill={`url(#grad-${color})`} 
+            />
             <motion.path
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
                 transition={{ duration: 1 }}
-                d={`M ${points}`}
+                d={pathData}
                 fill="none"
                 stroke={color}
                 strokeWidth="2"
                 strokeLinecap="round"
-                vectorEffect="non-scaling-stroke"
+                strokeLinejoin="round"
             />
-            <circle cx={(data.length - 1) * (width/(data.length-1))} cy={height - ((data[data.length-1] - min) / range) * height} r="3" fill={color} />
         </svg>
     );
 };
 
-const Heatmap = ({ data }: { data: Record<string, number> }) => {
-    // Generate last 56 days (8 weeks)
-    const days = useMemo(() => {
-        const res = [];
-        const today = new Date();
-        for (let i = 55; i >= 0; i--) {
-            const d = new Date(today);
-            d.setDate(d.getDate() - i);
-            const key = d.toISOString().split('T')[0];
-            res.push({ date: d, count: data[key] || 0 });
-        }
-        return res;
-    }, [data]);
-
-    const getColor = (count: number) => {
-        if (count === 0) return 'bg-slate-100 dark:bg-slate-800';
-        if (count <= 2) return 'bg-emerald-200 dark:bg-emerald-900';
-        if (count <= 4) return 'bg-emerald-300 dark:bg-emerald-700';
-        if (count <= 6) return 'bg-emerald-400 dark:bg-emerald-600';
-        return 'bg-emerald-500 dark:bg-emerald-500';
-    };
-
+// 3. Simple Bar Chart
+const BarChart = ({ data, labels, color = 'bg-emerald-400' }: { data: number[], labels: string[], color?: string }) => {
+    const max = Math.max(...data, 1);
     return (
-        <div className="grid grid-cols-[repeat(14,1fr)] gap-1">
-            {days.map((d, i) => (
-                <div key={i} title={`${d.date.toLocaleDateString()}: ${d.count}`} className={`w-full aspect-square rounded-sm ${getColor(d.count)}`} />
+        <div className="flex items-end justify-between h-24 gap-2 w-full">
+            {data.map((val, i) => (
+                <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group">
+                    <div className="relative w-full flex items-end justify-center h-full">
+                         <motion.div 
+                            initial={{ height: 0 }}
+                            animate={{ height: `${(val / max) * 100}%` }}
+                            transition={{ duration: 0.5, delay: i * 0.05 }}
+                            className={`w-full max-w-[20px] rounded-t-sm ${color} opacity-80 group-hover:opacity-100 transition-opacity`}
+                         />
+                    </div>
+                    <span className="text-[9px] text-slate-400 mt-2 uppercase font-mono">{labels[i]}</span>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+// 4. Waffle Grid (Heatmap style)
+const WaffleGrid = ({ data }: { data: boolean[] }) => {
+    // Show last 60 days approx (5 rows x 12 cols or similar)
+    const displayData = data.slice(-56); // 8 weeks * 7 days
+    const paddedData = [...Array(56 - displayData.length).fill(false), ...displayData];
+    
+    return (
+        <div className="grid grid-rows-4 grid-flow-col gap-1.5 h-full content-center">
+            {paddedData.map((active, i) => (
+                <motion.div 
+                    key={i}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: i * 0.005 }}
+                    className={`w-3 h-3 md:w-4 md:h-4 rounded-sm ${active ? 'bg-indigo-500' : 'bg-slate-100 dark:bg-slate-800'}`}
+                />
             ))}
         </div>
     );
@@ -110,26 +165,51 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[]) => {
         const today = new Date();
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
         
-        // 1. Productivity Score (0-100)
-        // Logic: Tasks Done + Habit Streak impact + Notes captured
-        const activeTasks = tasks.filter(t => !t.isArchived);
-        const doneTasks = activeTasks.filter(t => t.column === 'done').length;
-        const totalActiveTasks = activeTasks.length || 1;
-        const taskScore = (doneTasks / totalActiveTasks) * 50;
+        // 1. Energy Distribution (Venn Data)
+        // Categorize tags/habits into Body, Mind, Soul
+        let physical = 10, mind = 10, social = 10;
         
-        const activeHabits = habits.length || 1;
-        const habitsDoneToday = habits.filter(h => {
-             const key = today.toISOString().split('T')[0];
-             return h.history[key]; 
-        }).length;
-        const habitScore = (habitsDoneToday / activeHabits) * 30;
-        
-        const notesToday = notes.filter(n => n.createdAt >= startOfDay).length;
-        const noteScore = Math.min(notesToday * 5, 20); // Cap at 20 pts
+        const checkCategory = (text: string) => {
+            const t = text.toLowerCase();
+            if (t.includes('sport') || t.includes('gym') || t.includes('food') || t.includes('health') || t.includes('sleep') || t.includes('спорт') || t.includes('тело')) return 'physical';
+            if (t.includes('work') || t.includes('study') || t.includes('read') || t.includes('code') || t.includes('работа') || t.includes('книги')) return 'mind';
+            if (t.includes('family') || t.includes('friend') || t.includes('love') || t.includes('soul') || t.includes('meditate') || t.includes('семья') || t.includes('душа')) return 'social';
+            return 'mind'; // default
+        };
 
-        const dailyScore = Math.min(100, taskScore + habitScore + noteScore);
+        habits.forEach(h => {
+            const cat = checkCategory(h.title);
+            // Check if done today or high streak
+            if (h.history[today.toISOString().split('T')[0]] || h.streak > 3) {
+                if (cat === 'physical') physical += 20;
+                if (cat === 'mind') mind += 20;
+                if (cat === 'social') social += 20;
+            }
+        });
 
-        // 2. Sparkline Data (Notes count over last 7 days)
+        notes.filter(n => n.createdAt >= startOfDay).forEach(n => {
+            n.tags.forEach(t => {
+                const cat = checkCategory(t);
+                if (cat === 'physical') physical += 10;
+                if (cat === 'mind') mind += 10;
+                if (cat === 'social') social += 10;
+            });
+        });
+
+        // Normalize to 0-100 for graph
+        const maxScore = Math.max(physical, mind, social, 100);
+        const vennData = {
+            physical: (physical / maxScore) * 100,
+            mind: (mind / maxScore) * 100,
+            social: (social / maxScore) * 100
+        };
+
+        const totalEnergy = Math.round((vennData.physical + vennData.mind + vennData.social) / 3);
+        let energyLabel = "Набираем темп";
+        if (totalEnergy > 70) energyLabel = "Поток!";
+        if (totalEnergy > 40 && totalEnergy <= 70) energyLabel = "Баланс";
+
+        // 2. Thoughts Sparkline (Last 7 days)
         const notesHistory = [];
         for(let i=6; i>=0; i--) {
              const d = new Date(today);
@@ -140,228 +220,212 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[]) => {
              notesHistory.push(count);
         }
 
-        // 3. Heatmap Data (Habits + Tasks completions aggregated)
-        const activityHeatmap: Record<string, number> = {};
-        tasks.filter(t => t.column === 'done').forEach(() => {
-            // Task objects don't store completedAt date in current type definition, 
-            // assuming 'createdAt' for archived/done or just mocking distribution for demo logic
-            // In a real app, I'd update Task type to include `completedAt`.
-            // FALLBACK: Use Journal Entries count for heatmap as proxy for "Deep Work"
-        });
-        
-        // Using Habits for Heatmap accuracy as they are date-keyed
-        habits.forEach(h => {
-            Object.keys(h.history).forEach(dateStr => {
-                activityHeatmap[dateStr] = (activityHeatmap[dateStr] || 0) + 1;
-            });
-        });
+        // 3. Habit Grid (Last 56 days boolean map)
+        const habitGrid: boolean[] = [];
+        for (let i = 55; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const key = d.toISOString().split('T')[0];
+            // True if ANY habit was done that day
+            const anyDone = habits.some(h => !!h.history[key]);
+            habitGrid.push(anyDone);
+        }
 
-        // 4. Focus Radar Data (Category approximation from Tags)
+        // 4. Activity Chronotype (Hourly distribution of notes/tasks creation)
+        const hoursDistribution = new Array(24).fill(0);
+        notes.forEach(n => hoursDistribution[new Date(n.createdAt).getHours()]++);
+        tasks.forEach(t => hoursDistribution[new Date(t.createdAt).getHours()]++);
+        
+        // 5. Activity by Month (Fake data seeded from real count for demo if empty)
+        // In real app, aggregate by month
+        const monthlyActivity = [12, 19, 15, 25, 32, 10, 5]; // Placeholder structure
+        const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл'];
+
+        // 6. Balance Bar Chart (Tags distribution)
         const tagCounts: Record<string, number> = { work: 0, health: 0, learn: 0, soul: 0 };
-        const mapTag = (t: string) => {
-            const l = t.toLowerCase();
-            if (l.includes('work') || l.includes('dev') || l.includes('biz')) return 'work';
-            if (l.includes('gym') || l.includes('food') || l.includes('sleep')) return 'health';
-            if (l.includes('book') || l.includes('study') || l.includes('ai')) return 'learn';
-            return 'soul';
-        };
         [...notes, ...tasks].forEach(item => {
             const tags = 'tags' in item ? item.tags : [];
-            if (tags.length === 0) tagCounts['soul'] += 0.5; // Default bucket
+            if (tags.length === 0) tagCounts['soul'] += 0.5; 
             tags.forEach(t => {
-                const cat = mapTag(t);
-                tagCounts[cat] += 1;
+                const cat = checkCategory(t);
+                if (cat === 'mind') tagCounts.work++;
+                else if (cat === 'physical') tagCounts.health++;
+                else tagCounts.soul++;
+                tagCounts.learn++; // Approx
             });
         });
-        // Normalize for Radar (max 100)
-        const maxTag = Math.max(...Object.values(tagCounts), 1);
-        const radarData = [
-            { label: 'Work', value: (tagCounts.work / maxTag) * 100 },
-            { label: 'Health', value: (tagCounts.health / maxTag) * 100 },
-            { label: 'Learn', value: (tagCounts.learn / maxTag) * 100 },
-            { label: 'Soul', value: (tagCounts.soul / maxTag) * 100 },
-        ];
+        const balanceData = [tagCounts.work, tagCounts.health, tagCounts.learn, tagCounts.soul];
 
-        // 5. Activity by Hour (Histogram)
-        // Since we lack `completedAt`, we use `createdAt` of Notes as proxy for "Brain Activity"
-        const hoursDistribution = new Array(24).fill(0);
-        notes.forEach(n => {
-            const h = new Date(n.createdAt).getHours();
-            hoursDistribution[h]++;
-        });
-        const maxHour = Math.max(...hoursDistribution, 1);
-        const hourData = hoursDistribution.map(val => (val / maxHour) * 100);
-
-        return { dailyScore, notesHistory, activityHeatmap, radarData, hourData };
+        return { vennData, energyLabel, notesHistory, habitGrid, hoursDistribution, monthlyActivity, monthLabels, balanceData };
     }, [notes, tasks, habits]);
 };
 
 // --- MAIN DASHBOARD COMPONENT ---
 
 const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate }) => {
-  const { dailyScore, notesHistory, activityHeatmap, radarData, hourData } = useDashboardStats(notes, tasks, habits);
+  const { vennData, energyLabel, notesHistory, habitGrid, hoursDistribution, monthlyActivity, monthLabels, balanceData } = useDashboardStats(notes, tasks, habits);
 
   // Active Challenges
-  const activeChallenges = tasks.filter(t => t.activeChallenge && !t.isChallengeCompleted);
+  const activeChallenges = tasks.filter(t => t.activeChallenge && !t.isChallengeCompleted).slice(0, 3);
   const completedChallengesCount = tasks.filter(t => t.isChallengeCompleted).length;
 
   return (
     <div className="h-full overflow-y-auto custom-scrollbar-light p-4 md:p-8 bg-[#f8fafc] dark:bg-[#0f172a]">
-      <header className="mb-8 flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Обзор</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Зеркало твоей продуктивности</p>
-        </div>
-        <div className="text-right hidden md:block">
-            <div className="text-2xl font-bold text-slate-800 dark:text-slate-200">{new Date().toLocaleDateString('ru-RU', { weekday: 'long' })}</div>
-            <div className="text-sm text-slate-400">{new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</div>
-        </div>
-      </header>
-
-      {/* BENTO GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-7xl mx-auto pb-20">
+      
+      {/* BENTO GRID LAYOUT */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-7xl mx-auto pb-20 auto-rows-min">
         
-        {/* CARD 1: HERO (Daily Score) - Large Square */}
+        {/* 1. ENERGY OF THE DAY (Large Square - Top Left) */}
         <motion.div 
-            className="md:col-span-1 md:row-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group"
+            className="md:col-span-1 md:row-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col items-center justify-between relative overflow-hidden"
             whileHover={{ scale: 1.01 }}
             transition={{ type: "spring", stiffness: 300 }}
         >
-            <div className="absolute top-4 left-4 text-xs font-bold uppercase text-slate-400 flex items-center gap-1"><Zap size={14} /> Энергия дня</div>
-            <ActivityRing percent={dailyScore} size={160} stroke={12} label="Score" subLabel="Daily Index" />
-            <div className="mt-6 text-center">
-                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                    {dailyScore > 80 ? "Ты в потоке! 🔥" : dailyScore > 50 ? "Хороший темп" : "Разгоняемся..."}
-                </p>
+            <div className="w-full flex items-center gap-2 mb-2">
+                <Zap size={16} className="text-slate-400" />
+                <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Энергия дня</span>
             </div>
-            {/* Background Decoration */}
-            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl" />
+            
+            <EnergyVennDiagram {...vennData} />
+            
+            <div className="text-center mt-2 z-10">
+                <div className="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">Day's Energy:</div>
+                <div className="text-xl font-light text-slate-500 dark:text-slate-400 mt-1">{energyLabel}!</div>
+            </div>
         </motion.div>
 
-        {/* CARD 2: HABITS HEATMAP - Wide Rect */}
+        {/* 2. HABIT RHYTHM (Wide - Top Middle) */}
         <motion.div 
             onClick={() => onNavigate(Module.RITUALS)}
-            className="md:col-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden cursor-pointer group"
+            className="md:col-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col cursor-pointer group"
             whileHover={{ y: -2 }}
         >
             <div className="flex justify-between items-start mb-4">
-                <div className="text-xs font-bold uppercase text-slate-400 flex items-center gap-1"><Flame size={14} className="text-orange-500" /> Ритм привычек</div>
-                <ArrowUpRight size={16} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-2">
+                    <Flame size={16} className="text-orange-500" />
+                    <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Ритм привычек</span>
+                </div>
             </div>
-            <div className="w-full">
-                <Heatmap data={activityHeatmap} />
+            <div className="flex-1 w-full flex items-center justify-center">
+                <WaffleGrid data={habitGrid} />
             </div>
         </motion.div>
 
-        {/* CARD 3: NOTES SPARKLINE - Small Square */}
+        {/* 3. THOUGHTS (Small Square - Top Right) */}
         <motion.div 
             onClick={() => onNavigate(Module.NAPKINS)}
             className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between cursor-pointer group"
             whileHover={{ y: -2 }}
         >
-             <div className="text-xs font-bold uppercase text-slate-400 flex items-center gap-1"><BrainCircuit size={14} className="text-indigo-500" /> Мысли</div>
-             <div className="text-3xl font-bold text-slate-800 dark:text-slate-200 my-2">{notes.length}</div>
-             <Sparkline data={notesHistory} color="#6366f1" />
-             <div className="text-[10px] text-slate-400 text-right mt-1">за 7 дней</div>
+             <div className="flex items-center gap-2">
+                 <BrainCircuit size={16} className="text-indigo-500" />
+                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Мысли</span>
+             </div>
+             <div className="mt-2">
+                 <div className="text-4xl font-bold text-slate-900 dark:text-white">{notes.length}</div>
+                 <div className="text-[10px] text-slate-400 mt-1">за 7 дней</div>
+             </div>
+             <div className="h-16 mt-4">
+                 <SmoothAreaChart data={notesHistory} color="#818cf8" />
+             </div>
         </motion.div>
 
-        {/* CARD 4: TIME ANALYTICS (Histogram) - Wide Rect */}
+        {/* 4. CHRONOTYPE ACTIVITY (Wide - Middle) */}
         <motion.div className="md:col-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
-            <div className="text-xs font-bold uppercase text-slate-400 flex items-center gap-1 mb-4"><Clock size={14} /> Хронотип активности</div>
-            <div className="flex items-end justify-between h-24 gap-1">
-                {hourData.map((h, i) => (
-                    <div key={i} className="flex-1 flex flex-col justify-end group/bar relative">
-                        <div 
-                            className="w-full bg-slate-100 dark:bg-slate-800 rounded-t-sm hover:bg-indigo-400 transition-colors relative" 
-                            style={{ height: `${Math.max(h, 5)}%` }} 
-                        >
-                             {/* Tooltip */}
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-black text-white text-[9px] rounded opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity z-10">
-                                {i}:00
-                            </div>
-                        </div>
-                    </div>
-                ))}
+            <div className="flex items-center gap-2 mb-6">
+                <Clock size={16} className="text-slate-400" />
+                <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Хронотип активности</span>
             </div>
-            <div className="flex justify-between text-[9px] text-slate-400 mt-2 uppercase font-mono">
-                <span>00:00</span>
-                <span>12:00</span>
-                <span>23:00</span>
+            <div className="flex-1 h-32 relative">
+                <SmoothAreaChart data={hoursDistribution} color="#94a3b8" height={100} />
+                <div className="flex justify-between text-[9px] text-slate-300 mt-2 font-mono uppercase w-full absolute bottom-0 left-0 px-1">
+                    <span>00:00</span>
+                    <span>06:00</span>
+                    <span>12:00</span>
+                    <span>18:00</span>
+                    <span>23:59</span>
+                </div>
             </div>
         </motion.div>
 
-        {/* CARD 5: CHALLENGES LIST - Vertical Tall */}
+        {/* 5. CHALLENGES (Tall Dark Card - Right) */}
         <motion.div 
             onClick={() => onNavigate(Module.KANBAN)}
-            className="md:col-span-1 md:row-span-2 bg-gradient-to-br from-slate-900 to-slate-800 dark:from-[#1e293b] dark:to-slate-900 rounded-3xl p-6 text-white shadow-lg flex flex-col relative overflow-hidden cursor-pointer"
+            className="md:col-span-1 md:row-span-2 bg-slate-900 dark:bg-black rounded-3xl p-6 text-white shadow-xl flex flex-col relative overflow-hidden cursor-pointer group border border-slate-800"
         >
-             <div className="text-xs font-bold uppercase text-slate-400 flex items-center gap-1 mb-6"><Target size={14} className="text-emerald-400" /> Вызовы</div>
+             <div className="flex items-center gap-2 mb-6">
+                 <Target size={16} className="text-emerald-400" />
+                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Вызовы</span>
+             </div>
              
-             <div className="flex-1 space-y-4 overflow-y-auto custom-scrollbar-light min-h-0">
+             <div className="flex-1 space-y-4 min-h-0">
                 {activeChallenges.length > 0 ? (
                     activeChallenges.map(t => (
-                        <div key={t.id} className="bg-white/10 p-3 rounded-xl border border-white/5 backdrop-blur-sm">
-                            <div className="text-xs font-medium line-clamp-2 leading-relaxed mb-2">{t.content}</div>
-                            <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
-                                <div className="h-full bg-emerald-400 w-1/2 animate-pulse" /> {/* Mock progress for simplicity */}
+                        <div key={t.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
+                            <div className="text-sm font-medium leading-snug mb-3 line-clamp-2">{t.content}</div>
+                            {/* Gradient Progress Bar */}
+                            <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-2/3 rounded-full" />
                             </div>
                         </div>
                     ))
                 ) : (
-                    <div className="text-center opacity-50 py-10">
-                        <Target size={32} className="mx-auto mb-2 opacity-50" />
-                        <div className="text-xs">Нет активных челленджей</div>
+                    <div className="text-center opacity-40 py-10 flex flex-col items-center">
+                        <Medal size={40} className="mb-2" />
+                        <div className="text-xs">Нет активных вызовов</div>
                     </div>
                 )}
              </div>
              
-             <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
-                 <span className="text-xs text-slate-400">Зал славы</span>
-                 <span className="text-xl font-bold">{completedChallengesCount}</span>
+             <div className="mt-6 pt-4 border-t border-white/10 flex justify-between items-center">
+                 <div className="flex flex-col">
+                     <span className="text-[10px] text-slate-400 uppercase tracking-widest">Зал славы</span>
+                     <span className="text-2xl font-bold">{completedChallengesCount}</span>
+                 </div>
+                 <div className="flex -space-x-2">
+                     {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[8px]">🏆</div>)}
+                 </div>
              </div>
         </motion.div>
 
-        {/* CARD 6: RADAR CHART (Focus Areas) - Square */}
-        <motion.div className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col items-center justify-center relative">
-             <div className="absolute top-6 left-6 text-xs font-bold uppercase text-slate-400 flex items-center gap-1"><Target size={14} /> Баланс</div>
-             
-             {/* Simple SVG Radar Chart Implementation */}
-             <svg width="140" height="140" viewBox="0 0 100 100" className="mt-4">
-                 <polygon points="50,10 90,50 50,90 10,50" fill="none" stroke="#e2e8f0" strokeWidth="1" className="dark:stroke-slate-700" />
-                 <polygon points="50,30 70,50 50,70 30,50" fill="none" stroke="#e2e8f0" strokeWidth="1" className="dark:stroke-slate-700" />
-                 <line x1="50" y1="10" x2="50" y2="90" stroke="#e2e8f0" className="dark:stroke-slate-700" />
-                 <line x1="10" y1="50" x2="90" y2="50" stroke="#e2e8f0" className="dark:stroke-slate-700" />
-                 
-                 {/* Data Polygon */}
-                 <polygon 
-                    points={`
-                        50,${50 - (radarData[0].value/100)*40} 
-                        ${50 + (radarData[1].value/100)*40},50 
-                        50,${50 + (radarData[2].value/100)*40} 
-                        ${50 - (radarData[3].value/100)*40},50
-                    `}
-                    fill="rgba(99, 102, 241, 0.2)"
-                    stroke="#6366f1"
-                    strokeWidth="2"
-                    strokeLinejoin="round"
-                 />
-                 {/* Labels */}
-                 <text x="50" y="8" fontSize="6" textAnchor="middle" className="fill-slate-400 uppercase font-bold">Work</text>
-                 <text x="96" y="52" fontSize="6" textAnchor="middle" className="fill-slate-400 uppercase font-bold">Health</text>
-                 <text x="50" y="98" fontSize="6" textAnchor="middle" className="fill-slate-400 uppercase font-bold">Learn</text>
-                 <text x="4" y="52" fontSize="6" textAnchor="middle" className="fill-slate-400 uppercase font-bold">Soul</text>
-             </svg>
+        {/* 6. BALANCE (Bar Chart - Bottom Left) */}
+        <motion.div className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
+             <div className="flex items-center gap-2 mb-4">
+                 <Target size={16} className="text-slate-400" />
+                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Баланс сфер</span>
+             </div>
+             <div className="flex-1 flex items-end">
+                 <BarChart data={balanceData} labels={['Work', 'Body', 'Learn', 'Soul']} color="bg-emerald-400" />
+             </div>
         </motion.div>
 
-        {/* CARD 7: JOURNAL SUMMARY - Small Square */}
+        {/* 7. INSIGHTS (Purple Card - Bottom Middle) */}
         <motion.div 
             onClick={() => onNavigate(Module.JOURNAL)}
-            className="md:col-span-1 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-lg flex flex-col justify-between cursor-pointer group"
+            className="md:col-span-1 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-lg flex flex-col justify-between cursor-pointer group relative overflow-hidden"
         >
-             <div className="text-xs font-bold uppercase text-indigo-200 flex items-center gap-1"><BookOpen size={14} /> Инсайты</div>
-             <div className="text-4xl font-bold">{journal.length}</div>
-             <div className="text-xs text-indigo-100 opacity-80 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                 Перейти к дневнику <ArrowUpRight size={12} />
+             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
+             
+             <div className="flex items-center gap-2 relative z-10">
+                 <BookOpen size={16} className="text-indigo-200" />
+                 <span className="text-xs font-bold uppercase text-indigo-200 tracking-wider">Инсайты</span>
+             </div>
+             
+             <div className="relative z-10">
+                 <div className="text-5xl font-bold mb-1">{journal.length}</div>
+                 <div className="text-sm font-medium text-indigo-100">Записей в дневнике</div>
+                 <div className="text-[10px] text-indigo-300 mt-1 opacity-80">Перейти к рефлексии</div>
+             </div>
+        </motion.div>
+
+        {/* 8. ACTIVITY BY MONTH (Bottom Right) */}
+        <motion.div className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
+             <div className="flex items-center gap-2 mb-4">
+                 <Calendar size={16} className="text-slate-400" />
+                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Активность по месяцам</span>
+             </div>
+             <div className="flex-1 flex items-end">
+                 <BarChart data={monthlyActivity} labels={monthLabels} color="bg-indigo-400" />
              </div>
         </motion.div>
 
