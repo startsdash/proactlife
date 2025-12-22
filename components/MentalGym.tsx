@@ -63,7 +63,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
 
       <div className="flex-1 flex flex-col items-center justify-center w-full relative my-auto">
         {flashcards.length > 0 && flashcards[currentCardIndex] ? (
-            <div className="w-full max-w-md flex flex-col gap-6">
+            <div className="w-full max-w-md md:max-w-sm flex flex-col gap-6 md:gap-4">
                 
                 {/* CARD CONTAINER */}
                 <div 
@@ -81,7 +81,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                     <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
                         
                         {/* FRONT SIDE (A) */}
-                        <div className="absolute w-full h-full backface-hidden bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 shadow-xl rounded-3xl p-6 md:p-10 flex flex-col items-center text-center">
+                        <div className="absolute w-full h-full backface-hidden bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 shadow-xl rounded-3xl p-6 md:p-8 flex flex-col items-center text-center">
                             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                                 <BrainCircuit size={14} /> Исходная мысль
                             </div>
@@ -98,7 +98,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                         </div>
 
                         {/* BACK SIDE (B) */}
-                        <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-indigo-600 dark:bg-indigo-700 shadow-xl rounded-3xl p-6 md:p-10 flex flex-col items-center text-center text-white">
+                        <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-indigo-600 dark:bg-indigo-700 shadow-xl rounded-3xl p-6 md:p-8 flex flex-col items-center text-center text-white">
                             <div className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-6 flex items-center gap-2">
                                 <Lightbulb size={14} /> Формируемый навык
                             </div>
