@@ -338,25 +338,26 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         let productivity = 10, growth = 10, relationships = 10;
         
         // Helper to categorize text context
-        const checkCategory = (text: string): 'productivity' | 'growth' | 'relationships' | 'neutral' => {
+        // defaultCategory is used if no regex match is found
+        const checkCategory = (text: string, defaultCategory: 'productivity' | 'growth' | 'relationships'): 'productivity' | 'growth' | 'relationships' => {
             const t = text.toLowerCase();
             
-            // Productivity Keywords
-            if (t.match(/work|code|job|bussiness|money|finance|project|task|deadline|career|работа|код|бизнес|деньги|финансы|проект|задача|карьера|дело|план|цель/)) return 'productivity';
+            // Productivity Keywords (Expanded)
+            if (t.match(/work|code|job|bussiness|money|finance|project|task|deadline|career|to-do|todo|buy|sell|make|build|работа|код|бизнес|деньги|финансы|проект|задача|карьера|дело|план|цель|купить|продать|сделать|построить|спринт|список|начал|закончил/)) return 'productivity';
             
-            // Growth Keywords
-            if (t.match(/health|gym|sport|run|sleep|meditate|read|book|learn|skill|art|create|hobby|self|grow|здоровье|спорт|бег|сон|медитация|книг|учеба|навык|творчество|хобби|рост|развитие|английский|язык/)) return 'growth';
+            // Growth Keywords (Expanded)
+            if (t.match(/health|gym|sport|run|sleep|meditate|read|book|learn|skill|art|create|hobby|self|grow|habit|ritual|journal|reflection|здоровье|спорт|бег|сон|медитация|книг|учеба|навык|творчество|хобби|рост|развитие|английский|язык|привычка|ритуал|дневник|мысли|инсайт|трекер|анализ|сегодня|день/)) return 'growth';
             
-            // Relationships Keywords
-            if (t.match(/family|friend|love|date|social|party|meet|people|talk|help|gift|child|kids|wife|husband|семья|друзья|любовь|свидание|общение|встреча|люди|разговор|помощь|дети|жена|муж/)) return 'relationships';
+            // Relationships Keywords (Expanded)
+            if (t.match(/family|friend|love|date|social|party|meet|people|talk|help|gift|child|kids|wife|husband|mom|dad|parent|colleague|team|семья|друзья|любовь|свидание|общение|встреча|люди|разговор|помощь|дети|жена|муж|мама|папа|родители|коллег|команда/)) return 'relationships';
             
-            return 'neutral';
+            return defaultCategory;
         };
 
         // Scan Habits (History Today or Streak)
         habits.forEach(h => {
-            const cat = checkCategory(h.title);
-            if (cat === 'neutral') return; // Skip if unclear
+            // Habits default to Growth if ambiguous
+            const cat = checkCategory(h.title, 'growth');
             
             const isDoneToday = h.history[today.toISOString().split('T')[0]];
             const isActiveStreak = h.streak > 2;
@@ -374,25 +375,24 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
             if (!isRelevant) return;
 
             const text = `${t.content} ${t.description || ''}`;
-            const cat = checkCategory(text);
+            // Tasks default to Productivity if ambiguous
+            const cat = checkCategory(text, 'productivity');
             
-            if (cat !== 'neutral') {
-                const score = t.column === 'done' ? 15 : 5;
-                if (cat === 'productivity') productivity += score;
-                if (cat === 'growth') growth += score;
-                if (cat === 'relationships') relationships += score;
-            }
+            const score = t.column === 'done' ? 15 : 5;
+            if (cat === 'productivity') productivity += score;
+            if (cat === 'growth') growth += score;
+            if (cat === 'relationships') relationships += score;
         });
 
         // Scan Journal (Entries Today)
         journal.forEach(j => {
             if (j.date >= startOfDay) {
-                const cat = checkCategory(j.content);
-                if (cat !== 'neutral') {
-                    if (cat === 'productivity') productivity += 10;
-                    if (cat === 'growth') growth += 10;
-                    if (cat === 'relationships') relationships += 10;
-                }
+                // Journal defaults to Growth (reflection)
+                const cat = checkCategory(j.content, 'growth');
+                
+                if (cat === 'productivity') productivity += 10;
+                if (cat === 'growth') growth += 10;
+                if (cat === 'relationships') relationships += 10;
             }
         });
 
