@@ -56,7 +56,7 @@ const UserSettings: React.FC<Props> = ({ user, syncStatus, isDriveConnected, onC
                 </div>
                 <div className="flex-1">
                    <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-1">{user ? user.name : 'Гостевой режим'}</h2>
-                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">{user ? user.email : 'Данные хранятся только в браузере.'}</p>
+                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">{user ? user.email : 'Данные хранятся только в браузере'}</p>
                    <div className="flex justify-center md:justify-start mb-6">
                       {getSyncStatusBadge()}
                    </div>
