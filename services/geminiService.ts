@@ -1,10 +1,13 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig, JournalEntry } from "../types";
 import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL, applyTypography } from '../constants';
 
 // --- API Access ---
 // The API key must be obtained exclusively from the environment variable process.env.API_KEY.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// We access it safely to prevent "Uncaught ReferenceError: process is not defined" in browser environments.
+const apiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : '';
+const ai = new GoogleGenAI({ apiKey });
 
 // Helper to check if model requires legacy/chat handling (Gemma doesn't support systemInstruction in config)
 const isGemmaModel = (model: string) => model.toLowerCase().includes('gemma');
