@@ -13,8 +13,8 @@ interface Props {
 
 // --- SVG VISUALIZATION COMPONENTS ---
 
-// 1. Energy Venn Diagram (Updated to Match Reference Rings & Russian Labels)
-const EnergyVennDiagram = ({ physical, mind, social }: { physical: number, mind: number, social: number }) => {
+// 1. Energy Venn Diagram (Updated Spheres: Productivity, Growth, Relationships)
+const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivity: number, growth: number, relationships: number }) => {
     // Fixed radius for consistent design match
     const r = 36;
     const strokeWidth = 5;
@@ -30,62 +30,62 @@ const EnergyVennDiagram = ({ physical, mind, social }: { physical: number, mind:
         };
     };
 
-    const mindPos = getDotPos(100, 80, r, mind);
-    const physPos = getDotPos(65, 140, r, physical);
-    const socPos = getDotPos(135, 140, r, social);
+    const prodPos = getDotPos(100, 80, r, productivity);
+    const growthPos = getDotPos(65, 140, r, growth);
+    const relPos = getDotPos(135, 140, r, relationships);
 
     return (
         <div className="relative w-full h-56 flex items-center justify-center -mt-2">
             <svg viewBox="0 0 200 220" className="w-full h-full max-w-[220px] drop-shadow-sm">
                 
-                {/* Physical (Bottom Left) - Green */}
+                {/* Growth (Bottom Left) - Emerald */}
                 <g>
                     <motion.circle 
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={{ pathLength: 1, opacity: 1 }}
                         transition={{ duration: 1, ease: "easeOut" }}
                         cx="65" cy="140" r={r} 
-                        fill="none" stroke="#4ade80" strokeWidth={strokeWidth} 
+                        fill="none" stroke="#10b981" strokeWidth={strokeWidth} 
                         className="opacity-90"
                     />
-                    <text x="65" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#4ade80" className="uppercase tracking-widest pointer-events-none">ТЕЛО</text>
+                    <text x="65" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#10b981" className="uppercase tracking-widest pointer-events-none">РОСТ</text>
                     <motion.circle 
                         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5 }}
-                        cx={physPos.x} cy={physPos.y} r="3" fill="white" stroke="#4ade80" strokeWidth="2" 
+                        cx={growthPos.x} cy={growthPos.y} r="3" fill="white" stroke="#10b981" strokeWidth="2" 
                     />
                 </g>
 
-                {/* Social (Bottom Right) - Orange */}
+                {/* Relationships (Bottom Right) - Rose/Pink */}
                 <g>
                     <motion.circle 
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={{ pathLength: 1, opacity: 1 }}
                         transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
                         cx="135" cy="140" r={r} 
-                        fill="none" stroke="#fb923c" strokeWidth={strokeWidth} 
+                        fill="none" stroke="#f43f5e" strokeWidth={strokeWidth} 
                         className="opacity-90"
                     />
-                    <text x="135" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#fb923c" className="uppercase tracking-widest pointer-events-none">ДУША</text>
+                    <text x="135" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#f43f5e" className="uppercase tracking-widest pointer-events-none">ЛЮДИ</text>
                     <motion.circle 
                         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.7 }}
-                        cx={socPos.x} cy={socPos.y} r="3" fill="white" stroke="#fb923c" strokeWidth="2" 
+                        cx={relPos.x} cy={relPos.y} r="3" fill="white" stroke="#f43f5e" strokeWidth="2" 
                     />
                 </g>
 
-                {/* Mind (Top) - Teal/Mint */}
+                {/* Productivity (Top) - Indigo */}
                 <g>
                     <motion.circle 
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={{ pathLength: 1, opacity: 1 }}
                         transition={{ duration: 1, ease: "easeOut", delay: 0.4 }}
                         cx="100" cy="80" r={r} 
-                        fill="none" stroke="#2dd4bf" strokeWidth={strokeWidth} 
+                        fill="none" stroke="#6366f1" strokeWidth={strokeWidth} 
                         className="opacity-90"
                     />
-                    <text x="100" y="80" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#2dd4bf" className="uppercase tracking-widest pointer-events-none">РАЗУМ</text>
+                    <text x="100" y="80" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#6366f1" className="uppercase tracking-widest pointer-events-none">ДЕЛО</text>
                     <motion.circle 
                         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.9 }}
-                        cx={mindPos.x} cy={mindPos.y} r="3" fill="white" stroke="#2dd4bf" strokeWidth="2" 
+                        cx={prodPos.x} cy={prodPos.y} r="3" fill="white" stroke="#6366f1" strokeWidth="2" 
                     />
                 </g>
             </svg>
@@ -329,51 +329,82 @@ const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], label
 };
 
 // --- DATA PROCESSING HOOKS ---
-const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[]) => {
+const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journal: JournalEntry[]) => {
     return useMemo(() => {
         const today = new Date();
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
         
-        // 1. Energy Distribution (Venn Data)
-        // Categorize tags/habits into Body, Mind, Soul
-        let physical = 10, mind = 10, social = 10;
+        // 1. New Spheres: Productivity, Growth, Relationships
+        let productivity = 10, growth = 10, relationships = 10;
         
-        const checkCategory = (text: string) => {
+        // Helper to categorize text context
+        const checkCategory = (text: string): 'productivity' | 'growth' | 'relationships' | 'neutral' => {
             const t = text.toLowerCase();
-            if (t.includes('sport') || t.includes('gym') || t.includes('food') || t.includes('health') || t.includes('sleep') || t.includes('спорт') || t.includes('тело')) return 'physical';
-            if (t.includes('work') || t.includes('study') || t.includes('read') || t.includes('code') || t.includes('работа') || t.includes('книги')) return 'mind';
-            if (t.includes('family') || t.includes('friend') || t.includes('love') || t.includes('soul') || t.includes('meditate') || t.includes('семья') || t.includes('душа')) return 'social';
-            return 'mind'; // default
+            
+            // Productivity Keywords
+            if (t.match(/work|code|job|bussiness|money|finance|project|task|deadline|career|работа|код|бизнес|деньги|финансы|проект|задача|карьера|дело|план|цель/)) return 'productivity';
+            
+            // Growth Keywords
+            if (t.match(/health|gym|sport|run|sleep|meditate|read|book|learn|skill|art|create|hobby|self|grow|здоровье|спорт|бег|сон|медитация|книг|учеба|навык|творчество|хобби|рост|развитие|английский|язык/)) return 'growth';
+            
+            // Relationships Keywords
+            if (t.match(/family|friend|love|date|social|party|meet|people|talk|help|gift|child|kids|wife|husband|семья|друзья|любовь|свидание|общение|встреча|люди|разговор|помощь|дети|жена|муж/)) return 'relationships';
+            
+            return 'neutral';
         };
 
+        // Scan Habits (History Today or Streak)
         habits.forEach(h => {
             const cat = checkCategory(h.title);
-            // Check if done today or high streak
-            if (h.history[today.toISOString().split('T')[0]] || h.streak > 3) {
-                if (cat === 'physical') physical += 20;
-                if (cat === 'mind') mind += 20;
-                if (cat === 'social') social += 20;
+            if (cat === 'neutral') return; // Skip if unclear
+            
+            const isDoneToday = h.history[today.toISOString().split('T')[0]];
+            const isActiveStreak = h.streak > 2;
+
+            if (isDoneToday || isActiveStreak) {
+                if (cat === 'productivity') productivity += 20;
+                if (cat === 'growth') growth += 20;
+                if (cat === 'relationships') relationships += 20;
             }
         });
 
-        notes.filter(n => n.createdAt >= startOfDay).forEach(n => {
-            n.tags.forEach(t => {
-                const cat = checkCategory(t);
-                if (cat === 'physical') physical += 10;
-                if (cat === 'mind') mind += 10;
-                if (cat === 'social') social += 10;
-            });
+        // Scan Tasks (Sprints) - Created Today or Completed Today or Doing
+        tasks.forEach(t => {
+            const isRelevant = t.createdAt >= startOfDay || t.column === 'doing' || t.column === 'done';
+            if (!isRelevant) return;
+
+            const text = `${t.content} ${t.description || ''}`;
+            const cat = checkCategory(text);
+            
+            if (cat !== 'neutral') {
+                const score = t.column === 'done' ? 15 : 5;
+                if (cat === 'productivity') productivity += score;
+                if (cat === 'growth') growth += score;
+                if (cat === 'relationships') relationships += score;
+            }
+        });
+
+        // Scan Journal (Entries Today)
+        journal.forEach(j => {
+            if (j.date >= startOfDay) {
+                const cat = checkCategory(j.content);
+                if (cat !== 'neutral') {
+                    if (cat === 'productivity') productivity += 10;
+                    if (cat === 'growth') growth += 10;
+                    if (cat === 'relationships') relationships += 10;
+                }
+            }
         });
 
         // Normalize to 0-100 for graph
-        const maxScore = Math.max(physical, mind, social, 100);
+        const maxScore = Math.max(productivity, growth, relationships, 100);
         const vennData = {
-            physical: (physical / maxScore) * 100,
-            mind: (mind / maxScore) * 100,
-            social: (social / maxScore) * 100
+            productivity: (productivity / maxScore) * 100,
+            growth: (growth / maxScore) * 100,
+            relationships: (relationships / maxScore) * 100
         };
 
-        const totalEnergy = Math.round((vennData.physical + vennData.mind + vennData.social) / 3);
+        const totalEnergy = Math.round((vennData.productivity + vennData.growth + vennData.relationships) / 3);
         let energyLabel = "Набираем темп";
         if (totalEnergy > 70) energyLabel = "Поток!";
         if (totalEnergy > 40 && totalEnergy <= 70) energyLabel = "Баланс";
@@ -427,29 +458,18 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[]) => {
         const monthlyActivity = [12, 19, 15, 25, 32, 10, 5]; // Placeholder structure
         const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл'];
 
-        // 6. Balance Bar Chart (Tags distribution)
-        const tagCounts: Record<string, number> = { work: 0, health: 0, learn: 0, soul: 0 };
-        [...notes, ...tasks].forEach(item => {
-            const tags = 'tags' in item ? item.tags : [];
-            if (tags.length === 0) tagCounts['soul'] += 0.5; 
-            tags.forEach(t => {
-                const cat = checkCategory(t);
-                if (cat === 'mind') tagCounts.work++;
-                else if (cat === 'physical') tagCounts.health++;
-                else tagCounts.soul++;
-                tagCounts.learn++; // Approx
-            });
-        });
-        const balanceData = [tagCounts.work, tagCounts.health, tagCounts.learn, tagCounts.soul];
+        // 6. Balance Bar Chart Data (Use calculated stats)
+        // Scale down for bar chart visualization if needed, or use raw scores relative to each other
+        const balanceData = [productivity, growth, relationships];
 
         return { vennData, energyLabel, notesHistory, habitGrid, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData };
-    }, [notes, tasks, habits]);
+    }, [notes, tasks, habits, journal]);
 };
 
 // --- MAIN DASHBOARD COMPONENT ---
 
 const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate }) => {
-  const { vennData, energyLabel, notesHistory, habitGrid, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData } = useDashboardStats(notes, tasks, habits);
+  const { vennData, energyLabel, notesHistory, habitGrid, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData } = useDashboardStats(notes, tasks, habits, journal);
 
   // Active Challenges
   const activeChallenges = tasks.filter(t => t.activeChallenge && !t.isChallengeCompleted).slice(0, 3);
@@ -472,7 +492,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Энергия дня</span>
             </div>
             
-            <EnergyVennDiagram {...vennData} />
+            <EnergyVennDiagram productivity={vennData.productivity} growth={vennData.growth} relationships={vennData.relationships} />
             
             <div className="text-center mt-2 z-10">
                 <div className="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">Энергия дня:</div>
@@ -583,7 +603,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
                  <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Баланс сфер</span>
              </div>
              <div className="flex-1 flex items-end">
-                 <BarChart data={balanceData} labels={['Дело', 'Тело', 'Учеба', 'Душа']} color="bg-emerald-400" />
+                 <BarChart data={balanceData} labels={['Дело', 'Рост', 'Люди']} color="bg-emerald-400" />
              </div>
         </motion.div>
 
