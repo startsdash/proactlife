@@ -234,7 +234,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     <div className="h-full overflow-y-auto custom-scrollbar-light p-4 md:p-8 relative">
       <header className="mb-6 flex justify-between items-end">
         <div>
-          <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Трекер <span className="text-orange-500 text-lg">/ Привычки</span></h1>
+          <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Трекер</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Настрой автопилот полезных привычек</p>
         </div>
         {!isFormOpen && (

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry } from '../types';
@@ -668,7 +667,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
   return (
     <div className="h-full p-3 md:p-8 flex flex-col overflow-hidden relative">
       <header className="mb-4 shrink-0">
-          <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Спринты <span className="text-emerald-500 text-sm md:text-lg">/ Фокус</span></h1>
+          <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Спринты</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Меньше планирования, больше дела</p>
       </header>
       

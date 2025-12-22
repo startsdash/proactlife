@@ -158,7 +158,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
       <header className="mb-6 shrink-0">
         <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-3">
             <History className="text-slate-400" size={32} />
-            <span>Зал славы <span className="text-orange-400 text-lg">/ Финиш</span></span>
+            <span>Зал славы</span>
         </h1>
         <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Выполненные миссии и закрытые гештальты</p>
       </header>

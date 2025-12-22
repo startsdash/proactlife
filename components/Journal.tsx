@@ -386,7 +386,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         <header className="mb-4 md:mb-6">
           <h1 className="text-2xl font-light text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-3">
             < Book className="text-slate-400" size={28} />
-            Бортжурнал <span className="text-cyan-500 text-lg">/ Логи</span>
+            Бортжурнал
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Фиксируй реальность. Факты, эмоции, гипотезы</p>
         </header>
