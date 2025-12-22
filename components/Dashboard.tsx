@@ -13,7 +13,7 @@ interface Props {
 
 // --- SVG VISUALIZATION COMPONENTS ---
 
-// 1. Energy Venn Diagram (Updated to Match Reference Rings)
+// 1. Energy Venn Diagram (Updated to Match Reference Rings & Russian Labels)
 const EnergyVennDiagram = ({ physical, mind, social }: { physical: number, mind: number, social: number }) => {
     // Fixed radius for consistent design match
     const r = 36;
@@ -48,7 +48,7 @@ const EnergyVennDiagram = ({ physical, mind, social }: { physical: number, mind:
                         fill="none" stroke="#4ade80" strokeWidth={strokeWidth} 
                         className="opacity-90"
                     />
-                    <text x="65" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#4ade80" className="uppercase tracking-widest pointer-events-none">PHYSICAL</text>
+                    <text x="65" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#4ade80" className="uppercase tracking-widest pointer-events-none">ТЕЛО</text>
                     <motion.circle 
                         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5 }}
                         cx={physPos.x} cy={physPos.y} r="3" fill="white" stroke="#4ade80" strokeWidth="2" 
@@ -65,7 +65,7 @@ const EnergyVennDiagram = ({ physical, mind, social }: { physical: number, mind:
                         fill="none" stroke="#fb923c" strokeWidth={strokeWidth} 
                         className="opacity-90"
                     />
-                    <text x="135" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#fb923c" className="uppercase tracking-widest pointer-events-none">SOCIAL</text>
+                    <text x="135" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#fb923c" className="uppercase tracking-widest pointer-events-none">ДУША</text>
                     <motion.circle 
                         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.7 }}
                         cx={socPos.x} cy={socPos.y} r="3" fill="white" stroke="#fb923c" strokeWidth="2" 
@@ -82,7 +82,7 @@ const EnergyVennDiagram = ({ physical, mind, social }: { physical: number, mind:
                         fill="none" stroke="#2dd4bf" strokeWidth={strokeWidth} 
                         className="opacity-90"
                     />
-                    <text x="100" y="80" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#2dd4bf" className="uppercase tracking-widest pointer-events-none">MIND</text>
+                    <text x="100" y="80" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#2dd4bf" className="uppercase tracking-widest pointer-events-none">РАЗУМ</text>
                     <motion.circle 
                         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.9 }}
                         cx={mindPos.x} cy={mindPos.y} r="3" fill="white" stroke="#2dd4bf" strokeWidth="2" 
@@ -475,7 +475,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
             <EnergyVennDiagram {...vennData} />
             
             <div className="text-center mt-2 z-10">
-                <div className="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">Day's Energy:</div>
+                <div className="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">Энергия дня:</div>
                 <div className="text-xl font-light text-slate-500 dark:text-slate-400 mt-1">{energyLabel}!</div>
             </div>
         </motion.div>
@@ -531,7 +531,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
                 {/* Right: Radar Chart (Peak Focus) */}
                 <div className="flex-1 w-full h-48 flex flex-col items-center justify-center relative">
                     <RadarChart data={radarData} labels={bucketLabels} color="#6366f1" />
-                    <div className="text-center text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">Peak Focus Hours</div>
+                    <div className="text-center text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">Пик продуктивности</div>
                 </div>
             </div>
         </motion.div>
@@ -539,21 +539,21 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         {/* 5. CHALLENGES (Tall Dark Card - Right) */}
         <motion.div 
             onClick={() => onNavigate(Module.KANBAN)}
-            className="md:col-span-1 md:row-span-2 bg-slate-900 dark:bg-black rounded-3xl p-6 text-white shadow-xl flex flex-col relative overflow-hidden cursor-pointer group border border-slate-800"
+            className="md:col-span-1 md:row-span-2 bg-slate-700 dark:bg-slate-800 rounded-3xl p-6 text-white shadow-xl flex flex-col relative overflow-hidden cursor-pointer group border border-slate-600 dark:border-slate-700"
         >
              <div className="flex items-center gap-2 mb-6">
                  <Target size={16} className="text-emerald-400" />
-                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Вызовы</span>
+                 <span className="text-xs font-bold uppercase text-slate-300 tracking-wider">Вызовы</span>
              </div>
              
              <div className="flex-1 space-y-4 min-h-0">
                 {activeChallenges.length > 0 ? (
                     activeChallenges.map(t => (
-                        <div key={t.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
+                        <div key={t.id} className="bg-white/10 p-4 rounded-2xl border border-white/10 hover:bg-white/15 transition-colors">
                             <div className="text-sm font-medium leading-snug mb-3 line-clamp-2">{t.content}</div>
                             {/* Gradient Progress Bar */}
                             <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-2/3 rounded-full" />
+                                <div className="h-full bg-gradient-to-r from-indigo-400 to-purple-400 w-2/3 rounded-full" />
                             </div>
                         </div>
                     ))
@@ -567,11 +567,11 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
              
              <div className="mt-6 pt-4 border-t border-white/10 flex justify-between items-center">
                  <div className="flex flex-col">
-                     <span className="text-[10px] text-slate-400 uppercase tracking-widest">Зал славы</span>
+                     <span className="text-[10px] text-slate-300 uppercase tracking-widest">Зал славы</span>
                      <span className="text-2xl font-bold">{completedChallengesCount}</span>
                  </div>
                  <div className="flex -space-x-2">
-                     {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[8px]">🏆</div>)}
+                     {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-slate-600 border border-slate-500 flex items-center justify-center text-[8px]">🏆</div>)}
                  </div>
              </div>
         </motion.div>
@@ -583,7 +583,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
                  <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Баланс сфер</span>
              </div>
              <div className="flex-1 flex items-end">
-                 <BarChart data={balanceData} labels={['Work', 'Body', 'Learn', 'Soul']} color="bg-emerald-400" />
+                 <BarChart data={balanceData} labels={['Дело', 'Тело', 'Учеба', 'Душа']} color="bg-emerald-400" />
              </div>
         </motion.div>
 
