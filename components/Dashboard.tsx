@@ -13,50 +13,81 @@ interface Props {
 
 // --- SVG VISUALIZATION COMPONENTS ---
 
-// 1. Energy Venn Diagram
+// 1. Energy Venn Diagram (Updated to Match Reference Rings)
 const EnergyVennDiagram = ({ physical, mind, social }: { physical: number, mind: number, social: number }) => {
-    // Normalize values between 0.6 and 1.0 for visual balance (min size constraint)
-    const norm = (val: number) => 0.6 + (Math.min(val, 100) / 100) * 0.4;
+    // Fixed radius for consistent design match
+    const r = 36;
+    const strokeWidth = 5;
     
-    return (
-        <div className="relative w-full h-48 flex items-center justify-center">
-            <svg viewBox="0 0 200 200" className="w-full h-full max-w-[200px]">
-                <defs>
-                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur stdDeviation="4" result="blur" />
-                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                    </filter>
-                </defs>
-                
-                {/* Mind (Top) - Teal/Green */}
-                <motion.circle 
-                    initial={{ r: 0, opacity: 0 }}
-                    animate={{ r: 45 * norm(mind), opacity: 0.6 }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                    cx="100" cy="75" fill="#10b981" 
-                    className="mix-blend-multiply dark:mix-blend-screen"
-                />
-                <text x="100" y="75" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="white" className="pointer-events-none uppercase tracking-widest opacity-90">Разум</text>
+    // Calculate dot positions based on value (0-100 mapping to circle perimeter)
+    // -90deg is top. We map 0..100 to 0..360deg for the dot position visually.
+    const getDotPos = (cx: number, cy: number, radius: number, val: number) => {
+        const angle = (val / 100) * 360 - 90;
+        const rad = angle * (Math.PI / 180);
+        return {
+            x: cx + radius * Math.cos(rad),
+            y: cy + radius * Math.sin(rad)
+        };
+    };
 
-                {/* Physical (Bottom Left) - Green/Emerald */}
-                <motion.circle 
-                    initial={{ r: 0, opacity: 0 }}
-                    animate={{ r: 45 * norm(physical), opacity: 0.6 }}
-                    transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-                    cx="75" cy="125" fill="#34d399" 
-                    className="mix-blend-multiply dark:mix-blend-screen"
-                />
-                <text x="70" y="128" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="white" className="pointer-events-none uppercase tracking-widest opacity-90">Тело</text>
+    const mindPos = getDotPos(100, 80, r, mind);
+    const physPos = getDotPos(65, 140, r, physical);
+    const socPos = getDotPos(135, 140, r, social);
+
+    return (
+        <div className="relative w-full h-56 flex items-center justify-center -mt-2">
+            <svg viewBox="0 0 200 220" className="w-full h-full max-w-[220px] drop-shadow-sm">
+                
+                {/* Physical (Bottom Left) - Green */}
+                <g>
+                    <motion.circle 
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 1 }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        cx="65" cy="140" r={r} 
+                        fill="none" stroke="#4ade80" strokeWidth={strokeWidth} 
+                        className="opacity-90"
+                    />
+                    <text x="65" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#4ade80" className="uppercase tracking-widest pointer-events-none">PHYSICAL</text>
+                    <motion.circle 
+                        initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5 }}
+                        cx={physPos.x} cy={physPos.y} r="3" fill="white" stroke="#4ade80" strokeWidth="2" 
+                    />
+                </g>
 
                 {/* Social (Bottom Right) - Orange */}
-                <motion.circle 
-                    initial={{ r: 0, opacity: 0 }}
-                    animate={{ r: 45 * norm(social), opacity: 0.6 }}
-                    transition={{ duration: 1, delay: 0.4, ease: "easeOut" }}
-                    cx="125" cy="125" fill="#fb923c" 
-                    className="mix-blend-multiply dark:mix-blend-screen"
-                />
-                <text x="130" y="128" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="white" className="pointer-events-none uppercase tracking-widest opacity-90">Душа</text>
+                <g>
+                    <motion.circle 
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 1 }}
+                        transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
+                        cx="135" cy="140" r={r} 
+                        fill="none" stroke="#fb923c" strokeWidth={strokeWidth} 
+                        className="opacity-90"
+                    />
+                    <text x="135" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#fb923c" className="uppercase tracking-widest pointer-events-none">SOCIAL</text>
+                    <motion.circle 
+                        initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.7 }}
+                        cx={socPos.x} cy={socPos.y} r="3" fill="white" stroke="#fb923c" strokeWidth="2" 
+                    />
+                </g>
+
+                {/* Mind (Top) - Teal/Mint */}
+                <g>
+                    <motion.circle 
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 1 }}
+                        transition={{ duration: 1, ease: "easeOut", delay: 0.4 }}
+                        cx="100" cy="80" r={r} 
+                        fill="none" stroke="#2dd4bf" strokeWidth={strokeWidth} 
+                        className="opacity-90"
+                    />
+                    <text x="100" y="80" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#2dd4bf" className="uppercase tracking-widest pointer-events-none">MIND</text>
+                    <motion.circle 
+                        initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.9 }}
+                        cx={mindPos.x} cy={mindPos.y} r="3" fill="white" stroke="#2dd4bf" strokeWidth="2" 
+                    />
+                </g>
             </svg>
         </div>
     );
