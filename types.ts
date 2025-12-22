@@ -45,6 +45,7 @@ export interface Task {
   
   consultationHistory?: string[];
   
+  spheres?: string[]; // NEW: Manual sphere selection
   isArchived?: boolean;
 }
 
@@ -78,6 +79,7 @@ export interface Habit {
   streak: number;
   bestStreak: number;
   
+  spheres?: string[]; // NEW: Manual sphere selection
   isArchived?: boolean;
   createdAt: number;
 }
@@ -96,6 +98,7 @@ export interface JournalEntry {
   linkedTaskId?: string; 
   aiFeedback?: string;
   mentorId?: string;
+  spheres?: string[]; // NEW: Manual sphere selection
 }
 
 export interface MentorAnalysis {

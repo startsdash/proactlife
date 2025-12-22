@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
-import { ICON_MAP, applyTypography } from '../constants';
+import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
 import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll, XCircle, Send } from 'lucide-react';
 import EmptyState from './EmptyState';
@@ -161,6 +161,59 @@ const TaskSelect: React.FC<{
   );
 };
 
+// --- REUSABLE SPHERE SELECTOR ---
+const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
+    const toggleSphere = (id: string) => {
+        if (selected.includes(id)) {
+            onChange(selected.filter(s => s !== id));
+        } else {
+            onChange([...selected, id]);
+        }
+    };
+
+    return (
+        <div className="flex gap-2">
+            {SPHERES.map(s => {
+                const isSelected = selected.includes(s.id);
+                const Icon = ICON_MAP[s.icon];
+                return (
+                    <button
+                        key={s.id}
+                        onClick={() => toggleSphere(s.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all border ${
+                            isSelected 
+                            ? `${s.bg} ${s.text} ${s.border}` 
+                            : 'bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                        }`}
+                    >
+                        {Icon && <Icon size={12} />}
+                        {s.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+};
+
+const SphereBadgeList: React.FC<{ spheres: string[] }> = ({ spheres }) => {
+    if (!spheres || spheres.length === 0) return null;
+    return (
+        <div className="flex flex-wrap gap-1 mt-2">
+            {spheres.map(id => {
+                const s = SPHERES.find(sp => sp.id === id);
+                if (!s) return null;
+                const Icon = ICON_MAP[s.icon];
+                return (
+                    <span key={id} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${s.bg} ${s.text}`}>
+                        {Icon && <Icon size={10} />}
+                        {s.label}
+                    </span>
+                );
+            })}
+        </div>
+    );
+};
+
 const StaticChallengeRenderer: React.FC<{ 
     content: string,
     mode: 'draft' | 'history'
@@ -228,6 +281,7 @@ const StaticChallengeRenderer: React.FC<{
 const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addEntry, deleteEntry, updateEntry, addMentorAnalysis, deleteMentorAnalysis, initialTaskId, onClearInitialTask, onNavigateToTask }) => {
   const [content, setContent] = useState('');
   const [linkedTaskId, setLinkedTaskId] = useState<string>('');
+  const [selectedSpheres, setSelectedSpheres] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -277,10 +331,12 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       date: Date.now(),
       content: formattedContent,
       linkedTaskId: linkedTaskId || undefined,
+      spheres: selectedSpheres
     };
     addEntry(newEntry);
     setContent('');
     setLinkedTaskId('');
+    setSelectedSpheres([]);
   };
 
   const startEditing = (entry: JournalEntry) => {
@@ -396,6 +452,12 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
             </label>
             <TaskSelect tasks={availableTasks} selectedId={linkedTaskId} onSelect={setLinkedTaskId} />
           </div>
+          <div>
+             <label className="block text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1">
+               <Zap size={12} /> Сферы (Для статистики)
+             </label>
+             <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
+          </div>
           <textarea 
             className="w-full h-32 md:h-40 resize-none outline-none text-sm text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-300 dark:focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono" 
             placeholder="О чем ты думаешь? Чему научило это событие? (Поддерживается Markdown)" 
@@ -509,6 +571,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     </div>
                   )}
                   <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3"><Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}</div>
+                  {entry.spheres && entry.spheres.length > 0 && (
+                      <SphereBadgeList spheres={entry.spheres} />
+                  )}
                   {entry.linkedTaskId && getTaskPreview(entry.linkedTaskId)}
                   {isEditing ? (
                       <div className="mb-4">
@@ -519,7 +584,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                           </div>
                       </div>
                   ) : (
-                    <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed whitespace-pre-wrap mb-4 font-normal"><ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown></div>
+                    <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed whitespace-pre-wrap mb-4 font-normal mt-2"><ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown></div>
                   )}
                   {entry.aiFeedback && (
                     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 relative mt-4">
@@ -582,6 +647,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
                         <div className="flex justify-between items-center mb-3"><span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${viewingTask.column === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.column === 'done' ? <CheckCircle2 size={12} /> : <Circle size={12} />}{viewingTask.column === 'done' ? 'Сделано' : 'В процессе'}{viewingTask.isArchived && " (В архиве)"}</span></div>
                         <div className="text-sm text-slate-800 dark:text-slate-200 font-normal leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.content}</ReactMarkdown></div>
+                        {viewingTask.spheres && viewingTask.spheres.length > 0 && <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700"><SphereBadgeList spheres={viewingTask.spheres} /></div>}
                     </div>
                     {viewingTask.description && (<CollapsibleSection title="Источник" icon={<FileText size={14}/>}><div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.description}</ReactMarkdown></div></CollapsibleSection>)}
                     {viewingTask.activeChallenge && (

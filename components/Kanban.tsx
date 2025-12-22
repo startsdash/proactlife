@@ -5,6 +5,7 @@ import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiServi
 import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
+import { SPHERES, ICON_MAP } from '../constants';
 
 interface Props {
   tasks: Task[];
@@ -53,6 +54,40 @@ const markdownComponents = {
             ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400 border border-slate-200 dark:border-slate-700" {...props}>{children}</code>
             : <code className="block bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     }
+};
+
+// Reuse SphereSelector Logic locally or import if I made it shared (I'll define locally to be safe as per strict instructions)
+const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
+    const toggleSphere = (id: string) => {
+        if (selected.includes(id)) {
+            onChange(selected.filter(s => s !== id));
+        } else {
+            onChange([...selected, id]);
+        }
+    };
+
+    return (
+        <div className="flex gap-2">
+            {SPHERES.map(s => {
+                const isSelected = selected.includes(s.id);
+                const Icon = ICON_MAP[s.icon];
+                return (
+                    <button
+                        key={s.id}
+                        onClick={() => toggleSphere(s.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all border ${
+                            isSelected 
+                            ? `${s.bg} ${s.text} ${s.border}` 
+                            : 'bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                        }`}
+                    >
+                        {Icon && <Icon size={12} />}
+                        {s.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
 };
 
 const CollapsibleSection: React.FC<{
@@ -499,6 +534,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                         <div className="flex justify-between items-center mb-2">
                             <span className={`text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>{statusText}</span>
                             <div className="flex items-center gap-2">
+                                {task.spheres && task.spheres.length > 0 && (
+                                    <div className="flex -space-x-1">
+                                        {task.spheres.map(s => {
+                                            const sp = SPHERES.find(x => x.id === s);
+                                            return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
+                                        })}
+                                    </div>
+                                )}
                                 {StatusIcon && <div className={statusColor}><StatusIcon size={14} fill={task.isChallengeCompleted ? "none" : "currentColor"} /></div>}
                             </div>
                         </div>
@@ -726,6 +769,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider block mb-3">Задача</span>
                             <div className="text-sm text-slate-800 dark:text-slate-200 font-normal leading-relaxed">
                                 <ReactMarkdown components={markdownComponents}>{getTaskForModal()?.content}</ReactMarkdown>
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Сферы</span>
+                                <SphereSelector 
+                                    selected={getTaskForModal()?.spheres || []} 
+                                    onChange={(s) => {
+                                        const t = getTaskForModal();
+                                        if (t) updateTask({ ...t, spheres: s });
+                                    }} 
+                                />
                             </div>
                         </div>
 

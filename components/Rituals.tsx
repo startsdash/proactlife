@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
 import ProgressStats from './ProgressStats';
 import { Tooltip } from './Tooltip';
+import { SPHERES, ICON_MAP } from '../constants';
 
 interface Props {
   habits: Habit[];
@@ -22,6 +23,40 @@ const getLocalDateKey = (date: Date) => {
     return `${year}-${month}-${day}`;
 };
 
+// Reusable Sphere Selector (Local Definition)
+const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
+    const toggleSphere = (id: string) => {
+        if (selected.includes(id)) {
+            onChange(selected.filter(s => s !== id));
+        } else {
+            onChange([...selected, id]);
+        }
+    };
+
+    return (
+        <div className="flex gap-2">
+            {SPHERES.map(s => {
+                const isSelected = selected.includes(s.id);
+                const Icon = ICON_MAP[s.icon];
+                return (
+                    <button
+                        key={s.id}
+                        onClick={() => toggleSphere(s.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all border ${
+                            isSelected 
+                            ? `${s.bg} ${s.text} ${s.border}` 
+                            : 'bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                        }`}
+                    >
+                        {Icon && <Icon size={12} />}
+                        {s.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+};
+
 const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -33,6 +68,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
   const [targetDays, setTargetDays] = useState<number[]>([]); // 0-6
   const [targetCount, setTargetCount] = useState<number>(3);
   const [reminderTime, setReminderTime] = useState('');
+  const [selectedSpheres, setSelectedSpheres] = useState<string[]>([]);
 
   const todayStr = getLocalDateKey(new Date());
 
@@ -53,6 +89,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     setTargetDays(habit.targetDays || []);
     setTargetCount(habit.targetCount || 3);
     setReminderTime(habit.reminders?.[0] || '');
+    setSelectedSpheres(habit.spheres || []);
     setIsFormOpen(true);
   };
 
@@ -70,7 +107,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                 targetDays: frequency === 'specific_days' ? targetDays : undefined,
                 targetCount: (frequency === 'times_per_week' || frequency === 'times_per_day') ? targetCount : undefined,
                 reminders: reminderTime ? [reminderTime] : [],
-                // Preserve history and stats
+                spheres: selectedSpheres
             };
             updateHabit(updated);
         }
@@ -85,6 +122,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
           targetDays: frequency === 'specific_days' ? targetDays : undefined,
           targetCount: (frequency === 'times_per_week' || frequency === 'times_per_day') ? targetCount : undefined,
           reminders: reminderTime ? [reminderTime] : [],
+          spheres: selectedSpheres,
           history: {},
           streak: 0,
           bestStreak: 0,
@@ -109,6 +147,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     setTargetDays([]);
     setTargetCount(3);
     setReminderTime('');
+    setSelectedSpheres([]);
   };
 
   const toggleDay = (dayIndex: number) => {
@@ -293,6 +332,11 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                       />
 
                       <div className="flex flex-col gap-4">
+                          <div>
+                             <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Сферы (Для статистики)</label>
+                             <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
+                          </div>
+
                           <div className="space-y-2">
                               <label className="text-xs font-bold text-slate-400 uppercase">Частота</label>
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -447,25 +491,35 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
 
                           <div className="flex-1 min-w-0">
                               <h3 className={`text-lg font-bold truncate transition-colors ${isCompletedToday ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-800 dark:text-slate-200'}`}>{habit.title}</h3>
-                              <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                                  <div className={`flex items-center gap-1 font-medium ${isFire ? 'text-orange-500 animate-pulse' : ''}`}>
-                                      <Flame size={12} fill={isFire ? "currentColor" : "none"} /> {streak} дней
+                              <div className="flex items-center gap-2 mt-1">
+                                  {habit.spheres && habit.spheres.length > 0 && (
+                                      <div className="flex -space-x-1 mr-2">
+                                          {habit.spheres.map(s => {
+                                              const sp = SPHERES.find(x => x.id === s);
+                                              return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
+                                          })}
+                                      </div>
+                                  )}
+                                  <div className="flex items-center gap-3 text-xs text-slate-400">
+                                      <div className={`flex items-center gap-1 font-medium ${isFire ? 'text-orange-500 animate-pulse' : ''}`}>
+                                          <Flame size={12} fill={isFire ? "currentColor" : "none"} /> {streak} дней
+                                      </div>
+                                      {habit.frequency === 'times_per_week' && (
+                                          <div className="flex items-center gap-1">
+                                              <Repeat size={12} /> {getWeekProgress(habit)}/{habit.targetCount || 1} на этой неделе
+                                          </div>
+                                      )}
+                                      {habit.frequency === 'specific_days' && (
+                                          <div className="flex items-center gap-1">
+                                              <Calendar size={12} /> По дням
+                                          </div>
+                                      )}
+                                      {habit.frequency === 'times_per_day' && (
+                                          <div className="flex items-center gap-1 text-indigo-500">
+                                              <Repeat size={12} /> Цель: {habit.targetCount || 1} в день
+                                          </div>
+                                      )}
                                   </div>
-                                  {habit.frequency === 'times_per_week' && (
-                                      <div className="flex items-center gap-1">
-                                          <Repeat size={12} /> {getWeekProgress(habit)}/{habit.targetCount || 1} на этой неделе
-                                      </div>
-                                  )}
-                                  {habit.frequency === 'specific_days' && (
-                                      <div className="flex items-center gap-1">
-                                          <Calendar size={12} /> По дням
-                                      </div>
-                                  )}
-                                  {habit.frequency === 'times_per_day' && (
-                                      <div className="flex items-center gap-1 text-indigo-500">
-                                          <Repeat size={12} /> Цель: {habit.targetCount || 1} в день
-                                      </div>
-                                  )}
                               </div>
                           </div>
                           

@@ -334,38 +334,39 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         const today = new Date();
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
         
-        // 1. New Spheres: Productivity, Growth, Relationships
         let productivity = 10, growth = 10, relationships = 10;
         
-        // Helper to categorize text context
-        // defaultCategory is used if no regex match is found
-        const checkCategory = (text: string, defaultCategory: 'productivity' | 'growth' | 'relationships'): 'productivity' | 'growth' | 'relationships' => {
+        // Helper to categorize text context (Fallback)
+        const checkCategoryFallback = (text: string, defaultCategory: 'productivity' | 'growth' | 'relationships'): 'productivity' | 'growth' | 'relationships' => {
             const t = text.toLowerCase();
-            
-            // Productivity Keywords (Expanded)
             if (t.match(/work|code|job|bussiness|money|finance|project|task|deadline|career|to-do|todo|buy|sell|make|build|работа|код|бизнес|деньги|финансы|проект|задача|карьера|дело|план|цель|купить|продать|сделать|построить|спринт|список|начал|закончил/)) return 'productivity';
-            
-            // Growth Keywords (Expanded)
             if (t.match(/health|gym|sport|run|sleep|meditate|read|book|learn|skill|art|create|hobby|self|grow|habit|ritual|journal|reflection|здоровье|спорт|бег|сон|медитация|книг|учеба|навык|творчество|хобби|рост|развитие|английский|язык|привычка|ритуал|дневник|мысли|инсайт|трекер|анализ|сегодня|день/)) return 'growth';
-            
-            // Relationships Keywords (Expanded)
             if (t.match(/family|friend|love|date|social|party|meet|people|talk|help|gift|child|kids|wife|husband|mom|dad|parent|colleague|team|семья|друзья|любовь|свидание|общение|встреча|люди|разговор|помощь|дети|жена|муж|мама|папа|родители|коллег|команда/)) return 'relationships';
-            
             return defaultCategory;
+        };
+
+        const processSpheres = (spheres: string[] | undefined, fallbackText: string, weight: number, fallbackDefault: 'productivity' | 'growth' | 'relationships') => {
+            if (spheres && spheres.length > 0) {
+                spheres.forEach(s => {
+                    if (s === 'productivity') productivity += weight;
+                    if (s === 'growth') growth += weight;
+                    if (s === 'relationships') relationships += weight;
+                });
+            } else {
+                const cat = checkCategoryFallback(fallbackText, fallbackDefault);
+                if (cat === 'productivity') productivity += weight;
+                if (cat === 'growth') growth += weight;
+                if (cat === 'relationships') relationships += weight;
+            }
         };
 
         // Scan Habits (History Today or Streak)
         habits.forEach(h => {
-            // Habits default to Growth if ambiguous
-            const cat = checkCategory(h.title, 'growth');
-            
             const isDoneToday = h.history[today.toISOString().split('T')[0]];
             const isActiveStreak = h.streak > 2;
 
             if (isDoneToday || isActiveStreak) {
-                if (cat === 'productivity') productivity += 20;
-                if (cat === 'growth') growth += 20;
-                if (cat === 'relationships') relationships += 20;
+                processSpheres(h.spheres, h.title, 20, 'growth');
             }
         });
 
@@ -373,26 +374,14 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         tasks.forEach(t => {
             const isRelevant = t.createdAt >= startOfDay || t.column === 'doing' || t.column === 'done';
             if (!isRelevant) return;
-
-            const text = `${t.content} ${t.description || ''}`;
-            // Tasks default to Productivity if ambiguous
-            const cat = checkCategory(text, 'productivity');
-            
             const score = t.column === 'done' ? 15 : 5;
-            if (cat === 'productivity') productivity += score;
-            if (cat === 'growth') growth += score;
-            if (cat === 'relationships') relationships += score;
+            processSpheres(t.spheres, t.content, score, 'productivity');
         });
 
         // Scan Journal (Entries Today)
         journal.forEach(j => {
             if (j.date >= startOfDay) {
-                // Journal defaults to Growth (reflection)
-                const cat = checkCategory(j.content, 'growth');
-                
-                if (cat === 'productivity') productivity += 10;
-                if (cat === 'growth') growth += 10;
-                if (cat === 'relationships') relationships += 10;
+                processSpheres(j.spheres, j.content, 10, 'growth');
             }
         });
 

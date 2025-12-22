@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { AppConfig, AIToolConfig } from "./types";
-import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book, Flame, Repeat, Calendar, CheckCircle, LayoutDashboard } from 'lucide-react';
+import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book, Flame, Repeat, Calendar, CheckCircle, LayoutDashboard, Briefcase, Sprout, Heart, Target } from 'lucide-react';
 
 // --- ICON REGISTRY ---
 export const ICON_MAP: Record<string, React.ElementType> = {
@@ -23,10 +23,44 @@ export const ICON_MAP: Record<string, React.ElementType> = {
   'Repeat': Repeat,
   'Calendar': Calendar,
   'CheckCircle': CheckCircle,
-  'LayoutDashboard': LayoutDashboard
+  'LayoutDashboard': LayoutDashboard,
+  'Briefcase': Briefcase,
+  'Sprout': Sprout,
+  'Heart': Heart,
+  'Target': Target
 };
 
 export const AVAILABLE_ICONS = Object.keys(ICON_MAP);
+
+export const SPHERES = [
+  { 
+    id: 'productivity', 
+    label: 'Дело', 
+    icon: 'Briefcase',
+    color: 'indigo',
+    bg: 'bg-indigo-50 dark:bg-indigo-900/30',
+    text: 'text-indigo-600 dark:text-indigo-400',
+    border: 'border-indigo-200 dark:border-indigo-800'
+  },
+  { 
+    id: 'growth', 
+    label: 'Рост', 
+    icon: 'Sprout',
+    color: 'emerald',
+    bg: 'bg-emerald-50 dark:bg-emerald-900/30',
+    text: 'text-emerald-600 dark:text-emerald-400',
+    border: 'border-emerald-200 dark:border-emerald-800'
+  },
+  { 
+    id: 'relationships', 
+    label: 'Люди', 
+    icon: 'Heart',
+    color: 'rose',
+    bg: 'bg-rose-50 dark:bg-rose-900/30',
+    text: 'text-rose-600 dark:text-rose-400',
+    border: 'border-rose-200 dark:border-rose-800'
+  }
+];
 
 export const AVAILABLE_MODELS = [
   { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Preview)' },
