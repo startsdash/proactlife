@@ -103,13 +103,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
   };
 
   const getTooltipClass = (p: number) => {
-      let borderColor = 'border-slate-700';
-      if (p >= 100) borderColor = 'border-emerald-500';
-      else if (p >= 66) borderColor = 'border-indigo-500';
-      else if (p >= 33) borderColor = 'border-orange-500';
-      else if (p > 0) borderColor = 'border-rose-500';
-
-      return `bg-slate-900 text-white ${borderColor} border shadow-xl`;
+      return `bg-black text-white border border-white/10 shadow-xl`;
   };
 
   const formatDate = (dateStr: string) => {
@@ -145,13 +139,13 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
                   {days.map((day, idx) => (
                       <div key={day.str} className="flex flex-col gap-1 h-full relative group cursor-default">
                           {/* Tooltip */}
-                          <div className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all duration-300 ease-out transform translate-y-2 opacity-0 scale-90 group-hover:translate-y-0 group-hover:opacity-100 group-hover:scale-100 whitespace-nowrap ${getTooltipClass(day.percentage)}`}>
+                          <div className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300 ease-out transform translate-y-2 opacity-0 scale-90 group-hover:translate-y-0 group-hover:opacity-100 group-hover:scale-100 whitespace-nowrap ${getTooltipClass(day.percentage)}`}>
                               <div className="flex items-center gap-2">
                                 <span>{formatDate(day.str)}</span>
-                                <span className="px-1.5 py-0.5 rounded bg-white/10">{day.percentage}%</span>
+                                <span className="px-1.5 py-0.5 rounded bg-white/20">{day.percentage}%</span>
                               </div>
                               {/* Arrow */}
-                              <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-b border-r ${getTooltipClass(day.percentage).split(' ')[2]} transform rotate-45`}></div>
+                              <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-black border-r border-b border-white/10 transform rotate-45`}></div>
                           </div>
                           
                           <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-lg relative overflow-hidden flex items-end">
@@ -230,7 +224,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
                                         <span>{day.percentage}%</span>
                                       </div>
                                       {/* Arrow */}
-                                      <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-b border-r ${getTooltipClass(day.percentage).split(' ')[2]} transform rotate-45`}></div>
+                                      <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-black border-r border-b border-white/10 transform rotate-45`}></div>
                                   </div>
 
                                   <div className="relative w-5 h-5 md:w-6 md:h-6 flex items-center justify-center">
