@@ -216,17 +216,18 @@ const App: React.FC = () => {
   }, [data, isLoaded, isDriveConnected, triggerAutoSave]);
 
   const addNote = (note: Note) => setData(p => ({ ...p, notes: [note, ...p.notes] }));
+  
   const moveNoteToSandbox = (id: string) => setData(p => {
     const originalNote = p.notes.find(n => n.id === id);
     if (!originalNote) return p;
-    const updatedNotes = p.notes.map(n => n.id === id ? { ...n, status: 'archived' as const } : n);
+    // Don't modify original note status - just clone it to sandbox
     const sandboxClone: Note = {
       ...originalNote,
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       status: 'sandbox',
       createdAt: Date.now()
     };
-    return { ...p, notes: [sandboxClone, ...updatedNotes] };
+    return { ...p, notes: [sandboxClone, ...p.notes] };
   });
 
   const moveNoteToInbox = (id: string) => setData(p => ({ ...p, notes: p.notes.map(n => n.id === id ? { ...n, status: 'inbox' } : n) }));
