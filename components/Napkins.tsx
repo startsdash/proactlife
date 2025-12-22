@@ -4,7 +4,7 @@ import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
-import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -546,7 +546,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                   <div className="p-6 md:p-8 flex flex-col h-full overflow-hidden">
                       {oracleState === 'select' && (
                           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full h-full flex flex-col items-center justify-center">
-                              <Quote size={48} className="text-slate-200 dark:text-slate-700 mb-6" />
                               <h3 className="text-xl font-light text-slate-800 dark:text-slate-200 mb-2">Рандом</h3>
                               <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Что ищем?</p>
                               <div className="grid grid-cols-2 gap-4 w-full">
@@ -571,17 +570,18 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0 pr-2">
                                   <div className="min-h-full flex flex-col">
                                       <div className="m-auto w-full py-2">
-                                          <div className="text-lg md:text-2xl text-slate-800 dark:text-slate-200 font-medium leading-relaxed italic relative py-8 text-center">
-                                              <span className="text-4xl md:text-5xl text-slate-200 dark:text-slate-700 font-serif absolute top-0 left-0 leading-none">“</span>
+                                          <div className="text-base md:text-lg text-slate-800 dark:text-slate-200 font-normal leading-relaxed relative py-4 text-center">
                                               <div className="relative z-10 px-3"><ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}}>{oracleNote.content}</ReactMarkdown></div>
-                                              <span className="text-4xl md:text-5xl text-slate-200 dark:text-slate-700 font-serif absolute bottom-0 right-0 leading-none">”</span>
                                           </div>
                                       </div>
                                   </div>
                                </div>
                                <div className="mt-6 flex flex-col gap-3 shrink-0 pt-2 border-t border-transparent">
                                   <button onClick={() => { closeOracle(); handleOpenNote(oracleNote); }} className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg bg-gradient-to-r ${oracleVibe.color} hover:opacity-90 transition-opacity flex items-center justify-center gap-2 active:scale-[0.98]`}>Открыть заметку <ArrowRight size={18} /></button>
-                                  <button onClick={() => castOracleSpell(oracleVibe)} className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2"><Shuffle size={12} /> Попробовать еще раз</button>
+                                  <div className="flex flex-col gap-1 items-center">
+                                      <button onClick={() => castOracleSpell(oracleVibe)} className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2"><Shuffle size={12} /> Попробовать еще раз</button>
+                                      <button onClick={() => setOracleState('select')} className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2"><ArrowLeft size={12} /> Попробовать другой вайб</button>
+                                  </div>
                                </div>
                            </div>
                       )}
