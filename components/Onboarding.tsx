@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowRight, ArrowLeft, StickyNote, Box, Kanban, Flame, CheckCircle2, Check } from 'lucide-react';
+import { X, ArrowRight, ArrowLeft, StickyNote, Box, Kanban, Dumbbell, Book, CheckCircle2, Check } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -9,39 +8,44 @@ interface Props {
 
 const steps = [
   {
-    id: 'intro',
-    title: 'Лаборатория Личности',
-    desc: 'Превращайте хаос мыслей в конкретные действия и привычки. Это не просто заметки, это конвейер по производству вашей лучшей версии.',
-    icon: <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-xl shadow-slate-300 dark:shadow-none">L</div>,
-    color: 'bg-slate-900'
-  },
-  {
     id: 'napkins',
-    title: '1. Салфетки (Capture)',
-    desc: 'Сбрасывайте всё, что приходит в голову. Не фильтруйте. Это ваше хранилище сырого материала. ИИ поможет найти нужные теги.',
+    title: 'Этап 1. Хаос',
+    subtitle: 'Салфетки',
+    desc: 'Всё начинается здесь. Не фильтруйте мысли. Записывайте идеи, цитаты, инсайты или просто тревоги. Это ваше хранилище сырого материала.',
     icon: <StickyNote size={48} className="text-blue-500" />,
     color: 'bg-blue-500'
   },
   {
     id: 'sandbox',
-    title: '2. Песочница (Refine)',
-    desc: 'Превращайте идеи в золото с помощью ИИ-менторов (Питерсон, Талеб и др.). Анализируйте мысли и создавайте из них Задачи или Навыки.',
+    title: 'Этап 2. Трансформация',
+    subtitle: 'Хаб',
+    desc: 'Выберите мысль из «Салфеток» и отправьте её в «Хаб». Здесь Консилиум ИИ-менторов (Питерсон, Талеб, Грин и др.) поможет вам превратить хаотичную идею в чёткий план действий или глубокий принцип.',
     icon: <Box size={48} className="text-amber-500" />,
     color: 'bg-amber-500'
   },
   {
     id: 'kanban',
-    title: '3. Действия (Act)',
-    desc: 'Идеи становятся задачами. Используйте "Челленджи" для геймификации сложных дел и получайте советы от ИИ, если застряли.',
+    title: 'Этап 3. От слов к делу',
+    subtitle: 'Действия',
+    desc: 'Идеи без действий мертвы. В «Канбане» ваши планы становятся задачами. Используйте Челленджи, чтобы бросать себе вызовы, и ИИ-терапию, если застряли. Двигайте карточки в колонку «Сделано».',
     icon: <Kanban size={48} className="text-emerald-500" />,
     color: 'bg-emerald-500'
   },
   {
-    id: 'rituals',
-    title: '4. Ритуалы (Sustain)',
-    desc: 'Мы — это то, что мы делаем постоянно. Отслеживайте привычки, поддерживайте "огонь" стриков и следите за прогрессом на тепловой карте.',
-    icon: <Flame size={48} className="text-orange-500" />,
-    color: 'bg-orange-500'
+    id: 'mentalgym',
+    title: 'Этап 4. Навыки',
+    subtitle: 'Mental Gym',
+    desc: 'Важные принципы нужно помнить. В «Хабе» вы создаёте «навыки» (флеш-карточки). Здесь вы тренируете свой мозг, чтобы новые знания стали частью вашего автоматического поведения.',
+    icon: <Dumbbell size={48} className="text-indigo-500" />,
+    color: 'bg-indigo-500'
+  },
+  {
+    id: 'journal',
+    title: 'Этап 5. Путь',
+    subtitle: 'Дневник',
+    desc: 'В конце дня или после задачи — рефлексируйте. Свяжите запись в дневнике с конкретной задачей. ИИ прокомментирует ваш опыт, помогая извлечь уроки из каждой победы или поражения.',
+    icon: <Book size={48} className="text-slate-800 dark:text-slate-400" />,
+    color: 'bg-slate-800'
   }
 ];
 
@@ -119,9 +123,12 @@ const Onboarding: React.FC<Props> = ({ onClose }) => {
                 <div className="mb-8 mt-2 scale-110">
                   {steps[currentStep].icon}
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4 tracking-tight">
-                  {steps[currentStep].title}
-                </h2>
+                <div className="space-y-1 mb-4">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">{steps[currentStep].title}</span>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+                    {steps[currentStep].subtitle}
+                    </h2>
+                </div>
                 <p className="text-slate-600 dark:text-slate-300 text-lg leading-relaxed font-light">
                   {steps[currentStep].desc}
                 </p>

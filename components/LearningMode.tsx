@@ -103,8 +103,8 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
               <FlaskConical size={32} />
            </div>
            <div>
-              <h1 className="text-3xl font-light text-slate-800 tracking-tight">Практикум Пути</h1>
-              <p className="text-slate-500 text-sm">Методология эффективной работы над собой.</p>
+              <h1 className="text-3xl font-light text-slate-800 tracking-tight">Практикум</h1>
+              <p className="text-slate-500 text-sm">Немного знаний для старта</p>
            </div>
         </header>
 
