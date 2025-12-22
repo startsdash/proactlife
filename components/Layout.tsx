@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus } from '../types';
 import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Tooltip } from './Tooltip';
 
 interface Props {
   currentModule: Module;
@@ -44,14 +43,14 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
   }, []);
 
   const navItems = [
-    { id: Module.NAPKINS, icon: StickyNote, label: 'Заметки', color: 'indigo' },
-    { id: Module.SANDBOX, icon: Box, label: 'Хаб', color: 'amber' },
-    { id: Module.KANBAN, icon: KanbanIcon, label: 'Спринты', color: 'emerald' },
-    { id: Module.MENTAL_GYM, icon: Dumbbell, label: 'Скиллы', color: 'indigo' },
-    { id: Module.RITUALS, icon: Flame, label: 'Трекер', color: 'orange' },
-    { id: Module.JOURNAL, icon: Book, label: 'Дневник', color: 'cyan' },
-    { id: Module.ARCHIVE, icon: Trophy, label: 'Зал славы', color: 'slate' },
-    { id: Module.LEARNING, icon: FlaskConical, label: 'Практикум', color: 'slate' },
+    { id: Module.NAPKINS, icon: StickyNote, label: 'Заметки' },
+    { id: Module.SANDBOX, icon: Box, label: 'Хаб' },
+    { id: Module.MENTAL_GYM, icon: Dumbbell, label: 'Скиллы' },
+    { id: Module.KANBAN, icon: KanbanIcon, label: 'Спринты' },
+    { id: Module.JOURNAL, icon: Book, label: 'Дневник' },
+    { id: Module.RITUALS, icon: Flame, label: 'Трекер' },
+    { id: Module.ARCHIVE, icon: Trophy, label: 'Зал славы' },
+    { id: Module.LEARNING, icon: FlaskConical, label: 'Практикум' },
   ];
 
   const getSyncIcon = () => {
@@ -130,14 +129,13 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
 
           {!isExpanded && (
               <div className="w-full hidden md:flex justify-center py-2 border-b border-slate-50 dark:border-slate-800">
-                  <Tooltip content="Развернуть" position="right">
-                    <button 
-                        onClick={() => setIsExpanded(true)} 
-                        className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-100/10 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                    >
-                        <PanelLeftOpen size={18} />
-                    </button>
-                  </Tooltip>
+                  <button 
+                    onClick={() => setIsExpanded(true)} 
+                    className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-100/10 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    title="Развернуть"
+                  >
+                    <PanelLeftOpen size={18} />
+                  </button>
               </div>
           )}
         </div>
@@ -146,123 +144,114 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
         <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0">
           <nav className="p-3 space-y-2 mt-2">
             {navItems.map(item => (
-              <Tooltip 
+              <button 
                 key={item.id} 
-                content={!isExpanded ? item.label : null} 
-                position="right"
-                color={item.color as any}
-                className="block w-full"
+                onClick={() => {
+                    setModule(item.id);
+                    if (isMobile) setIsExpanded(false);
+                }} 
+                className={`
+                    w-full flex items-center p-3 rounded-xl transition-all duration-300 group relative overflow-hidden
+                    ${currentModule === item.id 
+                        ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-lg shadow-slate-200 dark:shadow-slate-900/50' 
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'}
+                    ${isExpanded ? 'justify-start' : 'justify-center'}
+                `}
+                title={!isExpanded ? item.label : undefined}
               >
-                <button 
-                    onClick={() => {
-                        setModule(item.id);
-                        if (isMobile) setIsExpanded(false);
-                    }} 
+                {/* Active Indicator Background */}
+                {currentModule === item.id && (
+                    <motion.div
+                        layoutId="activeNav"
+                        className="absolute inset-0 bg-slate-900 dark:bg-indigo-600 z-0 rounded-xl"
+                        initial={false}
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                    />
+                )}
+
+                <item.icon size={20} className={`shrink-0 transition-colors relative z-10 ${currentModule === item.id ? 'text-white' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-slate-200'}`} />
+                
+                <span 
                     className={`
-                        w-full flex items-center p-3 rounded-xl transition-all duration-300 group relative overflow-hidden
-                        ${currentModule === item.id 
-                            ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-lg shadow-slate-200 dark:shadow-slate-900/50' 
-                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'}
-                        ${isExpanded ? 'justify-start' : 'justify-center'}
+                        font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out relative z-10
+                        ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 ml-0 absolute'}
                     `}
                 >
-                    {/* Active Indicator Background */}
-                    {currentModule === item.id && (
-                        <motion.div
-                            layoutId="activeNav"
-                            className="absolute inset-0 bg-slate-900 dark:bg-indigo-600 z-0 rounded-xl"
-                            initial={false}
-                            transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                        />
-                    )}
-
-                    <item.icon size={20} className={`shrink-0 transition-colors relative z-10 ${currentModule === item.id ? 'text-white' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-slate-200'}`} />
-                    
-                    <span 
-                        className={`
-                            font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out relative z-10
-                            ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 ml-0 absolute'}
-                        `}
-                    >
-                        {item.label}
-                    </span>
-                    
-                    {!isExpanded && currentModule === item.id && (
-                        <motion.div 
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className="absolute right-1 top-1 w-2 h-2 bg-amber-400 rounded-full border-2 border-white dark:border-slate-900 shadow-sm z-20" 
-                        />
-                    )}
-                </button>
-              </Tooltip>
+                    {item.label}
+                </span>
+                
+                {!isExpanded && currentModule === item.id && (
+                    <motion.div 
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute right-1 top-1 w-2 h-2 bg-amber-400 rounded-full border-2 border-white dark:border-slate-900 shadow-sm z-20" 
+                    />
+                )}
+              </button>
             ))}
           </nav>
         </div>
 
         {/* FOOTER ACTIONS (Fixed Bottom) */}
         <div className="shrink-0 p-3 space-y-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20">
-             <Tooltip content={!isExpanded ? "Облако" : null} position="right" className="block w-full">
-                <button 
-                    onClick={!isDriveConnected ? onConnectDrive : undefined} 
-                    disabled={isDriveConnected && syncStatus === 'synced'} 
-                    className={`
-                        w-full flex items-center p-3 rounded-xl transition-all duration-200 relative overflow-hidden
-                        ${!isDriveConnected ? 'hover:bg-indigo-50 dark:hover:bg-slate-800 cursor-pointer' : 'cursor-default'}
-                        ${isExpanded ? 'justify-start' : 'justify-center'}
-                    `} 
-                >
-                    <div className="relative shrink-0">
-                        <Cloud size={20} className={isDriveConnected ? 'text-indigo-500 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'} />
-                        <div className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 rounded-full ring-2 ring-white dark:ring-slate-800">{getSyncIcon()}</div>
-                    </div>
-                    
-                    <div className={`flex flex-col items-start overflow-hidden transition-all duration-300 ${isExpanded ? 'opacity-100 w-auto ml-3' : 'opacity-0 w-0 h-0 ml-0'}`}>
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">Облако</span>
-                    </div>
-                </button>
-             </Tooltip>
+             <button 
+                onClick={!isDriveConnected ? onConnectDrive : undefined} 
+                disabled={isDriveConnected && syncStatus === 'synced'} 
+                className={`
+                    w-full flex items-center p-3 rounded-xl transition-all duration-200 relative overflow-hidden
+                    ${!isDriveConnected ? 'hover:bg-indigo-50 dark:hover:bg-slate-800 cursor-pointer' : 'cursor-default'}
+                    ${isExpanded ? 'justify-start' : 'justify-center'}
+                `} 
+                title={!isExpanded ? "Облако" : undefined}
+             >
+                <div className="relative shrink-0">
+                    <Cloud size={20} className={isDriveConnected ? 'text-indigo-500 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'} />
+                    <div className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 rounded-full ring-2 ring-white dark:ring-slate-800">{getSyncIcon()}</div>
+                </div>
+                
+                <div className={`flex flex-col items-start overflow-hidden transition-all duration-300 ${isExpanded ? 'opacity-100 w-auto ml-3' : 'opacity-0 w-0 h-0 ml-0'}`}>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">Облако</span>
+                </div>
+             </button>
 
-             <Tooltip content={!isExpanded ? "Настройки" : null} position="right" className="block w-full">
-                 <button 
-                    onClick={() => {
-                        setModule(Module.USER_SETTINGS);
-                        if (isMobile) setIsExpanded(false);
-                    }} 
-                    className={`
-                        w-full flex items-center p-3 rounded-xl transition-all duration-200 relative
-                        ${currentModule === Module.USER_SETTINGS ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}
-                        ${isExpanded ? 'justify-start' : 'justify-center'}
-                    `}
-                 >
-                      {currentModule === Module.USER_SETTINGS && (
-                          <motion.div layoutId="activeNav" className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl" transition={{ type: "spring", stiffness: 300, damping: 30 }} />
-                      )}
-                      <Settings size={20} className="shrink-0 relative z-10" />
-                      <span className={`text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 ml-0'}`}>Настройки</span>
-                 </button>
-             </Tooltip>
+             <button 
+                onClick={() => {
+                    setModule(Module.USER_SETTINGS);
+                    if (isMobile) setIsExpanded(false);
+                }} 
+                className={`
+                    w-full flex items-center p-3 rounded-xl transition-all duration-200 relative
+                    ${currentModule === Module.USER_SETTINGS ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}
+                    ${isExpanded ? 'justify-start' : 'justify-center'}
+                `}
+                title={!isExpanded ? "Настройки" : undefined}
+             >
+                  {currentModule === Module.USER_SETTINGS && (
+                      <motion.div layoutId="activeNav" className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl" transition={{ type: "spring", stiffness: 300, damping: 30 }} />
+                  )}
+                  <Settings size={20} className="shrink-0 relative z-10" />
+                  <span className={`text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 ml-0'}`}>Настройки</span>
+             </button>
 
              {isOwner && (
-               <Tooltip content={!isExpanded ? "Владелец" : null} position="right" color="red" className="block w-full">
-                   <button 
-                    onClick={() => {
-                        setModule(Module.SETTINGS);
-                        if (isMobile) setIsExpanded(false);
-                    }} 
-                    className={`
-                        w-full flex items-center p-3 rounded-xl transition-all duration-200 relative
-                        ${currentModule === Module.SETTINGS ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}
-                        ${isExpanded ? 'justify-start' : 'justify-center'}
-                    `}
-                   >
-                      {currentModule === Module.SETTINGS && (
-                          <motion.div layoutId="activeNav" className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl" transition={{ type: "spring", stiffness: 300, damping: 30 }} />
-                      )}
-                      <Shield size={20} className="shrink-0 relative z-10" />
-                      <span className={`text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 ml-0'}`}>Владелец</span>
-                   </button>
-               </Tooltip>
+               <button 
+                onClick={() => {
+                    setModule(Module.SETTINGS);
+                    if (isMobile) setIsExpanded(false);
+                }} 
+                className={`
+                    w-full flex items-center p-3 rounded-xl transition-all duration-200 relative
+                    ${currentModule === Module.SETTINGS ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}
+                    ${isExpanded ? 'justify-start' : 'justify-center'}
+                `}
+                title={!isExpanded ? "Настройки Владельца" : undefined}
+               >
+                  {currentModule === Module.SETTINGS && (
+                      <motion.div layoutId="activeNav" className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl" transition={{ type: "spring", stiffness: 300, damping: 30 }} />
+                  )}
+                  <Shield size={20} className="shrink-0 relative z-10" />
+                  <span className={`text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 ml-0'}`}>Владелец</span>
+               </button>
              )}
         </div>
       </aside>
