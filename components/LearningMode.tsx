@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Module } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Book, ArrowRight, ArrowLeft, FlaskConical, Zap, Sparkles, BrainCircuit, X, Flame } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Book, ArrowRight, ArrowLeft, FlaskConical, X, Flame } from 'lucide-react';
 
 interface Step {
   id: number;
@@ -25,7 +25,7 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
     {
       id: 0,
       title: "Заметки/Входящие",
-      subtitle: "Сырой материал",
+      subtitle: "На скорости мысли",
       description: "Всё начинается здесь. Не фильтруй мысли. Записывай идеи, цитаты, инсайты или просто тревоги. Это твое хранилище сырого материала. Лучшее сохрани в «Библиотеке».",
       icon: StickyNote,
       color: "bg-blue-500",
@@ -65,8 +65,8 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
     {
       id: 4,
       title: "Трекер",
-      subtitle: "Дисциплина",
-      description: "Сила в системе. Заведи свои полезные привычки и отслеживай прогресс.",
+      subtitle: "Система",
+      description: "Сила в системе. Заведи полезные привычки и отслеживай прогресс.",
       icon: Flame,
       color: "bg-orange-500",
       module: Module.RITUALS,
@@ -185,31 +185,6 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
                         </button>
                     </div>
                  </div>
-              </div>
-           </div>
-        </div>
-
-        {/* Footer Hints */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-           <div className="p-5 bg-white border border-slate-100 rounded-2xl flex items-start gap-4 shadow-sm">
-              <Zap size={20} className="text-amber-500 shrink-0 mt-1" />
-              <div>
-                <h4 className="font-bold text-slate-800 text-sm">ИИ-менторы</h4>
-                <p className="text-xs text-slate-500 leading-relaxed mt-1">Используйте разных менторов в «Хабе» для разных задач.</p>
-              </div>
-           </div>
-           <div className="p-5 bg-white border border-slate-100 rounded-2xl flex items-start gap-4 shadow-sm">
-              <BrainCircuit size={20} className="text-indigo-500 shrink-0 mt-1" />
-              <div>
-                <h4 className="font-bold text-slate-800 text-sm">Нейротренировка</h4>
-                <p className="text-xs text-slate-500 leading-relaxed mt-1">Mental Gym помогает перепрошивать привычки мышления.</p>
-              </div>
-           </div>
-           <div className="p-5 bg-white border border-slate-100 rounded-2xl flex items-start gap-4 shadow-sm">
-              <Sparkles size={20} className="text-emerald-500 shrink-0 mt-1" />
-              <div>
-                <h4 className="font-bold text-slate-800 text-sm">Смысл в Действии</h4>
-                <p className="text-xs text-slate-500 leading-relaxed mt-1">Челленджи превращают рутину в увлекательный квест.</p>
               </div>
            </div>
         </div>
