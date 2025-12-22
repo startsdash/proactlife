@@ -468,7 +468,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     {hasMoodMatcher && (
                         <button onClick={() => setShowMoodInput(true)} className={`p-2 rounded-xl border transition-all ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/50 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-purple-500 hover:border-purple-200'}`} title="Подбор по теме (ИИ)"><Sparkles size={18} /></button>
                     )}
-                    <button onClick={startOracle} className="group relative p-2 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none" title="Оракул Смыслов">
+                    <button onClick={startOracle} className="group relative p-2 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none" title="Рандом">
                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
                         <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
                         <Dices size={18} className="relative z-10 text-white transition-transform duration-500 group-hover:rotate-180" />
@@ -547,8 +547,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                       {oracleState === 'select' && (
                           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full h-full flex flex-col items-center justify-center">
                               <Quote size={48} className="text-slate-200 dark:text-slate-700 mb-6" />
-                              <h3 className="text-xl font-light text-slate-800 dark:text-slate-200 mb-2">Оракул Смыслов</h3>
-                              <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Какую энергию ты ищешь?</p>
+                              <h3 className="text-xl font-light text-slate-800 dark:text-slate-200 mb-2">Рандом</h3>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Что ищем?</p>
                               <div className="grid grid-cols-2 gap-4 w-full">
                                   {ORACLE_VIBES.map(vibe => (
                                       <button key={vibe.id} onClick={() => castOracleSpell(vibe)} className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 hover:shadow-lg hover:scale-105 border border-slate-100 dark:border-slate-700 transition-all duration-300 group">
