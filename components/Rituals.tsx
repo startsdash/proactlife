@@ -258,7 +258,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                 <div className="p-2 bg-white dark:bg-indigo-800 rounded-lg text-indigo-500"><Bell size={18} /></div>
                 <div className="text-sm text-indigo-900 dark:text-indigo-200">
                     <div className="font-bold">Включите напоминания</div>
-                    <div className="opacity-80">Чтобы не пропускать ритуалы.</div>
+                    <div className="opacity-80">Чтобы ничего не пропустить</div>
                 </div>
             </div>
             <button onClick={requestNotificationPermission} className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700">Включить</button>
@@ -276,7 +276,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
           >
               <div className="bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{editingId ? 'Редактировать Ритуал' : 'Новый Ритуал'}</h3>
+                      <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{editingId ? 'Редактировать привычку' : 'Новая привычка'}</h3>
                       <button onClick={() => { setIsFormOpen(false); resetForm(); }} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
                   </div>
                   
@@ -348,7 +348,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                             disabled={!newTitle.trim()}
                             className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors disabled:opacity-50"
                           >
-                              {editingId ? 'Сохранить изменения' : 'Создать ритуал'}
+                              {editingId ? 'Сохранить изменения' : 'Создать'}
                           </button>
                       </div>
                   </div>
