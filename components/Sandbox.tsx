@@ -5,6 +5,7 @@ import { analyzeSandboxItem, SandboxAnalysis } from '../services/geminiService';
 import { ICON_MAP } from '../constants';
 import EmptyState from './EmptyState';
 import { CheckSquare, Library, Loader2, Quote, BrainCircuit, ArrowLeft, Tag, Archive, Trash2, Dumbbell, Box } from 'lucide-react';
+import { Tooltip } from './Tooltip';
 
 interface Props {
   notes: Note[];
@@ -157,22 +158,23 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                                             </span>
                                         ))}
                                     </div>
-                                    <button 
-                                        onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            if (window.confirm("Удалить заметку?")) {
-                                                deleteNote(note.id);
-                                                if (selectedNoteId === note.id) {
-                                                    setAnalysis(null);
-                                                    setSelectedNoteId(null);
+                                    <Tooltip content="Удалить">
+                                        <button 
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                if (window.confirm("Удалить заметку?")) {
+                                                    deleteNote(note.id);
+                                                    if (selectedNoteId === note.id) {
+                                                        setAnalysis(null);
+                                                        setSelectedNoteId(null);
+                                                    }
                                                 }
-                                            }
-                                        }} 
-                                        className="p-1.5 text-slate-400 hover:text-red-600 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors border border-slate-100 dark:border-slate-700 hover:border-red-100 dark:hover:border-red-800 shadow-sm"
-                                        title="Удалить"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
+                                            }} 
+                                            className="p-1.5 text-slate-400 hover:text-red-600 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors border border-slate-100 dark:border-slate-700 hover:border-red-100 dark:hover:border-red-800 shadow-sm"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </Tooltip>
                                 </div>
                             </div>
                         ))}

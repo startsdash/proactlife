@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { Task } from '../types';
 import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, MessageCircle, Circle, XCircle, Trophy, Minus, Plus } from 'lucide-react';
 import EmptyState from './EmptyState';
+import { Tooltip } from './Tooltip';
 
 interface Props {
   tasks: Task[];
@@ -202,26 +203,28 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                 )}
 
                 <div className="flex justify-end gap-2 pt-3 border-t border-slate-50 dark:border-slate-700">
-                   <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm("Восстановить задачу в Спринты?")) restoreTask(task.id);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                      title="Восстановить в Спринты"
-                   >
-                      <RotateCcw size={14} /> <span className="hidden md:inline">Восстановить</span>
-                   </button>
-                   <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm("Удалить задачу из истории навсегда?")) deleteTask(task.id);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                      title="Удалить навсегда"
-                   >
-                      <Trash2 size={14} /> <span className="hidden md:inline">Удалить</span>
-                   </button>
+                   <Tooltip content="Восстановить в Спринты">
+                       <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm("Восстановить задачу в Спринты?")) restoreTask(task.id);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                       >
+                          <RotateCcw size={14} /> <span className="hidden md:inline">Восстановить</span>
+                       </button>
+                   </Tooltip>
+                   <Tooltip content="Удалить навсегда">
+                       <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm("Удалить задачу из истории навсегда?")) deleteTask(task.id);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-2 md:px-4 text-xs font-medium text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                       >
+                          <Trash2 size={14} /> <span className="hidden md:inline">Удалить</span>
+                       </button>
+                   </Tooltip>
                 </div>
               </div>
             ))}

@@ -5,6 +5,7 @@ import { Flame, Check, Plus, Trash2, X, Zap, Calendar, Repeat, Bell, GripVertica
 import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
 import ProgressStats from './ProgressStats';
+import { Tooltip } from './Tooltip';
 
 interface Props {
   habits: Habit[];
@@ -237,12 +238,14 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
           <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Автопилот полезных привычек</p>
         </div>
         {!isFormOpen && (
-            <button 
-                onClick={openNewForm} 
-                className="bg-slate-900 dark:bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:scale-105 transition-transform"
-            >
-                <Plus size={24} />
-            </button>
+            <Tooltip content="Новая привычка">
+                <button 
+                    onClick={openNewForm} 
+                    className="bg-slate-900 dark:bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:scale-105 transition-transform"
+                >
+                    <Plus size={24} />
+                </button>
+            </Tooltip>
         )}
       </header>
 
@@ -467,12 +470,16 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                           </div>
                           
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => openEditForm(habit)} className="p-2 text-slate-300 hover:text-indigo-500 transition-colors" title="Редактировать">
-                                  <Edit2 size={18} />
-                              </button>
-                              <button onClick={() => { if(confirm("Удалить ритуал?")) deleteHabit(habit.id); }} className="p-2 text-slate-300 hover:text-red-500 transition-colors" title="Удалить">
-                                  <Trash2 size={18} />
-                              </button>
+                              <Tooltip content="Редактировать">
+                                  <button onClick={() => openEditForm(habit)} className="p-2 text-slate-300 hover:text-indigo-500 transition-colors">
+                                      <Edit2 size={18} />
+                                  </button>
+                              </Tooltip>
+                              <Tooltip content="Удалить">
+                                  <button onClick={() => { if(confirm("Удалить ритуал?")) deleteHabit(habit.id); }} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                                      <Trash2 size={18} />
+                                  </button>
+                              </Tooltip>
                           </div>
                       </div>
                   );

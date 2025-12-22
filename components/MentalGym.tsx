@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Flashcard, Task } from '../types';
 import { Dumbbell, RotateCw, Trash2, ChevronLeft, ChevronRight, BrainCircuit, Lightbulb } from 'lucide-react';
 import EmptyState from './EmptyState';
+import { Tooltip } from './Tooltip';
 
 interface Props {
   flashcards: Flashcard[];
@@ -70,13 +71,14 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                     className="perspective-1000 w-full aspect-[3/4] cursor-pointer group relative" 
                     onClick={() => setIsFlipped(!isFlipped)}
                 >
-                    <button 
-                        onClick={handleDelete}
-                        className="absolute -top-3 -right-3 z-50 p-2 bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 border border-slate-100 dark:border-slate-700 rounded-full shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                        title="Удалить карточку"
-                    >
-                        <Trash2 size={16} />
-                    </button>
+                    <Tooltip content="Удалить карточку" side="left">
+                        <button 
+                            onClick={handleDelete}
+                            className="absolute -top-3 -right-3 z-50 p-2 bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 border border-slate-100 dark:border-slate-700 rounded-full shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    </Tooltip>
 
                     <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
                         
