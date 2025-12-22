@@ -44,7 +44,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
 
   const navItems = [
     { id: Module.NAPKINS, icon: StickyNote, label: 'Заметки' },
-    { id: Module.SANDBOX, icon: Box, label: 'Менторы' },
+    { id: Module.SANDBOX, icon: Box, label: 'Хаб' },
     { id: Module.MENTAL_GYM, icon: Dumbbell, label: 'Скиллы' },
     { id: Module.KANBAN, icon: KanbanIcon, label: 'Спринты' },
     { id: Module.JOURNAL, icon: Book, label: 'Дневник' },

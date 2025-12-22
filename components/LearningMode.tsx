@@ -36,12 +36,12 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
     {
       id: 1,
       title: "Этап 2. Трансформация",
-      subtitle: "Песочница",
-      description: "Выберите мысль из «Салфеток» и отправьте её в «Песочницу». Здесь Консилиум ИИ-менторов (Питерсон, Талеб, Грин и др.) поможет вам превратить хаотичную идею в чёткий план действий или глубокий принцип.",
+      subtitle: "Хаб",
+      description: "Выберите мысль из «Салфеток» и отправьте её в «Хаб». Здесь Консилиум ИИ-менторов (Питерсон, Талеб, Грин и др.) поможет вам превратить хаотичную идею в чёткий план действий или глубокий принцип.",
       icon: Box,
       color: "bg-amber-500",
       module: Module.SANDBOX,
-      actionLabel: "В Песочницу"
+      actionLabel: "В Хаб"
     },
     {
       id: 2,
@@ -57,7 +57,7 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
       id: 3,
       title: "Этап 4. Навыки",
       subtitle: "Mental Gym",
-      description: "Важные принципы нужно помнить. В «Песочнице» вы создаёте «навыки» (флеш-карточки). Здесь вы тренируете свой мозг, чтобы новые знания стали частью вашего автоматического поведения.",
+      description: "Важные принципы нужно помнить. В «Хабе» вы создаёте «навыки» (флеш-карточки). Здесь вы тренируете свой мозг, чтобы новые знания стали частью вашего автоматического поведения.",
       icon: Dumbbell,
       color: "bg-indigo-500",
       module: Module.MENTAL_GYM,
@@ -186,7 +186,7 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
               <Zap size={20} className="text-amber-500 shrink-0 mt-1" />
               <div>
                 <h4 className="font-bold text-slate-800 text-sm">ИИ-менторы</h4>
-                <p className="text-xs text-slate-500 leading-relaxed mt-1">Используйте разных менторов в «Песочнице» для разных задач.</p>
+                <p className="text-xs text-slate-500 leading-relaxed mt-1">Используйте разных менторов в «Хабе» для разных задач.</p>
               </div>
            </div>
            <div className="p-5 bg-white border border-slate-100 rounded-2xl flex items-start gap-4 shadow-sm">
