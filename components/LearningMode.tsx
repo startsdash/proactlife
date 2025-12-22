@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { Module } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Book, ArrowRight, ArrowLeft, GraduationCap, Zap, Sparkles, BrainCircuit, X } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Book, ArrowRight, ArrowLeft, FlaskConical, Zap, Sparkles, BrainCircuit, X } from 'lucide-react';
 
 interface Step {
   id: number;
@@ -101,10 +100,10 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
         {/* Header */}
         <header className="flex items-center gap-4 mb-12">
            <div className="p-3 bg-slate-900 rounded-2xl text-white shadow-lg shadow-slate-200">
-              <GraduationCap size={32} />
+              <FlaskConical size={32} />
            </div>
            <div>
-              <h1 className="text-3xl font-light text-slate-800 tracking-tight">Академия Пути</h1>
+              <h1 className="text-3xl font-light text-slate-800 tracking-tight">Практикум Пути</h1>
               <p className="text-slate-500 text-sm">Методология эффективной работы над собой.</p>
            </div>
         </header>

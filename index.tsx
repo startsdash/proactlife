@@ -13,6 +13,8 @@ interface ErrorBoundaryState {
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   public state: ErrorBoundaryState = { hasError: false, error: null };
+  // Fix for TypeScript error: Property 'props' does not exist on type 'ErrorBoundary'
+  declare props: Readonly<ErrorBoundaryProps>;
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };

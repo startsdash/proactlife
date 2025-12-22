@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, History, Book, GraduationCap, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
@@ -49,8 +49,8 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
     { id: Module.KANBAN, icon: KanbanIcon, label: 'Спринты' },
     { id: Module.JOURNAL, icon: Book, label: 'Дневник' },
     { id: Module.RITUALS, icon: Flame, label: 'Трекер' },
-    { id: Module.ARCHIVE, icon: History, label: 'Зал славы' },
-    { id: Module.LEARNING, icon: GraduationCap, label: 'Академия' },
+    { id: Module.ARCHIVE, icon: Trophy, label: 'Зал славы' },
+    { id: Module.LEARNING, icon: FlaskConical, label: 'Практикум' },
   ];
 
   const getSyncIcon = () => {

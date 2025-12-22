@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task } from '../types';
-import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, List, Plus, Minus, MessageCircle, Circle, XCircle } from 'lucide-react';
+import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, List, Plus, Minus, MessageCircle, Circle, XCircle, Trophy } from 'lucide-react';
 import EmptyState from './EmptyState';
 
 interface Props {
@@ -176,7 +176,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
         {archivedTasks.length === 0 ? (
           <div className="py-10">
               <EmptyState 
-                  icon={History} 
+                  icon={Trophy} 
                   title="Все впереди!" 
                   description="Немного конфетти для мотивации" 
                   color="amber"

@@ -365,7 +365,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                     title="Стриков пока нет" 
                     description="Заведи полезные привычки и отслеживай прогресс" 
                     color="orange"
-                    actionLabel="Создать первый ритуал"
+                    actionLabel="Завести первую привычку"
                     onAction={openNewForm}
                   />
               </div>

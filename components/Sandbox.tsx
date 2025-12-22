@@ -90,7 +90,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
       column: 'todo',
       createdAt: Date.now()
     });
-    alert("Задача создана! Заметка осталась в Лабе.");
+    alert("Задача создана! Заметка осталась в Хабе");
   };
 
   const handleAcceptCard = () => {
@@ -102,7 +102,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
       level: 0,
       nextReview: Date.now()
     });
-    alert("Навык создан! Заметка осталась в Лабе.");
+    alert("Навык создан! Заметка осталась в Хабе");
   };
   
   const handleManualArchive = () => {
