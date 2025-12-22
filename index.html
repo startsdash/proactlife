@@ -16,6 +16,10 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+      // Polyfill process.env to prevent crashes in browser environments
+      window.process = window.process || { env: {} };
+    </script>
+    <script>
       tailwind.config = {
         darkMode: 'class',
         theme: {
