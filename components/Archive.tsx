@@ -170,7 +170,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                   icon={History} 
                   title="Все впереди!" 
                   description="Немного конфетти для мотивации" 
-                  color="orange"
+                  color="amber"
               />
           </div>
         ) : (

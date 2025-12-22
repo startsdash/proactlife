@@ -146,7 +146,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                     icon={Dumbbell} 
                     title="Пока пусто" 
                     description="Создай карточки в «Хабе», чтобы начать тренировку" 
-                    color="violet"
+                    color="slate"
                 />
             </div>
         )}
