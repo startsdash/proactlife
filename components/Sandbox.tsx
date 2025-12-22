@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Note, Task, Flashcard, AppConfig } from '../types';
@@ -139,7 +138,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                         <EmptyState 
                             icon={Box} 
                             title="Входящих нет" 
-                            description="Отправьте заметки из «Инбокса», чтобы начать работу над ними." 
+                            description="Отправь заметку из «Входящих», чтобы поработать с ней" 
                             color="amber"
                         />
                     </div>
@@ -203,7 +202,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                 {!selectedNoteId ? (
                     <div className="flex flex-col items-center justify-center h-full text-slate-300 dark:text-slate-600 p-8 text-center">
                         <BrainCircuit size={64} className="mb-6 opacity-40" />
-                        <p className="text-lg font-light">Выберите заметку для анализа</p>
+                        <p className="text-lg font-light">Выбери заметку для работы</p>
                     </div>
                 ) : (
                     <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-lg md:shadow-sm border border-slate-200 dark:border-slate-700 p-5 md:p-8 h-full md:h-auto overflow-y-auto flex flex-col relative custom-scrollbar-light">

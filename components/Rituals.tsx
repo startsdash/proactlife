@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Habit, HabitFrequency } from '../types';
 import { notificationService } from '../services/notificationService';
@@ -363,8 +362,8 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
               <div className="py-10">
                   <EmptyState 
                     icon={Flame} 
-                    title="Ритуалов пока нет" 
-                    description="Создайте полезную привычку, чтобы начать стрик." 
+                    title="Стриков пока нет" 
+                    description="Заведи полезную привычку и отслеживай прогресс" 
                     color="orange"
                     actionLabel="Создать первый ритуал"
                     onAction={openNewForm}

@@ -13,13 +13,13 @@ let API_KEY = '';
 let CLIENT_SECRET = '';
 
 try {
+  // Safely access env vars
   // @ts-ignore
-  CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-  // @ts-ignore
-  API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || '';
-  // @ts-ignore
-  CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '';
-} catch (e) { console.warn(e); }
+  const env = import.meta && import.meta.env ? import.meta.env : {};
+  CLIENT_ID = env.VITE_GOOGLE_CLIENT_ID || '';
+  API_KEY = env.VITE_GOOGLE_API_KEY || '';
+  CLIENT_SECRET = env.VITE_GOOGLE_CLIENT_SECRET || '';
+} catch (e) { console.warn("Env load error:", e); }
 
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
 const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';

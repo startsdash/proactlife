@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
@@ -482,7 +481,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                <EmptyState 
                    icon={Book} 
                    title="Страницы пусты" 
-                   description={searchQuery || hasActiveDateFilter ? 'Ничего не найдено по вашему запросу.' : 'Записывайте свои мысли и связывайте их с задачами, чтобы отслеживать свой путь.'}
+                   description={searchQuery || hasActiveDateFilter ? 'Ничего не найдено по вашему запросу' : 'Записывай свои мысли, связывай их с задачами, чтобы отслеживать свой путь'}
                    color="cyan"
                />
            </div>

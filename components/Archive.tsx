@@ -168,8 +168,8 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
           <div className="py-10">
               <EmptyState 
                   icon={History} 
-                  title="Архив пуст" 
-                  description="Здесь будут храниться завершенные и удаленные задачи." 
+                  title="Все впереди!" 
+                  description="Немного конфетти для мотивации" 
                   color="orange"
               />
           </div>

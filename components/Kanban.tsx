@@ -447,6 +447,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     if (!col) return null;
     const tasksInCol = activeTasks.filter(t => t.column === col.id);
     
+    let emptyText = "Перетащите задачи сюда";
+    if (col.id === 'todo') emptyText = "Добавь задачу из «Входящих» или «Хаба»";
+    if (col.id === 'doing') emptyText = "Перетащи задачу из «Выполнить»";
+    if (col.id === 'done') emptyText = "Готово? Перетащи задачу сюда";
+
     return (
     <div key={col.id} className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col h-full border-t-4 ${col.color} p-2 md:p-3 min-h-0 overflow-hidden`} onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
         <h3 className="font-semibold text-slate-600 dark:text-slate-400 mb-3 flex justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
@@ -456,7 +461,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                    <EmptyState 
                         icon={KanbanIcon} 
                         title="Пусто" 
-                        description="Перетащите задачи сюда." 
+                        description={emptyText} 
                         color="slate"
                     /> 
                 </div>

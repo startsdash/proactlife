@@ -1,10 +1,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig, JournalEntry } from "../types";
-import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL, applyTypography } from '../constants';
+import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL, applyTypography, BASE_OUTPUT_INSTRUCTION } from '../constants';
 
 // --- API Access ---
 // The API key must be obtained exclusively from the environment variable process.env.API_KEY.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// We provide a fallback to prevent runtime crashes if env is missing during initialization.
+const apiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : '';
+const ai = new GoogleGenAI({ apiKey: apiKey || 'MISSING_KEY' });
 
 // Helper to check if model requires legacy/chat handling (Gemma doesn't support systemInstruction in config)
 const isGemmaModel = (model: string) => model.toLowerCase().includes('gemma');
@@ -76,59 +78,59 @@ export const autoTagNote = async (content: string, config: AppConfig): Promise<s
             responseMimeType: tool.responseMimeType || "application/json",
             responseSchema: {
               type: Type.OBJECT,
-              properties: { tags: { type: Type.ARRAY, items: { type: Type.STRING } } },
-              required: ["tags"]
+              properties: { tags: { type: Type.ARRAY, items: { type: Type.STRING } } }
             }
           }
         });
     }
-    
-    const result = parseJSON<{ tags: string[] }>(response.text, { tags: [] });
-    return result.tags || [];
+
+    const json = parseJSON<{tags: string[]}>(response.text, { tags: [] });
+    return json.tags || [];
+
   } catch (error) {
-    console.error("AutoTag Error:", error);
+    console.error("AutoTag Error", error);
     return [];
   }
 };
 
 export const findNotesByMood = async (notes: Note[], mood: string, config: AppConfig): Promise<string[]> => {
-  const tool = getToolConfig('mood_matcher', config);
-  const model = tool.model || DEFAULT_MODEL;
-  
-  // Optimization: Send simplified objects to save context tokens
-  const simplifiedNotes = notes.map(n => ({ id: n.id, content: n.content.slice(0, 300), tags: n.tags }));
-  
-  try {
-    let response;
-    if (isGemmaModel(model)) {
-        const gemmaPrompt = `${tool.systemPrompt}\n\nUser Mood: "${mood}"\nLibrary: ${JSON.stringify(simplifiedNotes)}\n\nReturn ONLY raw JSON: { "ids": ["id1", "id2"] }`;
-        response = await ai.models.generateContent({ 
-          model, 
-          contents: gemmaPrompt,
-          config: getGemmaConfig()
-        });
-    } else {
-        response = await ai.models.generateContent({
-          model,
-          contents: `User Mood/State: "${mood}". Notes Library: ${JSON.stringify(simplifiedNotes)}`,
-          config: {
-            systemInstruction: tool.systemPrompt,
-            responseMimeType: tool.responseMimeType || "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: { ids: { type: Type.ARRAY, items: { type: Type.STRING } } },
-              required: ["ids"]
-            }
-          }
-        });
-    }
+    const tool = getToolConfig('mood_matcher', config);
+    const model = tool.model || DEFAULT_MODEL;
     
-    const result = parseJSON<{ ids: string[] }>(response.text, { ids: [] });
-    return result.ids || [];
-  } catch (error) {
-    console.error("Mood Match Error:", error);
-    return [];
-  }
+    // Prepare simplified notes for context
+    const notesContext = notes.map(n => `ID: ${n.id}\nContent: ${n.content.substring(0, 200)}...`).join('\n---\n');
+    const fullPrompt = `${tool.systemPrompt}\n\n[NOTES DATABASE]\n${notesContext}`;
+
+    try {
+        let response;
+        if (isGemmaModel(model)) {
+             const gemmaPrompt = `${fullPrompt}\n\n[TASK]\nUser Mood: "${mood}"\nFind relevant Note IDs.\n\n[OUTPUT]\nReturn ONLY raw JSON: { "ids": ["id1", "id2"] }`;
+             response = await ai.models.generateContent({
+                model,
+                contents: gemmaPrompt,
+                config: getGemmaConfig()
+             });
+        } else {
+            response = await ai.models.generateContent({
+                model,
+                contents: `Mood: ${mood}`,
+                config: {
+                    systemInstruction: fullPrompt,
+                    responseMimeType: tool.responseMimeType || "application/json",
+                    responseSchema: {
+                        type: Type.OBJECT,
+                        properties: { ids: { type: Type.ARRAY, items: { type: Type.STRING } } }
+                    }
+                }
+            });
+        }
+        
+        const json = parseJSON<{ids: string[]}>(response.text, { ids: [] });
+        return json.ids || [];
+    } catch (e) {
+        console.error("Mood Match Error", e);
+        return [];
+    }
 };
 
 export interface SandboxAnalysis {
@@ -138,251 +140,115 @@ export interface SandboxAnalysis {
   suggestedFlashcardBack: string;
 }
 
-export const analyzeSandboxItem = async (content: string, mentorId: string, config: AppConfig): Promise<SandboxAnalysis> => {
-  const mentor = config.mentors.find(m => m.id === mentorId) || config.mentors[0];
-  const model = mentor.model || DEFAULT_MODEL;
-  
-  // Combine Core Library with Mentor Prompt
-  const fullPrompt = `${mentor.systemPrompt}\n\n[CONTEXT LIBRARY]\n${config.coreLibrary}`;
-
-  try {
-    let response;
+export const analyzeSandboxItem = async (content: string, mentorId: string, config: AppConfig): Promise<SandboxAnalysis | null> => {
+    const mentor = config.mentors.find(m => m.id === mentorId) || config.mentors[0];
+    const model = mentor.model || DEFAULT_MODEL;
     
-    if (isGemmaModel(model)) {
-        // Gemma needs explicit schema instructions in prompt since responseSchema might be unsupported
-        const schemaInstruction = `
-        [OUTPUT FORMAT]
-        Return ONLY valid JSON with this structure:
-        {
-          "analysis": "string (Deep analysis)",
-          "suggestedTask": "string (Actionable step)",
-          "suggestedFlashcardFront": "string (Concept/Question)",
-          "suggestedFlashcardBack": "string (Principle/Answer)"
-        }`;
-        
-        const gemmaPrompt = `${fullPrompt}\n\n${schemaInstruction}\n\nUser Note: "${content}"`;
-        
-        response = await ai.models.generateContent({
-            model,
-            contents: gemmaPrompt,
-            config: getGemmaConfig()
+    const systemInstruction = `${mentor.systemPrompt}\n\n${BASE_OUTPUT_INSTRUCTION}\n\nCONTEXT:\n${config.coreLibrary}`;
+
+    try {
+        let response;
+        if (isGemmaModel(model)) {
+             const gemmaPrompt = `${systemInstruction}\n\n[INPUT TEXT]\n"${content}"\n\n[OUTPUT]\nReturn ONLY raw JSON conforming to the schema described above.`;
+             response = await ai.models.generateContent({
+                model,
+                contents: gemmaPrompt,
+                config: getGemmaConfig()
+             });
+        } else {
+             response = await ai.models.generateContent({
+                model,
+                contents: content,
+                config: {
+                    systemInstruction,
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: Type.OBJECT,
+                        properties: {
+                            analysis: { type: Type.STRING },
+                            suggestedTask: { type: Type.STRING },
+                            suggestedFlashcardFront: { type: Type.STRING },
+                            suggestedFlashcardBack: { type: Type.STRING },
+                        }
+                    }
+                }
+             });
+        }
+
+        return parseJSON<SandboxAnalysis>(response.text, { 
+            analysis: "Could not analyze.", 
+            suggestedTask: "Review content", 
+            suggestedFlashcardFront: "Key Concept", 
+            suggestedFlashcardBack: "Definition" 
         });
-    } else {
-        response = await ai.models.generateContent({
-          model,
-          contents: `User Note: "${content}"`,
-          config: {
-            systemInstruction: fullPrompt,
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                analysis: { type: Type.STRING },
-                suggestedTask: { type: Type.STRING },
-                suggestedFlashcardFront: { type: Type.STRING },
-                suggestedFlashcardBack: { type: Type.STRING }
-              },
-              required: ["analysis", "suggestedTask", "suggestedFlashcardFront", "suggestedFlashcardBack"]
-            }
-          }
-        });
+
+    } catch (e) {
+        console.error("Sandbox Analysis Error", e);
+        return null;
     }
+};
+
+export const getKanbanTherapy = async (taskContent: string, type: 'stuck' | 'completed', config: AppConfig): Promise<string> => {
+    const tool = getToolConfig('kanban_therapist', config);
+    const model = tool.model || DEFAULT_MODEL;
     
-    const result = parseJSON<SandboxAnalysis>(response.text, {
-      analysis: "Сбой анализа.",
-      suggestedTask: "Повторить",
-      suggestedFlashcardFront: "Error",
-      suggestedFlashcardBack: "Try again"
-    });
+    const context = type === 'stuck' 
+        ? "The user is STUCK on this task. Help them unblock it using stoic/cognitive reframing." 
+        : "The user COMPLETED this task. Help them integrate this win and reflect on the value.";
+    
+    const fullPrompt = `${tool.systemPrompt}\n\nCONTEXT: ${context}\n\nTASK: "${taskContent}"`;
 
-    // Apply Typography Rules
-    if (result.analysis) result.analysis = applyTypography(result.analysis);
-    if (result.suggestedTask) result.suggestedTask = applyTypography(result.suggestedTask);
-    if (result.suggestedFlashcardFront) result.suggestedFlashcardFront = applyTypography(result.suggestedFlashcardFront);
-    if (result.suggestedFlashcardBack) result.suggestedFlashcardBack = applyTypography(result.suggestedFlashcardBack);
-
-    return result;
-  } catch (e) {
-    console.error("Analysis Error:", e);
-    return {
-      analysis: "Сбой связи с ментором.",
-      suggestedTask: "Повторить",
-      suggestedFlashcardFront: "Error",
-      suggestedFlashcardBack: "Try again"
-    };
-  }
+    try {
+        const response = await ai.models.generateContent({
+            model,
+            contents: fullPrompt, // Simple text generation
+            config: isGemmaModel(model) ? getGemmaConfig() : { systemInstruction: tool.systemPrompt }
+        });
+        return applyTypography(response.text || "Thinking...");
+    } catch (e) {
+        console.error("Kanban Therapy Error", e);
+        return "Thinking process interrupted.";
+    }
 };
 
 export const generateTaskChallenge = async (taskContent: string, config: AppConfig): Promise<string> => {
-  const author: Partial<ChallengeAuthor> = config.challengeAuthors[0] || { systemPrompt: 'Challenge the user.', model: DEFAULT_MODEL };
-  const fullPrompt = `${author.systemPrompt}\n\n[CONTEXT LIBRARY]\n${config.coreLibrary}`;
-  const model = author.model || DEFAULT_MODEL;
-
-  // Add instruction to start with a header and AVOID COLONS
-  const userContent = `Task: "${taskContent}"\n\n[INSTRUCTION]\nStart the response with a short, bold Markdown Heading (e.g. ### Title) that summarizes the challenge. \nIMPORTANT: Do NOT put a colon (:) at the end of the header text.`;
-
-  try {
-    let response;
+    const author = config.challengeAuthors[0]; // Default to first author (Popper usually)
+    if (!author) return "No challenge author configured.";
     
-    if (isGemmaModel(model)) {
-         const gemmaPrompt = `${fullPrompt}\n\n${userContent}`;
-         response = await ai.models.generateContent({ 
-           model, 
-           contents: gemmaPrompt,
-           config: getGemmaConfig() 
-         });
-    } else {
-         response = await ai.models.generateContent({
-          model,
-          contents: userContent,
-          config: { 
-            systemInstruction: fullPrompt,
-            responseMimeType: author.responseMimeType
-          }
+    const model = author.model || DEFAULT_MODEL;
+    const fullPrompt = `${author.systemPrompt}\n\nTASK: "${taskContent}"\n\nGenerate a challenge checklist (Markdown).`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model,
+            contents: fullPrompt,
+            config: isGemmaModel(model) ? getGemmaConfig() : { systemInstruction: author.systemPrompt }
         });
+        return applyTypography(response.text || "");
+    } catch (e) {
+        console.error("Challenge Generation Error", e);
+        return "Could not generate challenge.";
     }
-    const text = response.text || "Нет ответа.";
-    return applyTypography(text);
-  } catch (e) {
-    console.error("Challenge Error:", e);
-    return "Не удалось сгенерировать вызов.";
-  }
-};
-
-export const getKanbanTherapy = async (taskContent: string, state: 'stuck' | 'completed', config: AppConfig): Promise<string> => {
-  const tool = getToolConfig('kanban_therapist', config);
-  const fullPrompt = `${tool.systemPrompt}\n\n[CONTEXT LIBRARY]\n${config.coreLibrary}`;
-  const model = tool.model || DEFAULT_MODEL;
-
-  try {
-    let userMessage = state === 'stuck' 
-      ? `Пользователь застрял на задаче: "${taskContent}". Дай совет или упражнение.`
-      : `Пользователь завершил задачу: "${taskContent}". Проведи краткую рефлексию.`;
-
-    // Add instruction for header and AVOID COLONS
-    userMessage += `\n\n[INSTRUCTION]\nStart the response with a short, bold Markdown Heading (e.g. ### Title) matching the context. \nIMPORTANT: Do NOT put a colon (:) at the end of the header text.`;
-
-    let response;
-    if (isGemmaModel(model)) {
-        const gemmaPrompt = `${fullPrompt}\n\n${userMessage}`;
-        response = await ai.models.generateContent({ 
-          model, 
-          contents: gemmaPrompt,
-          config: getGemmaConfig()
-        });
-    } else {
-        response = await ai.models.generateContent({
-          model,
-          contents: userMessage,
-          config: {
-            systemInstruction: fullPrompt,
-            responseMimeType: tool.responseMimeType // Use configured format (text or json)
-          }
-        });
-    }
-    const text = response.text || "Продолжай.";
-    return applyTypography(text);
-  } catch (e) {
-    console.error("Therapy Error:", e);
-    return "Система поддержки недоступна.";
-  }
-};
-
-export interface JournalReflection {
-  feedback: string;
-  mentorId: string;
-}
-
-export const generateJournalReflection = async (
-  entryContent: string, 
-  linkedTask: Task | undefined, 
-  config: AppConfig
-): Promise<JournalReflection> => {
-  try {
-    // Select a random mentor for variety, or use a specific strategy
-    const randomMentor = config.mentors[Math.floor(Math.random() * config.mentors.length)];
-    const model = randomMentor.model || DEFAULT_MODEL;
-    
-    let prompt = `Пользователь написал запись в дневнике: "${entryContent}".`;
-    if (linkedTask) {
-      prompt += `\nЗапись привязана к задаче (${linkedTask.column === 'done' ? 'ВЫПОЛНЕНО' : 'В ПРОЦЕССЕ'}): "${linkedTask.content}".`;
-      if (linkedTask.activeChallenge) prompt += `\nАктивный челлендж задачи: "${linkedTask.activeChallenge}".`;
-    }
-    
-    prompt += `\nДай краткий (1-2 предложения), глубокий философский комментарий или вопрос, который поможет пользователю осознать опыт.`;
-
-    const fullPrompt = `${randomMentor.systemPrompt}\n\n[CONTEXT LIBRARY]\n${config.coreLibrary}\n\nВАЖНО: Отвечай от лица ${randomMentor.name}. Будь краток.`;
-
-    let response;
-    if (isGemmaModel(model)) {
-        const gemmaPrompt = `${fullPrompt}\n\n${prompt}`;
-        response = await ai.models.generateContent({ 
-          model, 
-          contents: gemmaPrompt,
-          config: getGemmaConfig()
-        });
-    } else {
-        response = await ai.models.generateContent({
-          model,
-          contents: prompt,
-          config: { systemInstruction: fullPrompt }
-        });
-    }
-
-    const feedback = response.text || "Продолжай наблюдение.";
-    return {
-      feedback: applyTypography(feedback),
-      mentorId: randomMentor.id
-    };
-  } catch (e) {
-    console.error("Reflection Error:", e);
-    return {
-      feedback: "Тишина...",
-      mentorId: 'system'
-    };
-  }
 };
 
 export const analyzeJournalPath = async (entries: JournalEntry[], config: AppConfig): Promise<string> => {
-  const tool = getToolConfig('journal_mentor', config);
-  const model = tool.model || DEFAULT_MODEL;
-  const fullPrompt = `${tool.systemPrompt}\n\n[CONTEXT LIBRARY]\n${config.coreLibrary}`;
+    const tool = getToolConfig('journal_mentor', config);
+    const model = tool.model || DEFAULT_MODEL;
 
-  if (entries.length === 0) return "Записей нет. Путь еще не начат.";
+    // Prepare journal context (last 10 entries to fit context window)
+    const contextEntries = entries.slice(0, 10).map(e => `[${new Date(e.date).toLocaleDateString()}] ${e.content}`).join('\n---\n');
+    
+    const fullPrompt = `${tool.systemPrompt}\n\nJOURNAL ENTRIES:\n${contextEntries}`;
 
-  // Prepare entries context (reverse chronological usually, or chronological for path analysis)
-  // Let's sort chronologically for the AI to see the timeline
-  const sortedEntries = [...entries].sort((a, b) => a.date - b.date);
-  
-  const entriesText = sortedEntries.map(e => {
-    return `[${new Date(e.date).toLocaleDateString()}] ${e.content}`;
-  }).join('\n\n---\n\n');
-
-  try {
-    let response;
-    const userRequest = `Проанализируй этот набор записей из дневника пользователя:\n\n${entriesText}`;
-
-    if (isGemmaModel(model)) {
-        const gemmaPrompt = `${fullPrompt}\n\n${userRequest}`;
-        response = await ai.models.generateContent({
-          model,
-          contents: gemmaPrompt,
-          config: getGemmaConfig()
+    try {
+        const response = await ai.models.generateContent({
+            model,
+            contents: fullPrompt,
+            config: isGemmaModel(model) ? getGemmaConfig() : { systemInstruction: tool.systemPrompt }
         });
-    } else {
-        response = await ai.models.generateContent({
-          model,
-          contents: userRequest,
-          config: {
-            systemInstruction: fullPrompt,
-            responseMimeType: tool.responseMimeType
-          }
-        });
+        return applyTypography(response.text || "");
+    } catch (e) {
+        console.error("Journal Analysis Error", e);
+        return "Analysis failed.";
     }
-    const text = response.text || "Не удалось проанализировать Путь.";
-    return applyTypography(text);
-  } catch (error) {
-    console.error("Journal Analysis Error:", error);
-    return "Наставник временно недоступен.";
-  }
 };

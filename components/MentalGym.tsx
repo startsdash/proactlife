@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Flashcard, Task } from '../types';
 import { Dumbbell, RotateCw, Trash2, ChevronLeft, ChevronRight, BrainCircuit, Lightbulb } from 'lucide-react';
@@ -145,8 +144,8 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
             <div className="py-10">
                 <EmptyState 
                     icon={Dumbbell} 
-                    title="Спортзал пуст" 
-                    description="Создайте карточки навыков в «Лабе» после анализа ИИ, чтобы начать тренировку." 
+                    title="Пока пусто" 
+                    description="Создай карточки в «Хабе», чтобы начать тренировку" 
                     color="violet"
                 />
             </div>

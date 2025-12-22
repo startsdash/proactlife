@@ -514,7 +514,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         <EmptyState 
                           icon={PenTool} 
                           title="Чистый лист" 
-                          description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу.' : 'Входящие пусты. Это отличное начало для новых идей.'}
+                          description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'}
                         />
                     </div>
                 )}
