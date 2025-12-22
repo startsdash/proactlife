@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Module } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Book, ArrowRight, ArrowLeft, FlaskConical, Zap, Sparkles, BrainCircuit, X } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Book, ArrowRight, ArrowLeft, FlaskConical, Zap, Sparkles, BrainCircuit, X, Flame } from 'lucide-react';
 
 interface Step {
   id: number;
@@ -24,19 +24,19 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
   const steps: Step[] = [
     {
       id: 0,
-      title: "Этап 1. Хаос",
-      subtitle: "Салфетки",
-      description: "Всё начинается здесь. Не фильтруйте мысли. Записывайте идеи, цитаты, инсайты или просто тревоги. Это ваше хранилище сырого материала.",
+      title: "Заметки/Входящие",
+      subtitle: "Сырой материал",
+      description: "Всё начинается здесь. Не фильтруй мысли. Записывай идеи, цитаты, инсайты или просто тревоги. Это твое хранилище сырого материала. Лучшее сохрани в «Библиотеке».",
       icon: StickyNote,
       color: "bg-blue-500",
       module: Module.NAPKINS,
-      actionLabel: "К Салфеткам"
+      actionLabel: "К Заметкам"
     },
     {
       id: 1,
-      title: "Этап 2. Трансформация",
-      subtitle: "Хаб",
-      description: "Выберите мысль из «Салфеток» и отправьте её в «Хаб». Здесь Консилиум ИИ-менторов (Питерсон, Талеб, Грин и др.) поможет вам превратить хаотичную идею в чёткий план действий или глубокий принцип.",
+      title: "Хаб",
+      subtitle: "Трансформация",
+      description: "Выбери мысль из «Входящих заметок» и отправь её в «Хаб». Поработай над ней с ИИ-менторами. Лучшая команда поможет превратить хаотичные мысли и идеи в чёткий план действий или глубокий принцип.",
       icon: Box,
       color: "bg-amber-500",
       module: Module.SANDBOX,
@@ -44,31 +44,41 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
     },
     {
       id: 2,
-      title: "Этап 3. От слов к делу",
-      subtitle: "Действия",
-      description: "Идеи без действий мертвы. В «Канбане» ваши планы становятся задачами. Используйте Челленджи, чтобы бросать себе вызовы, и ИИ-терапию, если застряли. Двигайте карточки в колонку «Сделано».",
+      title: "Спринты",
+      subtitle: "От слов к делу",
+      description: "Мысли и идеи без действий мертвы. В «Спринтах» они становятся задачами. Используй «Челленджи», чтобы бросать себе вызовы, и ИИ-консультанта, если нужна поддержка.",
       icon: KanbanIcon,
       color: "bg-emerald-500",
       module: Module.KANBAN,
-      actionLabel: "К Действиям"
+      actionLabel: "К Спринтам"
     },
     {
       id: 3,
-      title: "Этап 4. Навыки",
-      subtitle: "Mental Gym",
-      description: "Важные принципы нужно помнить. В «Хабе» вы создаёте «навыки» (флеш-карточки). Здесь вы тренируете свой мозг, чтобы новые знания стали частью вашего автоматического поведения.",
+      title: "Скиллы",
+      subtitle: "Нейропластичность",
+      description: "Важные принципы нужно помнить. В «Хабе» ты создаешь «навыки» (флеш-карточки). Здесь ты тренируешь свой мозг, чтобы новые знания стали частью тебя.",
       icon: Dumbbell,
       color: "bg-indigo-500",
       module: Module.MENTAL_GYM,
-      actionLabel: "В Спортзал"
+      actionLabel: "В Скиллы"
     },
     {
       id: 4,
-      title: "Этап 5. Путь",
-      subtitle: "Дневник",
-      description: "В конце дня или после задачи — рефлексируйте. Свяжите запись в дневнике с конкретной задачей. ИИ прокомментирует ваш опыт, помогая извлечь уроки из каждой победы или поражения.",
+      title: "Трекер",
+      subtitle: "Дисциплина",
+      description: "Сила в системе. Заведи свои полезные привычки и отслеживай прогресс.",
+      icon: Flame,
+      color: "bg-orange-500",
+      module: Module.RITUALS,
+      actionLabel: "К Трекеру"
+    },
+    {
+      id: 5,
+      title: "Дневник",
+      subtitle: "Рефлексия",
+      description: "Здесь можно порефлексировать. Свяжи запись в дневнике с конкретной задачей, или просто пиши. ИИ-наставник прокомментирует твой опыт, помогая извлечь уроки из каждой победы или поражения.",
       icon: Book,
-      color: "bg-slate-800",
+      color: "bg-cyan-600",
       module: Module.JOURNAL,
       actionLabel: "В Дневник"
     }
@@ -135,13 +145,13 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
            <div className="p-8 md:p-12 flex flex-col md:flex-row gap-10 items-center">
               
               <div className={`shrink-0 w-32 h-32 md:w-48 md:h-48 rounded-3xl ${current.color} flex items-center justify-center text-white shadow-2xl transition-all duration-500`}>
-                 <current.icon size={currentStep === 4 ? 64 : 80} strokeWidth={1} />
+                 <current.icon size={currentStep === 5 ? 64 : 80} strokeWidth={1} />
               </div>
 
               <div className="flex-1 space-y-6 text-center md:text-left">
                  <div className="space-y-1">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{current.title}</span>
-                    <h2 className="text-2xl md:text-4xl font-bold text-slate-900 tracking-tight">{current.subtitle}</h2>
+                    <h2 className="text-2xl md:text-4xl font-bold text-slate-900 tracking-tight">{current.title}</h2>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{current.subtitle}</span>
                  </div>
                  <p className="text-slate-600 text-lg leading-relaxed font-light">
                     {current.description}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowRight, ArrowLeft, StickyNote, Box, Kanban, Dumbbell, Book, CheckCircle2, Check } from 'lucide-react';
+import { X, ArrowRight, ArrowLeft, StickyNote, Box, Kanban, Dumbbell, Book, CheckCircle2, Check, Flame } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -9,43 +9,51 @@ interface Props {
 const steps = [
   {
     id: 'napkins',
-    title: 'Этап 1. Хаос',
-    subtitle: 'Салфетки',
-    desc: 'Всё начинается здесь. Не фильтруйте мысли. Записывайте идеи, цитаты, инсайты или просто тревоги. Это ваше хранилище сырого материала.',
+    title: 'Заметки/Входящие',
+    subtitle: 'Сырой материал',
+    desc: 'Всё начинается здесь. Не фильтруй мысли. Записывай идеи, цитаты, инсайты или просто тревоги. Это твое хранилище сырого материала. Лучшее сохрани в «Библиотеке».',
     icon: <StickyNote size={48} className="text-blue-500" />,
     color: 'bg-blue-500'
   },
   {
     id: 'sandbox',
-    title: 'Этап 2. Трансформация',
-    subtitle: 'Хаб',
-    desc: 'Выберите мысль из «Салфеток» и отправьте её в «Хаб». Здесь Консилиум ИИ-менторов (Питерсон, Талеб, Грин и др.) поможет вам превратить хаотичную идею в чёткий план действий или глубокий принцип.',
+    title: 'Хаб',
+    subtitle: 'Трансформация',
+    desc: 'Выбери мысль из «Входящих заметок» и отправь её в «Хаб». Поработай над ней с ИИ-менторами. Лучшая команда поможет превратить хаотичные мысли и идеи в чёткий план действий или глубокий принцип.',
     icon: <Box size={48} className="text-amber-500" />,
     color: 'bg-amber-500'
   },
   {
     id: 'kanban',
-    title: 'Этап 3. От слов к делу',
-    subtitle: 'Действия',
-    desc: 'Идеи без действий мертвы. В «Канбане» ваши планы становятся задачами. Используйте Челленджи, чтобы бросать себе вызовы, и ИИ-терапию, если застряли. Двигайте карточки в колонку «Сделано».',
+    title: 'Спринты',
+    subtitle: 'От слов к делу',
+    desc: 'Мысли и идеи без действий мертвы. В «Спринтах» они становятся задачами. Используй «Челленджи», чтобы бросать себе вызовы, и ИИ-консультанта, если нужна поддержка.',
     icon: <Kanban size={48} className="text-emerald-500" />,
     color: 'bg-emerald-500'
   },
   {
     id: 'mentalgym',
-    title: 'Этап 4. Навыки',
-    subtitle: 'Mental Gym',
-    desc: 'Важные принципы нужно помнить. В «Хабе» вы создаёте «навыки» (флеш-карточки). Здесь вы тренируете свой мозг, чтобы новые знания стали частью вашего автоматического поведения.',
+    title: 'Скиллы',
+    subtitle: 'Нейропластичность',
+    desc: 'Важные принципы нужно помнить. В «Хабе» ты создаешь «навыки» (флеш-карточки). Здесь ты тренируешь свой мозг, чтобы новые знания стали частью тебя.',
     icon: <Dumbbell size={48} className="text-indigo-500" />,
     color: 'bg-indigo-500'
   },
   {
+    id: 'tracker',
+    title: 'Трекер',
+    subtitle: 'Дисциплина',
+    desc: 'Сила в системе. Заведи свои полезные привычки и отслеживай прогресс.',
+    icon: <Flame size={48} className="text-orange-500" />,
+    color: 'bg-orange-500'
+  },
+  {
     id: 'journal',
-    title: 'Этап 5. Путь',
-    subtitle: 'Дневник',
-    desc: 'В конце дня или после задачи — рефлексируйте. Свяжите запись в дневнике с конкретной задачей. ИИ прокомментирует ваш опыт, помогая извлечь уроки из каждой победы или поражения.',
-    icon: <Book size={48} className="text-slate-800 dark:text-slate-400" />,
-    color: 'bg-slate-800'
+    title: 'Дневник',
+    subtitle: 'Рефлексия',
+    desc: 'Здесь можно порефлексировать. Свяжи запись в дневнике с конкретной задачей, или просто пиши. ИИ-наставник прокомментирует твой опыт, помогая извлечь уроки из каждой победы или поражения.',
+    icon: <Book size={48} className="text-cyan-600" />,
+    color: 'bg-cyan-600'
   }
 ];
 
@@ -124,10 +132,10 @@ const Onboarding: React.FC<Props> = ({ onClose }) => {
                   {steps[currentStep].icon}
                 </div>
                 <div className="space-y-1 mb-4">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">{steps[currentStep].title}</span>
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-                    {steps[currentStep].subtitle}
+                    {steps[currentStep].title}
                     </h2>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">{steps[currentStep].subtitle}</span>
                 </div>
                 <p className="text-slate-600 dark:text-slate-300 text-lg leading-relaxed font-light">
                   {steps[currentStep].desc}
