@@ -1,4 +1,5 @@
 
+
 declare global {
   interface Window {
     confetti: any;
@@ -6,6 +7,7 @@ declare global {
 }
 
 export enum Module {
+  DASHBOARD = 'dashboard',
   NAPKINS = 'napkins',
   SANDBOX = 'sandbox',
   MENTAL_GYM = 'mental_gym',

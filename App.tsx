@@ -1,10 +1,12 @@
 
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit } from './types';
 import { loadState, saveState } from './services/storageService';
 import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
 import Layout from './components/Layout';
+import Dashboard from './components/Dashboard';
 import Napkins from './components/Napkins';
 import Sandbox from './components/Sandbox';
 import MentalGym from './components/MentalGym';
@@ -51,8 +53,8 @@ const App: React.FC = () => {
         return tab as Module;
       }
     }
-    // Default to NAPKINS as requested
-    return Module.NAPKINS;
+    // Default to DASHBOARD (Updated from Napkins)
+    return Module.DASHBOARD;
   };
 
   const [module, setModule] = useState<Module>(getInitialModule);
@@ -320,7 +322,8 @@ const App: React.FC = () => {
         isOwner={isOwner}
     >
       <Onboarding onClose={() => setShowOnboarding(false)} />
-      {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
+      {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.DASHBOARD)} onNavigate={handleNavigate} />}
+      {module === Module.DASHBOARD && <Dashboard notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} onNavigate={handleNavigate} />}
       {module === Module.NAPKINS && <Napkins notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} />}
       {module === Module.SANDBOX && <Sandbox notes={data.notes} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
@@ -328,8 +331,8 @@ const App: React.FC = () => {
       {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} />}
       {module === Module.JOURNAL && <Journal entries={data.journal} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
       {module === Module.ARCHIVE && <Archive tasks={data.tasks} restoreTask={restoreTask} deleteTask={deleteTask} />}
-      {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
-      {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}
+      {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.DASHBOARD)} theme={theme} toggleTheme={toggleTheme} />}
+      {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.DASHBOARD)} />}
     </Layout>
   );
 };
