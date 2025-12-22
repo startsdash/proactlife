@@ -252,7 +252,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const startOracle = () => {
       if (notes.length === 0) {
-          alert("Сначала добавь пару мыслей в «Инбокс».");
+          alert("Сначала добавь пару мыслей в Заметки");
           return;
       }
       setShowOracle(true);

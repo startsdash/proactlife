@@ -363,7 +363,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                   <EmptyState 
                     icon={Flame} 
                     title="Стриков пока нет" 
-                    description="Заведи полезную привычку и отслеживай прогресс" 
+                    description="Заведи полезные привычки и отслеживай прогресс" 
                     color="orange"
                     actionLabel="Создать первый ритуал"
                     onAction={openNewForm}

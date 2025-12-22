@@ -145,20 +145,29 @@ const StaticChallengeRenderer: React.FC<{
 const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  useEffect(() => {
-      console.log("Archive Component Mounted");
-  }, []);
-
   const archivedTasks = tasks
     .filter(t => t.isArchived)
     .sort((a, b) => b.createdAt - a.createdAt);
 
+  useEffect(() => {
+      if (archivedTasks.length === 0 && window.confetti) {
+          const timer = setTimeout(() => {
+              window.confetti({
+                  particleCount: 80,
+                  spread: 60,
+                  origin: { y: 0.7 },
+                  colors: ['#fbbf24', '#f59e0b', '#d97706']
+              });
+          }, 300);
+          return () => clearTimeout(timer);
+      }
+  }, [archivedTasks.length]);
+
   return (
     <div className="h-full p-4 md:p-8 flex flex-col overflow-hidden relative">
       <header className="mb-6 shrink-0">
-        <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-3">
-            <History className="text-slate-400" size={32} />
-            <span>Зал славы</span>
+        <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">
+            Зал славы
         </h1>
         <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Выполненные миссии</p>
       </header>
