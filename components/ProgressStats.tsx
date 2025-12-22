@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import { Habit } from '../types';
 import { Flame, Calendar, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -103,6 +102,16 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
       return 'linear-gradient(to top, #34d399, #10b981)'; // Emerald
   };
 
+  const getTooltipClass = (p: number) => {
+      let borderColor = 'border-slate-700';
+      if (p >= 100) borderColor = 'border-emerald-500';
+      else if (p >= 66) borderColor = 'border-indigo-500';
+      else if (p >= 33) borderColor = 'border-orange-500';
+      else if (p > 0) borderColor = 'border-rose-500';
+
+      return `bg-slate-900 text-white ${borderColor} border shadow-xl`;
+  };
+
   const formatDate = (dateStr: string) => {
       try {
           const [y, m, d] = dateStr.split('-');
@@ -136,8 +145,13 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
                   {days.map((day, idx) => (
                       <div key={day.str} className="flex flex-col gap-1 h-full relative group cursor-default">
                           {/* Tooltip */}
-                          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                              {formatDate(day.str)}: {day.percentage}%
+                          <div className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all duration-300 ease-out transform translate-y-2 opacity-0 scale-90 group-hover:translate-y-0 group-hover:opacity-100 group-hover:scale-100 whitespace-nowrap ${getTooltipClass(day.percentage)}`}>
+                              <div className="flex items-center gap-2">
+                                <span>{formatDate(day.str)}</span>
+                                <span className="px-1.5 py-0.5 rounded bg-white/10">{day.percentage}%</span>
+                              </div>
+                              {/* Arrow */}
+                              <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-b border-r ${getTooltipClass(day.percentage).split(' ')[2]} transform rotate-45`}></div>
                           </div>
                           
                           <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-lg relative overflow-hidden flex items-end">
@@ -180,7 +194,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
           }
 
           return (
-              <div className="h-full flex flex-col pb-4"> {/* Increased from pb-2 to pb-4 for more air */}
+              <div className="h-full flex flex-col pb-4">
                   <div className="grid grid-cols-7 gap-1 mb-2">
                      {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(d => <div key={d} className="text-center text-[9px] text-slate-400 uppercase">{d}</div>)}
                   </div>
@@ -191,7 +205,7 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
                           // Circular Progress Logic for Month View using ViewBox
                           const viewBoxSize = 24;
                           const strokeWidth = 3;
-                          const radius = 9; // (24 - 2*3)/2 + margin adjustments, let's keep it safe inside
+                          const radius = 9; 
                           const cx = 12;
                           const cy = 12;
                           const circ = 2 * Math.PI * radius;
@@ -209,8 +223,14 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
                                 className={`aspect-square rounded-md bg-slate-50 dark:bg-slate-800/50 flex flex-col items-center justify-center relative group cursor-default border border-slate-100 dark:border-slate-800 ${day.isToday ? 'ring-1 ring-orange-500 z-10' : ''}`}
                               >
                                   {/* Tooltip */}
-                                  <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
-                                      {formatDate(day.str)}: {day.percentage}%
+                                  <div className={`absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none px-2 py-1 rounded-lg text-[9px] font-bold transition-all duration-200 ease-out transform translate-y-1 opacity-0 scale-90 group-hover:translate-y-0 group-hover:opacity-100 group-hover:scale-100 whitespace-nowrap ${getTooltipClass(day.percentage)}`}>
+                                      <div className="flex items-center gap-1">
+                                        <span>{formatDate(day.str)}</span>
+                                        <span className="opacity-70">|</span>
+                                        <span>{day.percentage}%</span>
+                                      </div>
+                                      {/* Arrow */}
+                                      <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-b border-r ${getTooltipClass(day.percentage).split(' ')[2]} transform rotate-45`}></div>
                                   </div>
 
                                   <div className="relative w-5 h-5 md:w-6 md:h-6 flex items-center justify-center">
