@@ -159,6 +159,107 @@ const WaffleGrid = ({ data }: { data: boolean[] }) => {
     );
 };
 
+// 5. Radar Chart (Spider Chart)
+const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], labels: string[], color?: string }) => {
+    const size = 200;
+    const center = size / 2;
+    const radius = size / 2 - 30; // padding for labels
+    const max = Math.max(...data, 1);
+    const count = data.length;
+    const angleStep = (Math.PI * 2) / count;
+
+    // Calculate points for the data polygon
+    const points = data.map((val, i) => {
+        const angle = i * angleStep - Math.PI / 2; // -90deg to start at top
+        const r = (val / max) * radius;
+        const x = center + r * Math.cos(angle);
+        const y = center + r * Math.sin(angle);
+        return `${x},${y}`;
+    }).join(' ');
+
+    // Calculate points for the grid (concentric polygons)
+    const gridLevels = [0.25, 0.5, 0.75, 1];
+    
+    return (
+        <div className="w-full h-full flex items-center justify-center relative">
+            <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-[220px]">
+                {/* Grid */}
+                {gridLevels.map((level, idx) => {
+                    const gridPoints = Array.from({ length: count }).map((_, i) => {
+                        const angle = i * angleStep - Math.PI / 2;
+                        const r = radius * level;
+                        const x = center + r * Math.cos(angle);
+                        const y = center + r * Math.sin(angle);
+                        return `${x},${y}`;
+                    }).join(' ');
+                    return (
+                        <polygon 
+                            key={idx} 
+                            points={gridPoints} 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeOpacity={0.1}
+                            className="text-slate-400 dark:text-slate-500"
+                        />
+                    );
+                })}
+
+                {/* Axes */}
+                {Array.from({ length: count }).map((_, i) => {
+                    const angle = i * angleStep - Math.PI / 2;
+                    const x = center + radius * Math.cos(angle);
+                    const y = center + radius * Math.sin(angle);
+                    return (
+                        <line 
+                            key={i} 
+                            x1={center} y1={center} x2={x} y2={y} 
+                            stroke="currentColor" 
+                            strokeOpacity={0.1}
+                            className="text-slate-400 dark:text-slate-500"
+                        />
+                    );
+                })}
+
+                {/* Data Polygon */}
+                <motion.polygon
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 0.6, scale: 1 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    points={points}
+                    fill={color}
+                    fillOpacity={0.2}
+                    stroke={color}
+                    strokeWidth={2}
+                    strokeLinejoin="round"
+                />
+
+                {/* Labels */}
+                {labels.map((label, i) => {
+                    const angle = i * angleStep - Math.PI / 2;
+                    // Push text slightly further than radius
+                    const labelRadius = radius + 15; 
+                    const x = center + labelRadius * Math.cos(angle);
+                    const y = center + labelRadius * Math.sin(angle);
+                    return (
+                        <text 
+                            key={i} 
+                            x={x} 
+                            y={y} 
+                            textAnchor="middle" 
+                            dominantBaseline="middle" 
+                            fontSize="8" 
+                            fontWeight="bold"
+                            className="fill-slate-400 dark:fill-slate-500 font-mono"
+                        >
+                            {label}
+                        </text>
+                    );
+                })}
+            </svg>
+        </div>
+    );
+};
+
 // --- DATA PROCESSING HOOKS ---
 const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[]) => {
     return useMemo(() => {
@@ -231,11 +332,32 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[]) => {
             habitGrid.push(anyDone);
         }
 
-        // 4. Activity Chronotype (Hourly distribution of notes/tasks creation)
-        const hoursDistribution = new Array(24).fill(0);
-        notes.forEach(n => hoursDistribution[new Date(n.createdAt).getHours()]++);
-        tasks.forEach(t => hoursDistribution[new Date(t.createdAt).getHours()]++);
+        // 4. Activity Chronotype (Radar Chart Data)
+        // Aggregate activity into 8 buckets (3-hour intervals)
+        const buckets = new Array(8).fill(0); // 00-03, 03-06, 06-09, 09-12, 12-15, 15-18, 18-21, 21-24
         
+        const addToBucket = (timestamp: number) => {
+            const hour = new Date(timestamp).getHours();
+            const bucketIndex = Math.floor(hour / 3);
+            buckets[bucketIndex]++;
+        };
+
+        notes.forEach(n => addToBucket(n.createdAt));
+        tasks.forEach(t => addToBucket(t.createdAt));
+        
+        // Rotate buckets so the chart starts naturally (00 at top or 12 at bottom?)
+        // Chart starts at -90deg (Top). Let's map standard clock positions.
+        // 00h (Top) -> Index 0.
+        // RadarChart draws index 0 at top.
+        // Index 0 (00-03) -> Top.
+        // Index 1 (03-06) -> Top-Right.
+        // Index 2 (06-09) -> Right.
+        // ...
+        
+        const bucketLabels = ['00', '03', '06', '09', '12', '15', '18', '21'];
+        // Ensure at least some value for visualization if empty
+        const radarData = buckets.reduce((a, b) => a + b, 0) === 0 ? buckets.map(() => 1) : buckets;
+
         // 5. Activity by Month (Fake data seeded from real count for demo if empty)
         // In real app, aggregate by month
         const monthlyActivity = [12, 19, 15, 25, 32, 10, 5]; // Placeholder structure
@@ -256,14 +378,14 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[]) => {
         });
         const balanceData = [tagCounts.work, tagCounts.health, tagCounts.learn, tagCounts.soul];
 
-        return { vennData, energyLabel, notesHistory, habitGrid, hoursDistribution, monthlyActivity, monthLabels, balanceData };
+        return { vennData, energyLabel, notesHistory, habitGrid, radarData, bucketLabels, monthlyActivity, monthLabels, balanceData };
     }, [notes, tasks, habits]);
 };
 
 // --- MAIN DASHBOARD COMPONENT ---
 
 const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate }) => {
-  const { vennData, energyLabel, notesHistory, habitGrid, hoursDistribution, monthlyActivity, monthLabels, balanceData } = useDashboardStats(notes, tasks, habits);
+  const { vennData, energyLabel, notesHistory, habitGrid, radarData, bucketLabels, monthlyActivity, monthLabels, balanceData } = useDashboardStats(notes, tasks, habits);
 
   // Active Challenges
   const activeChallenges = tasks.filter(t => t.activeChallenge && !t.isChallengeCompleted).slice(0, 3);
@@ -330,22 +452,16 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
              </div>
         </motion.div>
 
-        {/* 4. CHRONOTYPE ACTIVITY (Wide - Middle) */}
+        {/* 4. CHRONOTYPE ACTIVITY (Radar Chart) */}
         <motion.div className="md:col-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
-            <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center gap-2 mb-2">
                 <Clock size={16} className="text-slate-400" />
                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Хронотип активности</span>
             </div>
-            <div className="flex-1 h-32 relative">
-                <SmoothAreaChart data={hoursDistribution} color="#94a3b8" height={100} />
-                <div className="flex justify-between text-[9px] text-slate-300 mt-2 font-mono uppercase w-full absolute bottom-0 left-0 px-1">
-                    <span>00:00</span>
-                    <span>06:00</span>
-                    <span>12:00</span>
-                    <span>18:00</span>
-                    <span>23:59</span>
-                </div>
+            <div className="flex-1 h-48 w-full flex items-center justify-center">
+                <RadarChart data={radarData} labels={bucketLabels} color="#6366f1" />
             </div>
+            <div className="text-center text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">Peak Focus Hours</div>
         </motion.div>
 
         {/* 5. CHALLENGES (Tall Dark Card - Right) */}
