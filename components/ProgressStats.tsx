@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { Habit } from '../types';
 import { Flame, Calendar, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -102,15 +103,8 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
       return 'linear-gradient(to top, #34d399, #10b981)'; // Emerald
   };
 
-  const getTooltipClass = (p: number) => {
-      let borderColor = 'border-slate-700';
-      if (p >= 100) borderColor = 'border-emerald-500';
-      else if (p >= 66) borderColor = 'border-indigo-500';
-      else if (p >= 33) borderColor = 'border-orange-500';
-      else if (p > 0) borderColor = 'border-rose-500';
-
-      return `bg-slate-900 text-white ${borderColor} border shadow-xl`;
-  };
+  const tooltipClass = "bg-slate-900 text-white border border-slate-700/50 shadow-xl rounded-lg";
+  const arrowClass = "bg-slate-900 border-b border-r border-slate-700/50";
 
   const formatDate = (dateStr: string) => {
       try {
@@ -145,13 +139,13 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
                   {days.map((day, idx) => (
                       <div key={day.str} className="flex flex-col gap-1 h-full relative group cursor-default">
                           {/* Tooltip */}
-                          <div className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all duration-300 ease-out transform translate-y-2 opacity-0 scale-90 group-hover:translate-y-0 group-hover:opacity-100 group-hover:scale-100 whitespace-nowrap ${getTooltipClass(day.percentage)}`}>
+                          <div className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1.5 text-[10px] font-bold transition-all duration-300 ease-out transform translate-y-2 opacity-0 scale-90 group-hover:translate-y-0 group-hover:opacity-100 group-hover:scale-100 whitespace-nowrap ${tooltipClass}`}>
                               <div className="flex items-center gap-2">
                                 <span>{formatDate(day.str)}</span>
                                 <span className="px-1.5 py-0.5 rounded bg-white/10">{day.percentage}%</span>
                               </div>
                               {/* Arrow */}
-                              <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-b border-r ${getTooltipClass(day.percentage).split(' ')[2]} transform rotate-45`}></div>
+                              <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 transform rotate-45 ${arrowClass}`}></div>
                           </div>
                           
                           <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-lg relative overflow-hidden flex items-end">
@@ -223,14 +217,14 @@ const ProgressStats: React.FC<Props> = ({ habits }) => {
                                 className={`aspect-square rounded-md bg-slate-50 dark:bg-slate-800/50 flex flex-col items-center justify-center relative group cursor-default border border-slate-100 dark:border-slate-800 ${day.isToday ? 'ring-1 ring-orange-500 z-10' : ''}`}
                               >
                                   {/* Tooltip */}
-                                  <div className={`absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none px-2 py-1 rounded-lg text-[9px] font-bold transition-all duration-200 ease-out transform translate-y-1 opacity-0 scale-90 group-hover:translate-y-0 group-hover:opacity-100 group-hover:scale-100 whitespace-nowrap ${getTooltipClass(day.percentage)}`}>
+                                  <div className={`absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none px-2 py-1 text-[9px] font-bold transition-all duration-200 ease-out transform translate-y-1 opacity-0 scale-90 group-hover:translate-y-0 group-hover:opacity-100 group-hover:scale-100 whitespace-nowrap ${tooltipClass}`}>
                                       <div className="flex items-center gap-1">
                                         <span>{formatDate(day.str)}</span>
                                         <span className="opacity-70">|</span>
                                         <span>{day.percentage}%</span>
                                       </div>
                                       {/* Arrow */}
-                                      <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-b border-r ${getTooltipClass(day.percentage).split(' ')[2]} transform rotate-45`}></div>
+                                      <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 transform rotate-45 ${arrowClass}`}></div>
                                   </div>
 
                                   <div className="relative w-5 h-5 md:w-6 md:h-6 flex items-center justify-center">
