@@ -530,7 +530,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     <EmptyState 
                       icon={Library} 
                       title="Библиотека пуста" 
-                      description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Здесь будут храниться ваши обработанные заметки.'}
+                      description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'}
                       color="indigo"
                     />
                 </div>

@@ -137,7 +137,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                     <div className="py-10">
                         <EmptyState 
                             icon={Box} 
-                            title="Входящих нет" 
+                            title="Команда ждет!" 
                             description="Отправь заметку из «Входящих», чтобы поработать с ней" 
                             color="amber"
                         />

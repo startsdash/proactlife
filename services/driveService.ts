@@ -12,16 +12,13 @@ let CLIENT_ID = '';
 let API_KEY = '';
 let CLIENT_SECRET = '';
 
-// Safe environment variable loader to avoid Uncaught ReferenceError
+// Safe environment variable loader
 try {
-  // @ts-ignore
-  if (import.meta && import.meta.env) {
-      // @ts-ignore
-      CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-      // @ts-ignore
-      API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || '';
-      // @ts-ignore
-      CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '';
+  // Use process.env which is polyfilled in index.html
+  if (typeof process !== 'undefined' && process.env) {
+      CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || '';
+      API_KEY = process.env.VITE_GOOGLE_API_KEY || '';
+      CLIENT_SECRET = process.env.VITE_GOOGLE_CLIENT_SECRET || '';
   }
 } catch (e) {}
 
