@@ -196,10 +196,11 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = fal
             {/* X Axis Labels */}
             {showAxes && (
                 <div className="flex justify-between text-[8px] text-slate-400 mt-2 font-mono uppercase w-full px-1 opacity-70">
-                    <span>03:00</span>
-                    <span>09:00</span>
-                    <span>15:00</span>
-                    <span>21:00</span>
+                    <span>00:00</span>
+                    <span>06:00</span>
+                    <span>12:00</span>
+                    <span>18:00</span>
+                    <span>23:59</span>
                 </div>
             )}
         </div>
