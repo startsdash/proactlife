@@ -17,6 +17,7 @@ import Journal from './components/Journal';
 import LearningMode from './components/LearningMode';
 import UserSettings from './components/UserSettings';
 import Onboarding from './components/Onboarding';
+import { LogIn, Shield, CloudOff } from 'lucide-react';
 
 const OWNER_EMAIL = 'rukomrus@gmail.com';
 
@@ -313,6 +314,34 @@ const App: React.FC = () => {
   }, [data.config, isOwner, data.user]);
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a] text-slate-800 dark:text-slate-200">Loading...</div>;
+
+  // --- GUEST MODE GUARD ---
+  // If guest mode is disabled AND user is not logged in, show blocking login screen
+  const isGuestModeAllowed = data.config.isGuestModeEnabled ?? true;
+  const isAuthenticated = !!data.user;
+
+  if (!isGuestModeAllowed && !isAuthenticated) {
+      return (
+          <div className="flex flex-col h-screen items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a] p-4 animate-in fade-in duration-500">
+              <div className="w-full max-w-sm bg-white dark:bg-[#1e293b] rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 text-center">
+                  <div className="w-16 h-16 bg-slate-900 dark:bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-6 shadow-lg">L</div>
+                  <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Доступ ограничен</h1>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
+                      Владелец отключил гостевой режим. Пожалуйста, войдите через Google, чтобы продолжить.
+                  </p>
+                  <button 
+                         onClick={() => handleDriveConnect(false)}
+                         className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium text-sm transition-colors shadow-lg shadow-indigo-200 dark:shadow-none"
+                       >
+                           <LogIn size={18} /> Войти через Google
+                   </button>
+              </div>
+              <div className="mt-8 text-xs text-slate-400 flex items-center gap-2">
+                  <Shield size={12} /> Protected by LIVE.ACT Pro
+              </div>
+          </div>
+      );
+  }
 
   return (
     <Layout 

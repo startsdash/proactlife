@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { AppConfig, Mentor, ChallengeAuthor, AIToolConfig, AccessControl } from '../types';
 import { AVAILABLE_ICONS, ICON_MAP, DEFAULT_AI_TOOLS, AVAILABLE_MODELS, DEFAULT_MODEL } from '../constants';
-import { Save, Plus, Trash2, Edit3, X, Database, Users, Zap, Bot, Cpu, FileJson, FileType, Shield, Lock, Globe, Code, Copy, Check, ArrowLeft, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { Save, Plus, Trash2, Edit3, X, Database, Users, Zap, Bot, Cpu, FileJson, FileType, Shield, Lock, Globe, Code, Copy, Check, ArrowLeft, ChevronRight, Eye, EyeOff, LayoutTemplate } from 'lucide-react';
 
 interface Props {
   config: AppConfig;
@@ -10,15 +11,15 @@ interface Props {
 }
 
 // --- HELPER COMPONENT: STATUS TOGGLE ---
-const StatusToggle = ({ isDisabled, onChange }: { isDisabled?: boolean, onChange: (val: boolean) => void }) => {
+const StatusToggle = ({ isDisabled, onChange, label = "Активно", descriptionOn = "Доступно для использования", descriptionOff = "Скрыто из интерфейса" }: { isDisabled?: boolean, onChange: (val: boolean) => void, label?: string, descriptionOn?: string, descriptionOff?: string }) => {
   return (
     <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between mb-4 shadow-sm">
         <div className="flex items-center gap-2">
             {isDisabled ? <EyeOff size={20} className="text-slate-400" /> : <Eye size={20} className="text-emerald-500" />}
             <div>
-                <div className="text-sm font-bold text-slate-800">{isDisabled ? 'Отключено' : 'Активно'}</div>
+                <div className="text-sm font-bold text-slate-800">{isDisabled ? 'Отключено' : label}</div>
                 <div className="text-[10px] text-slate-500">
-                    {isDisabled ? 'Скрыто из интерфейса приложения' : 'Доступно для использования'}
+                    {isDisabled ? descriptionOff : descriptionOn}
                 </div>
             </div>
         </div>
@@ -121,11 +122,12 @@ const AccessControlEditor = ({ data, onChange }: { data: AccessControl, onChange
 };
 
 const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'core' | 'mentors' | 'authors' | 'tools'>('core');
+  const [activeTab, setActiveTab] = useState<'general' | 'core' | 'mentors' | 'authors' | 'tools'>('general');
   
   const [localCore, setLocalCore] = useState(config.coreLibrary);
   const [mentors, setMentors] = useState<Mentor[]>(config.mentors);
   const [authors, setAuthors] = useState<ChallengeAuthor[]>(config.challengeAuthors);
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(config.isGuestModeEnabled ?? true);
   
   // Initialize AI Tools
   const [aiTools, setAiTools] = useState<AIToolConfig[]>(() => {
@@ -152,7 +154,8 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
       coreLibrary: localCore,
       mentors: mentors,
       challengeAuthors: authors,
-      aiTools: aiTools 
+      aiTools: aiTools,
+      isGuestModeEnabled: isGuestMode
     });
     alert("Конфигурация сохранена локально!");
   };
@@ -164,7 +167,7 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
       // Create a complete content for constants.ts
       const fileContent = `import React from 'react';
 import { AppConfig, AIToolConfig } from "./types";
-import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book } from 'lucide-react';
+import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book, Flame, Repeat, Calendar, CheckCircle, LayoutDashboard, Briefcase, Sprout, Heart, Target } from 'lucide-react';
 
 // --- ICON REGISTRY ---
 export const ICON_MAP: Record<string, React.ElementType> = {
@@ -180,10 +183,49 @@ export const ICON_MAP: Record<string, React.ElementType> = {
   'Search': Search,
   'Feather': Feather,
   'User': User,
-  'Book': Book
+  'Book': Book,
+  'Flame': Flame,
+  'Repeat': Repeat,
+  'Calendar': Calendar,
+  'CheckCircle': CheckCircle,
+  'LayoutDashboard': LayoutDashboard,
+  'Briefcase': Briefcase,
+  'Sprout': Sprout,
+  'Heart': Heart,
+  'Target': Target
 };
 
 export const AVAILABLE_ICONS = Object.keys(ICON_MAP);
+
+export const SPHERES = [
+  { 
+    id: 'productivity', 
+    label: 'Дело', 
+    icon: 'Briefcase',
+    color: 'indigo',
+    bg: 'bg-indigo-50 dark:bg-indigo-900/30',
+    text: 'text-indigo-600 dark:text-indigo-400',
+    border: 'border-indigo-200 dark:border-indigo-800'
+  },
+  { 
+    id: 'growth', 
+    label: 'Рост', 
+    icon: 'Sprout',
+    color: 'emerald',
+    bg: 'bg-emerald-50 dark:bg-emerald-900/30',
+    text: 'text-emerald-600 dark:text-emerald-400',
+    border: 'border-emerald-200 dark:border-emerald-800'
+  },
+  { 
+    id: 'relationships', 
+    label: 'Люди', 
+    icon: 'Heart',
+    color: 'rose',
+    bg: 'bg-rose-50 dark:bg-rose-900/30',
+    text: 'text-rose-600 dark:text-rose-400',
+    border: 'border-rose-200 dark:border-rose-800'
+  }
+];
 
 export const AVAILABLE_MODELS = [
   { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Preview)' },
@@ -209,6 +251,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = ${JSON.stringify(aiTools, null, 
 
 export const DEFAULT_CONFIG: AppConfig = {
   "_version": ${version},
+  "isGuestModeEnabled": ${isGuestMode},
   "coreLibrary": DEFAULT_CORE_LIBRARY,
   "mentors": ${JSON.stringify(mentors, null, 2)},
   "challengeAuthors": ${JSON.stringify(authors, null, 2)},
@@ -218,28 +261,17 @@ export const DEFAULT_CONFIG: AppConfig = {
 export const applyTypography = (text: string): string => {
   if (!text) return text;
   let res = text;
-  
-  // 1. Hyphens to Em-dashes (space - space) -> (space — space)
-  res = res.replace(/(\\s)-(\\s)/g, '$1—$2');
-  
-  // 2. Quotes
-  // Open quote: start of line or whitespace/punctuation opening before it
+  res = res.replace(/(\\S)[ \\t]+-[ \\t]+/g, '$1 — ');
   res = res.replace(/(^|[\\s(\\[{])"/g, '$1«');
-  // Close quote: everything else
   res = res.replace(/"/g, '»');
-  
-  // 3. Nested quotes: simple one-level fix
-  // Finds «...«...»...» and converts inner to „...“
+  res = res.replace(/(^|[\\s(\\[{])'/g, '$1«');
+  res = res.replace(/'(?=[.,:;!?\\s)\\]}]|$)/g, '»');
   const nestedPattern = /«([^»]*)«([^»]*)»([^»]*)»/g;
   let prev = '';
-  // Repeat to handle multiple/sequential nested occurrences if regex overlaps allow, 
-  // though global replace handles non-overlapping well. 
-  // Loop ensures complex cases get treated.
   while (res !== prev) {
       prev = res;
       res = res.replace(nestedPattern, '«$1„$2“$3»');
   }
-
   return res;
 };
 `;
@@ -347,6 +379,7 @@ export const applyTypography = (text: string): string => {
         {/* Tab Navigation - Horizontal Scroll on Mobile */}
         <div className="flex gap-2 mb-4 shrink-0 overflow-x-auto pb-2 scrollbar-none">
           {[
+            { id: 'general', label: 'Общие', icon: LayoutTemplate },
             { id: 'core', label: 'Ядро Знаний', icon: Database },
             { id: 'mentors', label: 'Менторы', icon: Users },
             { id: 'authors', label: 'Авторы челленджей', icon: Zap },
@@ -369,6 +402,22 @@ export const applyTypography = (text: string): string => {
 
         <div className="flex-1 bg-white rounded-3xl md:rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
           
+          {/* GENERAL TAB */}
+          {activeTab === 'general' && (
+            <div className="flex-1 p-6 flex flex-col overflow-y-auto">
+               <div className="max-w-xl">
+                   <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Безопасность</h3>
+                   <StatusToggle 
+                        isDisabled={!isGuestMode} 
+                        onChange={(enabled) => setIsGuestMode(enabled)} 
+                        label="Гостевой режим"
+                        descriptionOn="Любой пользователь может использовать приложение без входа."
+                        descriptionOff="Доступ только для авторизованных пользователей Google."
+                   />
+               </div>
+            </div>
+          )}
+
           {/* CORE LIBRARY TAB */}
           {activeTab === 'core' && (
             <div className="flex-1 p-6 flex flex-col">

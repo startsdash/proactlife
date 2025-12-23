@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { AppConfig, AIToolConfig } from "./types";
 import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book, Flame, Repeat, Calendar, CheckCircle, LayoutDashboard, Briefcase, Sprout, Heart, Target } from 'lucide-react';
@@ -135,6 +134,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
 
 export const DEFAULT_CONFIG: AppConfig = {
   "_version": 1766182249982,
+  "isGuestModeEnabled": true,
   "coreLibrary": DEFAULT_CORE_LIBRARY,
   "mentors": [
   {
