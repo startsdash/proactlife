@@ -215,14 +215,14 @@ const BarChart = ({ data, labels, colors, color }: { data: number[], labels: str
     const max = Math.max(...data, 1);
     
     return (
-        <div className="flex items-end justify-between h-24 gap-2 w-full">
+        <div className="flex items-end justify-between h-24 gap-1 w-full">
             {data.map((val, i) => {
                 const barColor = colors?.[i] || color || 'bg-emerald-400';
                 // Dynamic opacity: Min 0.3, Max 1.0 based on value height
                 const opacity = 0.3 + (val / max) * 0.7; 
                 
                 return (
-                    <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group">
+                    <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group min-w-[8px]">
                         <div className="relative w-full flex items-end justify-center h-full">
                              <motion.div 
                                 initial={{ height: 0 }}
@@ -232,7 +232,7 @@ const BarChart = ({ data, labels, colors, color }: { data: number[], labels: str
                                 style={{ opacity }}
                              />
                         </div>
-                        <span className="text-[9px] text-slate-400 mt-2 uppercase font-mono">{labels[i]}</span>
+                        <span className="text-[7px] md:text-[8px] text-slate-400 mt-2 uppercase font-mono truncate w-full text-center tracking-tighter">{labels[i]}</span>
                     </div>
                 );
             })}
@@ -537,10 +537,34 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         // Ensure at least some value for visualization if empty
         const radarData = buckets.reduce((a, b) => a + b, 0) === 0 ? buckets.map(() => 1) : buckets;
 
-        // 5. Activity by Month (Fake data seeded from real count for demo if empty)
-        // In real app, aggregate by month
-        const monthlyActivity = [12, 19, 15, 25, 32, 10, 5]; // Placeholder structure
-        const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл'];
+        // 5. Activity by Month (Real Data - 12 Months)
+        const currentYear = today.getFullYear();
+        const monthlyActivity = new Array(12).fill(0);
+        const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+
+        const processActivity = (ts: number) => {
+             const d = new Date(ts);
+             if (d.getFullYear() === currentYear) {
+                 monthlyActivity[d.getMonth()]++;
+             }
+        };
+
+        notes.forEach(n => processActivity(n.createdAt));
+        tasks.forEach(t => processActivity(t.createdAt));
+        journal.forEach(j => processActivity(j.date));
+        
+        // Include habit completions as activity
+        habits.forEach(h => {
+            Object.keys(h.history).forEach(dateStr => {
+                const val = h.history[dateStr];
+                if (val) {
+                    const [y, m] = dateStr.split('-').map(Number);
+                    if (y === currentYear) {
+                        monthlyActivity[m - 1]++;
+                    }
+                }
+            });
+        });
 
         // 6. Balance Bar Chart Data (Use calculated stats)
         // Scale down for bar chart visualization if needed, or use raw scores relative to each other
