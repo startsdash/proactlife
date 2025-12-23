@@ -359,7 +359,7 @@ const App: React.FC = () => {
                   <div className="w-16 h-16 bg-slate-900 dark:bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-6 shadow-lg">L</div>
                   <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Доступ ограничен</h1>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-                      Владелец отключил гостевой режим.
+                      Владелец отключил гостевой режим
                   </p>
                   
                   <button 
@@ -378,7 +378,7 @@ const App: React.FC = () => {
                    <div className="flex gap-2">
                        <input 
                           type="text" 
-                          placeholder="Инвайт код (6 символов)" 
+                          placeholder="Инвайт-код (6 символов)" 
                           className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-center uppercase font-mono tracking-widest text-slate-800 dark:text-white outline-none focus:border-indigo-500 transition-all placeholder:normal-case placeholder:tracking-normal placeholder:font-sans placeholder:text-slate-400"
                           value={inviteCodeInput}
                           onChange={(e) => setInviteCodeInput(e.target.value)}

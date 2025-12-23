@@ -30,7 +30,7 @@ const UserSettings: React.FC<Props> = ({ user, syncStatus, isDriveConnected, onC
       <header className="mb-8 flex items-center justify-between">
         <div>
            <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Настройки</h1>
-           <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Управление профилем и данными.</p>
+           <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Управление профилем и данными</p>
         </div>
         {onClose && (
             <button onClick={onClose} className="md:hidden p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-slate-400 dark:text-slate-500">
