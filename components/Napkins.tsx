@@ -375,16 +375,23 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
              <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 p-1 -ml-2 -mt-2" title="Перетащить">
                 <GripVertical size={14} />
              </div>
-             <div className="flex items-center -mr-2 -mt-2">
-                 <div className={`flex gap-0.5 md:opacity-0 group-hover:opacity-100 transition-opacity mr-1 ${note.isPinned ? 'mr-7' : 'mr-1'}`}>
+             <div className="flex items-center -mr-2 -mt-2 gap-1">
+                 <div className="flex gap-0.5 md:opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => moveNoteVertical(e, note.id, 'up')} className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400"><ChevronUp size={12}/></button>
                     <button onClick={(e) => moveNoteVertical(e, note.id, 'down')} className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400"><ChevronDown size={12}/></button>
                  </div>
-                 {note.isPinned && (
-                    <div className="absolute top-2 right-2 text-indigo-500 dark:text-indigo-400 transform rotate-45 pointer-events-none">
-                        <Pin size={12} fill="currentColor" />
-                    </div>
-                 )}
+                 
+                 <button 
+                    onClick={(e) => togglePin(e, note)}
+                    className={`p-1 rounded transition-all ${
+                        note.isPinned 
+                        ? 'text-indigo-500 dark:text-indigo-400 opacity-100' 
+                        : 'text-slate-300 dark:text-slate-600 md:opacity-0 group-hover:opacity-100 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
+                    title={note.isPinned ? "Открепить" : "Закрепить"}
+                 >
+                    <Pin size={14} fill={note.isPinned ? "currentColor" : "none"} className={note.isPinned ? "transform rotate-45" : ""} />
+                 </button>
              </div>
         </div>
         <div className="text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-3 text-sm">
