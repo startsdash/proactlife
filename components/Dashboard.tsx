@@ -118,7 +118,9 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
 // 2. Smooth Area Chart (Spline) - Enhanced
 const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = false }: { data: number[], color?: string, height?: number, showAxes?: boolean }) => {
     if (data.length < 2) return null;
-    const max = Math.max(...data, 1);
+    // Fix: Use a minimum max value of 5 to allow the chart to "grow" visually from the bottom
+    // instead of always normalizing small values (e.g. 1) to 100% height.
+    const max = Math.max(...data, 5);
     
     // Layout config
     const viewBoxWidth = 300;
@@ -153,7 +155,7 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = fal
             {/* Chart Area */}
             <div className="flex-1 relative w-full h-full">
                 {showAxes && (
-                    <div className="absolute top-0 left-0 text-[9px] text-slate-400 font-mono opacity-70">{max.toFixed(1)}</div>
+                    <div className="absolute top-0 left-0 text-[9px] text-slate-400 font-mono opacity-70">{max.toFixed(0)}</div>
                 )}
                 
                 <svg viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
@@ -193,7 +195,7 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = fal
                 </svg>
             </div>
             
-            {/* X Axis Labels */}
+            {/* X Axis Labels - Updated to match 0-24h range properly */}
             {showAxes && (
                 <div className="flex justify-between text-[8px] text-slate-400 mt-2 font-mono uppercase w-full px-1 opacity-70">
                     <span>00:00</span>
@@ -279,7 +281,8 @@ const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], label
     const size = 200;
     const center = size / 2;
     const radius = size / 2 - 30; // padding for labels
-    const max = Math.max(...data, 1);
+    // Fix: Set minimum max to 3 to show growth instead of immediate full shape
+    const max = Math.max(...data, 3);
     const count = data.length;
     const angleStep = (Math.PI * 2) / count;
 
