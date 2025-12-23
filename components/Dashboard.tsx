@@ -613,7 +613,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
       return stored ? parseInt(stored) : 0;
   });
   
-  const [activityView, setActivityView] = useState<'week' | 'year'>('year');
+  const [activityView, setActivityView] = useState<'week' | 'year'>('week');
 
   const { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, weeklyActivity, weekLabels, balanceData } = useDashboardStats(notes, tasks, habits, journal, chronotypeResetTime);
 
