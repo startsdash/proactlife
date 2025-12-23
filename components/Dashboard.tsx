@@ -119,8 +119,6 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
 // 2. Smooth Area Chart (Spline) - Enhanced
 const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = false }: { data: number[], color?: string, height?: number, showAxes?: boolean }) => {
     if (data.length < 2) return null;
-    // Fix: Use a minimum max value of 5 to allow the chart to "grow" visually from the bottom
-    // instead of always normalizing small values (e.g. 1) to 100% height.
     const max = Math.max(...data, 5);
     
     // Layout config
@@ -137,11 +135,9 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = fal
         return [x, y];
     });
 
-    // Catmull-Rom to Bezier conversion for smooth spline
     const pathData = points.reduce((acc, [x, y], i, arr) => {
         if (i === 0) return `M ${x},${y}`;
         const [prevX, prevY] = arr[i - 1];
-        // Control points
         const cp1x = prevX + (x - prevX) / 3;
         const cp1y = prevY;
         const cp2x = prevX + (x - prevX) * 2 / 3;
@@ -153,12 +149,10 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = fal
 
     return (
         <div className="w-full h-full relative flex flex-col">
-            {/* Chart Area */}
             <div className="flex-1 relative w-full h-full">
                 {showAxes && (
                     <div className="absolute top-0 left-0 text-[9px] text-slate-400 font-mono opacity-70">{max.toFixed(0)}</div>
                 )}
-                
                 <svg viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
                     <defs>
                         <linearGradient id={`grad-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
@@ -166,8 +160,6 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = fal
                             <stop offset="100%" stopColor={color} stopOpacity="0" />
                         </linearGradient>
                     </defs>
-                    
-                    {/* Grid Lines */}
                     {showAxes && (
                         <g className="text-slate-200 dark:text-slate-700/50">
                             <line x1="0" y1={viewBoxHeight} x2={viewBoxWidth} y2={viewBoxHeight} stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
@@ -175,7 +167,6 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = fal
                             <line x1="0" y1={viewBoxHeight * 0.33} x2={viewBoxWidth} y2={viewBoxHeight * 0.33} stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
                         </g>
                     )}
-
                     <motion.path 
                         initial={{ d: `M ${paddingX},${viewBoxHeight} L ${viewBoxWidth},${viewBoxHeight} L ${viewBoxWidth},${viewBoxHeight} L ${paddingX},${viewBoxHeight} Z` }}
                         animate={{ d: fillPath }}
@@ -195,22 +186,16 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = fal
                     />
                 </svg>
             </div>
-            
-            {/* X Axis Labels - Updated to match 0-24h range properly */}
             {showAxes && (
                 <div className="flex justify-between text-[8px] text-slate-400 mt-2 font-mono uppercase w-full px-1 opacity-70">
-                    <span>00:00</span>
-                    <span>06:00</span>
-                    <span>12:00</span>
-                    <span>18:00</span>
-                    <span>23:59</span>
+                    <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:59</span>
                 </div>
             )}
         </div>
     );
 };
 
-// 3. Simple Bar Chart (Modified for Per-Bar Colors and Opacity)
+// 3. Simple Bar Chart (Single Value)
 const BarChart = ({ data, labels, colors, color }: { data: number[], labels: string[], colors?: string[], color?: string }) => {
     const max = Math.max(...data, 1);
     
@@ -218,7 +203,6 @@ const BarChart = ({ data, labels, colors, color }: { data: number[], labels: str
         <div className="flex items-end justify-between h-24 gap-1 w-full">
             {data.map((val, i) => {
                 const barColor = colors?.[i] || color || 'bg-emerald-400';
-                // Dynamic opacity: Min 0.3, Max 1.0 based on value height
                 const opacity = 0.3 + (val / max) * 0.7; 
                 
                 return (
@@ -231,6 +215,44 @@ const BarChart = ({ data, labels, colors, color }: { data: number[], labels: str
                                 className={`w-full max-w-[20px] rounded-t-sm ${barColor} group-hover:opacity-100 transition-opacity`}
                                 style={{ opacity }}
                              />
+                        </div>
+                        <span className="text-[7px] md:text-[8px] text-slate-400 mt-2 uppercase font-mono truncate w-full text-center tracking-tighter">{labels[i]}</span>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+// 3.1 Stacked Bar Chart (For Activity by Sphere)
+const StackedBarChart = ({ data, labels }: { data: { p: number, g: number, r: number }[], labels: string[] }) => {
+    const totals = data.map(d => d.p + d.g + d.r);
+    const max = Math.max(...totals, 1);
+
+    return (
+        <div className="flex items-end justify-between h-24 gap-1 w-full">
+            {data.map((d, i) => {
+                const total = d.p + d.g + d.r;
+                const heightPercent = (total / max) * 100;
+                
+                // Proportions within the bar
+                const pPct = total ? (d.p / total) * 100 : 0;
+                const gPct = total ? (d.g / total) * 100 : 0;
+                const rPct = total ? (d.r / total) * 100 : 0;
+
+                return (
+                    <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group min-w-[8px]">
+                        <div className="relative w-full flex items-end justify-center h-full">
+                             <motion.div 
+                                initial={{ height: 0 }}
+                                animate={{ height: `${heightPercent}%` }}
+                                transition={{ duration: 0.5, delay: i * 0.05 }}
+                                className="w-full max-w-[20px] rounded-t-sm overflow-hidden flex flex-col-reverse relative min-h-[2px]"
+                             >
+                                {d.p > 0 && <div style={{ height: `${pPct}%` }} className="bg-indigo-500 w-full" />}
+                                {d.g > 0 && <div style={{ height: `${gPct}%` }} className="bg-emerald-500 w-full" />}
+                                {d.r > 0 && <div style={{ height: `${rPct}%` }} className="bg-rose-500 w-full" />}
+                             </motion.div>
                         </div>
                         <span className="text-[7px] md:text-[8px] text-slate-400 mt-2 uppercase font-mono truncate w-full text-center tracking-tighter">{labels[i]}</span>
                     </div>
@@ -282,27 +304,23 @@ const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], label
     const size = 200;
     const center = size / 2;
     const radius = size / 2 - 30; // padding for labels
-    // Fix: Set minimum max to 3 to show growth instead of immediate full shape
     const max = Math.max(...data, 3);
     const count = data.length;
     const angleStep = (Math.PI * 2) / count;
 
-    // Calculate points for the data polygon
     const points = data.map((val, i) => {
-        const angle = i * angleStep - Math.PI / 2; // -90deg to start at top
+        const angle = i * angleStep - Math.PI / 2; 
         const r = (val / max) * radius;
         const x = center + r * Math.cos(angle);
         const y = center + r * Math.sin(angle);
         return `${x},${y}`;
     }).join(' ');
 
-    // Calculate points for the grid (concentric polygons)
     const gridLevels = [0.25, 0.5, 0.75, 1];
     
     return (
         <div className="w-full h-full flex items-center justify-center relative">
             <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-[180px]">
-                {/* Grid */}
                 {gridLevels.map((level, idx) => {
                     const gridPoints = Array.from({ length: count }).map((_, i) => {
                         const angle = i * angleStep - Math.PI / 2;
@@ -312,34 +330,17 @@ const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], label
                         return `${x},${y}`;
                     }).join(' ');
                     return (
-                        <polygon 
-                            key={idx} 
-                            points={gridPoints} 
-                            fill="none" 
-                            stroke="currentColor" 
-                            strokeOpacity={0.1}
-                            className="text-slate-400 dark:text-slate-500"
-                        />
+                        <polygon key={idx} points={gridPoints} fill="none" stroke="currentColor" strokeOpacity={0.1} className="text-slate-400 dark:text-slate-500" />
                     );
                 })}
-
-                {/* Axes */}
                 {Array.from({ length: count }).map((_, i) => {
                     const angle = i * angleStep - Math.PI / 2;
                     const x = center + radius * Math.cos(angle);
                     const y = center + radius * Math.sin(angle);
                     return (
-                        <line 
-                            key={i} 
-                            x1={center} y1={center} x2={x} y2={y} 
-                            stroke="currentColor" 
-                            strokeOpacity={0.1}
-                            className="text-slate-400 dark:text-slate-500"
-                        />
+                        <line key={i} x1={center} y1={center} x2={x} y2={y} stroke="currentColor" strokeOpacity={0.1} className="text-slate-400 dark:text-slate-500" />
                     );
                 })}
-
-                {/* Data Polygon */}
                 <motion.polygon
                     initial={{ opacity: 0, scale: 0 }}
                     animate={{ opacity: 0.6, scale: 1 }}
@@ -351,25 +352,13 @@ const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], label
                     strokeWidth={2}
                     strokeLinejoin="round"
                 />
-
-                {/* Labels */}
                 {labels.map((label, i) => {
                     const angle = i * angleStep - Math.PI / 2;
-                    // Push text slightly further than radius
                     const labelRadius = radius + 15; 
                     const x = center + labelRadius * Math.cos(angle);
                     const y = center + labelRadius * Math.sin(angle);
                     return (
-                        <text 
-                            key={i} 
-                            x={x} 
-                            y={y} 
-                            textAnchor="middle" 
-                            dominantBaseline="middle" 
-                            fontSize="8" 
-                            fontWeight="bold"
-                            className="fill-slate-400 dark:fill-slate-500 font-mono"
-                        >
+                        <text key={i} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize="8" fontWeight="bold" className="fill-slate-400 dark:fill-slate-500 font-mono">
                             {label}
                         </text>
                     );
@@ -537,40 +526,72 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         // Ensure at least some value for visualization if empty
         const radarData = buckets.reduce((a, b) => a + b, 0) === 0 ? buckets.map(() => 1) : buckets;
 
-        // 5. Activity by Month (Real Data - 12 Months)
+        // 5. Activity by Month & Week (Real Data - Stacked)
         const currentYear = today.getFullYear();
-        const monthlyActivity = new Array(12).fill(0);
+        
+        // Initialize buckets
+        const monthlyActivity = Array.from({length: 12}, () => ({ p: 0, g: 0, r: 0 }));
+        const weeklyActivity = Array.from({length: 7}, () => ({ p: 0, g: 0, r: 0 }));
+        
         const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+        const weekLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-        const processActivity = (ts: number) => {
-             const d = new Date(ts);
-             if (d.getFullYear() === currentYear) {
-                 monthlyActivity[d.getMonth()]++;
-             }
+        // Helper to determine sphere of item for chart aggregation
+        const getSpheresForItem = (item: any, fallback: string, def: 'productivity' | 'growth' | 'relationships'): ('productivity' | 'growth' | 'relationships')[] => {
+            if (item.spheres && item.spheres.length > 0) return item.spheres;
+            return [checkCategoryFallback(fallback, def)];
         };
 
-        notes.forEach(n => processActivity(n.createdAt));
-        tasks.forEach(t => processActivity(t.createdAt));
-        journal.forEach(j => processActivity(j.date));
+        const incrementActivity = (ts: number, spheres: string[]) => {
+            const d = new Date(ts);
+            
+            // Year/Month Logic
+            if (d.getFullYear() === currentYear) {
+                const mIdx = d.getMonth();
+                spheres.forEach(s => {
+                    if (s === 'productivity') monthlyActivity[mIdx].p++;
+                    if (s === 'growth') monthlyActivity[mIdx].g++;
+                    if (s === 'relationships') monthlyActivity[mIdx].r++;
+                });
+            }
+
+            // Week Logic
+            // Check if date falls within current week (Monday start)
+            const diffTime = d.getTime() - monday.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays >= 0 && diffDays < 7) {
+                spheres.forEach(s => {
+                    if (s === 'productivity') weeklyActivity[diffDays].p++;
+                    if (s === 'growth') weeklyActivity[diffDays].g++;
+                    if (s === 'relationships') weeklyActivity[diffDays].r++;
+                });
+            }
+        };
+
+        notes.forEach(n => incrementActivity(n.createdAt, getSpheresForItem(n, n.content, 'growth')));
+        tasks.forEach(t => incrementActivity(t.createdAt, getSpheresForItem(t, t.content, 'productivity')));
+        journal.forEach(j => incrementActivity(j.date, getSpheresForItem(j, j.content, 'growth')));
         
         // Include habit completions as activity
         habits.forEach(h => {
+            const habitSpheres = getSpheresForItem(h, h.title, 'growth');
             Object.keys(h.history).forEach(dateStr => {
                 const val = h.history[dateStr];
                 if (val) {
-                    const [y, m] = dateStr.split('-').map(Number);
-                    if (y === currentYear) {
-                        monthlyActivity[m - 1]++;
-                    }
+                    // Create date object from YYYY-MM-DD
+                    const [y, m, d] = dateStr.split('-').map(Number);
+                    const dateObj = new Date(y, m - 1, d);
+                    // Use standard increment logic
+                    incrementActivity(dateObj.getTime(), habitSpheres);
                 }
             });
         });
 
         // 6. Balance Bar Chart Data (Use calculated stats)
-        // Scale down for bar chart visualization if needed, or use raw scores relative to each other
         const balanceData = [productivity, growth, relationships];
 
-        return { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData };
+        return { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, weeklyActivity, weekLabels, balanceData };
     }, [notes, tasks, habits, journal, resetTime]);
 };
 
@@ -581,8 +602,10 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
       const stored = localStorage.getItem('dashboard_chronotype_reset_time');
       return stored ? parseInt(stored) : 0;
   });
+  
+  const [activityView, setActivityView] = useState<'week' | 'year'>('year');
 
-  const { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData } = useDashboardStats(notes, tasks, habits, journal, chronotypeResetTime);
+  const { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, weeklyActivity, weekLabels, balanceData } = useDashboardStats(notes, tasks, habits, journal, chronotypeResetTime);
 
   // Active Challenges
   const activeChallenges = tasks.filter(t => t.activeChallenge && !t.isChallengeCompleted).slice(0, 3);
@@ -763,14 +786,24 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
              </div>
         </motion.div>
 
-        {/* 8. ACTIVITY BY MONTH (Bottom Right) */}
+        {/* 8. TOTAL ACTIVITY (Bottom Right - Updated) */}
         <motion.div className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
-             <div className="flex items-center gap-2 mb-4">
-                 <Calendar size={16} className="text-slate-400" />
-                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Активность по месяцам</span>
+             <div className="flex items-center justify-between mb-4">
+                 <div className="flex items-center gap-2">
+                     <Calendar size={16} className="text-slate-400" />
+                     <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Общая активность</span>
+                 </div>
+                 {/* Toggle Switch */}
+                 <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+                     <button onClick={() => setActivityView('week')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${activityView === 'week' ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Неделя</button>
+                     <button onClick={() => setActivityView('year')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${activityView === 'year' ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Год</button>
+                 </div>
              </div>
              <div className="flex-1 flex items-end">
-                 <BarChart data={monthlyActivity} labels={monthLabels} color="bg-indigo-400" />
+                 <StackedBarChart 
+                    data={activityView === 'week' ? weeklyActivity : monthlyActivity} 
+                    labels={activityView === 'week' ? weekLabels : monthLabels} 
+                 />
              </div>
         </motion.div>
 
