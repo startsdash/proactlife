@@ -687,42 +687,44 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
             </div>
         </motion.div>
 
-        {/* 5. CHALLENGES (Tall Dark Card - Right) */}
+        {/* 5. CHALLENGES (Tall Light Card - Right) */}
         <motion.div 
             onClick={() => onNavigate(Module.KANBAN)}
-            className="md:col-span-1 md:row-span-2 bg-slate-700 dark:bg-slate-800 rounded-3xl p-6 text-white shadow-xl flex flex-col relative overflow-hidden cursor-pointer group border border-slate-600 dark:border-slate-700"
+            className="md:col-span-1 md:row-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col relative overflow-hidden cursor-pointer group"
         >
              <div className="flex items-center gap-2 mb-6">
-                 <Target size={16} className="text-emerald-400" />
-                 <span className="text-xs font-bold uppercase text-slate-300 tracking-wider">Вызовы</span>
+                 <Target size={16} className="text-emerald-500" />
+                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Вызовы</span>
              </div>
              
              <div className="flex-1 space-y-4 min-h-0">
                 {activeChallenges.length > 0 ? (
                     activeChallenges.map(t => (
-                        <div key={t.id} className="bg-white/10 p-4 rounded-2xl border border-white/10 hover:bg-white/15 transition-colors">
-                            <div className="text-sm font-medium leading-snug mb-3 line-clamp-2">{t.content}</div>
+                        <div key={t.id} className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 hover:border-emerald-200 dark:hover:border-emerald-800/50 transition-colors group/item">
+                            <div className="text-sm font-medium leading-snug mb-3 line-clamp-2 text-slate-700 dark:text-slate-200">{t.content}</div>
                             {/* Gradient Progress Bar */}
-                            <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-indigo-400 to-purple-400 w-2/3 rounded-full" />
+                            <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-emerald-400 to-teal-400 w-2/3 rounded-full" />
                             </div>
                         </div>
                     ))
                 ) : (
                     <div className="text-center opacity-40 py-10 flex flex-col items-center">
-                        <Medal size={40} className="mb-2" />
-                        <div className="text-xs">Нет активных вызовов</div>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-full mb-3 text-slate-300 dark:text-slate-600">
+                            <Medal size={24} />
+                        </div>
+                        <div className="text-xs text-slate-400">Нет активных вызовов</div>
                     </div>
                 )}
              </div>
              
-             <div className="mt-6 pt-4 border-t border-white/10 flex justify-between items-center">
+             <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
                  <div className="flex flex-col">
-                     <span className="text-[10px] text-slate-300 uppercase tracking-widest">Зал славы</span>
-                     <span className="text-2xl font-bold">{completedChallengesCount}</span>
+                     <span className="text-[10px] text-slate-400 uppercase tracking-widest">Зал славы</span>
+                     <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{completedChallengesCount}</span>
                  </div>
                  <div className="flex -space-x-2">
-                     {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-slate-600 border border-slate-500 flex items-center justify-center text-[8px]">🏆</div>)}
+                     {[1,2,3].map(i => <div key={i} className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-[10px] shadow-sm">🏆</div>)}
                  </div>
              </div>
         </motion.div>
