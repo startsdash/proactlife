@@ -23,17 +23,12 @@ const getLocalDateKey = (date: Date) => {
 
 // --- SVG VISUALIZATION COMPONENTS ---
 
-// 1. Energy Venn Diagram (Updated Spheres: Productivity, Growth, Relationships)
+// 1. Energy Venn Diagram
 const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivity: number, growth: number, relationships: number }) => {
-    // Fixed radius for consistent design match
     const r = 36;
     const strokeWidth = 5;
     
-    // Calculate dot positions based on value (0-100 mapping to circle perimeter)
-    // SVG Circle starts at 3 o'clock (0 deg).
-    // We want start at 6 o'clock (90 deg) and go clockwise.
     const getDotPos = (cx: number, cy: number, radius: number, val: number) => {
-        // 90 deg is bottom. 
         const angle = (val / 100) * 360 + 90;
         const rad = angle * (Math.PI / 180);
         return {
@@ -49,13 +44,8 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
     return (
         <div className="relative w-full h-56 flex items-center justify-center -mt-2">
             <svg viewBox="0 0 200 220" className="w-full h-full max-w-[220px] drop-shadow-sm">
-                
-                {/* Growth (Bottom Left) - Emerald */}
                 <g>
-                    {/* Background Circle */}
                     <circle cx="65" cy="140" r={r} fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-100 dark:text-slate-700" />
-                    
-                    {/* Progress Circle - Rotated 90deg to start at bottom */}
                     <motion.circle 
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={{ pathLength: 1, opacity: 1 }}
@@ -67,15 +57,11 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
                         transform="rotate(90 65 140)"
                     />
                     <text x="65" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#10b981" className="uppercase tracking-widest pointer-events-none">РОСТ</text>
-                    
-                    {/* Dot Indicator */}
                     <motion.circle 
                         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5 }}
                         cx={growthPos.x} cy={growthPos.y} r="3" fill="white" stroke="#10b981" strokeWidth="2" 
                     />
                 </g>
-
-                {/* Relationships (Bottom Right) - Rose/Pink */}
                 <g>
                     <circle cx="135" cy="140" r={r} fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-100 dark:text-slate-700" />
                     <motion.circle 
@@ -93,8 +79,6 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
                         cx={relPos.x} cy={relPos.y} r="3" fill="white" stroke="#f43f5e" strokeWidth="2" 
                     />
                 </g>
-
-                {/* Productivity (Top) - Indigo */}
                 <g>
                     <circle cx="100" cy="80" r={r} fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-100 dark:text-slate-700" />
                     <motion.circle 
@@ -117,19 +101,17 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
     );
 };
 
-// 2. Smooth Area Chart (Spline) - Enhanced
+// 2. Smooth Area Chart
 const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = false }: { data: number[], color?: string, height?: number, showAxes?: boolean }) => {
-    if (data.length < 2) return null;
+    if (!data || data.length < 2) return null;
     const max = Math.max(...data, 5);
     
-    // Layout config
     const viewBoxWidth = 300;
     const viewBoxHeight = 100;
     const paddingX = 0;
     const paddingY = 5;
     const chartHeight = viewBoxHeight - paddingY * 2;
     
-    // Points generation
     const points = data.map((val, i) => {
         const x = paddingX + (i / (data.length - 1)) * (viewBoxWidth - paddingX * 2);
         const y = viewBoxHeight - paddingY - (val / max) * chartHeight;
@@ -196,23 +178,18 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = fal
     );
 };
 
-// 3. Simple Bar Chart (Single Value)
+// 3. Simple Bar Chart
 const BarChart = ({ data, labels, colors, color }: { data: number[], labels: string[], colors?: string[], color?: string }) => {
-    // If all data is 0, we still want to show the 'potential' tracks with a minimal max to render them
-    const max = Math.max(...data, 1);
+    const max = Math.max(...(data || []), 1);
     
     return (
         <div className="flex items-end justify-between h-24 gap-1 w-full">
-            {data.map((val, i) => {
+            {(data || []).map((val, i) => {
                 const barColor = colors?.[i] || color || 'bg-emerald-400';
-                
                 return (
                     <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group min-w-[8px] relative">
                         <div className="relative w-full flex items-end justify-center h-full">
-                             {/* Background Track (Ghost Bar) */}
                              <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800 rounded-t-sm w-full max-w-[20px] mx-auto" />
-                             
-                             {/* Fill Bar */}
                              <motion.div 
                                 initial={{ height: 0 }}
                                 animate={{ height: `${(val / max) * 100}%` }}
@@ -228,8 +205,9 @@ const BarChart = ({ data, labels, colors, color }: { data: number[], labels: str
     );
 };
 
-// 3.1 Stacked Bar Chart (For Activity by Sphere)
+// 3.1 Stacked Bar Chart
 const StackedBarChart = ({ data, labels }: { data: { p: number, g: number, r: number }[], labels: string[] }) => {
+    if (!data) return null;
     const totals = data.map(d => d.p + d.g + d.r);
     const max = Math.max(...totals, 1);
 
@@ -238,8 +216,6 @@ const StackedBarChart = ({ data, labels }: { data: { p: number, g: number, r: nu
             {data.map((d, i) => {
                 const total = d.p + d.g + d.r;
                 const heightPercent = max > 0 ? (total / max) * 100 : 0;
-                
-                // Proportions within the bar
                 const pPct = total ? (d.p / total) * 100 : 0;
                 const gPct = total ? (d.g / total) * 100 : 0;
                 const rPct = total ? (d.r / total) * 100 : 0;
@@ -247,9 +223,7 @@ const StackedBarChart = ({ data, labels }: { data: { p: number, g: number, r: nu
                 return (
                     <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group min-w-[8px]">
                         <div className="relative w-full flex items-end justify-center h-full">
-                             {/* Background Track */}
                              <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800 rounded-t-sm w-full max-w-[20px] mx-auto" />
-
                              <motion.div 
                                 initial={{ height: 0 }}
                                 animate={{ height: `${heightPercent}%` }}
@@ -269,19 +243,16 @@ const StackedBarChart = ({ data, labels }: { data: { p: number, g: number, r: nu
     );
 };
 
-// 4. Weekly Habit Rhythm (Heatmap Style)
+// 4. Weekly Habit Rhythm
 const WeeklyHabitRhythm = ({ data }: { data: { label: string, percent: number, isToday: boolean }[] }) => {
     return (
         <div className="flex items-end justify-between h-full gap-2 w-full px-2">
-            {data.map((day, i) => {
+            {(data || []).map((day, i) => {
                 const intensity = Math.max(0.1, day.percent / 100);
                 const isZero = day.percent === 0;
-                
                 return (
                     <div key={i} className="flex flex-col items-center justify-end flex-1 h-full gap-2 group cursor-default">
-                        {/* Container Slot */}
                         <div className={`relative w-full flex-1 flex items-end justify-center rounded-lg overflow-hidden transition-all ${day.isToday && isZero ? 'bg-slate-50 dark:bg-slate-800 ring-2 ring-orange-400/50 ring-offset-1 dark:ring-offset-slate-900 animate-pulse' : 'bg-slate-100 dark:bg-slate-800'}`}>
-                             {/* Filled Part */}
                              <motion.div 
                                 initial={{ height: 0 }}
                                 animate={{ height: `${day.percent}%` }}
@@ -289,15 +260,11 @@ const WeeklyHabitRhythm = ({ data }: { data: { label: string, percent: number, i
                                 className={`w-full rounded-t-sm ${isZero ? 'bg-transparent' : 'bg-gradient-to-t from-orange-400 to-amber-300'}`}
                                 style={{ opacity: isZero ? 0 : 0.6 + intensity * 0.4 }}
                              />
-                             
-                             {/* Empty State Call to Action for Today */}
                              {day.isToday && isZero && (
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <div className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce" />
                                 </div>
                              )}
-
-                             {/* Tooltip on Hover */}
                              <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold bg-black text-white px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10">
                                  {Math.round(day.percent)}%
                              </div>
@@ -315,16 +282,16 @@ const WeeklyHabitRhythm = ({ data }: { data: { label: string, percent: number, i
     );
 };
 
-// 5. Radar Chart (Spider Chart)
+// 5. Radar Chart
 const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], labels: string[], color?: string }) => {
     const size = 200;
     const center = size / 2;
-    const radius = size / 2 - 30; // padding for labels
-    const max = Math.max(...data, 3);
-    const count = data.length;
+    const radius = size / 2 - 30;
+    const max = Math.max(...(data || []), 3);
+    const count = (data || []).length;
     const angleStep = (Math.PI * 2) / count;
 
-    const points = data.map((val, i) => {
+    const points = (data || []).map((val, i) => {
         const angle = i * angleStep - Math.PI / 2; 
         const r = (val / max) * radius;
         const x = center + r * Math.cos(angle);
@@ -387,11 +354,17 @@ const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], label
 // --- DATA PROCESSING HOOKS ---
 const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journal: JournalEntry[], resetTime: number = 0) => {
     return useMemo(() => {
+        // Safety check for journal array
+        const safeJournal = journal || [];
+        const safeTasks = tasks || [];
+        const safeHabits = habits || [];
+        const safeNotes = notes || [];
+
         const today = new Date();
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
         const todayStr = getLocalDateKey(today);
         
-        // Initialize to 0 to ensure charts are empty if no activity.
+        // Initialize to 0
         let productivity = 0, growth = 0, relationships = 0;
         
         const processSpheres = (spheres: string[] | undefined, weight: number) => {
@@ -404,32 +377,23 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
             }
         };
 
-        // Scan Habits (History Today or Streak)
-        habits.forEach(h => {
-            const isDoneToday = h.history[today.toISOString().split('T')[0]];
+        safeHabits.forEach(h => {
+            const isDoneToday = h.history?.[today.toISOString().split('T')[0]];
             const isActiveStreak = h.streak > 2;
-
-            if (isDoneToday || isActiveStreak) {
-                processSpheres(h.spheres, 20);
-            }
+            if (isDoneToday || isActiveStreak) processSpheres(h.spheres, 20);
         });
 
-        // Scan Tasks (Sprints) - Created Today or Completed Today or Doing
-        tasks.forEach(t => {
+        safeTasks.forEach(t => {
             const isRelevant = t.createdAt >= startOfDay || t.column === 'doing' || t.column === 'done';
             if (!isRelevant) return;
             const score = t.column === 'done' ? 15 : 5;
             processSpheres(t.spheres, score);
         });
 
-        // Scan Journal (Entries Today)
-        journal.forEach(j => {
-            if (j.date >= startOfDay) {
-                processSpheres(j.spheres, 10);
-            }
+        safeJournal.forEach(j => {
+            if (j.date >= startOfDay) processSpheres(j.spheres, 10);
         });
 
-        // Normalize to 0-100 for graph
         const maxScore = Math.max(productivity, growth, relationships, 100);
         const vennData = {
             productivity: (productivity / maxScore) * 100,
@@ -442,24 +406,22 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         if (totalEnergy > 70) energyLabel = "Поток!";
         if (totalEnergy > 40 && totalEnergy <= 70) energyLabel = "Баланс";
 
-        // 2. Thoughts Sparkline (Last 7 days)
         const notesHistory = [];
         for(let i=6; i>=0; i--) {
              const d = new Date(today);
              d.setDate(d.getDate() - i);
              const start = new Date(d.setHours(0,0,0,0)).getTime();
              const end = new Date(d.setHours(23,59,59,999)).getTime();
-             const count = notes.filter(n => n.createdAt >= start && n.createdAt <= end).length;
+             const count = safeNotes.filter(n => n.createdAt >= start && n.createdAt <= end).length;
              notesHistory.push(count);
         }
 
-        // 3. Weekly Habit Rhythm (Current Week Heatmap) & Activity Logic
         const getMonday = (d: Date) => {
             const date = new Date(d);
             const day = date.getDay();
             const diff = date.getDate() - day + (day === 0 ? -6 : 1);
             const m = new Date(date.setDate(diff));
-            m.setHours(0, 0, 0, 0); // Strict normalization to 00:00
+            m.setHours(0, 0, 0, 0); 
             return m;
         };
         const monday = getMonday(new Date(today));
@@ -469,25 +431,23 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
             const d = new Date(monday);
             d.setDate(monday.getDate() + i);
             const dStr = getLocalDateKey(d);
-            const dayIndex = d.getDay(); // 0-6
+            const dayIndex = d.getDay(); 
 
             let potential = 0;
             let completedValue = 0;
 
-            habits.forEach(h => {
-                // Check if active for this day
+            safeHabits.forEach(h => {
                 let applies = false;
                 if (h.frequency === 'daily') applies = true;
                 else if (h.frequency === 'specific_days') applies = h.targetDays?.includes(dayIndex) ?? false;
                 else if (h.frequency === 'times_per_week') applies = true;
                 else if (h.frequency === 'times_per_day') applies = true;
 
-                // Don't count if created after this date
                 if (h.createdAt > d.getTime() + 86400000) applies = false;
 
                 if (applies) {
                     potential++;
-                    const val = h.history[dStr];
+                    const val = h.history?.[dStr];
                     if (val) {
                         if (typeof val === 'boolean') {
                             completedValue += 1;
@@ -506,21 +466,16 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
             });
         }
 
-        // 4. Activity Chronotype (Radar Chart Data)
-        // Aggregate activity into 24 hour buckets for Area Chart
-        // Also include journal entries for better reactivity
-        const chronotypeNotes = notes.filter(n => n.createdAt >= resetTime);
-        const chronotypeTasks = tasks.filter(t => t.createdAt >= resetTime);
-        const chronotypeJournal = journal.filter(j => j.date >= resetTime);
+        const chronotypeNotes = safeNotes.filter(n => n.createdAt >= resetTime);
+        const chronotypeTasks = safeTasks.filter(t => t.createdAt >= resetTime);
+        const chronotypeJournal = safeJournal.filter(j => j.date >= resetTime);
 
         const hoursDistribution = new Array(24).fill(0);
         chronotypeNotes.forEach(n => hoursDistribution[new Date(n.createdAt).getHours()]++);
         chronotypeTasks.forEach(t => hoursDistribution[new Date(t.createdAt).getHours()]++);
         chronotypeJournal.forEach(j => hoursDistribution[new Date(j.date).getHours()]++);
 
-        // Aggregate activity into 8 buckets (3-hour intervals) for Radar Chart
-        const buckets = new Array(8).fill(0); // 00-03, 03-06, ...
-        
+        const buckets = new Array(8).fill(0);
         const addToBucket = (timestamp: number) => {
             const hour = new Date(timestamp).getHours();
             const bucketIndex = Math.floor(hour / 3);
@@ -532,25 +487,17 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         chronotypeJournal.forEach(j => addToBucket(j.date));
         
         const bucketLabels = ['00', '03', '06', '09', '12', '15', '18', '21'];
-        // Ensure at least some value for visualization if empty
         const radarData = buckets.reduce((a, b) => a + b, 0) === 0 ? buckets.map(() => 1) : buckets;
 
-        // 5. Activity by Month & Week (Real Data - Stacked)
         const currentYear = today.getFullYear();
-        
-        // Initialize buckets
         const monthlyActivity = Array.from({length: 12}, () => ({ p: 0, g: 0, r: 0 }));
         const weeklyActivity = Array.from({length: 7}, () => ({ p: 0, g: 0, r: 0 }));
-        
         const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
         const weekLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
         const incrementActivity = (ts: number, spheres: string[]) => {
             if (!spheres || spheres.length === 0) return;
-
             const d = new Date(ts);
-            
-            // Year/Month Logic
             if (d.getFullYear() === currentYear) {
                 const mIdx = d.getMonth();
                 spheres.forEach(s => {
@@ -559,15 +506,10 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
                     if (s === 'relationships') monthlyActivity[mIdx].r++;
                 });
             }
-
-            // Week Logic
-            // Normalize item date to start of day for accurate diffing against normalized Monday
             const dStart = new Date(d);
             dStart.setHours(0,0,0,0);
-            
             const diffTime = dStart.getTime() - monday.getTime();
             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-            
             if (diffDays >= 0 && diffDays < 7) {
                 spheres.forEach(s => {
                     if (s === 'productivity') weeklyActivity[diffDays].p++;
@@ -577,33 +519,25 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
             }
         };
 
-        // For Activity, strictly use spheres property. 
-        // Notes do not have spheres property, so they are excluded from this specific chart as per request.
-        tasks.forEach(t => incrementActivity(t.createdAt, t.spheres || []));
-        journal.forEach(j => incrementActivity(j.date, j.spheres || []));
-        
-        // Include habit completions as activity
-        habits.forEach(h => {
+        safeTasks.forEach(t => incrementActivity(t.createdAt, t.spheres || []));
+        safeJournal.forEach(j => incrementActivity(j.date, j.spheres || []));
+        safeHabits.forEach(h => {
             const habitSpheres = h.spheres || [];
             if (habitSpheres.length === 0) return;
-
-            Object.keys(h.history).forEach(dateStr => {
+            Object.keys(h.history || {}).forEach(dateStr => {
                 const val = h.history[dateStr];
                 if (val) {
-                    // Create date object from YYYY-MM-DD
                     const [y, m, d] = dateStr.split('-');
                     const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
-                    // Use standard increment logic
                     incrementActivity(dateObj.getTime(), habitSpheres);
                 }
             });
         });
 
-        // 6. Balance Bar Chart Data (Use calculated stats)
         const balanceData = [productivity, growth, relationships];
-
-        // 7. Insights Count
-        const insightCount = journal.filter(j => j.isInsight).length;
+        
+        // 7. Insights Count (Count only journal entries marked as isInsight)
+        const insightCount = safeJournal.filter(j => j.isInsight).length;
 
         return { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, weeklyActivity, weekLabels, balanceData, insightCount };
     }, [notes, tasks, habits, journal, resetTime]);
@@ -622,8 +556,8 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
   const { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, weeklyActivity, weekLabels, balanceData, insightCount } = useDashboardStats(notes, tasks, habits, journal, chronotypeResetTime);
 
   // Active Challenges
-  const activeChallenges = tasks.filter(t => t.activeChallenge && !t.isChallengeCompleted).slice(0, 3);
-  const completedChallengesCount = tasks.filter(t => t.isChallengeCompleted).length;
+  const activeChallenges = (tasks || []).filter(t => t.activeChallenge && !t.isChallengeCompleted).slice(0, 3);
+  const completedChallengesCount = (tasks || []).filter(t => t.isChallengeCompleted).length;
 
   const handleResetChronotype = () => {
       if(confirm('Сбросить текущие показания графика активности? Это не удалит данные, только очистит визуализацию')) {
