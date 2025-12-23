@@ -693,7 +693,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
             className="md:col-span-1 md:row-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col relative overflow-hidden cursor-pointer group"
         >
              <div className="flex items-center gap-2 mb-6">
-                 <Target size={16} className="text-emerald-500" />
+                 <Zap size={16} className="text-indigo-500" />
                  <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Вызовы</span>
              </div>
              
@@ -732,7 +732,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         {/* 6. BALANCE (Bar Chart - Bottom Left) */}
         <motion.div className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
              <div className="flex items-center gap-2 mb-4">
-                 <Target size={16} className="text-slate-400" />
+                 <Target size={16} className="text-emerald-500" />
                  <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Баланс сфер</span>
              </div>
              <div className="flex-1 flex items-end">
