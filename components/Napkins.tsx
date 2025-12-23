@@ -381,17 +381,18 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     <button onClick={(e) => moveNoteVertical(e, note.id, 'down')} className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400"><ChevronDown size={12}/></button>
                  </div>
                  
-                 <button 
-                    onClick={(e) => togglePin(e, note)}
-                    className={`p-1 rounded transition-all ${
-                        note.isPinned 
-                        ? 'text-indigo-500 dark:text-indigo-400 opacity-100' 
-                        : 'text-slate-300 dark:text-slate-600 md:opacity-0 group-hover:opacity-100 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5'
-                    }`}
-                    title={note.isPinned ? "Открепить" : "Закрепить"}
-                 >
-                    <Pin size={14} fill={note.isPinned ? "currentColor" : "none"} className={note.isPinned ? "transform rotate-45" : ""} />
-                 </button>
+                 <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
+                     <button 
+                        onClick={(e) => togglePin(e, note)}
+                        className={`p-1 rounded transition-all ${
+                            note.isPinned 
+                            ? 'text-indigo-500 dark:text-indigo-400 opacity-100' 
+                            : 'text-slate-300 dark:text-slate-600 md:opacity-0 group-hover:opacity-100 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5'
+                        }`}
+                     >
+                        <Pin size={14} fill={note.isPinned ? "currentColor" : "none"} className={note.isPinned ? "transform rotate-45" : ""} />
+                     </button>
+                 </Tooltip>
              </div>
         </div>
         <div className="text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-3 text-sm">
