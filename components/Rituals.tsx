@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Habit, HabitFrequency } from '../types';
 import { notificationService } from '../services/notificationService';
@@ -530,7 +531,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                                   </button>
                               </Tooltip>
                               <Tooltip content="Удалить">
-                                  <button onClick={() => { if(confirm("Удалить ритуал?")) deleteHabit(habit.id); }} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                                  <button onClick={() => { if(confirm("Удалить привычку?")) deleteHabit(habit.id); }} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
                                       <Trash2 size={18} />
                                   </button>
                               </Tooltip>

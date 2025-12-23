@@ -590,8 +590,8 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
                 const val = h.history[dateStr];
                 if (val) {
                     // Create date object from YYYY-MM-DD
-                    const [y, m, d] = dateStr.split('-').map(Number);
-                    const dateObj = new Date(y, m - 1, d);
+                    const [y, m, d] = dateStr.split('-');
+                    const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
                     // Use standard increment logic
                     incrementActivity(dateObj.getTime(), habitSpheres);
                 }
@@ -622,7 +622,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
   const completedChallengesCount = tasks.filter(t => t.isChallengeCompleted).length;
 
   const handleResetChronotype = () => {
-      if(confirm('Сбросить текущие показания графика активности? Это не удалит данные, только очистит визуализацию.')) {
+      if(confirm('Сбросить текущие показания графика активности? Это не удалит данные, только очистит визуализацию')) {
           const now = Date.now();
           setChronotypeResetTime(now);
           localStorage.setItem('dashboard_chronotype_reset_time', now.toString());

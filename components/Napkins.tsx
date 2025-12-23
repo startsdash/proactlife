@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Note, AppConfig, Task } from '../types';
@@ -468,18 +469,18 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             
             {!showMoodInput && !showTagInput && (
                 <>
-                    <Tooltip content="Поиск по тегам">
+                    <Tooltip content="Поиск по тегам" side="bottom">
                         <button onClick={() => setShowTagInput(true)} className="p-2 rounded-xl border transition-all bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800"><TagIcon size={18} /></button>
                     </Tooltip>
-                    <Tooltip content="Фильтр по цвету">
+                    <Tooltip content="Фильтр по цвету" side="bottom">
                         <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border transition-all ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800/50 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}><Palette size={18} /></button>
                     </Tooltip>
                     {hasMoodMatcher && (
-                        <Tooltip content="Подбор по теме (ИИ)">
+                        <Tooltip content="Подбор по теме (ИИ)" side="bottom">
                             <button onClick={() => setShowMoodInput(true)} className={`p-2 rounded-xl border transition-all ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/50 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-purple-500 hover:border-purple-200'}`}><Sparkles size={18} /></button>
                         </Tooltip>
                     )}
-                    <Tooltip content="Рандом">
+                    <Tooltip content="Рандом" side="bottom">
                         <button onClick={startOracle} className="group relative p-2 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none">
                             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
                             <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
