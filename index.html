@@ -20,7 +20,8 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      // Polyfill process.env to prevent crashes in browser environments
+      // Polyfill process.env and global to prevent crashes in browser environments
+      window.global = window;
       window.process = window.process || { env: {} };
     </script>
     <script>
