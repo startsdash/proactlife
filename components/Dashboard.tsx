@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useEffect } from 'react';
 import { Note, Task, Habit, JournalEntry, Module } from '../types';
 import { motion } from 'framer-motion';
@@ -233,7 +234,7 @@ const StackedBarChart = ({ data, labels }: { data: { p: number, g: number, r: nu
         <div className="flex items-end justify-between h-24 gap-1 w-full">
             {data.map((d, i) => {
                 const total = d.p + d.g + d.r;
-                const heightPercent = (total / max) * 100;
+                const heightPercent = max > 0 ? (total / max) * 100 : 0;
                 
                 // Proportions within the bar
                 const pPct = total ? (d.p / total) * 100 : 0;
@@ -450,12 +451,14 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
              notesHistory.push(count);
         }
 
-        // 3. Weekly Habit Rhythm (Current Week Heatmap)
+        // 3. Weekly Habit Rhythm (Current Week Heatmap) & Activity Logic
         const getMonday = (d: Date) => {
             const date = new Date(d);
             const day = date.getDay();
             const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-            return new Date(date.setDate(diff));
+            const m = new Date(date.setDate(diff));
+            m.setHours(0, 0, 0, 0); // Strict normalization to 00:00
+            return m;
         };
         const monday = getMonday(new Date(today));
         const weeklyHabitStats = [];
@@ -503,12 +506,15 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
 
         // 4. Activity Chronotype (Radar Chart Data)
         // Aggregate activity into 24 hour buckets for Area Chart
+        // Also include journal entries for better reactivity
         const chronotypeNotes = notes.filter(n => n.createdAt >= resetTime);
         const chronotypeTasks = tasks.filter(t => t.createdAt >= resetTime);
+        const chronotypeJournal = journal.filter(j => j.date >= resetTime);
 
         const hoursDistribution = new Array(24).fill(0);
         chronotypeNotes.forEach(n => hoursDistribution[new Date(n.createdAt).getHours()]++);
         chronotypeTasks.forEach(t => hoursDistribution[new Date(t.createdAt).getHours()]++);
+        chronotypeJournal.forEach(j => hoursDistribution[new Date(j.date).getHours()]++);
 
         // Aggregate activity into 8 buckets (3-hour intervals) for Radar Chart
         const buckets = new Array(8).fill(0); // 00-03, 03-06, ...
@@ -521,6 +527,7 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
 
         chronotypeNotes.forEach(n => addToBucket(n.createdAt));
         chronotypeTasks.forEach(t => addToBucket(t.createdAt));
+        chronotypeJournal.forEach(j => addToBucket(j.date));
         
         const bucketLabels = ['00', '03', '06', '09', '12', '15', '18', '21'];
         // Ensure at least some value for visualization if empty
@@ -556,9 +563,12 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
             }
 
             // Week Logic
-            // Check if date falls within current week (Monday start)
-            const diffTime = d.getTime() - monday.getTime();
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            // Normalize item date to start of day for accurate diffing against normalized Monday
+            const dStart = new Date(d);
+            dStart.setHours(0,0,0,0);
+            
+            const diffTime = dStart.getTime() - monday.getTime();
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
             
             if (diffDays >= 0 && diffDays < 7) {
                 spheres.forEach(s => {
