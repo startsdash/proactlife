@@ -376,7 +376,8 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
         const todayStr = getLocalDateKey(today);
         
-        let productivity = 10, growth = 10, relationships = 10;
+        // Initialize to 0 to ensure charts are empty if no activity.
+        let productivity = 0, growth = 0, relationships = 0;
         
         const processSpheres = (spheres: string[] | undefined, weight: number) => {
             if (spheres && spheres.length > 0) {
