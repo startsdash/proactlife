@@ -198,23 +198,26 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = fal
 
 // 3. Simple Bar Chart (Single Value)
 const BarChart = ({ data, labels, colors, color }: { data: number[], labels: string[], colors?: string[], color?: string }) => {
+    // If all data is 0, we still want to show the 'potential' tracks with a minimal max to render them
     const max = Math.max(...data, 1);
     
     return (
         <div className="flex items-end justify-between h-24 gap-1 w-full">
             {data.map((val, i) => {
                 const barColor = colors?.[i] || color || 'bg-emerald-400';
-                const opacity = 0.3 + (val / max) * 0.7; 
                 
                 return (
-                    <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group min-w-[8px]">
+                    <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group min-w-[8px] relative">
                         <div className="relative w-full flex items-end justify-center h-full">
+                             {/* Background Track (Ghost Bar) */}
+                             <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800 rounded-t-sm w-full max-w-[20px] mx-auto" />
+                             
+                             {/* Fill Bar */}
                              <motion.div 
                                 initial={{ height: 0 }}
                                 animate={{ height: `${(val / max) * 100}%` }}
                                 transition={{ duration: 0.5, delay: i * 0.05 }}
-                                className={`w-full max-w-[20px] rounded-t-sm ${barColor} group-hover:opacity-100 transition-opacity`}
-                                style={{ opacity }}
+                                className={`w-full max-w-[20px] rounded-t-sm ${barColor} relative z-10`}
                              />
                         </div>
                         <span className="text-[7px] md:text-[8px] text-slate-400 mt-2 uppercase font-mono truncate w-full text-center tracking-tighter">{labels[i]}</span>
@@ -244,11 +247,14 @@ const StackedBarChart = ({ data, labels }: { data: { p: number, g: number, r: nu
                 return (
                     <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group min-w-[8px]">
                         <div className="relative w-full flex items-end justify-center h-full">
+                             {/* Background Track */}
+                             <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800 rounded-t-sm w-full max-w-[20px] mx-auto" />
+
                              <motion.div 
                                 initial={{ height: 0 }}
                                 animate={{ height: `${heightPercent}%` }}
                                 transition={{ duration: 0.5, delay: i * 0.05 }}
-                                className="w-full max-w-[20px] rounded-t-sm overflow-hidden flex flex-col-reverse relative min-h-[2px]"
+                                className="w-full max-w-[20px] rounded-t-sm overflow-hidden flex flex-col-reverse relative min-h-[2px] z-10"
                              >
                                 {d.p > 0 && <div style={{ height: `${pPct}%` }} className="bg-indigo-500 w-full" />}
                                 {d.g > 0 && <div style={{ height: `${gPct}%` }} className="bg-emerald-500 w-full" />}
@@ -268,13 +274,14 @@ const WeeklyHabitRhythm = ({ data }: { data: { label: string, percent: number, i
     return (
         <div className="flex items-end justify-between h-full gap-2 w-full px-2">
             {data.map((day, i) => {
-                // Color Logic: Orange (Flame) theme
                 const intensity = Math.max(0.1, day.percent / 100);
                 const isZero = day.percent === 0;
                 
                 return (
                     <div key={i} className="flex flex-col items-center justify-end flex-1 h-full gap-2 group cursor-default">
-                        <div className="relative w-full flex-1 flex items-end justify-center bg-slate-50 dark:bg-slate-800/50 rounded-lg overflow-hidden">
+                        {/* Container Slot */}
+                        <div className={`relative w-full flex-1 flex items-end justify-center rounded-lg overflow-hidden transition-all ${day.isToday && isZero ? 'bg-slate-50 dark:bg-slate-800 ring-2 ring-orange-400/50 ring-offset-1 dark:ring-offset-slate-900 animate-pulse' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                             {/* Filled Part */}
                              <motion.div 
                                 initial={{ height: 0 }}
                                 animate={{ height: `${day.percent}%` }}
@@ -282,6 +289,14 @@ const WeeklyHabitRhythm = ({ data }: { data: { label: string, percent: number, i
                                 className={`w-full rounded-t-sm ${isZero ? 'bg-transparent' : 'bg-gradient-to-t from-orange-400 to-amber-300'}`}
                                 style={{ opacity: isZero ? 0 : 0.6 + intensity * 0.4 }}
                              />
+                             
+                             {/* Empty State Call to Action for Today */}
+                             {day.isToday && isZero && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce" />
+                                </div>
+                             )}
+
                              {/* Tooltip on Hover */}
                              <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold bg-black text-white px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10">
                                  {Math.round(day.percent)}%
