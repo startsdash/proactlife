@@ -409,7 +409,7 @@ export const applyTypography = (text: string): string => {
                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Безопасность</h3>
                    <StatusToggle 
                         isDisabled={!isGuestMode} 
-                        onChange={(enabled) => setIsGuestMode(enabled)} 
+                        onChange={(isDisabled) => setIsGuestMode(!isDisabled)} 
                         label="Гостевой режим"
                         descriptionOn="Любой пользователь может использовать приложение без входа."
                         descriptionOff="Доступ только для авторизованных пользователей Google."
