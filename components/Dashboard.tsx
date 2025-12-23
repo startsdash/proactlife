@@ -378,27 +378,13 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         
         let productivity = 10, growth = 10, relationships = 10;
         
-        // Helper to categorize text context (Fallback)
-        const checkCategoryFallback = (text: string, defaultCategory: 'productivity' | 'growth' | 'relationships'): 'productivity' | 'growth' | 'relationships' => {
-            const t = text.toLowerCase();
-            if (t.match(/work|code|job|bussiness|money|finance|project|task|deadline|career|to-do|todo|buy|sell|make|build|работа|код|бизнес|деньги|финансы|проект|задача|карьера|дело|план|цель|купить|продать|сделать|построить|спринт|список|начал|закончил/)) return 'productivity';
-            if (t.match(/health|gym|sport|run|sleep|meditate|read|book|learn|skill|art|create|hobby|self|grow|habit|ritual|journal|reflection|здоровье|спорт|бег|сон|медитация|книг|учеба|навык|творчество|хобби|рост|развитие|английский|язык|привычка|ритуал|дневник|мысли|инсайт|трекер|анализ|сегодня|день/)) return 'growth';
-            if (t.match(/family|friend|love|date|social|party|meet|people|talk|help|gift|child|kids|wife|husband|mom|dad|parent|colleague|team|семья|друзья|любовь|свидание|общение|встреча|люди|разговор|помощь|дети|жена|муж|мама|папа|родители|коллег|команда/)) return 'relationships';
-            return defaultCategory;
-        };
-
-        const processSpheres = (spheres: string[] | undefined, fallbackText: string, weight: number, fallbackDefault: 'productivity' | 'growth' | 'relationships') => {
+        const processSpheres = (spheres: string[] | undefined, weight: number) => {
             if (spheres && spheres.length > 0) {
                 spheres.forEach(s => {
                     if (s === 'productivity') productivity += weight;
                     if (s === 'growth') growth += weight;
                     if (s === 'relationships') relationships += weight;
                 });
-            } else {
-                const cat = checkCategoryFallback(fallbackText, fallbackDefault);
-                if (cat === 'productivity') productivity += weight;
-                if (cat === 'growth') growth += weight;
-                if (cat === 'relationships') relationships += weight;
             }
         };
 
@@ -408,7 +394,7 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
             const isActiveStreak = h.streak > 2;
 
             if (isDoneToday || isActiveStreak) {
-                processSpheres(h.spheres, h.title, 20, 'growth');
+                processSpheres(h.spheres, 20);
             }
         });
 
@@ -417,13 +403,13 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
             const isRelevant = t.createdAt >= startOfDay || t.column === 'doing' || t.column === 'done';
             if (!isRelevant) return;
             const score = t.column === 'done' ? 15 : 5;
-            processSpheres(t.spheres, t.content, score, 'productivity');
+            processSpheres(t.spheres, score);
         });
 
         // Scan Journal (Entries Today)
         journal.forEach(j => {
             if (j.date >= startOfDay) {
-                processSpheres(j.spheres, j.content, 10, 'growth');
+                processSpheres(j.spheres, 10);
             }
         });
 
@@ -543,13 +529,9 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
         const weekLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-        // Helper to determine sphere of item for chart aggregation
-        const getSpheresForItem = (item: any, fallback: string, def: 'productivity' | 'growth' | 'relationships'): ('productivity' | 'growth' | 'relationships')[] => {
-            if (item.spheres && item.spheres.length > 0) return item.spheres;
-            return [checkCategoryFallback(fallback, def)];
-        };
-
         const incrementActivity = (ts: number, spheres: string[]) => {
+            if (!spheres || spheres.length === 0) return;
+
             const d = new Date(ts);
             
             // Year/Month Logic
@@ -579,13 +561,16 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
             }
         };
 
-        notes.forEach(n => incrementActivity(n.createdAt, getSpheresForItem(n, n.content, 'growth')));
-        tasks.forEach(t => incrementActivity(t.createdAt, getSpheresForItem(t, t.content, 'productivity')));
-        journal.forEach(j => incrementActivity(j.date, getSpheresForItem(j, j.content, 'growth')));
+        // For Activity, strictly use spheres property. 
+        // Notes do not have spheres property, so they are excluded from this specific chart as per request.
+        tasks.forEach(t => incrementActivity(t.createdAt, t.spheres || []));
+        journal.forEach(j => incrementActivity(j.date, j.spheres || []));
         
         // Include habit completions as activity
         habits.forEach(h => {
-            const habitSpheres = getSpheresForItem(h, h.title, 'growth');
+            const habitSpheres = h.spheres || [];
+            if (habitSpheres.length === 0) return;
+
             Object.keys(h.history).forEach(dateStr => {
                 const val = h.history[dateStr];
                 if (val) {
