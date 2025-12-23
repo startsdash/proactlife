@@ -322,12 +322,6 @@ const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], label
     return (
         <div className="w-full h-full flex items-center justify-center relative">
             <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-[180px]">
-                <defs>
-                    <radialGradient id={`radarGradient-${color.replace('#', '')}`} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-                        <stop offset="0%" stopColor={color} stopOpacity="0.5" />
-                        <stop offset="100%" stopColor={color} stopOpacity="0.1" />
-                    </radialGradient>
-                </defs>
                 {gridLevels.map((level, idx) => {
                     const gridPoints = Array.from({ length: count }).map((_, i) => {
                         const angle = i * angleStep - Math.PI / 2;
@@ -350,14 +344,14 @@ const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], label
                 })}
                 <motion.polygon
                     initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
+                    animate={{ opacity: 0.6, scale: 1 }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                     points={points}
-                    fill={`url(#radarGradient-${color.replace('#', '')})`}
+                    fill={color}
+                    fillOpacity={0.2}
                     stroke={color}
-                    strokeWidth={2.5}
+                    strokeWidth={2}
                     strokeLinejoin="round"
-                    className="drop-shadow-sm"
                 />
                 {labels.map((label, i) => {
                     const angle = i * angleStep - Math.PI / 2;
