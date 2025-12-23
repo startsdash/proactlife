@@ -17,7 +17,7 @@ import Journal from './components/Journal';
 import LearningMode from './components/LearningMode';
 import UserSettings from './components/UserSettings';
 import Onboarding from './components/Onboarding';
-import { LogIn, Shield, CloudOff } from 'lucide-react';
+import { LogIn, Shield, CloudOff, ArrowRight } from 'lucide-react';
 
 const OWNER_EMAIL = 'rukomrus@gmail.com';
 
@@ -96,6 +96,12 @@ const App: React.FC = () => {
   const [hasLoadedFromCloud, setHasLoadedFromCloud] = useState(false); // Guard state
   const [journalContextTaskId, setJournalContextTaskId] = useState<string | null>(null); // Context for navigation (Journal)
   const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
+  
+  // INVITE CODE LOGIC
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
+  const [guestSessionCode, setGuestSessionCode] = useState<string | null>(() => {
+      return localStorage.getItem('live_act_guest_code');
+  });
 
   const isHydratingRef = useRef(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -193,6 +199,10 @@ const App: React.FC = () => {
     setSyncStatus('disconnected');
     setHasLoadedFromCloud(false);
     localStorage.removeItem('isGoogleAuthEnabled');
+    
+    // Also clear guest session on explicit sign out if we treat it as logout
+    localStorage.removeItem('live_act_guest_code');
+    setGuestSessionCode(null);
     
     const localData = loadState();
     setData(prev => ({ ...localData, user: undefined, config: prev.config }));
@@ -313,28 +323,75 @@ const App: React.FC = () => {
     };
   }, [data.config, isOwner, data.user]);
 
+  // INVITE CODE VALIDATION
+  const validateGuestSession = (code: string | null): boolean => {
+      if (!code) return false;
+      const validCodes = data.config.inviteCodes || [];
+      const match = validCodes.find(c => c.code === code);
+      if (!match) return false;
+      if (match.expiresAt && match.expiresAt < Date.now()) return false;
+      return true;
+  };
+
+  const handleInviteCodeSubmit = () => {
+      if (!inviteCodeInput) return;
+      const code = inviteCodeInput.toUpperCase().trim();
+      if (validateGuestSession(code)) {
+          localStorage.setItem('live_act_guest_code', code);
+          setGuestSessionCode(code);
+          if (window.confetti) window.confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+      } else {
+          alert('Неверный или истекший код приглашения');
+      }
+  };
+
   if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a] text-slate-800 dark:text-slate-200">Loading...</div>;
 
   // --- GUEST MODE GUARD ---
-  // If guest mode is disabled AND user is not logged in, show blocking login screen
   const isGuestModeAllowed = data.config.isGuestModeEnabled ?? true;
   const isAuthenticated = !!data.user;
+  const isGuestAuthenticated = validateGuestSession(guestSessionCode);
 
-  if (!isGuestModeAllowed && !isAuthenticated) {
+  if (!isGuestModeAllowed && !isAuthenticated && !isGuestAuthenticated) {
       return (
           <div className="flex flex-col h-screen items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a] p-4 animate-in fade-in duration-500">
               <div className="w-full max-w-sm bg-white dark:bg-[#1e293b] rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 text-center">
                   <div className="w-16 h-16 bg-slate-900 dark:bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-6 shadow-lg">L</div>
                   <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Доступ ограничен</h1>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-                      Владелец отключил гостевой режим. Пожалуйста, войдите через Google, чтобы продолжить.
+                      Владелец отключил гостевой режим.
                   </p>
+                  
                   <button 
                          onClick={() => handleDriveConnect(false)}
-                         className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium text-sm transition-colors shadow-lg shadow-indigo-200 dark:shadow-none"
+                         className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium text-sm transition-colors shadow-lg shadow-indigo-200 dark:shadow-none mb-6"
                        >
                            <LogIn size={18} /> Войти через Google
                    </button>
+
+                   <div className="flex items-center gap-4 mb-6">
+                       <div className="h-[1px] bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                       <span className="text-xs text-slate-400 uppercase font-bold">ИЛИ</span>
+                       <div className="h-[1px] bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                   </div>
+
+                   <div className="flex gap-2">
+                       <input 
+                          type="text" 
+                          placeholder="Инвайт код (6 символов)" 
+                          className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-center uppercase font-mono tracking-widest text-slate-800 dark:text-white outline-none focus:border-indigo-500 transition-all placeholder:normal-case placeholder:tracking-normal placeholder:font-sans placeholder:text-slate-400"
+                          value={inviteCodeInput}
+                          onChange={(e) => setInviteCodeInput(e.target.value)}
+                          maxLength={6}
+                       />
+                       <button 
+                          onClick={handleInviteCodeSubmit}
+                          disabled={inviteCodeInput.length < 6}
+                          className="px-4 py-2.5 bg-slate-900 dark:bg-slate-700 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                       >
+                           <ArrowRight size={20} />
+                       </button>
+                   </div>
               </div>
               <div className="mt-8 text-xs text-slate-400 flex items-center gap-2">
                   <Shield size={12} /> Protected by LIVE.ACT Pro

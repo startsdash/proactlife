@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { AppConfig, Mentor, ChallengeAuthor, AIToolConfig, AccessControl } from '../types';
+import { AppConfig, Mentor, ChallengeAuthor, AIToolConfig, AccessControl, InviteCode } from '../types';
 import { AVAILABLE_ICONS, ICON_MAP, DEFAULT_AI_TOOLS, AVAILABLE_MODELS, DEFAULT_MODEL } from '../constants';
-import { Save, Plus, Trash2, Edit3, X, Database, Users, Zap, Bot, Cpu, FileJson, FileType, Shield, Lock, Globe, Code, Copy, Check, ArrowLeft, ChevronRight, Eye, EyeOff, LayoutTemplate } from 'lucide-react';
+import { Save, Plus, Trash2, Edit3, X, Database, Users, Zap, Bot, Cpu, FileJson, FileType, Shield, Lock, Globe, Code, Copy, Check, ArrowLeft, ChevronRight, Eye, EyeOff, LayoutTemplate, Key, Ticket, Clock } from 'lucide-react';
 
 interface Props {
   config: AppConfig;
@@ -34,6 +34,115 @@ const StatusToggle = ({ isDisabled, onChange, label = "Активно", descript
         </label>
     </div>
   );
+};
+
+// --- INVITE CODE MANAGER ---
+const InviteCodeManager = ({ codes, onChange }: { codes: InviteCode[], onChange: (codes: InviteCode[]) => void }) => {
+    const [duration, setDuration] = useState<number | 'permanent'>(24 * 60 * 60 * 1000); // Default 24h
+    const [comment, setComment] = useState('');
+    
+    const generateCode = () => {
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const expiresAt = duration === 'permanent' ? null : Date.now() + duration;
+        
+        const newInvite: InviteCode = {
+            code,
+            createdAt: Date.now(),
+            expiresAt,
+            comment: comment || 'Без комментария',
+            createdBy: 'Owner'
+        };
+        
+        onChange([newInvite, ...codes]);
+        setComment('');
+    };
+
+    const deleteCode = (codeToDelete: string) => {
+        if(confirm("Отозвать этот код приглашения?")) {
+            onChange(codes.filter(c => c.code !== codeToDelete));
+        }
+    };
+
+    const copyCode = (code: string) => {
+        navigator.clipboard.writeText(code);
+        alert(`Код ${code} скопирован!`);
+    };
+
+    return (
+        <div className="mt-8 pt-6 border-t border-slate-200">
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Ticket size={16} className="text-indigo-500"/> Пользователи и Инвайты
+            </h3>
+            
+            {/* GENERATOR */}
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+                <div className="text-xs font-bold text-slate-500 mb-3">Генерация кода доступа</div>
+                <div className="flex flex-col md:flex-row gap-3">
+                    <div className="flex-1">
+                        <input 
+                            type="text" 
+                            placeholder="Комментарий (для кого?)" 
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                            className="w-full p-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:border-indigo-300"
+                        />
+                    </div>
+                    <div className="w-full md:w-40">
+                        <select 
+                            className="w-full p-2.5 rounded-lg border border-slate-200 text-sm outline-none bg-white"
+                            value={duration}
+                            onChange={(e) => setDuration(e.target.value === 'permanent' ? 'permanent' : parseInt(e.target.value))}
+                        >
+                            <option value={60 * 60 * 1000}>1 Час</option>
+                            <option value={24 * 60 * 60 * 1000}>24 Часа</option>
+                            <option value={7 * 24 * 60 * 60 * 1000}>7 Дней</option>
+                            <option value={30 * 24 * 60 * 60 * 1000}>30 Дней</option>
+                            <option value="permanent">Бессрочно</option>
+                        </select>
+                    </div>
+                    <button 
+                        onClick={generateCode}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                        <Plus size={16} /> Создать
+                    </button>
+                </div>
+            </div>
+
+            {/* LIST */}
+            <div className="space-y-2">
+                {codes.map(c => {
+                    const isExpired = c.expiresAt && c.expiresAt < Date.now();
+                    return (
+                        <div key={c.code} className={`flex items-center justify-between p-3 rounded-lg border ${isExpired ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white border-slate-200'} transition-all`}>
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="font-mono font-bold text-base text-slate-700 tracking-wider bg-slate-100 px-2 py-1 rounded select-all">
+                                    {c.code}
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <div className="text-sm font-medium text-slate-800 truncate">{c.comment}</div>
+                                    <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                                        <Clock size={10} /> 
+                                        {isExpired 
+                                            ? 'Истек' 
+                                            : c.expiresAt 
+                                                ? `До ${new Date(c.expiresAt).toLocaleDateString()} ${new Date(c.expiresAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+                                                : 'Бессрочно'
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <button onClick={() => copyCode(c.code)} className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors"><Copy size={16} /></button>
+                                <button onClick={() => deleteCode(c.code)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                            </div>
+                        </div>
+                    );
+                })}
+                {codes.length === 0 && <div className="text-center text-xs text-slate-400 py-4 italic">Нет активных кодов</div>}
+            </div>
+        </div>
+    );
 };
 
 // --- ACCESS CONTROL COMPONENT ---
@@ -128,6 +237,7 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
   const [mentors, setMentors] = useState<Mentor[]>(config.mentors);
   const [authors, setAuthors] = useState<ChallengeAuthor[]>(config.challengeAuthors);
   const [isGuestMode, setIsGuestMode] = useState<boolean>(config.isGuestModeEnabled ?? true);
+  const [inviteCodes, setInviteCodes] = useState<InviteCode[]>(config.inviteCodes || []);
   
   // Initialize AI Tools
   const [aiTools, setAiTools] = useState<AIToolConfig[]>(() => {
@@ -155,7 +265,8 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
       mentors: mentors,
       challengeAuthors: authors,
       aiTools: aiTools,
-      isGuestModeEnabled: isGuestMode
+      isGuestModeEnabled: isGuestMode,
+      inviteCodes: inviteCodes
     });
     alert("Конфигурация сохранена локально!");
   };
@@ -252,6 +363,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = ${JSON.stringify(aiTools, null, 
 export const DEFAULT_CONFIG: AppConfig = {
   "_version": ${version},
   "isGuestModeEnabled": ${isGuestMode},
+  "inviteCodes": ${JSON.stringify(inviteCodes, null, 2)},
   "coreLibrary": DEFAULT_CORE_LIBRARY,
   "mentors": ${JSON.stringify(mentors, null, 2)},
   "challengeAuthors": ${JSON.stringify(authors, null, 2)},
@@ -414,6 +526,8 @@ export const applyTypography = (text: string): string => {
                         descriptionOn="Любой пользователь может использовать приложение без входа."
                         descriptionOff="Доступ только для авторизованных пользователей Google."
                    />
+                   
+                   <InviteCodeManager codes={inviteCodes} onChange={setInviteCodes} />
                </div>
             </div>
           )}

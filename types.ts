@@ -143,9 +143,18 @@ export interface AIToolConfig extends AccessControl {
   responseMimeType?: 'text/plain' | 'application/json'; 
 }
 
+export interface InviteCode {
+  code: string;
+  createdAt: number;
+  expiresAt: number | null; // null = permanent
+  comment?: string;
+  createdBy: string;
+}
+
 export interface AppConfig {
   _version?: number; 
   isGuestModeEnabled?: boolean; // NEW: Controls whether unauthenticated users can access the app
+  inviteCodes?: InviteCode[]; // NEW: List of active invite codes
   coreLibrary: string;
   mentors: Mentor[];
   challengeAuthors: ChallengeAuthor[];
