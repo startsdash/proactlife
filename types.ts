@@ -1,5 +1,4 @@
 
-
 declare global {
   interface Window {
     confetti: any;
@@ -99,6 +98,7 @@ export interface JournalEntry {
   aiFeedback?: string;
   mentorId?: string;
   spheres?: string[]; // NEW: Manual sphere selection
+  isInsight?: boolean; // NEW: Toggle for dashboard stats
 }
 
 export interface MentorAnalysis {

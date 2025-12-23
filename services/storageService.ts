@@ -37,7 +37,15 @@ export const loadState = (): AppState => {
       }));
     }
 
-    if (!parsed.journal) parsed.journal = [];
+    if (parsed.journal) {
+        parsed.journal = parsed.journal.map((j: any) => ({
+            ...j,
+            isInsight: j.isInsight || false // Default to false if missing
+        }));
+    } else {
+        parsed.journal = [];
+    }
+
     if (!parsed.mentorAnalyses) parsed.mentorAnalyses = [];
     
     // Robust Habit Migration

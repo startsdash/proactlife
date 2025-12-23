@@ -602,7 +602,10 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         // 6. Balance Bar Chart Data (Use calculated stats)
         const balanceData = [productivity, growth, relationships];
 
-        return { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, weeklyActivity, weekLabels, balanceData };
+        // 7. Insights Count
+        const insightCount = journal.filter(j => j.isInsight).length;
+
+        return { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, weeklyActivity, weekLabels, balanceData, insightCount };
     }, [notes, tasks, habits, journal, resetTime]);
 };
 
@@ -616,7 +619,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
   
   const [activityView, setActivityView] = useState<'week' | 'year'>('week');
 
-  const { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, weeklyActivity, weekLabels, balanceData } = useDashboardStats(notes, tasks, habits, journal, chronotypeResetTime);
+  const { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, weeklyActivity, weekLabels, balanceData, insightCount } = useDashboardStats(notes, tasks, habits, journal, chronotypeResetTime);
 
   // Active Challenges
   const activeChallenges = tasks.filter(t => t.activeChallenge && !t.isChallengeCompleted).slice(0, 3);
@@ -791,8 +794,8 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
              </div>
              
              <div className="relative z-10">
-                 <div className="text-5xl font-bold mb-1">{journal.length}</div>
-                 <div className="text-sm font-medium text-indigo-100">Записей в дневнике</div>
+                 <div className="text-5xl font-bold mb-1">{insightCount}</div>
+                 <div className="text-sm font-medium text-indigo-100">Озарений в Дневнике</div>
                  <div className="text-[10px] text-indigo-300 mt-1 opacity-80">Перейти к рефлексии</div>
              </div>
         </motion.div>

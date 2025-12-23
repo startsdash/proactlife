@@ -1,9 +1,10 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll, XCircle, Send } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll, XCircle, Send, Lightbulb } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 
@@ -358,6 +359,10 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
     setEditContent('');
   };
 
+  const toggleInsight = (entry: JournalEntry) => {
+      updateEntry({ ...entry, isInsight: !entry.isInsight });
+  };
+
   const RenderIcon = ({ name, className }: { name: string, className?: string }) => {
     const Icon = ICON_MAP[name] || ICON_MAP['User'];
     return <Icon className={className} size={14} />;
@@ -562,6 +567,11 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 <div key={entry.id} className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 md:p-6 relative group hover:shadow-md transition-shadow">
                   {!isEditing && (
                     <div className="absolute top-4 right-4 flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                         <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
+                            <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-colors ${entry.isInsight ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-300 dark:text-slate-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
+                                <Lightbulb size={16} className={entry.isInsight ? "fill-current" : ""} />
+                            </button>
+                         </Tooltip>
                          <Tooltip content="Редактировать">
                             <button onClick={() => startEditing(entry)} className="text-slate-300 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"><Edit3 size={16} /></button>
                          </Tooltip>
@@ -570,7 +580,12 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                          </Tooltip>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3"><Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}</div>
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                      <Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
+                      {entry.isInsight && (
+                          <span className="ml-1 text-amber-500 animate-pulse" title="Инсайт"><Lightbulb size={12} className="fill-current"/></span>
+                      )}
+                  </div>
                   {entry.spheres && entry.spheres.length > 0 && (
                       <SphereBadgeList spheres={entry.spheres} />
                   )}
