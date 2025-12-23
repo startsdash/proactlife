@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus } from '../types';
 import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard } from 'lucide-react';
@@ -43,13 +44,13 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
   }, []);
 
   const navItems = [
-    { id: Module.DASHBOARD, icon: LayoutDashboard, label: 'Обзор' },
     { id: Module.NAPKINS, icon: StickyNote, label: 'Заметки' },
     { id: Module.SANDBOX, icon: Box, label: 'Хаб' },
-    { id: Module.MENTAL_GYM, icon: Dumbbell, label: 'Скиллы' },
     { id: Module.KANBAN, icon: KanbanIcon, label: 'Спринты' },
-    { id: Module.JOURNAL, icon: Book, label: 'Дневник' },
     { id: Module.RITUALS, icon: Flame, label: 'Трекер' },
+    { id: Module.JOURNAL, icon: Book, label: 'Дневник' },
+    { id: Module.MENTAL_GYM, icon: Dumbbell, label: 'Скиллы' },
+    { id: Module.DASHBOARD, icon: LayoutDashboard, label: 'Обзор' },
     { id: Module.ARCHIVE, icon: Trophy, label: 'Зал славы' },
     { id: Module.LEARNING, icon: FlaskConical, label: 'Практикум' },
   ];
