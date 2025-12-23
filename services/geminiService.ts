@@ -21,8 +21,11 @@ const getApiKey = (): string => {
   return '';
 };
 
-const apiKey = getApiKey();
-const ai = new GoogleGenAI({ apiKey: apiKey || 'MISSING_KEY' });
+// Initialize client lazily to prevent crash on module load if key is missing
+const getAiClient = () => {
+    const apiKey = getApiKey();
+    return new GoogleGenAI({ apiKey: apiKey || 'MISSING_KEY' });
+};
 
 // Helper to check if model requires legacy/chat handling (Gemma doesn't support systemInstruction in config)
 const isGemmaModel = (model: string) => model.toLowerCase().includes('gemma');
@@ -72,6 +75,7 @@ export const autoTagNote = async (content: string, config: AppConfig): Promise<s
   const tool = getToolConfig('tagger', config);
   const model = tool.model || DEFAULT_MODEL;
   const fullPrompt = `${tool.systemPrompt}\n\nБаза знаний (контекст): ${config.coreLibrary}`;
+  const ai = getAiClient();
 
   try {
     let response;
@@ -112,6 +116,7 @@ export const autoTagNote = async (content: string, config: AppConfig): Promise<s
 export const findNotesByMood = async (notes: Note[], mood: string, config: AppConfig): Promise<string[]> => {
     const tool = getToolConfig('mood_matcher', config);
     const model = tool.model || DEFAULT_MODEL;
+    const ai = getAiClient();
     
     // Prepare simplified notes for context
     const notesContext = notes.map(n => `ID: ${n.id}\nContent: ${n.content.substring(0, 200)}...`).join('\n---\n');
@@ -159,6 +164,7 @@ export interface SandboxAnalysis {
 export const analyzeSandboxItem = async (content: string, mentorId: string, config: AppConfig): Promise<SandboxAnalysis | null> => {
     const mentor = config.mentors.find(m => m.id === mentorId) || config.mentors[0];
     const model = mentor.model || DEFAULT_MODEL;
+    const ai = getAiClient();
     
     const systemInstruction = `${mentor.systemPrompt}\n\n${BASE_OUTPUT_INSTRUCTION}\n\nCONTEXT:\n${config.coreLibrary}`;
 
@@ -207,6 +213,7 @@ export const analyzeSandboxItem = async (content: string, mentorId: string, conf
 export const getKanbanTherapy = async (taskContent: string, type: 'stuck' | 'completed', config: AppConfig): Promise<string> => {
     const tool = getToolConfig('kanban_therapist', config);
     const model = tool.model || DEFAULT_MODEL;
+    const ai = getAiClient();
     
     const context = type === 'stuck' 
         ? "The user is STUCK on this task. Help them unblock it using stoic/cognitive reframing." 
@@ -233,6 +240,7 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
     
     const model = author.model || DEFAULT_MODEL;
     const fullPrompt = `${author.systemPrompt}\n\nTASK: "${taskContent}"\n\nGenerate a challenge checklist (Markdown).`;
+    const ai = getAiClient();
 
     try {
         const response = await ai.models.generateContent({
@@ -250,6 +258,7 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
 export const analyzeJournalPath = async (entries: JournalEntry[], config: AppConfig): Promise<string> => {
     const tool = getToolConfig('journal_mentor', config);
     const model = tool.model || DEFAULT_MODEL;
+    const ai = getAiClient();
 
     // Prepare journal context (last 10 entries to fit context window)
     const contextEntries = entries.slice(0, 10).map(e => `[${new Date(e.date).toLocaleDateString()}] ${e.content}`).join('\n---\n');
