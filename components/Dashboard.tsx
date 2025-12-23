@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Note, Task, Habit, JournalEntry, Module } from '../types';
 import { motion } from 'framer-motion';
-import { Activity, Flame, Zap, Target, BookOpen, Clock, BrainCircuit, Calendar, ArrowUpRight, TrendingUp, Trophy, Medal } from 'lucide-react';
+import { Activity, Flame, Zap, Target, BookOpen, Clock, BrainCircuit, Calendar, ArrowUpRight, TrendingUp, Trophy, Medal, RotateCcw } from 'lucide-react';
+import { Tooltip } from './Tooltip';
 
 interface Props {
   notes: Note[];
@@ -379,7 +380,7 @@ const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], label
 };
 
 // --- DATA PROCESSING HOOKS ---
-const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journal: JournalEntry[]) => {
+const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journal: JournalEntry[], resetTime: number = 0) => {
     return useMemo(() => {
         const today = new Date();
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
@@ -513,9 +514,12 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
 
         // 4. Activity Chronotype (Radar Chart Data)
         // Aggregate activity into 24 hour buckets for Area Chart
+        const chronotypeNotes = notes.filter(n => n.createdAt >= resetTime);
+        const chronotypeTasks = tasks.filter(t => t.createdAt >= resetTime);
+
         const hoursDistribution = new Array(24).fill(0);
-        notes.forEach(n => hoursDistribution[new Date(n.createdAt).getHours()]++);
-        tasks.forEach(t => hoursDistribution[new Date(t.createdAt).getHours()]++);
+        chronotypeNotes.forEach(n => hoursDistribution[new Date(n.createdAt).getHours()]++);
+        chronotypeTasks.forEach(t => hoursDistribution[new Date(t.createdAt).getHours()]++);
 
         // Aggregate activity into 8 buckets (3-hour intervals) for Radar Chart
         const buckets = new Array(8).fill(0); // 00-03, 03-06, ...
@@ -526,8 +530,8 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
             buckets[bucketIndex]++;
         };
 
-        notes.forEach(n => addToBucket(n.createdAt));
-        tasks.forEach(t => addToBucket(t.createdAt));
+        chronotypeNotes.forEach(n => addToBucket(n.createdAt));
+        chronotypeTasks.forEach(t => addToBucket(t.createdAt));
         
         const bucketLabels = ['00', '03', '06', '09', '12', '15', '18', '21'];
         // Ensure at least some value for visualization if empty
@@ -543,17 +547,30 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         const balanceData = [productivity, growth, relationships];
 
         return { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData };
-    }, [notes, tasks, habits, journal]);
+    }, [notes, tasks, habits, journal, resetTime]);
 };
 
 // --- MAIN DASHBOARD COMPONENT ---
 
 const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate }) => {
-  const { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData } = useDashboardStats(notes, tasks, habits, journal);
+  const [chronotypeResetTime, setChronotypeResetTime] = useState(() => {
+      const stored = localStorage.getItem('dashboard_chronotype_reset_time');
+      return stored ? parseInt(stored) : 0;
+  });
+
+  const { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, balanceData } = useDashboardStats(notes, tasks, habits, journal, chronotypeResetTime);
 
   // Active Challenges
   const activeChallenges = tasks.filter(t => t.activeChallenge && !t.isChallengeCompleted).slice(0, 3);
   const completedChallengesCount = tasks.filter(t => t.isChallengeCompleted).length;
+
+  const handleResetChronotype = () => {
+      if(confirm('Сбросить текущие показания графика активности? Это не удалит данные, только очистит визуализацию.')) {
+          const now = Date.now();
+          setChronotypeResetTime(now);
+          localStorage.setItem('dashboard_chronotype_reset_time', now.toString());
+      }
+  };
 
   return (
     <div className="h-full overflow-y-auto custom-scrollbar-light p-4 md:p-8 bg-[#f8fafc] dark:bg-[#0f172a]">
@@ -618,9 +635,19 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
 
         {/* 4. CHRONOTYPE ACTIVITY (Split Card: Area + Radar) */}
         <motion.div className="md:col-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
-            <div className="flex items-center gap-2 mb-4">
-                <Clock size={16} className="text-slate-400" />
-                <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Хронотип активности</span>
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-slate-400" />
+                    <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Хронотип активности</span>
+                </div>
+                <Tooltip content="Сбросить показания">
+                    <button 
+                        onClick={handleResetChronotype} 
+                        className="text-slate-400 hover:text-indigo-500 transition-colors p-1 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
+                    >
+                        <RotateCcw size={14} />
+                    </button>
+                </Tooltip>
             </div>
             <div className="flex-1 flex flex-col md:flex-row gap-6 items-center">
                 {/* Left: Area Chart (Hourly Flow) */}
