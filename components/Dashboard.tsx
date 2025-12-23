@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Note, Task, Habit, JournalEntry, Module } from '../types';
 import { motion } from 'framer-motion';
-import { Activity, Flame, Zap, Target, BookOpen, Clock, BrainCircuit, Calendar, ArrowUpRight, TrendingUp, Trophy, Medal, RotateCcw } from 'lucide-react';
+import { Activity, Flame, Zap, Target, BookOpen, Clock, BrainCircuit, Calendar, ArrowUpRight, TrendingUp, Trophy, Medal, RotateCcw, Lightbulb } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
 interface Props {
@@ -642,7 +642,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
             transition={{ type: "spring", stiffness: 300 }}
         >
             <div className="w-full flex items-center gap-2 mb-2">
-                <Zap size={16} className="text-slate-400" />
+                <Activity size={16} className="text-slate-400" />
                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Энергия дня</span>
             </div>
             
@@ -785,7 +785,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
              
              <div className="flex items-center gap-2 relative z-10">
-                 <BookOpen size={16} className="text-indigo-200" />
+                 <Lightbulb size={16} className="text-indigo-200" />
                  <span className="text-xs font-bold uppercase text-indigo-200 tracking-wider">Инсайты</span>
              </div>
              
