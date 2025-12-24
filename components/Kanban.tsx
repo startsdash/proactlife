@@ -663,19 +663,27 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             </Tooltip>
                         </div>
 
-                        {/* TOP: Content & Spheres */}
-                        <div className="flex justify-between items-start mb-2">
-                             <div className="text-slate-800 dark:text-slate-200 font-normal text-sm leading-relaxed w-full pr-8">
-                                 <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
-                             </div>
-                             {task.spheres && task.spheres.length > 0 && (
-                                <div className="absolute top-4 right-11 flex -space-x-1">
-                                    {task.spheres.map(s => {
-                                        const sp = SPHERES.find(x => x.id === s);
-                                        return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
-                                    })}
-                                </div>
-                             )}
+                        {/* TOP: Status (Icon+Text) + Spheres */}
+                        <div className="flex justify-between items-center mb-2">
+                            <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
+                                {StatusIcon && <StatusIcon size={14} fill={task.isChallengeCompleted ? "none" : "currentColor"} />}
+                                <span>{statusText}</span>
+                            </div>
+                            <div className="flex items-center gap-2 pr-7">
+                                {task.spheres && task.spheres.length > 0 && (
+                                    <div className="flex -space-x-1">
+                                        {task.spheres.map(s => {
+                                            const sp = SPHERES.find(x => x.id === s);
+                                            return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* CONTENT */}
+                        <div className="text-slate-800 dark:text-slate-200 font-normal text-sm leading-relaxed mb-3">
+                             <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
                         </div>
 
                         {/* PINNED ITEMS SECTION */}
@@ -737,36 +745,27 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             </div>
                         )}
 
-                        {/* STATUS & PROGRESS SECTION */}
-                        <div className="mt-3 mb-2">
-                            <div className="flex justify-between items-center mb-1.5">
-                                <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
-                                    {StatusIcon && <StatusIcon size={14} fill={task.isChallengeCompleted ? "none" : "currentColor"} />}
-                                    <span>{statusText}</span>
+                        {/* PROGRESS SECTION (Below Pinned) */}
+                        <div className="flex items-center gap-3 mt-2 mb-3 h-6 w-full">
+                            {/* Subtasks Badge */}
+                            {subtasksTotal > 0 && (
+                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
+                                    <ListTodo size={12} />
+                                    <span>{subtasksDone}/{subtasksTotal}</span>
                                 </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 w-full">
-                                {/* Subtasks Badge */}
-                                {subtasksTotal > 0 && (
-                                    <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
-                                        <ListTodo size={12} />
-                                        <span>{subtasksDone}/{subtasksTotal}</span>
+                            )}
+                            
+                            {/* Consolidated Progress Bar - Full Width */}
+                            {grandTotal > 0 && (
+                                <div className="flex-1 flex flex-col justify-center h-full">
+                                    <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                                        <div 
+                                            className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
+                                            style={{ width: `${progressPercent}%` }}
+                                        />
                                     </div>
-                                )}
-                                
-                                {/* Consolidated Progress Bar - Full Width */}
-                                {grandTotal > 0 && (
-                                    <div className="flex-1 flex flex-col justify-center h-full">
-                                        <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
-                                            <div 
-                                                className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
-                                                style={{ width: `${progressPercent}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </div>
 
                         {!hideExtraDetails && col.id === 'doing' && task.description && (
