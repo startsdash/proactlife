@@ -1,5 +1,4 @@
 
-
 declare global {
   interface Window {
     confetti: any;
@@ -34,6 +33,7 @@ export interface Subtask {
   id: string;
   text: string;
   isCompleted: boolean;
+  isPinned?: boolean; // NEW: Pin to card
 }
 
 export interface Task {
@@ -48,6 +48,7 @@ export interface Task {
   subtasks?: Subtask[]; // Checklist items
 
   activeChallenge?: string;
+  pinnedChallengeIndices?: number[]; // NEW: Indices of pinned lines in activeChallenge
   isChallengeCompleted?: boolean;
   challengeHistory?: string[];
   

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP } from '../constants';
@@ -127,45 +127,6 @@ const CollapsibleSection: React.FC<{
   );
 };
 
-const ProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
-    const isComplete = percent === 100;
-    
-    let barGradient = "bg-gradient-to-r from-indigo-400 to-purple-500";
-    let textColor = "text-purple-600 dark:text-purple-400";
-    let shadowClass = "shadow-purple-500/30";
-
-    if (isComplete) {
-        barGradient = "bg-gradient-to-r from-emerald-400 to-teal-500";
-        textColor = "text-emerald-600 dark:text-emerald-400";
-        shadowClass = "shadow-emerald-500/30";
-    } else if (percent < 30) {
-        barGradient = "bg-gradient-to-r from-blue-400 to-indigo-400";
-        textColor = "text-indigo-500 dark:text-indigo-400";
-        shadowClass = "shadow-indigo-500/30";
-    }
-
-    return (
-        <div className="w-full px-0.5 mb-3 mt-1">
-            <div className="flex justify-between items-end mb-1.5">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider opacity-90 flex items-center gap-1">
-                    Прогресс
-                </span>
-                <span className={`text-[10px] font-extrabold ${textColor} transition-colors duration-500`}>
-                    {percent}%
-                </span>
-            </div>
-            <div className="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden shadow-inner ring-1 ring-slate-100/50 dark:ring-slate-700/50">
-                <div 
-                    className={`h-full ${barGradient} transition-all duration-700 ease-out rounded-full shadow-[0_0_10px] ${shadowClass} relative`} 
-                    style={{ width: `${percent}%` }} 
-                >
-                    <div className="absolute top-0 left-0 w-full h-[40%] bg-white/30 rounded-t-full"></div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 const getChallengeStats = (content: string) => {
     const total = (content.match(/\[[xX ]\]/gm) || []).length;
     const checked = (content.match(/\[[xX]\]/gm) || []).length;
@@ -174,8 +135,10 @@ const getChallengeStats = (content: string) => {
 
 const InteractiveChallenge: React.FC<{ 
     content: string, 
-    onToggle: (index: number) => void 
-}> = ({ content, onToggle }) => {
+    onToggle: (index: number) => void,
+    onPin?: (index: number) => void,
+    pinnedIndices?: number[]
+}> = ({ content, onToggle, onPin, pinnedIndices = [] }) => {
     const lines = content.split('\n');
     let checkboxIndex = 0;
     const renderedParts: React.ReactNode[] = [];
@@ -203,20 +166,34 @@ const InteractiveChallenge: React.FC<{
             const isChecked = match[2].toLowerCase() === 'x';
             const label = match[3];
             const indent = match[1].length * 6; 
+            const isPinned = pinnedIndices.includes(currentIdx);
+
             renderedParts.push(
-                <button 
-                    key={`cb-${i}`}
-                    onClick={(e) => { e.stopPropagation(); onToggle(currentIdx); }}
-                    className="flex items-start gap-2 w-full text-left py-1 hover:bg-black/5 dark:hover:bg-white/5 rounded group px-1 mb-0.5"
-                    style={{ marginLeft: `${indent}px` }}
-                >
-                    <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-400'}`}>
-                        {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
-                    </div>
-                    <span className={`text-sm ${isChecked ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
-                    </span>
-                </button>
+                <div key={`cb-row-${i}`} className="flex items-start gap-2 group px-1 mb-0.5 w-full" style={{ marginLeft: `${indent}px` }}>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onToggle(currentIdx); }}
+                        className="flex-1 flex items-start gap-2 text-left py-1 hover:bg-black/5 dark:hover:bg-white/5 rounded"
+                    >
+                        <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-400'}`}>
+                            {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
+                        </div>
+                        <span className={`text-sm ${isChecked ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                            <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
+                        </span>
+                    </button>
+                    {onPin && (
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Tooltip content={isPinned ? "Открепить от карточки" : "Закрепить на карточке"}>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); onPin(currentIdx); }}
+                                    className={`p-1.5 rounded transition-colors ${isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-300 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                                >
+                                    <Pin size={14} className={isPinned ? "fill-current" : ""} />
+                                </button>
+                            </Tooltip>
+                        </div>
+                    )}
+                </div>
             );
         } else {
             textBuffer += line + '\n';
@@ -477,6 +454,19 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       updateTask({ ...task, activeChallenge: newLines.join('\n') });
   };
   
+  const handleToggleChallengeStepPin = (globalIndex: number) => {
+      const task = getTaskForModal();
+      if (!task) return;
+      const currentPinned = task.pinnedChallengeIndices || [];
+      const isPinned = currentPinned.includes(globalIndex);
+      
+      const newPinned = isPinned 
+        ? currentPinned.filter(i => i !== globalIndex)
+        : [...currentPinned, globalIndex];
+      
+      updateTask({ ...task, pinnedChallengeIndices: newPinned });
+  };
+
   const moveToDoing = (e: React.MouseEvent, task: Task) => {
       e.stopPropagation();
       if (!canMoveTask(task, 'doing')) return;
@@ -502,7 +492,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       const newSubtask: Subtask = {
           id: Date.now().toString(),
           text: newSubtaskText.trim(),
-          isCompleted: false
+          isCompleted: false,
+          isPinned: false
       };
       
       updateTask({
@@ -512,14 +503,27 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       setNewSubtaskText('');
   };
 
-  const handleToggleSubtask = (subtaskId: string) => {
-      const task = getTaskForModal();
+  const handleToggleSubtask = (subtaskId: string, taskId?: string) => {
+      const targetTaskId = taskId || activeModal?.taskId;
+      if (!targetTaskId) return;
+      
+      const task = tasks.find(t => t.id === targetTaskId);
       if (!task || !task.subtasks) return;
       
       const updatedSubtasks = task.subtasks.map(s => 
           s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s
       );
       
+      updateTask({ ...task, subtasks: updatedSubtasks });
+  };
+
+  const handleToggleSubtaskPin = (subtaskId: string) => {
+      const task = getTaskForModal();
+      if (!task || !task.subtasks) return;
+      
+      const updatedSubtasks = task.subtasks.map(s => 
+          s.id === subtaskId ? { ...s, isPinned: !s.isPinned } : s
+      );
       updateTask({ ...task, subtasks: updatedSubtasks });
   };
 
@@ -711,6 +715,65 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                 </div>
                             )}
                         </div>
+
+                        {/* PINNED ITEMS SECTION */}
+                        {((task.subtasks && task.subtasks.some(s => s.isPinned)) || (task.activeChallenge && task.pinnedChallengeIndices && task.pinnedChallengeIndices.length > 0)) && (
+                            <div className="mb-3 space-y-1.5 border-t border-slate-50 dark:border-slate-700 pt-2">
+                                {/* Pinned Subtasks */}
+                                {task.subtasks?.filter(s => s.isPinned).map(subtask => (
+                                    <div 
+                                        key={subtask.id} 
+                                        onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
+                                        className="flex items-start gap-2 p-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer group"
+                                    >
+                                        <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-indigo-500'}`}>
+                                            {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                                        </div>
+                                        <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
+                                            {subtask.text}
+                                        </span>
+                                    </div>
+                                ))}
+                                
+                                {/* Pinned Challenge Steps */}
+                                {task.activeChallenge && task.pinnedChallengeIndices?.map((idx) => {
+                                    // Parse challenge to find line at index
+                                    const lines = task.activeChallenge!.split('\n');
+                                    let currentCheckboxIdx = 0;
+                                    let contentLine = '';
+                                    let isChecked = false;
+                                    
+                                    for (const line of lines) {
+                                        const match = line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
+                                        if (match) {
+                                            if (currentCheckboxIdx === idx) {
+                                                isChecked = match[1].toLowerCase() === 'x';
+                                                contentLine = match[2];
+                                                break;
+                                            }
+                                            currentCheckboxIdx++;
+                                        }
+                                    }
+                                    
+                                    if (!contentLine) return null;
+
+                                    return (
+                                        <div 
+                                            key={`pinned-chal-${idx}`}
+                                            onClick={(e) => { e.stopPropagation(); toggleChallengeCheckbox(idx, task); }}
+                                            className="flex items-start gap-2 p-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer group"
+                                        >
+                                            <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-indigo-500'}`}>
+                                                {isChecked ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                                            </div>
+                                            <span className={`text-xs flex-1 break-words leading-snug ${isChecked ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{contentLine}</ReactMarkdown>
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
 
                         {!hideExtraDetails && col.id === 'doing' && task.description && (
                              <CollapsibleSection title="Источник" icon={<FileText size={12}/>} isCard>
@@ -962,34 +1025,40 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                {/* Subtasks Section for Details Modal */}
                                {activeModal.type === 'details' && (
                                    <div className="mb-6">
-                                       <div className="flex items-center justify-between mb-2">
-                                           <h4 className="text-xs font-bold text-slate-400 uppercase">Чек-лист</h4>
-                                           <span className="text-xs text-slate-400">{task.subtasks?.filter(s => s.isCompleted).length || 0}/{task.subtasks?.length || 0}</span>
-                                       </div>
-                                       
-                                       <div className="space-y-2 mb-3">
-                                           {task.subtasks?.map(subtask => (
-                                               <div key={subtask.id} className="flex items-start gap-2 group">
-                                                   <button onClick={() => handleToggleSubtask(subtask.id)} className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 hover:text-indigo-500'}`}>
-                                                       {subtask.isCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
-                                                   </button>
-                                                   <span className={`text-sm flex-1 break-words min-w-0 ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{subtask.text}</span>
-                                                   <button onClick={() => handleDeleteSubtask(subtask.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
-                                               </div>
-                                           ))}
-                                       </div>
-                                       
-                                       <div className="flex gap-2">
-                                           <input 
-                                               type="text" 
-                                               placeholder="Добавить подзадачу..." 
-                                               className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
-                                               value={newSubtaskText}
-                                               onChange={(e) => setNewSubtaskText(e.target.value)}
-                                               onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
-                                           />
-                                           <button onClick={handleAddSubtask} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40"><Plus size={18}/></button>
-                                       </div>
+                                       {/* DEFAULT CLOSED (isOpen=false implied by default) */}
+                                       <CollapsibleSection title={`Чек-лист (${task.subtasks?.filter(s => s.isCompleted).length || 0}/${task.subtasks?.length || 0})`} icon={<ListTodo size={14}/>}>
+                                           <div className="space-y-2 mb-3">
+                                               {task.subtasks?.map(subtask => (
+                                                   <div key={subtask.id} className="flex items-start gap-2 group">
+                                                       <button onClick={() => handleToggleSubtask(subtask.id)} className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 hover:text-indigo-500'}`}>
+                                                           {subtask.isCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+                                                       </button>
+                                                       <span className={`text-sm flex-1 break-words min-w-0 ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{subtask.text}</span>
+                                                       
+                                                       <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                           <Tooltip content={subtask.isPinned ? "Открепить от карточки" : "Закрепить на карточке"}>
+                                                                <button onClick={() => handleToggleSubtaskPin(subtask.id)} className={`p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded mr-1 ${subtask.isPinned ? 'text-indigo-500' : 'text-slate-300'}`}>
+                                                                    <Pin size={14} className={subtask.isPinned ? "fill-current" : ""} />
+                                                                </button>
+                                                           </Tooltip>
+                                                           <button onClick={() => handleDeleteSubtask(subtask.id)} className="text-slate-300 hover:text-red-500 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"><X size={14}/></button>
+                                                       </div>
+                                                   </div>
+                                               ))}
+                                           </div>
+                                           
+                                           <div className="flex gap-2">
+                                               <input 
+                                                   type="text" 
+                                                   placeholder="Добавить подзадачу..." 
+                                                   className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                                                   value={newSubtaskText}
+                                                   onChange={(e) => setNewSubtaskText(e.target.value)}
+                                                   onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                                               />
+                                               <button onClick={handleAddSubtask} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40"><Plus size={18}/></button>
+                                           </div>
+                                       </CollapsibleSection>
                                    </div>
                                )}
 
@@ -1020,7 +1089,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                                     if (getTaskForModal()) {
                                                         toggleChallengeCheckbox(idx, getTaskForModal()!);
                                                     }
-                                                }} 
+                                                }}
+                                                onPin={(idx) => handleToggleChallengeStepPin(idx)}
+                                                pinnedIndices={getTaskForModal()?.pinnedChallengeIndices} 
                                               />
                                             </div>
                                         )}
