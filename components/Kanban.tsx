@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, Lock } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, Lock, Edit2, PlusSquare } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP } from '../constants';
@@ -297,6 +297,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
+  // Task Content Editing States
+  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [newItemText, setNewItemText] = useState('');
+  const [isAddingItem, setIsAddingItem] = useState(false);
+
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
 
@@ -331,6 +337,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       onClearInitialTask?.();
     }
   }, [initialTaskId, tasks, onClearInitialTask]);
+
+  useEffect(() => {
+      // Reset editing states when modal changes or closes
+      setIsEditingContent(false);
+      setIsAddingItem(false);
+      setNewItemText('');
+  }, [activeModal]);
 
   const columns = [
     { id: 'todo', title: 'Выполнить', color: 'border-slate-200 dark:border-slate-700' },
@@ -510,6 +523,30 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                   origin: { y: 0.6 }
               });
           }
+      }
+  };
+
+  const handleStartEdit = (task: Task) => {
+      setEditContent(task.content);
+      setIsEditingContent(true);
+  };
+
+  const handleSaveEdit = () => {
+      const task = getTaskForModal();
+      if (task) {
+          updateTask({ ...task, content: editContent });
+          setIsEditingContent(false);
+      }
+  };
+
+  const handleAddItem = () => {
+      const task = getTaskForModal();
+      if (task && newItemText.trim()) {
+          const prefix = task.content ? (task.content.endsWith('\n') ? '' : '\n') : '';
+          const newContent = `${task.content}${prefix}- [ ] ${newItemText.trim()}`;
+          updateTask({ ...task, content: newContent });
+          setNewItemText('');
+          setIsAddingItem(false);
       }
   };
 
@@ -832,18 +869,65 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                 {activeModal.type === 'details' ? (
                      <div className="space-y-4">
                         <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
-                            <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider block mb-3">Задача</span>
+                            <div className="flex justify-between items-center mb-3">
+                                <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider">Задача</span>
+                                <button 
+                                    onClick={() => {
+                                        if (isEditingContent) handleSaveEdit();
+                                        else handleStartEdit(getTaskForModal()!);
+                                    }}
+                                    className="text-slate-400 hover:text-indigo-500 transition-colors p-1"
+                                >
+                                    {isEditingContent ? <Check size={16} /> : <Edit2 size={14} />}
+                                </button>
+                            </div>
                             
                             {/* Interactive Task Content inside Modal */}
                             {getTaskForModal() && (
-                                <InteractiveMarkdown 
-                                    content={getTaskForModal()!.content} 
-                                    onToggle={(idx) => {
-                                        if (getTaskForModal()) {
-                                            toggleTaskContentCheckbox(idx, getTaskForModal()!);
-                                        }
-                                    }} 
-                                />
+                                <>
+                                    {isEditingContent ? (
+                                        <textarea 
+                                            value={editContent}
+                                            onChange={(e) => setEditContent(e.target.value)}
+                                            className="w-full h-40 bg-slate-50 dark:bg-slate-800 p-2 rounded-lg text-sm border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                                            placeholder="Markdown..."
+                                        />
+                                    ) : (
+                                        <>
+                                            <InteractiveMarkdown 
+                                                content={getTaskForModal()!.content} 
+                                                onToggle={(idx) => {
+                                                    if (getTaskForModal()) {
+                                                        toggleTaskContentCheckbox(idx, getTaskForModal()!);
+                                                    }
+                                                }} 
+                                            />
+                                            {/* Add Item Button & Form */}
+                                            {!isAddingItem ? (
+                                                <button 
+                                                    onClick={() => setIsAddingItem(true)}
+                                                    className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-indigo-500 transition-colors mt-3"
+                                                >
+                                                    <PlusSquare size={14}/> Добавить пункт
+                                                </button>
+                                            ) : (
+                                                <div className="flex gap-2 mt-3 animate-in fade-in slide-in-from-top-1">
+                                                    <input 
+                                                        type="text"
+                                                        value={newItemText}
+                                                        onChange={(e) => setNewItemText(e.target.value)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
+                                                        placeholder="Название пункта..."
+                                                        autoFocus
+                                                        className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm outline-none focus:border-indigo-400"
+                                                    />
+                                                    <button onClick={handleAddItem} className="p-1.5 bg-indigo-500 text-white rounded hover:bg-indigo-600"><Check size={14} /></button>
+                                                    <button onClick={() => { setIsAddingItem(false); setNewItemText(''); }} className="p-1.5 text-slate-400 hover:text-slate-600"><X size={14} /></button>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </>
                             )}
                             
                             <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
