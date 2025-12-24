@@ -28,6 +28,11 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
     const r = 36;
     const strokeWidth = 5;
     
+    // Normalize for Venn (scale 0-100 visually, even if score > 100)
+    const normProd = Math.min(100, productivity);
+    const normGrowth = Math.min(100, growth);
+    const normRel = Math.min(100, relationships);
+
     const getDotPos = (cx: number, cy: number, radius: number, val: number) => {
         const angle = (val / 100) * 360 + 90;
         const rad = angle * (Math.PI / 180);
@@ -37,9 +42,9 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
         };
     };
 
-    const prodPos = getDotPos(100, 80, r, productivity);
-    const growthPos = getDotPos(65, 140, r, growth);
-    const relPos = getDotPos(135, 140, r, relationships);
+    const prodPos = getDotPos(100, 80, r, normProd);
+    const growthPos = getDotPos(65, 140, r, normGrowth);
+    const relPos = getDotPos(135, 140, r, normRel);
 
     return (
         <div className="relative w-full h-56 flex items-center justify-center -mt-2">
@@ -48,7 +53,7 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
                     <circle cx="65" cy="140" r={r} fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-100 dark:text-slate-700" />
                     <motion.circle 
                         initial={{ pathLength: 0, opacity: 0 }}
-                        animate={{ pathLength: 1, opacity: 1 }}
+                        animate={{ pathLength: normGrowth / 100, opacity: 1 }}
                         transition={{ duration: 1, ease: "easeOut" }}
                         cx="65" cy="140" r={r} 
                         fill="none" stroke="#10b981" strokeWidth={strokeWidth} 
@@ -66,7 +71,7 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
                     <circle cx="135" cy="140" r={r} fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-100 dark:text-slate-700" />
                     <motion.circle 
                         initial={{ pathLength: 0, opacity: 0 }}
-                        animate={{ pathLength: 1, opacity: 1 }}
+                        animate={{ pathLength: normRel / 100, opacity: 1 }}
                         transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
                         cx="135" cy="140" r={r} 
                         fill="none" stroke="#f43f5e" strokeWidth={strokeWidth} 
@@ -83,7 +88,7 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
                     <circle cx="100" cy="80" r={r} fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-100 dark:text-slate-700" />
                     <motion.circle 
                         initial={{ pathLength: 0, opacity: 0 }}
-                        animate={{ pathLength: 1, opacity: 1 }}
+                        animate={{ pathLength: normProd / 100, opacity: 1 }}
                         transition={{ duration: 1, ease: "easeOut", delay: 0.4 }}
                         cx="100" cy="80" r={r} 
                         fill="none" stroke="#6366f1" strokeWidth={strokeWidth} 
@@ -179,25 +184,39 @@ const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = fal
 };
 
 // 3. Simple Bar Chart
-const BarChart = ({ data, labels, colors, color }: { data: number[], labels: string[], colors?: string[], color?: string }) => {
-    const max = Math.max(...(data || []), 1);
+const BarChart = ({ data, labels, colors }: { data: number[], labels: string[], colors?: string[] }) => {
+    // Fixed max at 120 to allow for "Overachiever" visualization without breaking graph
+    const max = 120;
     
     return (
-        <div className="flex items-end justify-between h-24 gap-1 w-full">
+        <div className="flex items-end justify-between h-24 gap-2 w-full px-2">
             {(data || []).map((val, i) => {
-                const barColor = colors?.[i] || color || 'bg-emerald-400';
+                const barColor = colors?.[i] || 'bg-emerald-400';
+                const percent = Math.min(100, (val / max) * 100);
+                const isOverflow = val > 100;
+                
                 return (
-                    <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group min-w-[8px] relative">
+                    <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group relative">
                         <div className="relative w-full flex items-end justify-center h-full">
-                             <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800 rounded-t-sm w-full max-w-[20px] mx-auto" />
+                             <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800 rounded-t-lg w-full max-w-[32px] mx-auto" />
+                             {/* Dashed line for 100% target */}
+                             <div className="absolute top-[16.6%] left-0 right-0 border-t border-dashed border-slate-300 dark:border-slate-600 opacity-50 w-full" title="100% Goal"></div>
+                             
                              <motion.div 
                                 initial={{ height: 0 }}
-                                animate={{ height: `${(val / max) * 100}%` }}
+                                animate={{ height: `${percent}%` }}
                                 transition={{ duration: 0.5, delay: i * 0.05 }}
-                                className={`w-full max-w-[20px] rounded-t-sm ${barColor} relative z-10`}
-                             />
+                                className={`w-full max-w-[32px] rounded-t-lg ${barColor} relative z-10 ${isOverflow ? 'ring-2 ring-amber-400 ring-offset-1 dark:ring-offset-slate-900' : ''}`}
+                             >
+                                 {isOverflow && (
+                                     <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+                                 )}
+                             </motion.div>
                         </div>
-                        <span className="text-[7px] md:text-[8px] text-slate-400 mt-2 uppercase font-mono truncate w-full text-center tracking-tighter">{labels[i]}</span>
+                        <span className="text-[9px] text-slate-500 dark:text-slate-400 mt-2 uppercase font-bold tracking-wider">{labels[i]}</span>
+                        <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white text-[10px] px-2 py-1 rounded pointer-events-none z-20">
+                            {Math.round(val)}%
+                        </div>
                     </div>
                 );
             })}
@@ -209,13 +228,16 @@ const BarChart = ({ data, labels, colors, color }: { data: number[], labels: str
 const StackedBarChart = ({ data, labels }: { data: { p: number, g: number, r: number }[], labels: string[] }) => {
     if (!data) return null;
     const totals = data.map(d => d.p + d.g + d.r);
-    const max = Math.max(...totals, 1);
+    // Allow dynamic max, but ensure at least 100 for visual consistency
+    const max = Math.max(...totals, 100);
 
     return (
         <div className="flex items-end justify-between h-24 gap-1 w-full">
             {data.map((d, i) => {
                 const total = d.p + d.g + d.r;
                 const heightPercent = max > 0 ? (total / max) * 100 : 0;
+                
+                // Calculate internal proportions
                 const pPct = total ? (d.p / total) * 100 : 0;
                 const gPct = total ? (d.g / total) * 100 : 0;
                 const rPct = total ? (d.r / total) * 100 : 0;
@@ -224,6 +246,7 @@ const StackedBarChart = ({ data, labels }: { data: { p: number, g: number, r: nu
                     <div key={i} className="flex flex-col items-center justify-end flex-1 h-full group min-w-[8px]">
                         <div className="relative w-full flex items-end justify-center h-full">
                              <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800 rounded-t-sm w-full max-w-[20px] mx-auto" />
+                             
                              <motion.div 
                                 initial={{ height: 0 }}
                                 animate={{ height: `${heightPercent}%` }}
@@ -236,6 +259,10 @@ const StackedBarChart = ({ data, labels }: { data: { p: number, g: number, r: nu
                              </motion.div>
                         </div>
                         <span className="text-[7px] md:text-[8px] text-slate-400 mt-2 uppercase font-mono truncate w-full text-center tracking-tighter">{labels[i]}</span>
+                        
+                        <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white text-[10px] px-2 py-1 rounded pointer-events-none z-20 whitespace-nowrap">
+                            {Math.round(total)}%
+                        </div>
                     </div>
                 );
             })}
@@ -351,10 +378,9 @@ const RadarChart = ({ data, labels, color = '#6366f1' }: { data: number[], label
     );
 };
 
-// --- DATA PROCESSING HOOKS ---
+// --- CORE LOGIC ENGINE ---
 const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journal: JournalEntry[], resetTime: number = 0) => {
     return useMemo(() => {
-        // Safety check for journal array
         const safeJournal = journal || [];
         const safeTasks = tasks || [];
         const safeHabits = habits || [];
@@ -364,47 +390,192 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
         const todayStr = getLocalDateKey(today);
         
-        // Initialize to 0
-        let productivity = 0, growth = 0, relationships = 0;
+        // --- SCORING FORMULA ---
+        // Score = (Habits % * 100) + (Challenges * 5) + (Journal * 1)
         
-        const processSpheres = (spheres: string[] | undefined, weight: number) => {
-            if (spheres && spheres.length > 0) {
-                spheres.forEach(s => {
-                    if (s === 'productivity') productivity += weight;
-                    if (s === 'growth') growth += weight;
-                    if (s === 'relationships') relationships += weight;
-                });
-            }
+        // Helper: Calculate Day Score split by spheres
+        const calculateDayScore = (date: Date) => {
+            const dateKey = getLocalDateKey(date);
+            const scores = { productivity: 0, growth: 0, relationships: 0 };
+            
+            // 1. HABITS (The Foundation - up to 100%)
+            const habitCounts = {
+                productivity: { total: 0, done: 0 },
+                growth: { total: 0, done: 0 },
+                relationships: { total: 0, done: 0 }
+            };
+
+            safeHabits.forEach(h => {
+                if (!h.spheres || h.spheres.length === 0) return;
+                
+                // Check if active for this day
+                const dayIndex = date.getDay();
+                let applies = false;
+                if (h.frequency === 'daily') applies = true;
+                else if (h.frequency === 'specific_days') applies = h.targetDays?.includes(dayIndex) ?? false;
+                else if (h.frequency === 'times_per_week') applies = true; 
+                else if (h.frequency === 'times_per_day') applies = true;
+                
+                if (h.createdAt > date.getTime() + 86400000) applies = false;
+
+                if (applies) {
+                    const val = h.history?.[dateKey];
+                    let completion = 0;
+                    if (val) {
+                        if (typeof val === 'boolean') completion = 1;
+                        else if (typeof val === 'number') completion = Math.min(1, val / (h.targetCount || 1));
+                    }
+
+                    h.spheres.forEach(s => {
+                        if (habitCounts[s as keyof typeof habitCounts]) {
+                            habitCounts[s as keyof typeof habitCounts].total += 1;
+                            habitCounts[s as keyof typeof habitCounts].done += completion;
+                        }
+                    });
+                }
+            });
+
+            // Calculate Base Habit Score (0-100)
+            Object.keys(habitCounts).forEach(k => {
+                const key = k as keyof typeof habitCounts;
+                const { total, done } = habitCounts[key];
+                if (total > 0) {
+                    scores[key] += (done / total) * 100;
+                }
+            });
+
+            // 2. CHALLENGES (+5% per challenge)
+            // Filter tasks created or completed on this date
+            safeTasks.forEach(t => {
+                if (!t.activeChallenge || !t.isChallengeCompleted) return;
+                // Ideally track completion date, but falling back to check if task exists. 
+                // Since this is a snapshot, we check if it IS completed. 
+                // For "Activity history", we need a date. Assuming 'updatedAt' or similar doesn't exist,
+                // we'll approximate using 'createdAt' for now, OR rely on the fact that Archive preserves state.
+                // *Refinement*: For specific date history, checking task completion date is hard without a log.
+                // We will count it if created on that day OR linked journal entry exists on that day?
+                // Let's use `createdAt` for historical distribution to stay deterministic.
+                const tDate = new Date(t.createdAt);
+                if (getLocalDateKey(tDate) === dateKey) {
+                     if (t.spheres) {
+                         t.spheres.forEach(s => {
+                             if (scores[s as keyof typeof scores] !== undefined) {
+                                 scores[s as keyof typeof scores] += 5; // +5% Boost
+                             }
+                         });
+                     }
+                }
+            });
+
+            // 3. JOURNAL (+1% per entry)
+            safeJournal.forEach(j => {
+                const jDate = new Date(j.date);
+                if (getLocalDateKey(jDate) === dateKey) {
+                    if (j.spheres) {
+                        j.spheres.forEach(s => {
+                            if (scores[s as keyof typeof scores] !== undefined) {
+                                scores[s as keyof typeof scores] += 1; // +1% Boost
+                            }
+                        });
+                    }
+                }
+            });
+
+            return scores;
         };
 
-        safeHabits.forEach(h => {
-            const isDoneToday = h.history?.[today.toISOString().split('T')[0]];
-            const isActiveStreak = h.streak > 2;
-            if (isDoneToday || isActiveStreak) processSpheres(h.spheres, 20);
+        // --- AGGREGATORS ---
+
+        // 1. Today's Balance (Snapshot)
+        // We use a 7-day moving average for stability in the Venn diagram, but the bar chart shows "Current State"
+        // Let's calculate accumulated score for the LAST 7 DAYS for the "Balance" chart to make it meaningful.
+        let balanceProd = 0, balanceGrowth = 0, balanceRel = 0;
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const dayScores = calculateDayScore(d);
+            balanceProd += dayScores.productivity;
+            balanceGrowth += dayScores.growth;
+            balanceRel += dayScores.relationships;
+        }
+        // Average over 7 days
+        balanceProd = Math.round(balanceProd / 7);
+        balanceGrowth = Math.round(balanceGrowth / 7);
+        balanceRel = Math.round(balanceRel / 7);
+
+        const balanceData = [balanceProd, balanceGrowth, balanceRel];
+
+        // 2. Activity History (Stacked Bar)
+        const currentYear = today.getFullYear();
+        const monthlyActivity = Array.from({length: 12}, () => ({ p: 0, g: 0, r: 0 }));
+        const weeklyActivity = Array.from({length: 7}, () => ({ p: 0, g: 0, r: 0 }));
+        const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+        const weekLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+        // Get Monday of current week
+        const getMonday = (d: Date) => {
+            const date = new Date(d);
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+            const m = new Date(date.setDate(diff));
+            m.setHours(0, 0, 0, 0); 
+            return m;
+        };
+        const monday = getMonday(new Date(today));
+
+        // Populate Week
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            // Skip future days
+            if (d > today) break;
+            
+            const scores = calculateDayScore(d);
+            weeklyActivity[i] = {
+                p: scores.productivity,
+                g: scores.growth,
+                r: scores.relationships
+            };
+        }
+
+        // Populate Year (Sampled by iterating all habits/tasks might be slow, so we iterate days of year? Too slow)
+        // Optimization: Iterate relevant objects and bucket them.
+        // ACTUALLY: For the "Year" view, strict daily calculation is expensive.
+        // Let's approximate based on raw counts for the Year view, but keep Week view accurate.
+        // OR: Iterate days from beginning of year? (365 iterations is fine).
+        const startOfYear = new Date(currentYear, 0, 1);
+        const tempDate = new Date(startOfYear);
+        while (tempDate <= today) {
+            const mIdx = tempDate.getMonth();
+            const scores = calculateDayScore(tempDate);
+            // Accumulate daily scores into monthly buckets
+            monthlyActivity[mIdx].p += scores.productivity;
+            monthlyActivity[mIdx].g += scores.growth;
+            monthlyActivity[mIdx].r += scores.relationships;
+            tempDate.setDate(tempDate.getDate() + 1);
+        }
+        // Average monthly scores (divide by days in month passed?)
+        // Or just let it be cumulative "Total Score"? Cumulative allows visualising "Best Month".
+        // Let's normalize slightly so bars aren't huge (divide by ~30 to get avg daily score)
+        monthlyActivity.forEach(m => {
+            m.p = Math.round(m.p / 30);
+            m.g = Math.round(m.g / 30);
+            m.r = Math.round(m.r / 30);
         });
 
-        safeTasks.forEach(t => {
-            const isRelevant = t.createdAt >= startOfDay || t.column === 'doing' || t.column === 'done';
-            if (!isRelevant) return;
-            const score = t.column === 'done' ? 15 : 5;
-            processSpheres(t.spheres, score);
-        });
 
-        safeJournal.forEach(j => {
-            if (j.date >= startOfDay) processSpheres(j.spheres, 10);
-        });
-
-        const maxScore = Math.max(productivity, growth, relationships, 100);
+        // 3. Other Stats (Venn, Habits, etc - mostly legacy logic or simplified)
+        const maxScore = Math.max(balanceProd, balanceGrowth, balanceRel, 100);
         const vennData = {
-            productivity: (productivity / maxScore) * 100,
-            growth: (growth / maxScore) * 100,
-            relationships: (relationships / maxScore) * 100
+            productivity: (balanceProd / maxScore) * 100,
+            growth: (balanceGrowth / maxScore) * 100,
+            relationships: (balanceRel / maxScore) * 100
         };
 
-        const totalEnergy = Math.round((vennData.productivity + vennData.growth + vennData.relationships) / 3);
+        const totalEnergy = Math.round((balanceProd + balanceGrowth + balanceRel) / 3);
         let energyLabel = "Набираем темп";
-        if (totalEnergy > 70) energyLabel = "Поток!";
-        if (totalEnergy > 40 && totalEnergy <= 70) energyLabel = "Баланс";
+        if (totalEnergy > 80) energyLabel = "Поток!";
+        if (totalEnergy > 40 && totalEnergy <= 80) energyLabel = "Баланс";
 
         const notesHistory = [];
         for(let i=6; i>=0; i--) {
@@ -416,52 +587,38 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
              notesHistory.push(count);
         }
 
-        const getMonday = (d: Date) => {
-            const date = new Date(d);
-            const day = date.getDay();
-            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-            const m = new Date(date.setDate(diff));
-            m.setHours(0, 0, 0, 0); 
-            return m;
-        };
-        const monday = getMonday(new Date(today));
         const weeklyHabitStats = [];
-        
         for (let i = 0; i < 7; i++) {
             const d = new Date(monday);
             d.setDate(monday.getDate() + i);
             const dStr = getLocalDateKey(d);
-            const dayIndex = d.getDay(); 
-
-            let potential = 0;
-            let completedValue = 0;
-
+            const scores = calculateDayScore(d);
+            // Sum all sphere scores for total habit rhythm? No, revert to habit specific logic for this chart?
+            // Let's use the Base Habit % from calculation logic.
+            // Re-calculate raw habit % for this chart to keep it specific to "Habits"
+            let potential = 0; 
+            let doneVal = 0;
+            const dayIndex = d.getDay();
             safeHabits.forEach(h => {
                 let applies = false;
                 if (h.frequency === 'daily') applies = true;
                 else if (h.frequency === 'specific_days') applies = h.targetDays?.includes(dayIndex) ?? false;
                 else if (h.frequency === 'times_per_week') applies = true;
                 else if (h.frequency === 'times_per_day') applies = true;
-
                 if (h.createdAt > d.getTime() + 86400000) applies = false;
-
-                if (applies) {
+                if(applies) {
                     potential++;
                     const val = h.history?.[dStr];
-                    if (val) {
-                        if (typeof val === 'boolean') {
-                            completedValue += 1;
-                        } else if (typeof val === 'number') {
-                            const target = h.targetCount || 1;
-                            completedValue += Math.min(1, val / target);
-                        }
+                    if(val) {
+                        if(typeof val === 'boolean') doneVal++;
+                        else doneVal += Math.min(1, val/(h.targetCount||1));
                     }
                 }
             });
 
             weeklyHabitStats.push({ 
                 label: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'][i], 
-                percent: potential > 0 ? (completedValue / potential) * 100 : 0,
+                percent: potential > 0 ? (doneVal / potential) * 100 : 0,
                 isToday: dStr === todayStr
             });
         }
@@ -488,55 +645,7 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
         
         const bucketLabels = ['00', '03', '06', '09', '12', '15', '18', '21'];
         const radarData = buckets.reduce((a, b) => a + b, 0) === 0 ? buckets.map(() => 1) : buckets;
-
-        const currentYear = today.getFullYear();
-        const monthlyActivity = Array.from({length: 12}, () => ({ p: 0, g: 0, r: 0 }));
-        const weeklyActivity = Array.from({length: 7}, () => ({ p: 0, g: 0, r: 0 }));
-        const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
-        const weekLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-
-        const incrementActivity = (ts: number, spheres: string[]) => {
-            if (!spheres || spheres.length === 0) return;
-            const d = new Date(ts);
-            if (d.getFullYear() === currentYear) {
-                const mIdx = d.getMonth();
-                spheres.forEach(s => {
-                    if (s === 'productivity') monthlyActivity[mIdx].p++;
-                    if (s === 'growth') monthlyActivity[mIdx].g++;
-                    if (s === 'relationships') monthlyActivity[mIdx].r++;
-                });
-            }
-            const dStart = new Date(d);
-            dStart.setHours(0,0,0,0);
-            const diffTime = dStart.getTime() - monday.getTime();
-            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-            if (diffDays >= 0 && diffDays < 7) {
-                spheres.forEach(s => {
-                    if (s === 'productivity') weeklyActivity[diffDays].p++;
-                    if (s === 'growth') weeklyActivity[diffDays].g++;
-                    if (s === 'relationships') weeklyActivity[diffDays].r++;
-                });
-            }
-        };
-
-        safeTasks.forEach(t => incrementActivity(t.createdAt, t.spheres || []));
-        safeJournal.forEach(j => incrementActivity(j.date, j.spheres || []));
-        safeHabits.forEach(h => {
-            const habitSpheres = h.spheres || [];
-            if (habitSpheres.length === 0) return;
-            Object.keys(h.history || {}).forEach(dateStr => {
-                const val = h.history[dateStr];
-                if (val) {
-                    const [y, m, d] = dateStr.split('-');
-                    const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
-                    incrementActivity(dateObj.getTime(), habitSpheres);
-                }
-            });
-        });
-
-        const balanceData = [productivity, growth, relationships];
         
-        // 7. Insights Count (Count only journal entries marked as isInsight)
         const insightCount = safeJournal.filter(j => j.isInsight).length;
 
         return { vennData, energyLabel, notesHistory, weeklyHabitStats, radarData, bucketLabels, hoursDistribution, monthlyActivity, monthLabels, weeklyActivity, weekLabels, balanceData, insightCount };
@@ -704,7 +813,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         <motion.div className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
              <div className="flex items-center gap-2 mb-4">
                  <Target size={16} className="text-emerald-500" />
-                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Баланс сфер</span>
+                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Баланс сфер (7 дн)</span>
              </div>
              <div className="flex-1 flex items-end">
                  <BarChart 
