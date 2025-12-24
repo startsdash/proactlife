@@ -517,6 +517,17 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       updateTask({ ...task, subtasks: updatedSubtasks });
   };
 
+  const handleCompleteAndUnpinSubtask = (e: React.MouseEvent, subtaskId: string, task: Task) => {
+      e.stopPropagation();
+      if (!task || !task.subtasks) return;
+      
+      const updatedSubtasks = task.subtasks.map(s => 
+          s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted, isPinned: false } : s
+      );
+      
+      updateTask({ ...task, subtasks: updatedSubtasks });
+  };
+
   const handleToggleSubtaskPin = (subtaskId: string) => {
       const task = getTaskForModal();
       if (!task || !task.subtasks) return;
@@ -613,34 +624,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                     const subtasksTotal = task.subtasks?.length || 0;
                     const subtasksDone = task.subtasks?.filter(s => s.isCompleted).length || 0;
 
-                    const activeChallengeStats = task.activeChallenge ? getChallengeStats(task.activeChallenge) : { total: 0, checked: 0 };
-                    
-                    // Calculate Historical Stats
-                    let historyTotal = 0;
-                    let historyDone = 0;
-                    if (task.challengeHistory) {
-                        task.challengeHistory.forEach(ch => {
-                            const stats = getChallengeStats(ch);
-                            historyTotal += stats.total;
-                            historyDone += stats.checked;
-                        });
-                    }
-
-                    // Consolidated Progress Logic
-                    const hasChallenges = !!task.activeChallenge || (task.challengeHistory && task.challengeHistory.length > 0);
-                    
-                    let grandTotal = 0;
-                    let grandDone = 0;
-
-                    if (hasChallenges) {
-                        grandTotal = subtasksTotal + activeChallengeStats.total + historyTotal;
-                        grandDone = subtasksDone + activeChallengeStats.checked + historyDone;
-                    } else {
-                        grandTotal = subtasksTotal;
-                        grandDone = subtasksDone;
-                    }
-
-                    const progressPercent = grandTotal > 0 ? Math.round((grandDone / grandTotal) * 100) : 0;
+                    // Progress Bar solely based on subtasks
+                    const progressPercent = subtasksTotal > 0 ? Math.round((subtasksDone / subtasksTotal) * 100) : 0;
                     
                     const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
 
@@ -693,13 +678,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                 {task.subtasks?.filter(s => s.isPinned).map(subtask => (
                                     <div 
                                         key={subtask.id} 
-                                        onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
-                                        className="flex items-start gap-2 p-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer group"
+                                        className="flex items-start gap-2 p-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 group"
                                     >
-                                        <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-indigo-500'}`}>
+                                        <button 
+                                            onClick={(e) => handleCompleteAndUnpinSubtask(e, subtask.id, task)} 
+                                            className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-indigo-500'}`}
+                                        >
                                             {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                                        </div>
-                                        <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
+                                        </button>
+                                        <span className={`text-xs flex-1 break-words leading-snug cursor-pointer ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
                                             {subtask.text}
                                         </span>
                                     </div>
@@ -756,7 +743,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             )}
                             
                             {/* Consolidated Progress Bar - Full Width */}
-                            {grandTotal > 0 && (
+                            {subtasksTotal > 0 && (
                                 <div className="flex-1 flex flex-col justify-center h-full">
                                     <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
                                         <div 
@@ -1030,7 +1017,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                                        
                                                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                            <Tooltip content={subtask.isPinned ? "Открепить от карточки" : "Закрепить на карточке"}>
-                                                                <button onClick={() => handleToggleSubtaskPin(subtask.id)} className={`p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded mr-1 ${subtask.isPinned ? 'text-indigo-500' : 'text-slate-300'}`}>
+                                                                <button 
+                                                                    onClick={() => handleToggleSubtaskPin(subtask.id)} 
+                                                                    className={`p-1.5 rounded-lg mr-1 transition-colors ${subtask.isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800' : 'text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                                                                >
                                                                     <Pin size={14} className={subtask.isPinned ? "fill-current" : ""} />
                                                                 </button>
                                                            </Tooltip>
