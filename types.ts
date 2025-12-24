@@ -1,4 +1,5 @@
 
+
 declare global {
   interface Window {
     confetti: any;
@@ -29,6 +30,12 @@ export interface Note {
   color?: string;
 }
 
+export interface Subtask {
+  id: string;
+  text: string;
+  isCompleted: boolean;
+}
+
 export interface Task {
   id: string;
   content: string;
@@ -38,6 +45,8 @@ export interface Task {
   reflection?: string;
   blockerAnalysis?: string;
   
+  subtasks?: Subtask[]; // Checklist items
+
   activeChallenge?: string;
   isChallengeCompleted?: boolean;
   challengeHistory?: string[];

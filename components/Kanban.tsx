@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Task, AppConfig, JournalEntry } from '../types';
+import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP } from '../constants';
@@ -56,7 +57,6 @@ const markdownComponents = {
     }
 };
 
-// Reuse SphereSelector Logic locally or import if I made it shared (I'll define locally to be safe as per strict instructions)
 const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
     const toggleSphere = (id: string) => {
         if (selected.includes(id)) {
@@ -158,6 +158,22 @@ const ProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
                     <div className="absolute top-0 left-0 w-full h-[40%] bg-white/30 rounded-t-full"></div>
                 </div>
             </div>
+        </div>
+    );
+};
+
+const CardProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
+    let bgClass = 'bg-rose-500';
+    if (percent >= 100) bgClass = 'bg-emerald-500';
+    else if (percent >= 66) bgClass = 'bg-indigo-500';
+    else if (percent >= 33) bgClass = 'bg-orange-500';
+
+    return (
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-b-xl overflow-hidden">
+            <div 
+                className={`h-full ${bgClass} transition-all duration-500 ease-out`} 
+                style={{ width: `${percent}%` }}
+            />
         </div>
     );
 };
@@ -299,6 +315,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
   const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'completed' | 'none'>('all');
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [newSubtaskText, setNewSubtaskText] = useState('');
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
@@ -478,6 +495,59 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       updateTask({ ...task, column: 'doing' });
   };
 
+  const handleQuickComplete = (e: React.MouseEvent, task: Task) => {
+      e.stopPropagation();
+      if (task.activeChallenge && !task.isChallengeCompleted) {
+          alert('Необходимо завершить активный челлендж перед закрытием задачи!');
+          return;
+      }
+      
+      const newCol = task.column === 'done' ? 'todo' : 'done';
+      updateTask({ ...task, column: newCol });
+  };
+
+  // Subtask Management
+  const handleAddSubtask = () => {
+      const task = getTaskForModal();
+      if (!task || !newSubtaskText.trim()) return;
+      
+      const newSubtask: Subtask = {
+          id: Date.now().toString(),
+          text: newSubtaskText.trim(),
+          isCompleted: false
+      };
+      
+      updateTask({
+          ...task,
+          subtasks: [...(task.subtasks || []), newSubtask]
+      });
+      setNewSubtaskText('');
+  };
+
+  const handleToggleSubtask = (subtaskId: string) => {
+      const task = getTaskForModal();
+      if (!task || !task.subtasks) return;
+      
+      const updatedSubtasks = task.subtasks.map(s => 
+          s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s
+      );
+      
+      updateTask({ ...task, subtasks: updatedSubtasks });
+  };
+
+  const handleDeleteSubtask = (subtaskId: string) => {
+      const task = getTaskForModal();
+      if (!task || !task.subtasks) return;
+      
+      updateTask({ ...task, subtasks: task.subtasks.filter(s => s.id !== subtaskId) });
+  };
+
+  const calculateProgress = (subtasks: Subtask[]) => {
+      if (!subtasks || subtasks.length === 0) return 0;
+      const completed = subtasks.filter(s => s.isCompleted).length;
+      return Math.round((completed / subtasks.length) * 100);
+  };
+
   const getTaskForModal = () => tasks.find(t => t.id === activeModal?.taskId);
 
   const renderColumn = (col: typeof columns[0]) => {
@@ -527,13 +597,35 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
 
                     const challengeStats = task.activeChallenge ? getChallengeStats(task.activeChallenge) : { total: 0, checked: 0, percent: 0 };
                     const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
+                    const subtaskProgress = task.subtasks && task.subtasks.length > 0 ? calculateProgress(task.subtasks) : 0;
                     
                     return (
-                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group ${borderClass}`}>
+                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group ${borderClass} overflow-hidden`}>
                         
+                        {/* QUICK COMPLETE CIRCLE */}
+                        <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Tooltip content={task.column === 'done' ? "Вернуть в работу" : "Завершить"}>
+                                <button 
+                                    onClick={(e) => handleQuickComplete(e, task)} 
+                                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                        task.column === 'done' 
+                                        ? 'border-emerald-500 bg-emerald-500 text-white' 
+                                        : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 dark:hover:border-emerald-400 text-transparent hover:text-emerald-500 dark:hover:text-emerald-400'
+                                    }`}
+                                >
+                                    <Check size={12} strokeWidth={3} />
+                                </button>
+                            </Tooltip>
+                        </div>
+
+                        {/* PROGRESS BAR (IF SUBTASKS EXIST) */}
+                        {task.subtasks && task.subtasks.length > 0 && (
+                            <CardProgressBar percent={subtaskProgress} />
+                        )}
+
                         <div className="flex justify-between items-center mb-2">
                             <span className={`text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>{statusText}</span>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 pr-6"> {/* Added padding for circle button area */}
                                 {task.spheres && task.spheres.length > 0 && (
                                     <div className="flex -space-x-1">
                                         {task.spheres.map(s => {
@@ -755,7 +847,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       </div>
       {activeModal && (
         <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar-light" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-start mb-6">
                     <h3 className="text-lg md:text-xl font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                         {activeModal.type === 'details' && 'Детали задачи'}
@@ -781,6 +873,55 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                 />
                             </div>
                         </div>
+
+                        {getTaskForModal() && (
+                            <CollapsibleSection title="Чек-лист" icon={<ListTodo size={14}/>}>
+                                <div className="space-y-3">
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="text" 
+                                            value={newSubtaskText}
+                                            onChange={(e) => setNewSubtaskText(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                                            placeholder="Добавить подзадачу..."
+                                            className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-indigo-400 dark:focus:border-indigo-600 transition-colors"
+                                        />
+                                        <button 
+                                            onClick={handleAddSubtask}
+                                            disabled={!newSubtaskText.trim()}
+                                            className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50 transition-colors"
+                                        >
+                                            <Plus size={16} />
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="space-y-1">
+                                        {(getTaskForModal()?.subtasks || []).map(subtask => (
+                                            <div key={subtask.id} className="flex items-start gap-2 group p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors">
+                                                <button 
+                                                    onClick={() => handleToggleSubtask(subtask.id)}
+                                                    className={`mt-0.5 shrink-0 transition-colors ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 hover:text-indigo-400'}`}
+                                                >
+                                                    {subtask.isCompleted ? <CheckCircle2 size={16} /> : <Circle size={16} />}
+                                                </button>
+                                                <span className={`text-sm flex-1 break-words transition-colors ${subtask.isCompleted ? 'text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                    {subtask.text}
+                                                </span>
+                                                <button 
+                                                    onClick={() => handleDeleteSubtask(subtask.id)}
+                                                    className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {(!getTaskForModal()?.subtasks || getTaskForModal()?.subtasks?.length === 0) && (
+                                            <div className="text-center py-2 text-xs text-slate-400 italic">Нет подзадач</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </CollapsibleSection>
+                        )}
 
                         {getTaskForModal()?.description && (
                             <CollapsibleSection title="Источник" icon={<FileText size={14}/>}>
