@@ -162,22 +162,6 @@ const ProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
     );
 };
 
-const CardProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
-    let bgClass = 'bg-rose-500';
-    if (percent >= 100) bgClass = 'bg-emerald-500';
-    else if (percent >= 66) bgClass = 'bg-indigo-500';
-    else if (percent >= 33) bgClass = 'bg-orange-500';
-
-    return (
-        <div className="absolute bottom-0 left-0 w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-b-xl overflow-hidden">
-            <div 
-                className={`h-full ${bgClass} transition-all duration-500 ease-out`} 
-                style={{ width: `${percent}%` }}
-            />
-        </div>
-    );
-};
-
 const getChallengeStats = (content: string) => {
     const total = (content.match(/\[[xX ]\]/gm) || []).length;
     const checked = (content.match(/\[[xX]\]/gm) || []).length;
@@ -542,12 +526,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       updateTask({ ...task, subtasks: task.subtasks.filter(s => s.id !== subtaskId) });
   };
 
-  const calculateProgress = (subtasks: Subtask[]) => {
-      if (!subtasks || subtasks.length === 0) return 0;
-      const completed = subtasks.filter(s => s.isCompleted).length;
-      return Math.round((completed / subtasks.length) * 100);
-  };
-
   const getTaskForModal = () => tasks.find(t => t.id === activeModal?.taskId);
 
   const renderColumn = (col: typeof columns[0]) => {
@@ -595,12 +573,39 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                         else { statusText = 'ЧЕЛЛЕНДЖ АКТИВЕН'; statusColor = 'text-indigo-600 dark:text-indigo-400'; StatusIcon = Zap; }
                     }
 
-                    const challengeStats = task.activeChallenge ? getChallengeStats(task.activeChallenge) : { total: 0, checked: 0, percent: 0 };
-                    const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
-                    const subtaskProgress = task.subtasks && task.subtasks.length > 0 ? calculateProgress(task.subtasks) : 0;
-                    
                     const subtasksTotal = task.subtasks?.length || 0;
                     const subtasksDone = task.subtasks?.filter(s => s.isCompleted).length || 0;
+
+                    const activeChallengeStats = task.activeChallenge ? getChallengeStats(task.activeChallenge) : { total: 0, checked: 0 };
+                    
+                    // Calculate Historical Stats
+                    let historyTotal = 0;
+                    let historyDone = 0;
+                    if (task.challengeHistory) {
+                        task.challengeHistory.forEach(ch => {
+                            const stats = getChallengeStats(ch);
+                            historyTotal += stats.total;
+                            historyDone += stats.checked;
+                        });
+                    }
+
+                    // Consolidated Progress Logic
+                    const hasChallenges = !!task.activeChallenge || (task.challengeHistory && task.challengeHistory.length > 0);
+                    
+                    let grandTotal = 0;
+                    let grandDone = 0;
+
+                    if (hasChallenges) {
+                        grandTotal = subtasksTotal + activeChallengeStats.total + historyTotal;
+                        grandDone = subtasksDone + activeChallengeStats.checked + historyDone;
+                    } else {
+                        grandTotal = subtasksTotal;
+                        grandDone = subtasksDone;
+                    }
+
+                    const progressPercent = grandTotal > 0 ? Math.round((grandDone / grandTotal) * 100) : 0;
+                    
+                    const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
 
                     return (
                     <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group ${borderClass} overflow-hidden`}>
@@ -621,11 +626,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             </Tooltip>
                         </div>
 
-                        {/* PROGRESS BAR (IF SUBTASKS EXIST) */}
-                        {task.subtasks && task.subtasks.length > 0 && (
-                            <CardProgressBar percent={subtaskProgress} />
-                        )}
-
                         <div className="flex justify-between items-center mb-2">
                             <span className={`text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>{statusText}</span>
                             <div className="flex items-center gap-2 pr-6"> {/* Added padding for circle button area */}
@@ -643,21 +643,36 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
 
                         <div className="mb-3"><div className={`text-slate-800 dark:text-slate-200 font-normal text-sm leading-relaxed`}><ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown></div></div>
                         
-                        {/* PROGRESS BADGES */}
-                        <div className="flex flex-wrap gap-2 mt-2 mb-3">
-                            {/* Subtasks Badge */}
-                            {subtasksTotal > 0 && (
-                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700/50">
-                                    <ListTodo size={12} />
-                                    <span>{subtasksDone}/{subtasksTotal}</span>
-                                </div>
-                            )}
-                            
-                            {/* Challenge Badge */}
-                            {task.activeChallenge && (
-                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-md border border-indigo-100 dark:border-indigo-800/50">
-                                    <Zap size={12} />
-                                    <span>{challengeStats.checked}/{challengeStats.total}</span>
+                        {/* PROGRESS BADGES + CONSOLIDATED BAR */}
+                        <div className="flex items-center gap-3 mt-2 mb-3 h-6">
+                            {/* Badges container */}
+                            <div className="flex gap-2 shrink-0">
+                                {/* Subtasks Badge */}
+                                {subtasksTotal > 0 && (
+                                    <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700/50">
+                                        <ListTodo size={12} />
+                                        <span>{subtasksDone}/{subtasksTotal}</span>
+                                    </div>
+                                )}
+                                
+                                {/* Challenge Badge (Active Only) */}
+                                {task.activeChallenge && (
+                                    <div className="flex items-center gap-1.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-800/50">
+                                        <Zap size={12} />
+                                        <span>{activeChallengeStats.checked}/{activeChallengeStats.total}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Consolidated Progress Bar */}
+                            {grandTotal > 0 && (
+                                <div className="flex-1 min-w-[40px] max-w-[100px] flex flex-col justify-center">
+                                    <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                                        <div 
+                                            className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
+                                            style={{ width: `${progressPercent}%` }}
+                                        />
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -675,8 +690,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             {(() => {
                                 const content = (
                                     <div className={`p-2 rounded-lg border transition-all ${!task.isChallengeCompleted && col.id !== 'doing' ? 'mt-2 mb-2' : ''} ${task.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
-                                         {challengeStats.total > 0 && <ProgressBar percent={challengeStats.percent} />}
-                                        
                                          {task.isChallengeCompleted ? (
                                             <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
                                                <StaticChallengeRenderer content={task.activeChallenge || ''} mode="history" />
@@ -959,13 +972,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             icon={<Zap size={14}/>}
                           >
                              <div className={`p-3 rounded-lg border ${getTaskForModal()?.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
-                                
-                                {getChallengeStats(getTaskForModal()?.activeChallenge || '').total > 0 && (
-                                     <div className="mb-4 bg-white/50 dark:bg-black/20 p-2 rounded-lg">
-                                        <ProgressBar percent={getChallengeStats(getTaskForModal()?.activeChallenge || '').percent} />
-                                     </div>
-                                )}
-
                                 <span className={`text-[10px] font-bold uppercase tracking-wider block mb-2 ${getTaskForModal()?.isChallengeCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>
                                    {getTaskForModal()?.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
                                 </span>
