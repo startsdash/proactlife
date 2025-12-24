@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
 import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon } from 'lucide-react';
+import { motion } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP } from '../constants';
@@ -123,40 +125,32 @@ const CollapsibleSection: React.FC<{
   );
 };
 
+// Unified Bar Color Logic (Matching Rituals)
+const getBarColorClass = (percent: number) => {
+    if (percent >= 100) return 'bg-emerald-500';
+    if (percent >= 66) return 'bg-indigo-500';
+    if (percent >= 33) return 'bg-orange-500';
+    return 'bg-rose-500';
+};
+
 const ProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
-    const isComplete = percent === 100;
-    
-    let barGradient = "bg-gradient-to-r from-indigo-400 to-purple-500";
-    let textColor = "text-purple-600 dark:text-purple-400";
-    let shadowClass = "shadow-purple-500/30";
-
-    if (isComplete) {
-        barGradient = "bg-gradient-to-r from-emerald-400 to-teal-500";
-        textColor = "text-emerald-600 dark:text-emerald-400";
-        shadowClass = "shadow-emerald-500/30";
-    } else if (percent < 30) {
-        barGradient = "bg-gradient-to-r from-blue-400 to-indigo-400";
-        textColor = "text-indigo-500 dark:text-indigo-400";
-        shadowClass = "shadow-indigo-500/30";
-    }
-
     return (
         <div className="w-full px-0.5 mb-3 mt-1">
             <div className="flex justify-between items-end mb-1.5">
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider opacity-90 flex items-center gap-1">
                     Прогресс
                 </span>
-                <span className={`text-[10px] font-extrabold ${textColor} transition-colors duration-500`}>
+                <span className={`text-[10px] font-extrabold transition-colors duration-500 text-slate-600 dark:text-slate-300`}>
                     {percent}%
                 </span>
             </div>
-            <div className="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden shadow-inner ring-1 ring-slate-100/50 dark:ring-slate-700/50">
-                <div 
-                    className={`h-full ${barGradient} transition-all duration-700 ease-out rounded-full shadow-[0_0_10px] ${shadowClass} relative`} 
-                    style={{ width: `${percent}%` }} 
-                >
-                    <div className="absolute top-0 left-0 w-full h-[40%] bg-white/30 rounded-t-full"></div>
-                </div>
+            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                <motion.div 
+                    className={`h-full ${getBarColorClass(percent)}`} 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percent}%` }}
+                    transition={{ duration: 0.5 }}
+                />
             </div>
         </div>
     );
@@ -209,6 +203,7 @@ const InteractiveChallenge: React.FC<{
                     <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-400'}`}>
                         {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                     </div>
+                    {/* Explicitly no line-through as per requirements */}
                     <span className={`text-sm ${isChecked ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
                         <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
                     </span>
@@ -478,6 +473,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       updateTask({ ...task, column: 'doing' });
   };
 
+  const handleQuickComplete = (e: React.MouseEvent, task: Task) => {
+      e.stopPropagation();
+      if (task.activeChallenge && !task.isChallengeCompleted) {
+          alert('Необходимо завершить активный челлендж перед закрытием задачи!');
+          return;
+      }
+      updateTask({ ...task, column: 'done' });
+  };
+
   const getTaskForModal = () => tasks.find(t => t.id === activeModal?.taskId);
 
   const renderColumn = (col: typeof columns[0]) => {
@@ -529,8 +533,20 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                     const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
                     
                     return (
-                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group ${borderClass}`}>
+                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group overflow-hidden ${borderClass}`}>
                         
+                        {/* PROGRESS BAR - RITUALS STYLE */}
+                        {task.activeChallenge && (
+                            <div className="absolute bottom-0 left-0 h-1 bg-slate-100 dark:bg-slate-800 w-full">
+                                <motion.div 
+                                    className={`h-full ${getBarColorClass(challengeStats.percent)}`}
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${challengeStats.percent}%` }}
+                                    transition={{ duration: 0.5 }}
+                                />
+                            </div>
+                        )}
+
                         <div className="flex justify-between items-center mb-2">
                             <span className={`text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>{statusText}</span>
                             <div className="flex items-center gap-2">
@@ -561,8 +577,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             {(() => {
                                 const content = (
                                     <div className={`p-2 rounded-lg border transition-all ${!task.isChallengeCompleted && col.id !== 'doing' ? 'mt-2 mb-2' : ''} ${task.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
-                                         {challengeStats.total > 0 && <ProgressBar percent={challengeStats.percent} />}
-                                        
                                          {task.isChallengeCompleted ? (
                                             <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
                                                <StaticChallengeRenderer content={task.activeChallenge || ''} mode="history" />
@@ -624,9 +638,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             </div>
                         )}
 
-                        <div className="mt-auto border-t border-slate-50 dark:border-slate-700 pt-3 flex flex-col gap-3">
+                        <div className="mt-auto border-t border-slate-50 dark:border-slate-700 pt-3 flex flex-col gap-3 pb-1">
                             <div className="flex gap-2 items-center justify-end">
                                {col.id === 'todo' && (
+                                    <>
                                     <Tooltip content="Взять в работу">
                                         <button 
                                             onClick={(e) => moveToDoing(e, task)} 
@@ -635,6 +650,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                             <Play size={18} className="fill-current" />
                                         </button>
                                     </Tooltip>
+                                    <Tooltip content="Завершить задачу">
+                                        <button 
+                                            onClick={(e) => handleQuickComplete(e, task)} 
+                                            className="p-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg border border-transparent hover:border-emerald-100 dark:hover:border-emerald-800 transition-colors"
+                                        >
+                                            <CheckCircle2 size={18} />
+                                        </button>
+                                    </Tooltip>
+                                    </>
                                )}
 
                                {col.id === 'doing' && (
@@ -681,6 +705,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                            </button>
                                        </Tooltip>
                                    )}
+
+                                   <Tooltip content="Завершить задачу">
+                                        <button 
+                                            onClick={(e) => handleQuickComplete(e, task)} 
+                                            className="p-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg border border-transparent hover:border-emerald-100 dark:hover:border-emerald-800 transition-colors"
+                                        >
+                                            <CheckCircle2 size={18} />
+                                        </button>
+                                    </Tooltip>
                                    </>
                                )}
                                
