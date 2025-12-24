@@ -599,6 +599,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                     const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
                     const subtaskProgress = task.subtasks && task.subtasks.length > 0 ? calculateProgress(task.subtasks) : 0;
                     
+                    const subtasksTotal = task.subtasks?.length || 0;
+                    const subtasksDone = task.subtasks?.filter(s => s.isCompleted).length || 0;
+
                     return (
                     <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group ${borderClass} overflow-hidden`}>
                         
@@ -640,6 +643,25 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
 
                         <div className="mb-3"><div className={`text-slate-800 dark:text-slate-200 font-normal text-sm leading-relaxed`}><ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown></div></div>
                         
+                        {/* PROGRESS BADGES */}
+                        <div className="flex flex-wrap gap-2 mt-2 mb-3">
+                            {/* Subtasks Badge */}
+                            {subtasksTotal > 0 && (
+                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700/50">
+                                    <ListTodo size={12} />
+                                    <span>{subtasksDone}/{subtasksTotal}</span>
+                                </div>
+                            )}
+                            
+                            {/* Challenge Badge */}
+                            {task.activeChallenge && (
+                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-md border border-indigo-100 dark:border-indigo-800/50">
+                                    <Zap size={12} />
+                                    <span>{challengeStats.checked}/{challengeStats.total}</span>
+                                </div>
+                            )}
+                        </div>
+
                         {!hideExtraDetails && col.id === 'doing' && task.description && (
                              <CollapsibleSection title="Источник" icon={<FileText size={12}/>} isCard>
                                  <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-h-40 overflow-y-auto custom-scrollbar-light">
