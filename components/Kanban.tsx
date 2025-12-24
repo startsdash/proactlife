@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, BrainCircuit } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP } from '../constants';
@@ -837,9 +837,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                        <Tooltip content="Консультант (ИИ)">
                                            <button 
                                                 onClick={(e) => openTherapy(e, task)} 
-                                                className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg border border-transparent hover:border-amber-100 dark:hover:border-amber-800"
+                                                className="p-2 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg border border-transparent hover:border-violet-100 dark:hover:border-violet-800"
                                            >
-                                               <BrainCircuit size={18} /> 
+                                               <Bot size={18} /> 
                                            </button>
                                        </Tooltip>
                                    )}
@@ -969,11 +969,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                        
                                        <div className="space-y-2 mb-3">
                                            {task.subtasks?.map(subtask => (
-                                               <div key={subtask.id} className="flex items-center gap-2 group">
-                                                   <button onClick={() => handleToggleSubtask(subtask.id)} className={`shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 hover:text-indigo-500'}`}>
-                                                       {subtask.isCompleted ? <CheckSquare size={18} /> : <Square size={18} />}
+                                               <div key={subtask.id} className="flex items-start gap-2 group">
+                                                   <button onClick={() => handleToggleSubtask(subtask.id)} className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 hover:text-indigo-500'}`}>
+                                                       {subtask.isCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
                                                    </button>
-                                                   <span className={`text-sm flex-1 ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{subtask.text}</span>
+                                                   <span className={`text-sm flex-1 break-words min-w-0 ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{subtask.text}</span>
                                                    <button onClick={() => handleDeleteSubtask(subtask.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
                                                </div>
                                            ))}
@@ -1046,7 +1046,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                 )}
                                 
                                 {getTaskForModal()?.consultationHistory && getTaskForModal()!.consultationHistory!.length > 0 && (
-                                  <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}>
+                                  <CollapsibleSection title="История консультаций" icon={<Bot size={14}/>}>
                                      <ul className="space-y-4">
                                         {getTaskForModal()!.consultationHistory!.map((consultation, index) => (
                                            <li key={index} className="text-sm text-slate-900 dark:text-slate-200 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0 relative group">
@@ -1071,7 +1071,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                            </div>
                                        ) : aiResponse ? (
                                            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-100 dark:border-amber-800/50">
-                                               <div className="flex items-center gap-2 mb-2 text-amber-600 dark:text-amber-400 font-bold text-xs uppercase"><MessageCircle size={14} /> Совет Консультанта</div>
+                                               <div className="flex items-center gap-2 mb-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase"><Bot size={14} /> Совет Консультанта</div>
                                                <div className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed"><ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown></div>
                                            </div>
                                        ) : null}
