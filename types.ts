@@ -38,8 +38,9 @@ export interface Subtask {
 
 export interface Task {
   id: string;
-  content: string;
-  description?: string;
+  title?: string; // NEW: Task Title
+  content: string; // Description / Body
+  description?: string; // Context/Source (e.g. original note)
   column: 'todo' | 'doing' | 'done';
   createdAt: number;
   reflection?: string;
