@@ -103,7 +103,7 @@ const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }
     };
 
     return (
-        <div className="relative ml-auto">
+        <div className="relative">
             <button 
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
                 className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg transition-colors border border-slate-100 dark:border-slate-700 hover:border-indigo-100 dark:hover:border-indigo-800"
@@ -125,7 +125,7 @@ const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
-                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
+                    <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
                         {SPHERES.map(s => {
                             const isSelected = task.spheres?.includes(s.id);
                             const Icon = ICON_MAP[s.icon];
@@ -915,32 +915,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     return (
                     <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group border-l-4 ${borderClass} overflow-hidden`}>
                         
-                        {/* Sphere Indicators */}
-                        {task.spheres && task.spheres.length > 0 && (
-                            <div className="absolute top-4 left-3 flex gap-1 z-10">
-                                {task.spheres.map(s => {
-                                    const sp = SPHERES.find(x => x.id === s);
-                                    return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
-                                })}
-                            </div>
-                        )}
-
-                        {/* QUICK COMPLETE (Doing/Done only) */}
-                        {col.id === 'doing' && (
-                            <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Tooltip content="Завершить">
-                                    <button 
-                                        onClick={(e) => handleQuickComplete(e, task)} 
-                                        className="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all border-slate-300 dark:border-slate-500 hover:border-emerald-500 dark:hover:border-emerald-400 text-transparent hover:text-emerald-500 dark:hover:text-emerald-400"
-                                    >
-                                        <Check size={12} strokeWidth={3} />
-                                    </button>
-                                </Tooltip>
-                            </div>
-                        )}
+                        {/* Sphere Selector (Top Right) */}
+                        <div className="absolute top-3 right-3 z-20">
+                            <CardSphereSelector task={task} updateTask={updateTask} />
+                        </div>
 
                         {/* CONTENT */}
-                        <div className="mt-4 mb-3">
+                        <div className="mt-4 mb-3 pr-20">
                             {task.title && (
                                 <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-1 leading-snug">{task.title}</h4>
                             )}
@@ -1085,7 +1066,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         )}
 
                         <div className="mt-auto border-t border-slate-50 dark:border-slate-700 pt-3 flex flex-col gap-3">
-                            <div className="flex justify-between items-center w-full">
+                            <div className="flex justify-end items-center w-full gap-2">
                                {col.id === 'todo' && (
                                     <>
                                         <div className="flex gap-2">
@@ -1154,6 +1135,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                            </Tooltip>
                                        )}
                                    </div>
+                                   <Tooltip content="Завершить">
+                                        <button 
+                                            onClick={(e) => handleQuickComplete(e, task)} 
+                                            className="p-2 rounded-lg border border-transparent hover:border-emerald-500 dark:hover:border-emerald-400 text-slate-300 dark:text-slate-500 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                                        >
+                                            <Check size={18} strokeWidth={3} />
+                                        </button>
+                                    </Tooltip>
                                    </>
                                )}
                                
@@ -1174,9 +1163,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         </div>
                                     </>
                                )}
-                               
-                               <CardSphereSelector task={task} updateTask={updateTask} />
-
                             </div>
                             <div className="flex gap-2 items-center justify-between">
                                 <div className="w-8 flex justify-start">{col.id !== 'todo' && <button onClick={(e) => moveTask(e, task, 'left')} className="p-1.5 bg-slate-100 dark:bg-slate-700 md:hidden rounded-lg text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600"><ChevronLeft size={16} /></button>}</div>
