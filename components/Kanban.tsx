@@ -1055,7 +1055,24 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                         </button>
                                     }
                                   >
-                                     <div className={`p-3 rounded-lg border ${getTaskForModal()?.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
+                                     <div className={`p-3 rounded-lg border relative group ${getTaskForModal()?.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
+                                        
+                                        {!getTaskForModal()?.isChallengeCompleted && (
+                                            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                                <Tooltip content="Завершить челлендж">
+                                                    <button 
+                                                        onClick={(e) => { 
+                                                            const t = getTaskForModal();
+                                                            if (t) toggleChallengeComplete(e, t); 
+                                                        }}
+                                                        className="w-6 h-6 rounded-full bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-700 hover:border-emerald-500 dark:hover:border-emerald-500 text-transparent hover:text-emerald-500 flex items-center justify-center transition-all shadow-sm"
+                                                    >
+                                                        <Check size={14} strokeWidth={3} />
+                                                    </button>
+                                                </Tooltip>
+                                            </div>
+                                        )}
+
                                         <span className={`text-[10px] font-bold uppercase tracking-wider block mb-2 ${getTaskForModal()?.isChallengeCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>
                                            {getTaskForModal()?.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
                                         </span>
