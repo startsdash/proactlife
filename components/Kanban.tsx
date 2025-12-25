@@ -1134,6 +1134,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                    </div>
                                </div>
                                
+                               {/* Restore Sphere Selector */}
+                               {activeModal.type === 'details' && (
+                                   <div className="mb-4">
+                                       <span className="text-xs font-bold text-slate-400 uppercase mb-2 block">Сферы</span>
+                                       <SphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
+                                   </div>
+                               )}
+                               
                                {/* Subtasks Section for Details Modal */}
                                {activeModal.type === 'details' && (
                                    <div className="mb-6">
