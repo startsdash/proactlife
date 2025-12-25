@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Shuffle } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP } from '../constants';
@@ -278,7 +279,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
   const [challengeDrafts, setChallengeDrafts] = useState<{[taskId: string]: string}>({});
   const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'completed' | 'none'>('all');
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'manual'>('manual');
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [cardSubtaskInputs, setCardSubtaskInputs] = useState<{[taskId: string]: string}>({});
 
@@ -303,6 +304,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       }
       return true;
   }).sort((a, b) => {
+      if (sortOrder === 'manual') return 0; // Respect original array order
       if (sortOrder === 'desc') return b.createdAt - a.createdAt;
       return a.createdAt - b.createdAt;
   });
@@ -356,10 +358,18 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       const draggedTask = activeTasks.find(t => t.id === draggedTaskId);
       const targetTask = activeTasks.find(t => t.id === targetTaskId);
       if (!draggedTask || !targetTask) return;
+      
+      // If dropping onto a task in a DIFFERENT column
       if (draggedTask.column !== targetTask.column) {
            if (!canMoveTask(draggedTask, targetTask.column)) return;
            updateTask({ ...draggedTask, column: targetTask.column });
+           // Optionally reorder as well, but primary action is moving column
            return; 
+      }
+      
+      // If dropping onto a task in the SAME column -> Reorder
+      if (draggedTask.column === targetTask.column) {
+          reorderTask(draggedTaskId, targetTaskId);
       }
   };
 
@@ -378,7 +388,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     }
   };
 
-  const toggleSortOrder = () => { setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); };
+  const toggleSortOrder = () => { 
+      setSortOrder(prev => {
+          if (prev === 'manual') return 'desc';
+          if (prev === 'desc') return 'asc';
+          return 'manual';
+      }); 
+  };
 
   const triggerAI = async (content: string, type: 'stuck' | 'completed') => {
     setIsLoading(true);
@@ -673,10 +689,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                     let statusText = 'ЗАДАЧА';
                     let statusColor = 'text-slate-400 dark:text-slate-500';
                     let StatusIcon = null;
-                    let borderClass = 'border-l-4 border-slate-300 dark:border-slate-600';
                     
-                    if (col.id === 'done') borderClass = 'border-l-4 border-emerald-400';
-                    else if (col.id === 'doing') borderClass = 'border-l-4 border-indigo-400';
+                    // Specific border color classes to color ONLY the left border
+                    let borderClass = 'border-l-slate-300 dark:border-l-slate-600';
+                    if (col.id === 'done') borderClass = 'border-l-emerald-400';
+                    else if (col.id === 'doing') borderClass = 'border-l-indigo-400';
                     
                     if (isDoneColumn) {
                         statusText = 'ЗАДАЧА';
@@ -697,7 +714,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                     const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
 
                     return (
-                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group ${borderClass} overflow-hidden`}>
+                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group border-l-4 ${borderClass} overflow-hidden`}>
                         
                         {/* QUICK COMPLETE CIRCLE */}
                         <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1077,9 +1094,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                  <button onClick={() => setFilterChallenge('none')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'none' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Обычные</button>
              </div>
              
-             <button onClick={toggleSortOrder} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400">
-                 {sortOrder === 'desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
-             </button>
+             <Tooltip content={sortOrder === 'manual' ? "Ручная сортировка" : sortOrder === 'desc' ? "Новые сверху" : "Старые сверху"}>
+                 <button onClick={toggleSortOrder} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400">
+                     {sortOrder === 'manual' ? <Shuffle size={16} /> : sortOrder === 'desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
+                 </button>
+             </Tooltip>
         </div>
       </header>
 
