@@ -280,7 +280,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [challengeDrafts, setChallengeDrafts] = useState<{[taskId: string]: string}>({});
   const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'completed' | 'none'>('all');
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [sortOrder, setSortOrder] = useState<'manual' | 'desc' | 'asc'>('manual');
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [cardSubtaskInputs, setCardSubtaskInputs] = useState<{[taskId: string]: string}>({});
   
@@ -312,6 +312,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       }
       return true;
   }).sort((a, b) => {
+      if (sortOrder === 'manual') return 0;
       if (sortOrder === 'desc') return b.createdAt - a.createdAt;
       return a.createdAt - b.createdAt;
   });
@@ -391,6 +392,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const targetTask = activeTasks.find(t => t.id === targetTaskId);
       if (!draggedTask || !targetTask) return;
       
+      // Auto-switch to manual sort to prevent snapping back
+      if (sortOrder !== 'manual') setSortOrder('manual');
+
       // If dropping onto a task in a DIFFERENT column
       if (draggedTask.column !== targetTask.column) {
            if (!canMoveTask(draggedTask, targetTask.column)) return;
@@ -421,7 +425,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   const toggleSortOrder = () => { 
-      setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); 
+      setSortOrder(prev => {
+          if (prev === 'manual') return 'desc';
+          if (prev === 'desc') return 'asc';
+          return 'manual';
+      }); 
   };
 
   const triggerAI = async (content: string, type: 'stuck' | 'completed') => {
@@ -598,8 +606,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       updateTask({ ...task, subtasks: updatedSubtasks });
   };
 
-  const handleDeleteSubtask = (subtaskId: string) => {
-      const task = getTaskForModal();
+  const handleDeleteSubtask = (subtaskId: string, taskId?: string) => {
+      const targetTaskId = taskId || activeModal?.taskId;
+      if (!targetTaskId) return;
+      
+      const task = tasks.find(t => t.id === targetTaskId);
       if (!task || !task.subtasks) return;
       
       updateTask({ ...task, subtasks: task.subtasks.filter(s => s.id !== subtaskId) });
@@ -934,6 +945,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                      <button onClick={(e) => moveSubtaskManual(e, subtask.id, 'up', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded p-0.5"><ChevronUp size={10} /></button>
                                                      <button onClick={(e) => moveSubtaskManual(e, subtask.id, 'down', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded p-0.5"><ChevronDown size={10} /></button>
                                                  </div>
+
+                                                 {/* DELETE BUTTON */}
+                                                 <button onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(subtask.id, task.id); }} className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
                                              </div>
                                          ))}
                                      </div>
@@ -1146,9 +1160,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                  <button onClick={() => setFilterChallenge('none')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'none' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Обычные</button>
              </div>
              
-             <Tooltip content={sortOrder === 'desc' ? "Новые сверху" : "Старые сверху"}>
+             <Tooltip content={sortOrder === 'manual' ? "Ручная сортировка" : sortOrder === 'desc' ? "Новые сверху" : "Старые сверху"}>
                  <button onClick={toggleSortOrder} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400">
-                     {sortOrder === 'desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
+                     {sortOrder === 'manual' ? <Shuffle size={16} /> : sortOrder === 'desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
                  </button>
              </Tooltip>
         </div>
