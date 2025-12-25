@@ -865,7 +865,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         />
                         <textarea
                             placeholder="Задача..."
-                            className="w-full h-20 text-xs text-slate-700 dark:text-slate-300 bg-transparent outline-none resize-none placeholder:text-slate-400 font-mono leading-relaxed"
+                            className="w-full h-20 text-sm text-slate-700 dark:text-slate-300 bg-transparent outline-none resize-none placeholder:text-slate-400 font-mono leading-relaxed"
                             value={newTaskContent}
                             onChange={(e) => setNewTaskContent(e.target.value)}
                         />
@@ -1298,7 +1298,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             <input 
                                                 value={editTaskTitle} 
                                                 onChange={(e) => setEditTaskTitle(e.target.value)} 
-                                                className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-800 dark:text-slate-200"
+                                                className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-800 dark:text-slate-200 max-w-full"
                                                 placeholder="Название задачи..."
                                             />
                                         </div>
@@ -1307,7 +1307,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             <textarea 
                                                 value={editTaskContent} 
                                                 onChange={(e) => setEditTaskContent(e.target.value)} 
-                                                className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-800 dark:text-slate-200 font-mono"
+                                                className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-800 dark:text-slate-200 font-mono resize-none max-w-full"
                                                 placeholder="Описание (Markdown)..."
                                             />
                                         </div>
