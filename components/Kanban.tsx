@@ -585,9 +585,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     if (col.id === 'done') emptyText = "Готово? Перетащи задачу сюда";
 
     return (
-    <div key={col.id} className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col h-full border-t-4 ${col.color} p-2 md:p-3 min-h-0 overflow-hidden`} onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
+    <div key={col.id} className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col h-full border-t-4 ${col.color} p-2 md:p-3`} onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
         <h3 className="font-semibold text-slate-600 dark:text-slate-400 mb-3 flex justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
-        <div className="flex-1 overflow-y-auto space-y-3 pb-20 md:pb-2 min-h-0 px-1 custom-scrollbar-light">
+        <div className="space-y-3 pb-2 px-1">
             {tasksInCol.length === 0 ? (
                 <div className="py-10">
                    <EmptyState 
@@ -773,7 +773,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                          {task.subtasks.map(subtask => (
                                              <div 
                                                 key={subtask.id} 
-                                                className="flex items-start gap-2 group cursor-pointer"
+                                                className="flex items-start gap-2 group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 p-1 rounded"
                                                 onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
                                              >
                                                  <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500'}`}>
@@ -985,7 +985,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       </header>
 
       {/* Columns */}
-      <div className="flex-1 overflow-hidden p-4 md:p-8 pt-4">
+      <div className="flex-1 overflow-auto p-4 md:p-8 pt-4 custom-scrollbar-light">
           {/* Mobile Tabs */}
           <div className="md:hidden flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mb-4 shrink-0">
              {columns.map(c => (
@@ -995,16 +995,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
              ))}
           </div>
 
-          <div className="h-full flex gap-4 md:gap-6 overflow-x-auto overflow-y-hidden custom-scrollbar-light snap-x snap-mandatory">
+          <div className="flex gap-4 md:gap-6 min-h-full items-start">
               {/* Desktop: All Columns. Mobile: Active Column */}
               <div className="hidden md:contents">
                   {columns.map(col => (
-                      <div key={col.id} className="flex-1 min-w-[320px] h-full min-h-0 snap-center">
+                      <div key={col.id} className="flex-1 min-w-[320px]">
                           {renderColumn(col)}
                       </div>
                   ))}
               </div>
-              <div className="md:hidden w-full h-full min-h-0">
+              <div className="md:hidden w-full">
                   {renderColumn(columns.find(c => c.id === activeMobileCol)!)}
               </div>
           </div>
