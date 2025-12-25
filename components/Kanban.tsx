@@ -344,10 +344,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   
   // NEW TASK CREATION STATE
   const [newTaskContent, setNewTaskContent] = useState('');
+  const [isCreatingFocused, setIsCreatingFocused] = useState(false);
 
   // EDIT TASK STATE
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [editTaskContent, setEditTaskContent] = useState('');
+  const [editTaskDescription, setEditTaskDescription] = useState('');
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
@@ -405,13 +407,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       };
       addTask(newTask);
       setNewTaskContent('');
+      setIsCreatingFocused(false);
   };
 
   const handleSaveTaskContent = () => {
       const task = getTaskForModal();
       if (!task) return;
       if (editTaskContent.trim()) {
-          updateTask({ ...task, content: editTaskContent });
+          updateTask({ ...task, content: editTaskContent, description: editTaskDescription });
           setIsEditingTask(false);
       }
   };
@@ -825,20 +828,23 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
         <h3 className="font-semibold text-slate-600 dark:text-slate-400 mb-3 flex justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
         
         {col.id === 'todo' && (
-             <div className="mb-3 px-1">
+             <div className={`mb-3 px-1 transition-all duration-300 ${isCreatingFocused ? 'bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-indigo-100 dark:border-indigo-900' : ''}`}>
+                {isCreatingFocused && <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block animate-in fade-in slide-in-from-top-1">Название</label>}
                 <div className="relative">
                     <input
                         type="text"
-                        placeholder="Новая задача..."
-                        className="w-full bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 pr-10 text-sm outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/20 transition-all shadow-sm placeholder:text-slate-400"
+                        placeholder={isCreatingFocused ? "Задача..." : "Новая задача..."}
+                        className={`w-full bg-white dark:bg-[#1e293b] border rounded-xl px-3 py-2.5 pr-10 text-sm outline-none transition-all shadow-sm placeholder:text-slate-400 ${isCreatingFocused ? 'border-indigo-400 dark:border-indigo-500 ring-2 ring-indigo-50 dark:ring-indigo-900/20' : 'border-slate-200 dark:border-slate-700'}`}
                         value={newTaskContent}
+                        onFocus={() => setIsCreatingFocused(true)}
+                        onBlur={() => !newTaskContent && setIsCreatingFocused(false)}
                         onChange={(e) => setNewTaskContent(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleCreateTask()}
                     />
                     <button 
                         onClick={handleCreateTask}
                         disabled={!newTaskContent.trim()}
-                        className="absolute right-1.5 top-1.5 p-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        className={`absolute right-1.5 top-1.5 p-1.5 rounded-lg transition-all ${newTaskContent.trim() ? 'bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 opacity-50 cursor-not-allowed'}`}
                     >
                         <Plus size={16} />
                     </button>
@@ -1196,7 +1202,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     return (
                                         <>
                                             <Tooltip content="Редактировать">
-                                                <button onClick={() => setIsEditingTask(true)} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                                <button onClick={() => { setEditTaskContent(task.content); setEditTaskDescription(task.description || ''); setIsEditingTask(true); }} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                                     <Edit3 size={20} />
                                                 </button>
                                             </Tooltip>
@@ -1248,13 +1254,26 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             <div className="space-y-4">
                                 {/* TEXT EDITING */}
                                 {isEditingTask ? (
-                                    <div className="space-y-2">
-                                        <textarea 
-                                            value={editTaskContent} 
-                                            onChange={(e) => setEditTaskContent(e.target.value)} 
-                                            className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-800 dark:text-slate-200"
-                                        />
-                                        <div className="flex justify-end gap-2">
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Название</label>
+                                            <textarea 
+                                                value={editTaskContent} 
+                                                onChange={(e) => setEditTaskContent(e.target.value)} 
+                                                className="w-full h-20 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-800 dark:text-slate-200 resize-none"
+                                                placeholder="Название задачи"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Контекст</label>
+                                            <textarea 
+                                                value={editTaskDescription} 
+                                                onChange={(e) => setEditTaskDescription(e.target.value)} 
+                                                className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-800 dark:text-slate-200 resize-none"
+                                                placeholder="Описание или контекст..."
+                                            />
+                                        </div>
+                                        <div className="flex justify-end gap-2 pt-2">
                                             <button onClick={() => setIsEditingTask(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">Отмена</button>
                                             <button onClick={handleSaveTaskContent} className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">Сохранить</button>
                                         </div>
@@ -1274,7 +1293,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 </div>
 
                                 {/* CONTEXT (DESCRIPTION) - Collapsed by default */}
-                                {task.description && (
+                                {!isEditingTask && task.description && (
                                     <CollapsibleSection title="Контекст" icon={<FileText size={14}/>}>
                                         <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                                             <ReactMarkdown components={markdownComponents}>{task.description}</ReactMarkdown>
