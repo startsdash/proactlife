@@ -762,6 +762,33 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                              </CollapsibleSection>
                         )}
 
+                        {!hideExtraDetails && task.subtasks && task.subtasks.length > 0 && (
+                             <div className="mt-2 mb-2">
+                                 <CollapsibleSection 
+                                    title={`Чек-лист (${task.subtasks.filter(s => s.isCompleted).length}/${task.subtasks.length})`} 
+                                    icon={<ListTodo size={12}/>} 
+                                    isCard
+                                 >
+                                     <div className="space-y-1.5">
+                                         {task.subtasks.map(subtask => (
+                                             <div 
+                                                key={subtask.id} 
+                                                className="flex items-start gap-2 group cursor-pointer"
+                                                onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
+                                             >
+                                                 <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500'}`}>
+                                                     {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                                                 </div>
+                                                 <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                     {subtask.text}
+                                                 </span>
+                                             </div>
+                                         ))}
+                                     </div>
+                                 </CollapsibleSection>
+                             </div>
+                        )}
+
                         {!hideExtraDetails && (col.id === 'doing' || col.id === 'todo') && task.activeChallenge && !challengeDrafts[task.id] && (
                             <>
                             {(() => {
