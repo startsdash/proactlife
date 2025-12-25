@@ -333,7 +333,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details'} | null>(null);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeMobileCol, setActiveMobileCol] = useState<'todo' | 'doing' | 'done'>('todo');
   const [generatingChallengeFor, setGeneratingChallengeFor] = useState<string | null>(null);
   const [challengeDrafts, setChallengeDrafts] = useState<{[taskId: string]: string}>({});
   const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'completed' | 'none'>('all');
@@ -342,8 +341,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [cardSubtaskInputs, setCardSubtaskInputs] = useState<{[taskId: string]: string}>({});
   
-  // NEW TASK CREATION STATE
-  const [newTaskContent, setNewTaskContent] = useState('');
+  // NEW TASK CREATION STATE - Per Column inputs
+  const [newTaskInputs, setNewTaskInputs] = useState<{[key: string]: string}>({});
 
   // EDIT TASK STATE
   const [isEditingTask, setIsEditingTask] = useState(false);
@@ -395,16 +394,18 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     { id: 'done', title: 'Сделано', color: 'border-emerald-400' }
   ];
 
-  const handleCreateTask = () => {
-      if (!newTaskContent.trim()) return;
+  const handleCreateTask = (columnId: 'todo' | 'doing' | 'done') => {
+      const content = newTaskInputs[columnId]?.trim();
+      if (!content) return;
+      
       const newTask: Task = {
           id: Date.now().toString(),
-          content: newTaskContent.trim(),
-          column: 'todo',
+          content: content,
+          column: columnId,
           createdAt: Date.now(),
       };
       addTask(newTask);
-      setNewTaskContent('');
+      setNewTaskInputs(prev => ({...prev, [columnId]: ''}));
   };
 
   const handleSaveTaskContent = () => {
@@ -768,15 +769,32 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 {task.subtasks?.map(subtask => (
                     <div
                     key={subtask.id}
-                    className="flex items-center gap-2 group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 p-1 rounded"
+                    draggable
+                    onDragStart={(e) => handleSubtaskDragStart(e, subtask.id, task.id)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleSubtaskDrop(e, subtask.id, task)}
+                    className="flex items-center gap-2 group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 p-1 rounded relative"
                     onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
                     >
+                        {/* Grip Handle */}
+                        <div className="text-slate-300 dark:text-slate-600 cursor-move opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                             <GripVertical size={12} />
+                        </div>
+
                         <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500'}`}>
                             {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
                         </div>
                         <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
                             {subtask.text}
                         </span>
+                        
+                        {/* Delete Button */}
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(subtask.id, task.id); }} 
+                            className="text-slate-300 dark:text-slate-600 hover:text-red-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <X size={12} />
+                        </button>
                     </div>
                 ))}
                 {/* Input for new subtask */}
@@ -811,20 +829,20 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     <div key={col.id} className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3`} onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
         <h3 className="font-semibold text-slate-600 dark:text-slate-400 mb-3 flex justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
         
-        {col.id === 'todo' && (
+        {(col.id === 'todo' || col.id === 'doing') && (
              <div className="mb-3 px-1">
                 <div className="relative">
                     <input
                         type="text"
                         placeholder="Новая задача..."
                         className="w-full bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 pr-10 text-sm outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/20 transition-all shadow-sm placeholder:text-slate-400"
-                        value={newTaskContent}
-                        onChange={(e) => setNewTaskContent(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCreateTask()}
+                        value={newTaskInputs[col.id] || ''}
+                        onChange={(e) => setNewTaskInputs(prev => ({...prev, [col.id]: e.target.value}))}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateTask(col.id as any)}
                     />
                     <button 
-                        onClick={handleCreateTask}
-                        disabled={!newTaskContent.trim()}
+                        onClick={() => handleCreateTask(col.id as any)}
+                        disabled={!newTaskInputs[col.id]?.trim()}
                         className="absolute right-1.5 top-1.5 p-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                     >
                         <Plus size={16} />
