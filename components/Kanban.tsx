@@ -562,21 +562,24 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
   };
 
   // Subtask DnD Handlers
-  const handleSubtaskDragStart = (e: React.DragEvent, subtaskId: string) => {
+  const handleSubtaskDragStart = (e: React.DragEvent, subtaskId: string, taskId: string) => {
       e.dataTransfer.setData('subtaskId', subtaskId);
+      e.dataTransfer.setData('sourceTaskId', taskId);
       e.dataTransfer.effectAllowed = 'move';
       // Prevent bubble up to column DnD
       e.stopPropagation();
   };
 
-  const handleSubtaskDrop = (e: React.DragEvent, targetSubtaskId: string) => {
+  const handleSubtaskDrop = (e: React.DragEvent, targetSubtaskId: string, task: Task) => {
       e.preventDefault();
       e.stopPropagation();
       const draggedSubtaskId = e.dataTransfer.getData('subtaskId');
-      if (!draggedSubtaskId) return;
+      const sourceTaskId = e.dataTransfer.getData('sourceTaskId');
 
-      const task = getTaskForModal();
-      if (!task || !task.subtasks) return;
+      if (!draggedSubtaskId || !sourceTaskId) return;
+      if (sourceTaskId !== task.id) return; // Only reorder within same task
+
+      if (!task.subtasks) return;
 
       const subtasks = [...task.subtasks];
       const dragIdx = subtasks.findIndex(s => s.id === draggedSubtaskId);
@@ -590,8 +593,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       updateTask({ ...task, subtasks });
   };
 
-  const moveSubtaskManual = (subtaskId: string, direction: 'up' | 'down') => {
-      const task = getTaskForModal();
+  const moveSubtaskManual = (e: React.MouseEvent, subtaskId: string, direction: 'up' | 'down', task: Task) => {
+      e.stopPropagation();
       if (!task || !task.subtasks) return;
       
       const subtasks = [...task.subtasks];
@@ -838,15 +841,30 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                          {task.subtasks.map(subtask => (
                                              <div 
                                                 key={subtask.id} 
-                                                className="flex items-start gap-2 group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 p-1 rounded"
+                                                className="flex items-center gap-2 group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 p-1 rounded"
+                                                draggable
+                                                onDragStart={(e) => handleSubtaskDragStart(e, subtask.id, task.id)}
+                                                onDragOver={handleDragOver}
+                                                onDrop={(e) => handleSubtaskDrop(e, subtask.id, task)}
                                                 onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
                                              >
+                                                 {/* DnD Grip */}
+                                                 <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                     <GripVertical size={12} />
+                                                 </div>
+
                                                  <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500'}`}>
                                                      {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
                                                  </div>
                                                  <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
                                                      {subtask.text}
                                                  </span>
+
+                                                 {/* Arrows for Mobile/Manual Sort */}
+                                                 <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                     <button onClick={(e) => moveSubtaskManual(e, subtask.id, 'up', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded p-0.5"><ChevronUp size={10} /></button>
+                                                     <button onClick={(e) => moveSubtaskManual(e, subtask.id, 'down', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded p-0.5"><ChevronDown size={10} /></button>
+                                                 </div>
                                              </div>
                                          ))}
                                      </div>
@@ -1127,9 +1145,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                                         key={subtask.id} 
                                                         className="flex items-start gap-2 group min-h-[28px] items-center"
                                                         draggable
-                                                        onDragStart={(e) => handleSubtaskDragStart(e, subtask.id)}
+                                                        onDragStart={(e) => handleSubtaskDragStart(e, subtask.id, task.id)}
                                                         onDragOver={handleDragOver}
-                                                        onDrop={(e) => handleSubtaskDrop(e, subtask.id)}
+                                                        onDrop={(e) => handleSubtaskDrop(e, subtask.id, task)}
                                                    >
                                                        <div className="mt-0.5 cursor-move text-slate-300 hover:text-slate-500">
                                                             <GripVertical size={14} />
@@ -1142,8 +1160,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                            {/* Manual Reorder Arrows (Mobile Friendly) */}
                                                            <div className="flex flex-col gap-0.5">
-                                                                <button onClick={() => moveSubtaskManual(subtask.id, 'up')} className="text-slate-300 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded p-0.5"><ChevronUp size={10} /></button>
-                                                                <button onClick={() => moveSubtaskManual(subtask.id, 'down')} className="text-slate-300 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded p-0.5"><ChevronDown size={10} /></button>
+                                                                <button onClick={(e) => moveSubtaskManual(e, subtask.id, 'up', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded p-0.5"><ChevronUp size={10} /></button>
+                                                                <button onClick={(e) => moveSubtaskManual(e, subtask.id, 'down', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded p-0.5"><ChevronDown size={10} /></button>
                                                            </div>
                                                            
                                                            <button 
