@@ -349,6 +349,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [editTaskContent, setEditTaskContent] = useState('');
 
+  // INLINE CARD EDITING STATE
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [editingCardContent, setEditingCardContent] = useState('');
+
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
 
@@ -414,6 +418,30 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
           updateTask({ ...task, content: editTaskContent });
           setIsEditingTask(false);
       }
+  };
+
+  const startCardEditing = (e: React.MouseEvent, task: Task) => {
+      e.stopPropagation();
+      setEditingCardId(task.id);
+      setEditingCardContent(task.content);
+  };
+
+  const saveCardEditing = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (editingCardId) {
+          const task = tasks.find(t => t.id === editingCardId);
+          if (task && editingCardContent.trim()) {
+              updateTask({ ...task, content: editingCardContent.trim() });
+          }
+          setEditingCardId(null);
+          setEditingCardContent('');
+      }
+  };
+
+  const cancelCardEditing = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setEditingCardId(null);
+      setEditingCardContent('');
   };
 
   const canMoveTask = (task: Task, targetColId: string): boolean => {
@@ -758,7 +786,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const getTaskForModal = () => tasks.find(t => t.id === activeModal?.taskId);
 
   const renderCardChecklist = (task: Task) => (
-    <div className="mt-2 mb-2">
+    <div className="mt-2 mb-2" onClick={(e) => e.stopPropagation()}>
         <CollapsibleSection
             title="Чек-лист"
             icon={<ListTodo size={12}/>}
@@ -768,19 +796,36 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 {task.subtasks?.map(subtask => (
                     <div
                     key={subtask.id}
-                    className="flex items-center gap-2 group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 p-1 rounded"
-                    onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
+                    className="flex items-center gap-2 group p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700/50"
+                    draggable
+                    onDragStart={(e) => handleSubtaskDragStart(e, subtask.id, task.id)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleSubtaskDrop(e, subtask.id, task)}
                     >
-                        <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500'}`}>
+                        <div className="text-slate-300 dark:text-slate-600 cursor-move opacity-0 group-hover:opacity-100 transition-opacity">
+                             <GripVertical size={12} />
+                        </div>
+
+                        <div 
+                            className={`mt-0.5 shrink-0 cursor-pointer ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500'}`}
+                            onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
+                        >
                             {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
                         </div>
                         <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
                             {subtask.text}
                         </span>
+                        
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(subtask.id, task.id); }}
+                            className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
+                        >
+                            <Trash2 size={12} />
+                        </button>
                     </div>
                 ))}
                 {/* Input for new subtask */}
-                <div className="flex gap-1 mt-2" onClick={e => e.stopPropagation()}>
+                <div className="flex gap-1 mt-2">
                     <input
                         type="text"
                         className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-[10px] outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
@@ -884,9 +929,35 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         )}
 
                         {/* CONTENT */}
-                        <div className="text-slate-800 dark:text-slate-200 font-normal text-sm leading-relaxed mb-3 mt-4">
-                             <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
-                        </div>
+                        {editingCardId === task.id ? (
+                            <div className="mb-3 mt-4" onClick={e => e.stopPropagation()}>
+                                <textarea 
+                                    className="w-full p-2 text-sm bg-slate-50 dark:bg-slate-800 border border-indigo-300 rounded-lg focus:outline-none resize-none"
+                                    rows={3}
+                                    value={editingCardContent}
+                                    onChange={e => setEditingCardContent(e.target.value)}
+                                    autoFocus
+                                />
+                                <div className="flex justify-end gap-2 mt-2">
+                                    <button onClick={cancelCardEditing} className="p-1 text-slate-400 hover:text-slate-600"><X size={14}/></button>
+                                    <button onClick={saveCardEditing} className="p-1 text-emerald-500 hover:text-emerald-600"><Check size={14}/></button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="group/content relative">
+                                <div className="text-slate-800 dark:text-slate-200 font-normal text-sm leading-relaxed mb-3 mt-4 pr-6">
+                                     <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
+                                </div>
+                                {(col.id === 'todo' || col.id === 'doing') && (
+                                    <button 
+                                        onClick={(e) => startCardEditing(e, task)}
+                                        className="absolute top-0 right-0 p-1 text-slate-300 hover:text-indigo-500 opacity-0 group-hover/content:opacity-100 transition-opacity"
+                                    >
+                                        <Edit3 size={12} />
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
                         {/* TODO SPECIFIC MODULES */}
                         {col.id === 'todo' && (
