@@ -917,8 +917,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 onDrop={(e) => handleSubtaskDrop(e, subtask.id, task)}
                                                 onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
                                              >
-                                                 {/* DnD Grip */}
-                                                 <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                 {/* DnD Grip - Desktop Only */}
+                                                 <div className="hidden md:block text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                                      <GripVertical size={12} />
                                                  </div>
 
@@ -929,8 +929,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                      {subtask.text}
                                                  </span>
 
-                                                 {/* Arrows for Mobile/Manual Sort */}
-                                                 <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                 {/* Arrows for Mobile Only */}
+                                                 <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity md:hidden" onClick={(e) => e.stopPropagation()}>
                                                      <button onClick={(e) => moveSubtaskManual(e, subtask.id, 'up', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded p-0.5"><ChevronUp size={10} /></button>
                                                      <button onClick={(e) => moveSubtaskManual(e, subtask.id, 'down', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded p-0.5"><ChevronDown size={10} /></button>
                                                  </div>
@@ -1262,15 +1262,36 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 <CollapsibleSection title="Чек-лист" icon={<ListTodo size={14}/>}>
                                     <div className="space-y-2">
                                         {task.subtasks?.map(s => (
-                                            <div key={s.id} className="flex items-center gap-2 group">
-                                                <button onClick={() => handleToggleSubtask(s.id)} className={s.isCompleted ? "text-emerald-500" : "text-slate-300 dark:text-slate-600"}>
-                                                    {s.isCompleted ? <CheckCircle2 size={16}/> : <Square size={16}/>}
+                                            <div 
+                                                key={s.id} 
+                                                className="flex items-center gap-2 group"
+                                                draggable
+                                                onDragStart={(e) => handleSubtaskDragStart(e, s.id, task.id)}
+                                                onDragOver={handleDragOver}
+                                                onDrop={(e) => handleSubtaskDrop(e, s.id, task)}
+                                            >
+                                                {/* Grip - Desktop Only */}
+                                                <div className="hidden md:block text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                     <GripVertical size={14} />
+                                                </div>
+
+                                                <button onClick={() => handleToggleSubtask(s.id)} className={s.isCompleted ? "text-emerald-500" : "text-slate-300 dark:text-slate-600 hover:text-indigo-500"}>
+                                                    {s.isCompleted ? <CheckCircle2 size={16}/> : <Circle size={16}/>}
                                                 </button>
                                                 <span className={`flex-1 text-sm ${s.isCompleted ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-300"}`}>{s.text}</span>
-                                                <Tooltip content={s.isPinned ? "Открепить" : "Закрепить"}>
-                                                    <button onClick={() => handleToggleSubtaskPin(s.id)} className={`opacity-0 group-hover:opacity-100 p-1 ${s.isPinned ? "text-indigo-500" : "text-slate-300 dark:text-slate-600 hover:text-slate-500"}`}><Pin size={14}/></button>
-                                                </Tooltip>
-                                                <button onClick={() => handleDeleteSubtask(s.id)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-red-500"><X size={14}/></button>
+                                                
+                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {/* Arrows - Mobile Only */}
+                                                    <div className="flex flex-col gap-0.5 md:hidden" onClick={(e) => e.stopPropagation()}>
+                                                         <button onClick={(e) => moveSubtaskManual(e, s.id, 'up', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded p-0.5"><ChevronUp size={10} /></button>
+                                                         <button onClick={(e) => moveSubtaskManual(e, s.id, 'down', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded p-0.5"><ChevronDown size={10} /></button>
+                                                    </div>
+
+                                                    <Tooltip content={s.isPinned ? "Открепить" : "Закрепить"}>
+                                                        <button onClick={() => handleToggleSubtaskPin(s.id)} className={`p-1 ${s.isPinned ? "text-indigo-500" : "text-slate-300 dark:text-slate-600 hover:text-slate-500"}`}><Pin size={14}/></button>
+                                                    </Tooltip>
+                                                    <button onClick={() => handleDeleteSubtask(s.id)} className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-500"><X size={14}/></button>
+                                                </div>
                                             </div>
                                         ))}
                                         <div className="flex gap-2 mt-2">
