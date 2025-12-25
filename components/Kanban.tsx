@@ -767,23 +767,30 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                             <>
                             {(() => {
                                 const content = (
-                                    <div className={`p-2 rounded-lg border transition-all ${!task.isChallengeCompleted && col.id !== 'doing' ? 'mt-2 mb-2' : ''} ${task.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
+                                    <div className={`p-2 rounded-lg border transition-all relative group ${!task.isChallengeCompleted && col.id !== 'doing' ? 'mt-2 mb-2' : ''} ${task.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
                                          {task.isChallengeCompleted ? (
                                             <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
                                                <StaticChallengeRenderer content={task.activeChallenge || ''} mode="history" />
                                             </div>
                                          ) : (
-                                            <div className="flex justify-between items-start gap-2">
+                                            <>
                                                 <div className="w-full">
                                                     <InteractiveChallenge 
                                                         content={task.activeChallenge || ''} 
                                                         onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
                                                     />
                                                 </div>
-                                                <Tooltip content="Завершить челлендж">
-                                                    <button onClick={(e) => toggleChallengeComplete(e, task)} className={`shrink-0 rounded-full w-5 h-5 flex items-center justify-center border transition-all mt-0.5 ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white dark:bg-transparent border-indigo-300 dark:border-indigo-600 text-transparent hover:border-indigo-500'}`}><Check size={12} strokeWidth={3} /></button>
-                                                </Tooltip>
-                                            </div>
+                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-slate-800 rounded-full shadow-sm">
+                                                    <Tooltip content="Завершить челлендж">
+                                                        <button 
+                                                            onClick={(e) => toggleChallengeComplete(e, task)} 
+                                                            className="w-5 h-5 flex items-center justify-center rounded-full border-2 border-indigo-200 dark:border-indigo-700 hover:border-emerald-500 text-transparent hover:text-emerald-500 transition-all"
+                                                        >
+                                                            <Check size={12} strokeWidth={3} />
+                                                        </button>
+                                                    </Tooltip>
+                                                </div>
+                                            </>
                                          )}
 
                                         {task.isChallengeCompleted && hasChallengeAuthors && (
