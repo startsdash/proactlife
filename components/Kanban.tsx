@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Shuffle, Edit3, AlignLeft } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Shuffle, Edit3 } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP } from '../constants';
@@ -333,6 +333,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details'} | null>(null);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeMobileCol, setActiveMobileCol] = useState<'todo' | 'doing' | 'done'>('todo');
   const [generatingChallengeFor, setGeneratingChallengeFor] = useState<string | null>(null);
   const [challengeDrafts, setChallengeDrafts] = useState<{[taskId: string]: string}>({});
   const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'completed' | 'none'>('all');
@@ -342,14 +343,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [cardSubtaskInputs, setCardSubtaskInputs] = useState<{[taskId: string]: string}>({});
   
   // NEW TASK CREATION STATE
-  const [isCreatingTask, setIsCreatingTask] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [newTaskContent, setNewTaskContent] = useState('');
 
   // EDIT TASK STATE
   const [isEditingTask, setIsEditingTask] = useState(false);
-  const [editTaskTitle, setEditTaskTitle] = useState('');
-  const [editTaskDescription, setEditTaskDescription] = useState('');
+  const [editTaskContent, setEditTaskContent] = useState('');
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
@@ -398,44 +396,22 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   ];
 
   const handleCreateTask = () => {
-      if (!newTaskTitle.trim()) return;
+      if (!newTaskContent.trim()) return;
       const newTask: Task = {
           id: Date.now().toString(),
-          content: newTaskTitle.trim(),
-          description: newTaskDescription.trim(),
+          content: newTaskContent.trim(),
           column: 'todo',
           createdAt: Date.now(),
       };
       addTask(newTask);
-      setNewTaskTitle('');
-      setNewTaskDescription('');
-      // Keep isCreatingTask true for rapid entry or set to false to close
-      // setIsCreatingTask(false); 
-  };
-
-  const cancelCreateTask = () => {
-      setNewTaskTitle('');
-      setNewTaskDescription('');
-      setIsCreatingTask(false);
-  };
-
-  const openEditTask = () => {
-      const task = getTaskForModal();
-      if (!task) return;
-      setEditTaskTitle(task.content);
-      setEditTaskDescription(task.description || '');
-      setIsEditingTask(true);
+      setNewTaskContent('');
   };
 
   const handleSaveTaskContent = () => {
       const task = getTaskForModal();
       if (!task) return;
-      if (editTaskTitle.trim()) {
-          updateTask({ 
-              ...task, 
-              content: editTaskTitle.trim(),
-              description: editTaskDescription.trim()
-          });
+      if (editTaskContent.trim()) {
+          updateTask({ ...task, content: editTaskContent });
           setIsEditingTask(false);
       }
   };
@@ -850,38 +826,23 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
         
         {col.id === 'todo' && (
              <div className="mb-3 px-1">
-                {isCreatingTask ? (
-                    <div className="bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-3 animate-in fade-in slide-in-from-top-1">
-                        <input
-                            type="text"
-                            placeholder="Название"
-                            className="w-full text-sm font-bold text-slate-800 dark:text-slate-200 placeholder:text-slate-400 bg-transparent outline-none mb-2"
-                            value={newTaskTitle}
-                            onChange={(e) => setNewTaskTitle(e.target.value)}
-                            onKeyDown={(e) => { if(e.key === 'Enter') document.getElementById('new-task-desc')?.focus(); }}
-                            autoFocus
-                        />
-                        <textarea
-                            id="new-task-desc"
-                            placeholder="Задача..."
-                            className="w-full text-xs text-slate-600 dark:text-slate-400 placeholder:text-slate-400/70 bg-transparent outline-none resize-none h-20 font-mono"
-                            value={newTaskDescription}
-                            onChange={(e) => setNewTaskDescription(e.target.value)}
-                            onKeyDown={(e) => { if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleCreateTask(); }}
-                        />
-                        <div className="flex justify-end gap-2 mt-2">
-                            <button onClick={cancelCreateTask} className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">Отмена</button>
-                            <button onClick={handleCreateTask} disabled={!newTaskTitle.trim()} className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors">Добавить</button>
-                        </div>
-                    </div>
-                ) : (
+                <div className="relative">
+                    <input
+                        type="text"
+                        placeholder="Новая задача..."
+                        className="w-full bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 pr-10 text-sm outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/20 transition-all shadow-sm placeholder:text-slate-400"
+                        value={newTaskContent}
+                        onChange={(e) => setNewTaskContent(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateTask()}
+                    />
                     <button 
-                        onClick={() => setIsCreatingTask(true)}
-                        className="w-full py-2.5 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-slate-400 dark:text-slate-500 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-500 dark:hover:text-indigo-400 text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                        onClick={handleCreateTask}
+                        disabled={!newTaskContent.trim()}
+                        className="absolute right-1.5 top-1.5 p-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                     >
-                        <Plus size={16} /> Новая задача
+                        <Plus size={16} />
                     </button>
-                )}
+                </div>
             </div>
         )}
 
@@ -935,18 +896,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             </div>
                         )}
 
-                        {/* CONTENT (Title) */}
-                        <div className="text-slate-800 dark:text-slate-200 font-bold text-sm leading-snug mb-3 mt-4 pr-6">
-                             {task.content}
+                        {/* CONTENT */}
+                        <div className="text-slate-800 dark:text-slate-200 font-normal text-sm leading-relaxed mb-3 mt-4">
+                             <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
                         </div>
-                        
-                        {/* Description Indicator */}
-                        {task.description && (
-                            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-3">
-                                <AlignLeft size={12} />
-                                <span className="line-clamp-1 opacity-80">{task.description}</span>
-                            </div>
-                        )}
 
                         {/* TODO SPECIFIC MODULES */}
                         {col.id === 'todo' && (
@@ -1243,7 +1196,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     return (
                                         <>
                                             <Tooltip content="Редактировать">
-                                                <button onClick={openEditTask} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                                <button onClick={() => setIsEditingTask(true)} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                                     <Edit3 size={20} />
                                                 </button>
                                             </Tooltip>
@@ -1293,42 +1246,24 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
                         return (
                             <div className="space-y-4">
-                                {/* EDIT MODE */}
+                                {/* TEXT EDITING */}
                                 {isEditingTask ? (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Название</label>
-                                            <input 
-                                                value={editTaskTitle} 
-                                                onChange={(e) => setEditTaskTitle(e.target.value)} 
-                                                className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-800 dark:text-slate-200"
-                                                placeholder="Название задачи"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Описание</label>
-                                            <textarea 
-                                                value={editTaskDescription} 
-                                                onChange={(e) => setEditTaskDescription(e.target.value)} 
-                                                className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-800 dark:text-slate-200 font-mono"
-                                                placeholder="Детали, контекст (Markdown)..."
-                                            />
-                                        </div>
-                                        <div className="flex justify-end gap-2 pt-2">
+                                    <div className="space-y-2">
+                                        <textarea 
+                                            value={editTaskContent} 
+                                            onChange={(e) => setEditTaskContent(e.target.value)} 
+                                            className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-800 dark:text-slate-200"
+                                        />
+                                        <div className="flex justify-end gap-2">
                                             <button onClick={() => setIsEditingTask(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">Отмена</button>
                                             <button onClick={handleSaveTaskContent} className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">Сохранить</button>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="group relative pr-8">
-                                        <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug mb-3">
-                                            {task.content}
-                                        </h3>
-                                        {task.description && (
-                                            <div className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                                                <ReactMarkdown components={markdownComponents}>{task.description}</ReactMarkdown>
-                                            </div>
-                                        )}
+                                        <div className="text-slate-800 dark:text-slate-200 text-sm font-normal leading-relaxed">
+                                            <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
+                                        </div>
                                     </div>
                                 )}
 
@@ -1338,9 +1273,18 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     <SphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
                                 </div>
 
+                                {/* CONTEXT (DESCRIPTION) - Collapsed by default */}
+                                {task.description && (
+                                    <CollapsibleSection title="Контекст" icon={<FileText size={14}/>}>
+                                        <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                            <ReactMarkdown components={markdownComponents}>{task.description}</ReactMarkdown>
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+
                                 {/* CHECKLIST - Collapsed by default */}
                                 {(task.subtasks && task.subtasks.length > 0 || !isDone) && (
-                                    <CollapsibleSection title="Чек-лист" icon={<ListTodo size={14}/>} defaultOpen={!isDone}>
+                                    <CollapsibleSection title="Чек-лист" icon={<ListTodo size={14}/>}>
                                         <div className="space-y-2">
                                             {task.subtasks?.map(s => (
                                                 <div 
@@ -1401,7 +1345,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 </Tooltip>
                                             ) : undefined
                                         }
-                                        defaultOpen={!task.isChallengeCompleted}
                                     >
                                         <div className="relative group">
                                             {/* COMPLETE CHALLENGE CHECK (Hover) - Only if not done */}
