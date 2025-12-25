@@ -280,6 +280,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [newSubtaskText, setNewSubtaskText] = useState('');
+  const [cardSubtaskInputs, setCardSubtaskInputs] = useState<{[taskId: string]: string}>({});
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
@@ -502,6 +503,22 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       setNewSubtaskText('');
   };
 
+  const handleAddSubtaskFromCard = (taskId: string) => {
+      const text = cardSubtaskInputs[taskId]?.trim();
+      if (!text) return;
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const newSubtask: Subtask = {
+          id: Date.now().toString(),
+          text: text,
+          isCompleted: false,
+          isPinned: false
+      };
+      updateTask({ ...task, subtasks: [...(task.subtasks || []), newSubtask] });
+      setCardSubtaskInputs(prev => ({...prev, [taskId]: ''}));
+  };
+
   const handleToggleSubtask = (subtaskId: string, taskId?: string) => {
       const targetTaskId = taskId || activeModal?.taskId;
       if (!targetTaskId) return;
@@ -585,7 +602,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     if (col.id === 'done') emptyText = "Готово? Перетащи задачу сюда";
 
     return (
-    <div key={col.id} className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col h-full border-t-4 ${col.color} p-2 md:p-3`} onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
+    <div key={col.id} className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3`} onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
         <h3 className="font-semibold text-slate-600 dark:text-slate-400 mb-3 flex justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
         <div className="space-y-3 pb-2 px-1">
             {tasksInCol.length === 0 ? (
@@ -784,6 +801,22 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                                  </span>
                                              </div>
                                          ))}
+                                     </div>
+                                     <div className="mt-2 pt-2 border-t border-slate-200/50 dark:border-slate-700/50 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                         <input 
+                                            type="text" 
+                                            placeholder="Добавить пункт..." 
+                                            className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 text-xs outline-none focus:border-indigo-500"
+                                            value={cardSubtaskInputs[task.id] || ''}
+                                            onChange={(e) => setCardSubtaskInputs(prev => ({...prev, [task.id]: e.target.value}))}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAddSubtaskFromCard(task.id)}
+                                         />
+                                         <button 
+                                            onClick={() => handleAddSubtaskFromCard(task.id)}
+                                            className="p-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded"
+                                         >
+                                             <Plus size={14} />
+                                         </button>
                                      </div>
                                  </CollapsibleSection>
                              </div>
@@ -1049,18 +1082,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                                        <span className={`text-sm flex-1 break-words min-w-0 ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{subtask.text}</span>
                                                        
                                                        <div className="flex items-center gap-1">
-                                                           <Tooltip content={subtask.isPinned ? "Открепить от карточки" : "Закрепить на карточке"}>
-                                                                <button 
-                                                                    onClick={() => handleToggleSubtaskPin(subtask.id)} 
-                                                                    className={`p-1.5 rounded-lg transition-all ${
-                                                                        subtask.isPinned 
-                                                                        ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 opacity-100' 
-                                                                        : 'text-slate-300 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-700 opacity-0 group-hover:opacity-100'
-                                                                    }`}
-                                                                >
-                                                                    <Pin size={14} className={subtask.isPinned ? "fill-current" : ""} />
-                                                                </button>
-                                                           </Tooltip>
+                                                           {/* Pin button removed from modal as requested */}
                                                            <button 
                                                                onClick={() => handleDeleteSubtask(subtask.id)} 
                                                                className="text-slate-300 hover:text-red-500 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded opacity-0 group-hover:opacity-100 transition-opacity"
