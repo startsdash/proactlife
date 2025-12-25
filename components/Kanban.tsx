@@ -280,7 +280,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [challengeDrafts, setChallengeDrafts] = useState<{[taskId: string]: string}>({});
   const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'completed' | 'none'>('all');
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'manual'>('manual');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [cardSubtaskInputs, setCardSubtaskInputs] = useState<{[taskId: string]: string}>({});
   
@@ -312,7 +312,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       }
       return true;
   }).sort((a, b) => {
-      if (sortOrder === 'manual') return 0; // Respect original array order
       if (sortOrder === 'desc') return b.createdAt - a.createdAt;
       return a.createdAt - b.createdAt;
   });
@@ -422,11 +421,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   const toggleSortOrder = () => { 
-      setSortOrder(prev => {
-          if (prev === 'manual') return 'desc';
-          if (prev === 'desc') return 'asc';
-          return 'manual';
-      }); 
+      setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); 
   };
 
   const triggerAI = async (content: string, type: 'stuck' | 'completed') => {
@@ -1056,7 +1051,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             className={`p-2 rounded-lg border transition-colors ${
                                                 hasJournalEntry 
                                                 ? 'border-cyan-200 dark:border-cyan-800 text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100 dark:hover:bg-cyan-900/40' 
-                                                : 'border-transparent text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 hover:border-cyan-100'
+                                                : 'border-transparent text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 hover:border-cyan-100'
                                             }`}
                                        >
                                             <Book size={18} />
@@ -1151,9 +1146,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                  <button onClick={() => setFilterChallenge('none')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'none' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Обычные</button>
              </div>
              
-             <Tooltip content={sortOrder === 'manual' ? "Ручная сортировка" : sortOrder === 'desc' ? "Новые сверху" : "Старые сверху"}>
+             <Tooltip content={sortOrder === 'desc' ? "Новые сверху" : "Старые сверху"}>
                  <button onClick={toggleSortOrder} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400">
-                     {sortOrder === 'manual' ? <Shuffle size={16} /> : sortOrder === 'desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
+                     {sortOrder === 'desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
                  </button>
              </Tooltip>
         </div>
@@ -1242,7 +1237,17 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 </div>
 
                                 {task.activeChallenge && (
-                                    <CollapsibleSection title="Активный Челлендж" icon={<Zap size={14}/>}>
+                                    <CollapsibleSection 
+                                        title="Активный Челлендж" 
+                                        icon={<Zap size={14}/>}
+                                        actions={
+                                            <Tooltip content="Удалить челлендж">
+                                                <button onClick={deleteActiveChallenge} className="text-slate-400 hover:text-red-500 transition-colors p-1">
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </Tooltip>
+                                        }
+                                    >
                                         <div className="space-y-2">
                                             <InteractiveChallenge 
                                                 content={task.activeChallenge} 
@@ -1250,9 +1255,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 onPin={(i) => handleToggleChallengeStepPin(i)}
                                                 pinnedIndices={task.pinnedChallengeIndices}
                                             />
-                                            <div className="flex justify-end pt-2">
-                                                <button onClick={deleteActiveChallenge} className="text-xs text-red-400 hover:text-red-600 flex items-center gap-1"><Trash2 size={12}/> Удалить челлендж</button>
-                                            </div>
                                         </div>
                                     </CollapsibleSection>
                                 )}
@@ -1292,14 +1294,22 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 <div key={`ch-${i}`} className="text-sm bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 relative group">
                                                     <div className="text-[10px] font-bold text-slate-400 mb-1">Архивный челлендж</div>
                                                     <StaticChallengeRenderer content={h} mode="history" />
-                                                    <button onClick={() => deleteChallengeFromHistory(i)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500"><X size={14}/></button>
+                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Tooltip content="Удалить">
+                                                            <button onClick={() => deleteChallengeFromHistory(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={14}/></button>
+                                                        </Tooltip>
+                                                    </div>
                                                 </div>
                                             ))}
                                             {task.consultationHistory?.map((h, i) => (
                                                 <div key={`cons-${i}`} className="text-sm bg-violet-50 dark:bg-violet-900/10 p-3 rounded-lg border border-violet-100 dark:border-violet-900/30 relative group">
                                                     <div className="text-[10px] font-bold text-violet-400 mb-1 flex items-center gap-1"><Bot size={10}/> Консультация</div>
                                                     <ReactMarkdown components={markdownComponents}>{h}</ReactMarkdown>
-                                                    <button onClick={() => deleteConsultation(i)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500"><X size={14}/></button>
+                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Tooltip content="Удалить">
+                                                            <button onClick={() => deleteConsultation(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={14}/></button>
+                                                        </Tooltip>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
