@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
@@ -1016,22 +1015,31 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                        <CollapsibleSection title={`Чек-лист (${task.subtasks?.filter(s => s.isCompleted).length || 0}/${task.subtasks?.length || 0})`} icon={<ListTodo size={14}/>}>
                                            <div className="space-y-2 mb-3">
                                                {task.subtasks?.map(subtask => (
-                                                   <div key={subtask.id} className="flex items-start gap-2 group">
+                                                   <div key={subtask.id} className="flex items-start gap-2 group min-h-[28px] items-center">
                                                        <button onClick={() => handleToggleSubtask(subtask.id)} className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 hover:text-indigo-500'}`}>
                                                            {subtask.isCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
                                                        </button>
                                                        <span className={`text-sm flex-1 break-words min-w-0 ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{subtask.text}</span>
                                                        
-                                                       <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                       <div className="flex items-center gap-1">
                                                            <Tooltip content={subtask.isPinned ? "Открепить от карточки" : "Закрепить на карточке"}>
                                                                 <button 
                                                                     onClick={() => handleToggleSubtaskPin(subtask.id)} 
-                                                                    className={`p-1.5 rounded-lg mr-1 transition-colors ${subtask.isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800' : 'text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                                                                    className={`p-1.5 rounded-lg transition-all ${
+                                                                        subtask.isPinned 
+                                                                        ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 opacity-100' 
+                                                                        : 'text-slate-300 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-700 opacity-0 group-hover:opacity-100'
+                                                                    }`}
                                                                 >
                                                                     <Pin size={14} className={subtask.isPinned ? "fill-current" : ""} />
                                                                 </button>
                                                            </Tooltip>
-                                                           <button onClick={() => handleDeleteSubtask(subtask.id)} className="text-slate-300 hover:text-red-500 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"><X size={14}/></button>
+                                                           <button 
+                                                               onClick={() => handleDeleteSubtask(subtask.id)} 
+                                                               className="text-slate-300 hover:text-red-500 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                                           >
+                                                               <X size={14}/>
+                                                           </button>
                                                        </div>
                                                    </div>
                                                ))}
