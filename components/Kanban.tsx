@@ -12,6 +12,7 @@ interface Props {
   tasks: Task[];
   journalEntries: JournalEntry[];
   config: AppConfig;
+  addTask: (task: Task) => void;
   updateTask: (task: Task) => void;
   deleteTask: (id: string) => void;
   reorderTask: (draggedId: string, targetId: string) => void;
@@ -270,7 +271,7 @@ const StaticChallengeRenderer: React.FC<{
     return <>{renderedParts}</>;
 };
 
-const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
+const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
   const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details'} | null>(null);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -282,6 +283,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'manual'>('manual');
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [cardSubtaskInputs, setCardSubtaskInputs] = useState<{[taskId: string]: string}>({});
+  
+  // NEW TASK CREATION STATE
+  const [newTaskContent, setNewTaskContent] = useState('');
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
@@ -324,6 +328,18 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     { id: 'doing', title: 'В процессе', color: 'border-indigo-400' },
     { id: 'done', title: 'Сделано', color: 'border-emerald-400' }
   ];
+
+  const handleCreateTask = () => {
+      if (!newTaskContent.trim()) return;
+      const newTask: Task = {
+          id: Date.now().toString(),
+          content: newTaskContent.trim(),
+          column: 'todo',
+          createdAt: Date.now(),
+      };
+      addTask(newTask);
+      setNewTaskContent('');
+  };
 
   const canMoveTask = (task: Task, targetColId: string): boolean => {
     if (task.column === 'doing' && targetColId !== 'doing') {
@@ -671,6 +687,30 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
     return (
     <div key={col.id} className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3`} onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
         <h3 className="font-semibold text-slate-600 dark:text-slate-400 mb-3 flex justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
+        
+        {/* NEW INPUT HERE FOR TODO */}
+        {col.id === 'todo' && (
+             <div className="mb-3 px-1">
+                <div className="relative">
+                    <input
+                        type="text"
+                        placeholder="Новая задача..."
+                        className="w-full bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 pr-10 text-sm outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/20 transition-all shadow-sm placeholder:text-slate-400"
+                        value={newTaskContent}
+                        onChange={(e) => setNewTaskContent(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateTask()}
+                    />
+                    <button 
+                        onClick={handleCreateTask}
+                        disabled={!newTaskContent.trim()}
+                        className="absolute right-1.5 top-1.5 p-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >
+                        <Plus size={16} />
+                    </button>
+                </div>
+            </div>
+        )}
+
         <div className="space-y-3 pb-2 px-1">
             {tasksInCol.length === 0 ? (
                 <div className="py-10">
