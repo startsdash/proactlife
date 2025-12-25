@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
@@ -330,9 +329,12 @@ const StaticChallengeRenderer: React.FC<{
 };
 
 const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
-  const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details' | 'challenge'} | null>(null);
+  const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details'} | null>(null);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeMobileCol, setActiveMobileCol] = useState<'todo' | 'doing' | 'done'>('todo');
+  const [generatingChallengeFor, setGeneratingChallengeFor] = useState<string | null>(null);
+  const [challengeDrafts, setChallengeDrafts] = useState<{[taskId: string]: string}>({});
   const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'completed' | 'none'>('all');
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
   const [sortOrder, setSortOrder] = useState<'manual' | 'desc' | 'asc'>('manual');
@@ -513,33 +515,28 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
   const generateChallenge = async (e: React.MouseEvent, taskId: string, content: string) => {
     e.stopPropagation();
-    setActiveModal({ taskId, type: 'challenge' });
-    setIsLoading(true);
-    setAiResponse(null);
+    setGeneratingChallengeFor(taskId);
     try {
         const challenge = await generateTaskChallenge(content, config);
-        setAiResponse(challenge);
-    } catch (error) {
-        console.error(error);
-        setAiResponse("Failed to generate challenge.");
+        setChallengeDrafts(prev => ({ ...prev, [taskId]: challenge }));
     } finally {
-        setIsLoading(false);
+        setGeneratingChallengeFor(null);
     }
   };
 
-  const saveChallengeResponse = () => {
-      if (!activeModal || !aiResponse) return;
-      const task = tasks.find(t => t.id === activeModal.taskId);
-      if (task) {
+  const acceptChallenge = (e: React.MouseEvent, task: Task) => {
+      e.stopPropagation();
+      const draft = challengeDrafts[task.id];
+      if (draft) {
           const updatedTask: Task = { ...task };
           if (task.column === 'todo') updatedTask.column = 'doing';
           if (task.activeChallenge) updatedTask.challengeHistory = [...(task.challengeHistory || []), task.activeChallenge];
-          updatedTask.activeChallenge = aiResponse;
+          updatedTask.activeChallenge = draft;
           updatedTask.isChallengeCompleted = false;
-          
           updateTask(updatedTask);
-          setActiveModal(null);
-          setAiResponse(null);
+          const newDrafts = {...challengeDrafts};
+          delete newDrafts[task.id];
+          setChallengeDrafts(newDrafts);
       }
   };
 
@@ -705,6 +702,25 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const [moved] = subtasks.splice(dragIdx, 1);
       subtasks.splice(targetIdx, 0, moved);
 
+      updateTask({ ...task, subtasks });
+  };
+
+  const moveSubtaskManual = (e: React.MouseEvent, subtaskId: string, direction: 'up' | 'down', task: Task) => {
+      e.stopPropagation();
+      if (!task || !task.subtasks) return;
+      
+      const subtasks = [...task.subtasks];
+      const index = subtasks.findIndex(s => s.id === subtaskId);
+      if (index === -1) return;
+
+      if (direction === 'up' && index > 0) {
+          [subtasks[index], subtasks[index - 1]] = [subtasks[index - 1], subtasks[index]];
+      } else if (direction === 'down' && index < subtasks.length - 1) {
+          [subtasks[index], subtasks[index + 1]] = [subtasks[index + 1], subtasks[index]];
+      } else {
+          return;
+      }
+      
       updateTask({ ...task, subtasks });
   };
 
@@ -917,7 +933,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 {renderCardChecklist(task)}
 
                                 {/* ACTIVE CHALLENGE (Collapsed) */}
-                                {task.activeChallenge && (
+                                {task.activeChallenge && !challengeDrafts[task.id] && (
                                     <div className="mt-2 mb-2">
                                         <CollapsibleSection 
                                             title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
@@ -1005,6 +1021,20 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             </>
                         )}
 
+                        {/* CHALLENGE DRAFTS (Usually for Todo/Doing) */}
+                        {challengeDrafts[task.id] && (
+                            <div className="mt-2 mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 animate-in fade-in slide-in-from-top-2 relative">
+                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase mb-2"><Zap size={10} /> {config.challengeAuthors[0]?.name || 'Popper'}</div>
+                                <div className="text-sm text-slate-900 dark:text-slate-200 leading-relaxed mb-3">
+                                    <StaticChallengeRenderer content={challengeDrafts[task.id]} mode="draft" />
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={(e) => acceptChallenge(e, task)} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold py-1.5 rounded flex items-center justify-center gap-1 shadow-sm"><Play size={10} className="fill-current" /> Принять</button>
+                                    <button onClick={(e) => { e.stopPropagation(); const d = {...challengeDrafts}; delete d[task.id]; setChallengeDrafts(d); }} className="text-amber-400 hover:text-amber-700 px-2"><X size={14} /></button>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="mt-auto border-t border-slate-50 dark:border-slate-700 pt-3 flex flex-col gap-3">
                             <div className="flex justify-between items-center w-full">
                                {col.id === 'todo' && (
@@ -1038,13 +1068,21 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                            </button>
                                        </Tooltip>
 
-                                       {!task.activeChallenge && hasChallengeAuthors && (
+                                       {!challengeDrafts[task.id] && hasChallengeAuthors && (
                                            <Tooltip content="Челлендж">
                                                <button 
-                                                    onClick={(e) => generateChallenge(e, task.id, task.content)}
-                                                    className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
+                                                    onClick={(e) => {
+                                                        if (task.activeChallenge && !task.isChallengeCompleted) {
+                                                            e.stopPropagation();
+                                                            alert("Необходимо завершить активный челлендж");
+                                                            return;
+                                                        }
+                                                        generateChallenge(e, task.id, task.content);
+                                                    }} 
+                                                    disabled={generatingChallengeFor === task.id} 
+                                                    className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors disabled:opacity-50"
                                                >
-                                                    <Zap size={18} />
+                                                    <Zap size={18} className={generatingChallengeFor === task.id ? "opacity-50" : ""} />
                                                 </button>
                                            </Tooltip>
                                        )}
@@ -1141,7 +1179,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
                         {activeModal.type === 'stuck' && 'Психолог продуктивности'}
                         {activeModal.type === 'details' && 'Детали задачи'}
-                        {activeModal.type === 'challenge' && 'Генератор Челленджей'}
                     </h3>
                     <div className="flex items-center">
                         {activeModal.type === 'details' && !isEditingTask && (
@@ -1189,30 +1226,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 </div>
                             ) : (
                                 <div className="text-center text-slate-400 py-10">Не удалось получить ответ.</div>
-                            )}
-                        </div>
-                    )}
-
-                    {activeModal.type === 'challenge' && (
-                        <div className="space-y-4">
-                            {isLoading ? (
-                                <div className="flex flex-col items-center justify-center py-10 text-slate-400">
-                                    <Zap size={48} className="animate-pulse mb-4 text-amber-500 fill-current" />
-                                    <p className="text-sm">Проектирую сценарий испытания...</p>
-                                </div>
-                            ) : aiResponse ? (
-                                <div className="space-y-4">
-                                    <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-200 dark:border-amber-800">
-                                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-xs uppercase mb-2"><Zap size={14}/> Протокол Вызова</div>
-                                        <div className="text-sm text-slate-900 dark:text-slate-200 leading-relaxed"><StaticChallengeRenderer content={aiResponse} mode="draft" /></div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={saveChallengeResponse} className="flex-1 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium text-sm shadow-sm flex items-center justify-center gap-2"><Play size={14} className="fill-current" /> Принять вызов</button>
-                                        <button onClick={() => setAiResponse(null)} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 font-medium text-sm">Сброс</button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-center text-slate-400 py-10">Не удалось сгенерировать челлендж.</div>
                             )}
                         </div>
                     )}
