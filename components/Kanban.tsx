@@ -97,21 +97,22 @@ const CollapsibleSection: React.FC<{
   icon?: React.ReactNode;
   isCard?: boolean;
   actions?: React.ReactNode;
-}> = ({ title, children, icon, isCard = false, actions }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  defaultOpen?: boolean;
+}> = ({ title, children, icon, isCard = false, actions, defaultOpen = false }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
     <div className={`${isCard ? 'bg-slate-50/80 dark:bg-slate-800/50 mb-2 shadow-sm' : 'bg-slate-50 dark:bg-slate-800 mb-3'} rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden`}>
       <div 
         onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} 
-        className={`w-full flex items-center justify-between ${isCard ? 'p-2' : 'p-4'} cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors`}
+        className={`w-full flex items-center justify-between ${isCard ? 'p-2' : 'p-4'} cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group/header`}
       >
         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
            {icon}
            {title}
         </div>
         <div className="flex items-center gap-3">
-            {actions}
+            {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
             <div className="text-slate-400">
                 {isOpen ? <Minus size={14} /> : <Plus size={14} />}
             </div>
@@ -585,17 +586,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       updateTask({ ...task, subtasks: updatedSubtasks });
   };
 
-  const handleCompleteAndUnpinSubtask = (e: React.MouseEvent, subtaskId: string, task: Task) => {
-      e.stopPropagation();
-      if (!task || !task.subtasks) return;
-      
-      const updatedSubtasks = task.subtasks.map(s => 
-          s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted, isPinned: false } : s
-      );
-      
-      updateTask({ ...task, subtasks: updatedSubtasks });
-  };
-
   const handleToggleSubtaskPin = (subtaskId: string) => {
       const task = getTaskForModal();
       if (!task || !task.subtasks) return;
@@ -668,7 +658,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   // Delete Helpers
-  const deleteActiveChallenge = () => {
+  const deleteActiveChallenge = (e?: React.MouseEvent) => {
+      if (e) e.stopPropagation();
       const task = getTaskForModal();
       if (!task) return;
       if (window.confirm('Удалить активный челлендж?')) {
@@ -711,7 +702,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     <div key={col.id} className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3`} onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
         <h3 className="font-semibold text-slate-600 dark:text-slate-400 mb-3 flex justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
         
-        {/* NEW INPUT HERE FOR TODO */}
         {col.id === 'todo' && (
              <div className="mb-3 px-1">
                 <div className="relative">
@@ -747,290 +737,120 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             ) : (
                 tasksInCol.map(task => {
                     const isDoneColumn = col.id === 'done';
-                    const hideExtraDetails = isDoneColumn || (col.id === 'todo' && task.isChallengeCompleted);
-
-                    let statusText = 'ЗАДАЧА';
-                    let statusColor = 'text-slate-400 dark:text-slate-500';
-                    let StatusIcon = null;
-                    
                     // Specific border color classes to color ONLY the left border
                     let borderClass = 'border-l-slate-300 dark:border-l-slate-600';
                     if (col.id === 'done') borderClass = 'border-l-emerald-400';
                     else if (col.id === 'doing') borderClass = 'border-l-indigo-400';
                     
-                    if (isDoneColumn) {
-                        statusText = 'ЗАДАЧА';
-                        statusColor = 'text-slate-400 dark:text-slate-500';
-                        StatusIcon = null;
-                    }
-                    else if (task.activeChallenge) {
-                        if (task.isChallengeCompleted) { statusText = 'ЧЕЛЛЕНДЖ ВЫПОЛНЕН'; statusColor = 'text-emerald-600 dark:text-emerald-400'; StatusIcon = CheckCircle2; }
-                        else { statusText = 'ЧЕЛЛЕНДЖ АКТИВЕН'; statusColor = 'text-indigo-600 dark:text-indigo-400'; StatusIcon = Zap; }
-                    }
-
                     const subtasksTotal = task.subtasks?.length || 0;
                     const subtasksDone = task.subtasks?.filter(s => s.isCompleted).length || 0;
-
-                    // Progress Bar solely based on subtasks
                     const progressPercent = subtasksTotal > 0 ? Math.round((subtasksDone / subtasksTotal) * 100) : 0;
-                    
                     const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
 
                     return (
                     <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group border-l-4 ${borderClass} overflow-hidden`}>
                         
-                        {/* QUICK COMPLETE CIRCLE */}
-                        <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Tooltip content={task.column === 'done' ? "Вернуть в работу" : "Завершить"}>
-                                <button 
-                                    onClick={(e) => handleQuickComplete(e, task)} 
-                                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                        task.column === 'done' 
-                                        ? 'border-emerald-500 bg-emerald-500 text-white' 
-                                        : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 dark:hover:border-emerald-400 text-transparent hover:text-emerald-500 dark:hover:text-emerald-400'
-                                    }`}
-                                >
-                                    <Check size={12} strokeWidth={3} />
-                                </button>
-                            </Tooltip>
-                        </div>
-
-                        {/* TOP: Status (Icon+Text) + Spheres */}
-                        <div className="flex justify-between items-center mb-2">
-                            <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
-                                {StatusIcon && <StatusIcon size={14} fill={task.isChallengeCompleted ? "none" : "currentColor"} />}
-                                <span>{statusText}</span>
+                        {/* QUICK COMPLETE (Doing/Done only) */}
+                        {col.id !== 'todo' && (
+                            <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Tooltip content={task.column === 'done' ? "Вернуть в работу" : "Завершить"}>
+                                    <button 
+                                        onClick={(e) => handleQuickComplete(e, task)} 
+                                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                            task.column === 'done' 
+                                            ? 'border-emerald-500 bg-emerald-500 text-white' 
+                                            : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 dark:hover:border-emerald-400 text-transparent hover:text-emerald-500 dark:hover:text-emerald-400'
+                                        }`}
+                                    >
+                                        <Check size={12} strokeWidth={3} />
+                                    </button>
+                                </Tooltip>
                             </div>
-                            <div className="flex items-center gap-2 pr-7">
-                                {task.spheres && task.spheres.length > 0 && (
-                                    <div className="flex -space-x-1">
-                                        {task.spheres.map(s => {
-                                            const sp = SPHERES.find(x => x.id === s);
-                                            return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        )}
 
                         {/* CONTENT */}
-                        <div className="text-slate-800 dark:text-slate-200 font-normal text-sm leading-relaxed mb-3">
+                        <div className="text-slate-800 dark:text-slate-200 font-normal text-sm leading-relaxed mb-3 mt-1">
                              <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
                         </div>
 
-                        {/* PINNED ITEMS SECTION */}
-                        {((task.subtasks && task.subtasks.some(s => s.isPinned)) || (task.activeChallenge && task.pinnedChallengeIndices && task.pinnedChallengeIndices.length > 0)) && (
-                            <div className="mb-3 space-y-1.5 border-t border-slate-50 dark:border-slate-700/50 pt-2">
-                                {/* Pinned Subtasks */}
-                                {task.subtasks?.filter(s => s.isPinned).map(subtask => (
-                                    <div 
-                                        key={subtask.id} 
-                                        className="flex items-start gap-2 p-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 group"
-                                    >
-                                        <button 
-                                            onClick={(e) => handleCompleteAndUnpinSubtask(e, subtask.id, task)} 
-                                            className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-indigo-500'}`}
-                                        >
-                                            {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                                        </button>
-                                        <span className={`text-xs flex-1 break-words leading-snug cursor-pointer ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
-                                            {subtask.text}
-                                        </span>
-                                    </div>
-                                ))}
-                                
-                                {/* Pinned Challenge Steps */}
-                                {task.activeChallenge && task.pinnedChallengeIndices?.map((idx) => {
-                                    // Parse challenge to find line at index
-                                    const lines = task.activeChallenge!.split('\n');
-                                    let currentCheckboxIdx = 0;
-                                    let contentLine = '';
-                                    let isChecked = false;
-                                    
-                                    for (const line of lines) {
-                                        const match = line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
-                                        if (match) {
-                                            if (currentCheckboxIdx === idx) {
-                                                isChecked = match[1].toLowerCase() === 'x';
-                                                contentLine = match[2];
-                                                break;
-                                            }
-                                            currentCheckboxIdx++;
-                                        }
-                                    }
-                                    
-                                    if (!contentLine) return null;
-
-                                    return (
-                                        <div 
-                                            key={`pinned-chal-${idx}`}
-                                            onClick={(e) => { e.stopPropagation(); toggleChallengeCheckbox(idx, task); }}
-                                            className="flex items-start gap-2 p-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer group"
-                                        >
-                                            <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-indigo-500'}`}>
-                                                {isChecked ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                                            </div>
-                                            <span className={`text-xs flex-1 break-words leading-snug ${isChecked ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
-                                                <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{contentLine}</ReactMarkdown>
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        {/* PROGRESS SECTION (Below Pinned) */}
-                        <div className="flex items-center gap-3 mt-2 mb-3 h-6 w-full">
-                            {/* Subtasks Badge */}
-                            {subtasksTotal > 0 && (
-                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
-                                    <ListTodo size={12} />
-                                    <span>{subtasksDone}/{subtasksTotal}</span>
-                                </div>
-                            )}
-                            
-                            {/* Consolidated Progress Bar - Full Width */}
-                            {subtasksTotal > 0 && (
-                                <div className="flex-1 flex flex-col justify-center h-full">
-                                    <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
-                                            style={{ width: `${progressPercent}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {!hideExtraDetails && col.id === 'doing' && task.description && (
-                             <CollapsibleSection title="Источник" icon={<FileText size={12}/>} isCard>
-                                 <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-h-40 overflow-y-auto custom-scrollbar-light">
-                                      <ReactMarkdown components={markdownComponents}>{task.description}</ReactMarkdown>
-                                 </div>
-                             </CollapsibleSection>
-                        )}
-
-                        {!hideExtraDetails && task.subtasks && task.subtasks.length > 0 && (
-                             <div className="mt-2 mb-2">
-                                 <CollapsibleSection 
-                                    title={`Чек-лист (${task.subtasks.filter(s => s.isCompleted).length}/${task.subtasks.length})`} 
-                                    icon={<ListTodo size={12}/>} 
-                                    isCard
-                                 >
-                                     <div className="space-y-1.5">
-                                         {task.subtasks.map(subtask => (
-                                             <div 
-                                                key={subtask.id} 
-                                                className="flex items-center gap-2 group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 p-1 rounded"
-                                                draggable
-                                                onDragStart={(e) => handleSubtaskDragStart(e, subtask.id, task.id)}
-                                                onDragOver={handleDragOver}
-                                                onDrop={(e) => handleSubtaskDrop(e, subtask.id, task)}
-                                                onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
-                                             >
-                                                 {/* DnD Grip - Desktop Only */}
-                                                 <div className="hidden md:block text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                                     <GripVertical size={12} />
-                                                 </div>
-
-                                                 <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500'}`}>
-                                                     {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                                                 </div>
-                                                 <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
-                                                     {subtask.text}
-                                                 </span>
-
-                                                 {/* Arrows for Mobile Only */}
-                                                 <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity md:hidden" onClick={(e) => e.stopPropagation()}>
-                                                     <button onClick={(e) => moveSubtaskManual(e, subtask.id, 'up', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded p-0.5"><ChevronUp size={10} /></button>
-                                                     <button onClick={(e) => moveSubtaskManual(e, subtask.id, 'down', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded p-0.5"><ChevronDown size={10} /></button>
-                                                 </div>
-
-                                                 {/* DELETE BUTTON */}
-                                                 <button onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(subtask.id, task.id); }} className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
-                                             </div>
-                                         ))}
-                                     </div>
-                                     <div className="mt-2 pt-2 border-t border-slate-200/50 dark:border-slate-700/50 flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                         <input 
-                                            type="text" 
-                                            placeholder="Добавить пункт..." 
-                                            className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded px-2 py-1 text-xs outline-none focus:border-indigo-500"
-                                            value={cardSubtaskInputs[task.id] || ''}
-                                            onChange={(e) => setCardSubtaskInputs(prev => ({...prev, [task.id]: e.target.value}))}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleAddSubtaskFromCard(task.id)}
-                                         />
-                                         <button 
-                                            onClick={() => handleAddSubtaskFromCard(task.id)}
-                                            className="p-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded"
-                                         >
-                                             <Plus size={14} />
-                                         </button>
-                                     </div>
-                                 </CollapsibleSection>
-                             </div>
-                        )}
-
-                        {!hideExtraDetails && (col.id === 'doing' || col.id === 'todo') && task.activeChallenge && !challengeDrafts[task.id] && (
+                        {/* DOING SPECIFIC MODULES */}
+                        {col.id === 'doing' && (
                             <>
-                            {(() => {
-                                const content = (
-                                    <div className={`p-2 rounded-lg border transition-all relative group ${!task.isChallengeCompleted && col.id !== 'doing' ? 'mt-2 mb-2' : ''} ${task.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
-                                         {task.isChallengeCompleted ? (
-                                            <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
-                                               <StaticChallengeRenderer content={task.activeChallenge || ''} mode="history" />
+                                {/* CHECKLIST (Collapsed) */}
+                                {task.subtasks && task.subtasks.length > 0 && (
+                                     <div className="mt-2 mb-2">
+                                         <CollapsibleSection 
+                                            title={`Чек-лист (${subtasksDone}/${subtasksTotal})`} 
+                                            icon={<ListTodo size={12}/>} 
+                                            isCard
+                                         >
+                                             <div className="space-y-1.5">
+                                                 {task.subtasks.map(subtask => (
+                                                     <div 
+                                                        key={subtask.id} 
+                                                        className="flex items-center gap-2 group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 p-1 rounded"
+                                                        onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
+                                                     >
+                                                         <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500'}`}>
+                                                             {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                                                         </div>
+                                                         <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                             {subtask.text}
+                                                         </span>
+                                                     </div>
+                                                 ))}
+                                             </div>
+                                         </CollapsibleSection>
+                                     </div>
+                                )}
+
+                                {/* STATUS BAR */}
+                                <div className="flex items-center gap-3 mt-2 mb-3 h-6 w-full">
+                                    {subtasksTotal > 0 && (
+                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
+                                            <ListTodo size={12} />
+                                            <span>{subtasksDone}/{subtasksTotal}</span>
+                                        </div>
+                                    )}
+                                    {subtasksTotal > 0 && (
+                                        <div className="flex-1 flex flex-col justify-center h-full">
+                                            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                                                <div 
+                                                    className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
+                                                    style={{ width: `${progressPercent}%` }}
+                                                />
                                             </div>
-                                         ) : (
-                                            <>
-                                                <div className="w-full">
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* ACTIVE CHALLENGE (Collapsed) */}
+                                {task.activeChallenge && !challengeDrafts[task.id] && (
+                                    <div className="mt-2 mb-2">
+                                        <CollapsibleSection 
+                                            title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
+                                            icon={<Zap size={12} className={task.isChallengeCompleted ? "text-emerald-500" : "text-indigo-500"} fill="currentColor" />} 
+                                            isCard
+                                        >
+                                            <div className={`p-2 rounded-lg border transition-all relative group ${task.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
+                                                 {task.isChallengeCompleted ? (
+                                                    <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
+                                                       <StaticChallengeRenderer content={task.activeChallenge || ''} mode="history" />
+                                                    </div>
+                                                 ) : (
                                                     <InteractiveChallenge 
                                                         content={task.activeChallenge || ''} 
                                                         onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
                                                     />
-                                                </div>
-                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-slate-800 rounded-full shadow-sm">
-                                                    <Tooltip content="Завершить челлендж">
-                                                        <button 
-                                                            onClick={(e) => toggleChallengeComplete(e, task)} 
-                                                            className="w-5 h-5 flex items-center justify-center rounded-full border-2 border-indigo-200 dark:border-indigo-700 hover:border-emerald-500 text-transparent hover:text-emerald-500 transition-all"
-                                                        >
-                                                            <Check size={12} strokeWidth={3} />
-                                                        </button>
-                                                    </Tooltip>
-                                                </div>
-                                            </>
-                                         )}
-
-                                        {task.isChallengeCompleted && hasChallengeAuthors && (
-                                            <Tooltip content="Сгенерировать новый челлендж">
-                                                <button 
-                                                    onClick={(e) => generateChallenge(e, task.id, task.content)} 
-                                                    disabled={generatingChallengeFor === task.id}
-                                                    className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700/50 text-emerald-600 dark:text-emerald-400 rounded text-[10px] font-bold uppercase tracking-wide hover:bg-emerald-50 dark:hover:bg-emerald-900/30 disabled:opacity-70 disabled:cursor-not-allowed"
-                                                >
-                                                    <RotateCw size={12} className={generatingChallengeFor === task.id ? "animate-spin" : ""} /> 
-                                                    Новый челлендж
-                                                </button>
-                                            </Tooltip>
-                                        )}
+                                                 )}
+                                            </div>
+                                        </CollapsibleSection>
                                     </div>
-                                );
-
-                                if (col.id === 'doing') {
-                                    return (
-                                        <div className="mt-2 mb-2">
-                                            <CollapsibleSection title={task.isChallengeCompleted ? "Челлендж (Готов)" : "Челлендж"} icon={<Zap size={12}/>} isCard>
-                                                {content}
-                                            </CollapsibleSection>
-                                        </div>
-                                    );
-                                } else {
-                                    return <div className="mt-2 mb-2">{content}</div>;
-                                }
-                            })()}
+                                )}
                             </>
                         )}
 
+                        {/* CHALLENGE DRAFTS */}
                         {challengeDrafts[task.id] && (
                             <div className="mt-2 mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 animate-in fade-in slide-in-from-top-2 relative">
                                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase mb-2"><Zap size={10} /> {config.challengeAuthors[0]?.name || 'Popper'}</div>
@@ -1047,14 +867,27 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <div className="mt-auto border-t border-slate-50 dark:border-slate-700 pt-3 flex flex-col gap-3">
                             <div className="flex gap-2 items-center justify-end">
                                {col.id === 'todo' && (
-                                    <Tooltip content="Взять в работу">
-                                        <button 
-                                            onClick={(e) => moveToDoing(e, task)} 
-                                            className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
-                                        >
-                                            <Play size={18} className="fill-current" />
-                                        </button>
-                                    </Tooltip>
+                                    <>
+                                        <Tooltip content="Взять в работу">
+                                            <button 
+                                                onClick={(e) => moveToDoing(e, task)} 
+                                                className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
+                                            >
+                                                <Play size={18} className="fill-current" />
+                                            </button>
+                                        </Tooltip>
+                                        <Tooltip content="Удалить">
+                                           <button 
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    if(window.confirm('Удалить задачу?')) deleteTask(task.id); 
+                                                }} 
+                                                className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg border border-transparent hover:border-red-100 dark:hover:border-red-800 transition-colors"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </Tooltip>
+                                    </>
                                )}
 
                                {col.id === 'doing' && (
@@ -1073,7 +906,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                    </Tooltip>
 
                                    {!challengeDrafts[task.id] && hasChallengeAuthors && (
-                                       <Tooltip content="Челлендж (ИИ)">
+                                       <Tooltip content="Челлендж">
                                            <button 
                                                 onClick={(e) => {
                                                     if (task.activeChallenge && !task.isChallengeCompleted) {
@@ -1101,34 +934,47 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                            </button>
                                        </Tooltip>
                                    )}
+                                   
+                                   <Tooltip content="Удалить">
+                                       <button 
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                if(window.confirm('Удалить задачу?')) deleteTask(task.id); 
+                                            }} 
+                                            className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg border border-transparent hover:border-red-100 dark:hover:border-red-800 transition-colors"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                   </Tooltip>
                                    </>
                                )}
                                
                                {col.id === 'done' && (
-                                    <Tooltip content="В Зал славы">
-                                        <button 
-                                            onClick={(e) => { 
-                                                e.stopPropagation(); 
-                                                if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
-                                            }} 
-                                            className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
-                                        >
-                                            <History size={18} /> 
-                                        </button>
-                                    </Tooltip>
+                                    <>
+                                        <Tooltip content="В Зал славы">
+                                            <button 
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
+                                                }} 
+                                                className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
+                                            >
+                                                <History size={18} /> 
+                                            </button>
+                                        </Tooltip>
+                                        <Tooltip content="Удалить">
+                                           <button 
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    if(window.confirm('Удалить задачу?')) deleteTask(task.id); 
+                                                }} 
+                                                className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg border border-transparent hover:border-red-100 dark:hover:border-red-800 transition-colors"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </Tooltip>
+                                    </>
                                )}
-
-                               <Tooltip content="Удалить">
-                                   <button 
-                                        onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            if(window.confirm('Удалить задачу?')) deleteTask(task.id); 
-                                        }} 
-                                        className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg border border-transparent hover:border-red-100 dark:hover:border-red-800 transition-colors"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                               </Tooltip>
 
                             </div>
                             <div className="flex gap-2 items-center justify-between">
@@ -1217,8 +1063,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         const task = getTaskForModal();
                         if (!task) return null;
                         
+                        const isTodo = task.column === 'todo';
+                        const isDoing = task.column === 'doing';
+                        const isDone = task.column === 'done';
+
                         return (
                             <div className="space-y-4">
+                                {/* TEXT EDITING */}
                                 {isEditingTask ? (
                                     <div className="space-y-2">
                                         <textarea 
@@ -1236,120 +1087,177 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         <div className="text-slate-800 dark:text-slate-200 text-sm font-normal leading-relaxed">
                                             <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
                                         </div>
-                                        <button 
-                                            onClick={() => { setEditTaskContent(task.content); setIsEditingTask(true); }}
-                                            className="absolute top-0 right-0 p-1 text-slate-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            <Edit3 size={16} />
-                                        </button>
+                                        <div className="absolute top-0 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Tooltip content="Редактировать">
+                                                <button onClick={() => { setEditTaskContent(task.content); setIsEditingTask(true); }} className="p-1 text-slate-300 hover:text-indigo-500">
+                                                    <Edit3 size={16} />
+                                                </button>
+                                            </Tooltip>
+                                        </div>
                                     </div>
                                 )}
 
-                                <div>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
-                                    <SphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
-                                </div>
+                                {/* CONTEXT (DESCRIPTION) - Collapsed by default */}
+                                {task.description && (
+                                    <CollapsibleSection title="Контекст" icon={<FileText size={14}/>}>
+                                        <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                            <ReactMarkdown components={markdownComponents}>{task.description}</ReactMarkdown>
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
 
-                                {task.activeChallenge && (
+                                {/* CHECKLIST - Doing/Done Only - Collapsed by default */}
+                                {(isDoing || isDone) && (
+                                    <CollapsibleSection title="Чек-лист" icon={<ListTodo size={14}/>}>
+                                        <div className="space-y-2">
+                                            {task.subtasks?.map(s => (
+                                                <div 
+                                                    key={s.id} 
+                                                    className="flex items-center gap-2 group"
+                                                    draggable
+                                                    onDragStart={(e) => handleSubtaskDragStart(e, s.id, task.id)}
+                                                    onDragOver={handleDragOver}
+                                                    onDrop={(e) => handleSubtaskDrop(e, s.id, task)}
+                                                >
+                                                    <div className="hidden md:block text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                         <GripVertical size={14} />
+                                                    </div>
+                                                    <button onClick={() => handleToggleSubtask(s.id)} className={s.isCompleted ? "text-emerald-500" : "text-slate-300 dark:text-slate-600 hover:text-indigo-500"}>
+                                                        {s.isCompleted ? <CheckCircle2 size={16}/> : <Circle size={16}/>}
+                                                    </button>
+                                                    <span className={`flex-1 text-sm ${s.isCompleted ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-300"}`}>{s.text}</span>
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Tooltip content={s.isPinned ? "Открепить" : "Закрепить"}>
+                                                            <button onClick={() => handleToggleSubtaskPin(s.id)} className={`p-1 ${s.isPinned ? "text-indigo-500" : "text-slate-300 dark:text-slate-600 hover:text-slate-500"}`}><Pin size={14}/></button>
+                                                        </Tooltip>
+                                                        <button onClick={() => handleDeleteSubtask(s.id)} className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-500"><X size={14}/></button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <div className="flex gap-2 mt-2">
+                                                <input 
+                                                    type="text" 
+                                                    className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm outline-none text-slate-800 dark:text-slate-200"
+                                                    placeholder="Новый пункт..."
+                                                    value={newSubtaskText}
+                                                    onChange={(e) => setNewSubtaskText(e.target.value)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                                                />
+                                                <button onClick={handleAddSubtask} disabled={!newSubtaskText.trim()} className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-50"><Plus size={16}/></button>
+                                            </div>
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+
+                                {/* ACTIVE/FINAL CHALLENGE - Doing/Done Only */}
+                                {(isDoing || isDone) && task.activeChallenge && (
                                     <CollapsibleSection 
-                                        title="Активный Челлендж" 
-                                        icon={<Zap size={14}/>}
+                                        title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
+                                        icon={<Zap size={14} className={task.isChallengeCompleted ? "text-emerald-500" : "text-indigo-500"} fill="currentColor"/>}
                                         actions={
                                             <Tooltip content="Удалить челлендж">
-                                                <button onClick={deleteActiveChallenge} className="text-slate-400 hover:text-red-500 transition-colors p-1">
+                                                <button onClick={(e) => deleteActiveChallenge(e)} className="text-slate-400 hover:text-red-500 transition-colors p-1 opacity-0 group-hover/header:opacity-100">
                                                     <Trash2 size={14} />
                                                 </button>
                                             </Tooltip>
                                         }
                                     >
                                         <div className="space-y-2">
-                                            <InteractiveChallenge 
-                                                content={task.activeChallenge} 
-                                                onToggle={(i) => toggleChallengeCheckbox(i, task)} 
-                                                onPin={(i) => handleToggleChallengeStepPin(i)}
-                                                pinnedIndices={task.pinnedChallengeIndices}
-                                            />
+                                            {task.isChallengeCompleted ? (
+                                                <StaticChallengeRenderer content={task.activeChallenge} mode="history" />
+                                            ) : (
+                                                <InteractiveChallenge 
+                                                    content={task.activeChallenge} 
+                                                    onToggle={(i) => toggleChallengeCheckbox(i, task)} 
+                                                    onPin={(i) => handleToggleChallengeStepPin(i)}
+                                                    pinnedIndices={task.pinnedChallengeIndices}
+                                                />
+                                            )}
                                         </div>
                                     </CollapsibleSection>
                                 )}
 
-                                <CollapsibleSection title="Чек-лист" icon={<ListTodo size={14}/>}>
-                                    <div className="space-y-2">
-                                        {task.subtasks?.map(s => (
-                                            <div 
-                                                key={s.id} 
-                                                className="flex items-center gap-2 group"
-                                                draggable
-                                                onDragStart={(e) => handleSubtaskDragStart(e, s.id, task.id)}
-                                                onDragOver={handleDragOver}
-                                                onDrop={(e) => handleSubtaskDrop(e, s.id, task)}
-                                            >
-                                                {/* Grip - Desktop Only */}
-                                                <div className="hidden md:block text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                                     <GripVertical size={14} />
-                                                </div>
-
-                                                <button onClick={() => handleToggleSubtask(s.id)} className={s.isCompleted ? "text-emerald-500" : "text-slate-300 dark:text-slate-600 hover:text-indigo-500"}>
-                                                    {s.isCompleted ? <CheckCircle2 size={16}/> : <Circle size={16}/>}
-                                                </button>
-                                                <span className={`flex-1 text-sm ${s.isCompleted ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-300"}`}>{s.text}</span>
-                                                
-                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {/* Arrows - Mobile Only */}
-                                                    <div className="flex flex-col gap-0.5 md:hidden" onClick={(e) => e.stopPropagation()}>
-                                                         <button onClick={(e) => moveSubtaskManual(e, s.id, 'up', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded p-0.5"><ChevronUp size={10} /></button>
-                                                         <button onClick={(e) => moveSubtaskManual(e, s.id, 'down', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded p-0.5"><ChevronDown size={10} /></button>
+                                {/* HISTORY & CONSULTATIONS - Doing/Done Only */}
+                                {(isDoing || isDone) && (
+                                    <>
+                                    {task.challengeHistory && task.challengeHistory.length > 0 && (
+                                        <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
+                                            <div className="space-y-4">
+                                                {task.challengeHistory?.map((h, i) => (
+                                                    <div key={`ch-${i}`} className="text-sm bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 relative group">
+                                                        <div className="text-[10px] font-bold text-slate-400 mb-1">Архивный челлендж</div>
+                                                        <StaticChallengeRenderer content={h} mode="history" />
+                                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Tooltip content="Удалить">
+                                                                <button onClick={() => deleteChallengeFromHistory(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={14}/></button>
+                                                            </Tooltip>
+                                                        </div>
                                                     </div>
-
-                                                    <Tooltip content={s.isPinned ? "Открепить" : "Закрепить"}>
-                                                        <button onClick={() => handleToggleSubtaskPin(s.id)} className={`p-1 ${s.isPinned ? "text-indigo-500" : "text-slate-300 dark:text-slate-600 hover:text-slate-500"}`}><Pin size={14}/></button>
-                                                    </Tooltip>
-                                                    <button onClick={() => handleDeleteSubtask(s.id)} className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-500"><X size={14}/></button>
-                                                </div>
+                                                ))}
                                             </div>
-                                        ))}
-                                        <div className="flex gap-2 mt-2">
-                                            <input 
-                                                type="text" 
-                                                className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm outline-none text-slate-800 dark:text-slate-200"
-                                                placeholder="Новый пункт..."
-                                                value={newSubtaskText}
-                                                onChange={(e) => setNewSubtaskText(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
-                                            />
-                                            <button onClick={handleAddSubtask} disabled={!newSubtaskText.trim()} className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-50"><Plus size={16}/></button>
-                                        </div>
-                                    </div>
-                                </CollapsibleSection>
-
-                                {(task.challengeHistory?.length > 0 || task.consultationHistory?.length > 0) && (
-                                    <CollapsibleSection title="История и Консультации" icon={<History size={14}/>}>
-                                        <div className="space-y-4">
-                                            {task.challengeHistory?.map((h, i) => (
-                                                <div key={`ch-${i}`} className="text-sm bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 relative group">
-                                                    <div className="text-[10px] font-bold text-slate-400 mb-1">Архивный челлендж</div>
-                                                    <StaticChallengeRenderer content={h} mode="history" />
-                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Tooltip content="Удалить">
-                                                            <button onClick={() => deleteChallengeFromHistory(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={14}/></button>
-                                                        </Tooltip>
+                                        </CollapsibleSection>
+                                    )}
+                                    {task.consultationHistory && task.consultationHistory.length > 0 && (
+                                        <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}>
+                                            <div className="space-y-4">
+                                                {task.consultationHistory?.map((h, i) => (
+                                                    <div key={`cons-${i}`} className="text-sm bg-violet-50 dark:bg-violet-900/10 p-3 rounded-lg border border-violet-100 dark:border-violet-900/30 relative group">
+                                                        <div className="text-[10px] font-bold text-violet-400 mb-1 flex items-center gap-1"><Bot size={10}/> Консультация</div>
+                                                        <ReactMarkdown components={markdownComponents}>{h}</ReactMarkdown>
+                                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Tooltip content="Удалить">
+                                                                <button onClick={() => deleteConsultation(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={14}/></button>
+                                                            </Tooltip>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
-                                            {task.consultationHistory?.map((h, i) => (
-                                                <div key={`cons-${i}`} className="text-sm bg-violet-50 dark:bg-violet-900/10 p-3 rounded-lg border border-violet-100 dark:border-violet-900/30 relative group">
-                                                    <div className="text-[10px] font-bold text-violet-400 mb-1 flex items-center gap-1"><Bot size={10}/> Консультация</div>
-                                                    <ReactMarkdown components={markdownComponents}>{h}</ReactMarkdown>
-                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Tooltip content="Удалить">
-                                                            <button onClick={() => deleteConsultation(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={14}/></button>
-                                                        </Tooltip>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </CollapsibleSection>
+                                                ))}
+                                            </div>
+                                        </CollapsibleSection>
+                                    )}
+                                    </>
                                 )}
+
+                                {/* SPHERES */}
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
+                                    <SphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
+                                </div>
+
+                                {/* ACTION BUTTONS */}
+                                <div className="flex justify-end gap-2 pt-4 border-t border-slate-50 dark:border-slate-700/50">
+                                    {!isTodo && (
+                                        <Tooltip content={task.column === 'done' ? "Вернуть в работу" : "Завершить"}>
+                                            <button 
+                                                onClick={(e) => handleQuickComplete(e, task)} 
+                                                className={`p-2 rounded-lg border transition-all opacity-0 hover:opacity-100 ${
+                                                    task.column === 'done' 
+                                                    ? 'border-emerald-500 bg-emerald-500 text-white' 
+                                                    : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 dark:hover:border-emerald-400 text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400'
+                                                }`}
+                                            >
+                                                <Check size={16} />
+                                            </button>
+                                        </Tooltip>
+                                    )}
+                                    
+                                    <Tooltip content="Редактировать">
+                                        <button onClick={() => setIsEditingTask(true)} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors">
+                                            <Edit3 size={18} />
+                                        </button>
+                                    </Tooltip>
+
+                                    <Tooltip content="Удалить">
+                                        <button 
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                if(window.confirm('Удалить задачу?')) { deleteTask(task.id); setActiveModal(null); }
+                                            }} 
+                                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg border border-transparent hover:border-red-100 dark:hover:border-red-800 transition-colors"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </Tooltip>
+                                </div>
                             </div>
                         );
                     })()}
