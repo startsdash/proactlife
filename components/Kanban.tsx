@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Shuffle } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Shuffle, Edit3 } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP } from '../constants';
@@ -287,6 +287,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   // NEW TASK CREATION STATE
   const [newTaskContent, setNewTaskContent] = useState('');
 
+  // EDIT TASK STATE
+  const [isEditingTask, setIsEditingTask] = useState(false);
+  const [editTaskContent, setEditTaskContent] = useState('');
+
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
 
@@ -323,6 +327,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     }
   }, [initialTaskId, tasks, onClearInitialTask]);
 
+  useEffect(() => {
+      setIsEditingTask(false);
+  }, [activeModal]);
+
   const columns = [
     { id: 'todo', title: 'Выполнить', color: 'border-slate-200 dark:border-slate-700' },
     { id: 'doing', title: 'В процессе', color: 'border-indigo-400' },
@@ -339,6 +347,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       };
       addTask(newTask);
       setNewTaskContent('');
+  };
+
+  const handleSaveTaskContent = () => {
+      const task = getTaskForModal();
+      if (!task) return;
+      if (editTaskContent.trim()) {
+          updateTask({ ...task, content: editTaskContent });
+          setIsEditingTask(false);
+      }
   };
 
   const canMoveTask = (task: Task, targetColId: string): boolean => {
@@ -1144,236 +1161,154 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
       {/* Columns */}
       <div className="flex-1 overflow-auto p-4 md:p-8 pt-4 custom-scrollbar-light">
-          {/* Mobile Tabs */}
-          <div className="md:hidden flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mb-4 shrink-0">
-             {columns.map(c => (
-                 <button key={c.id} onClick={() => setActiveMobileCol(c.id as any)} className={`flex-1 py-2 text-xs font-bold uppercase rounded-lg transition-all ${activeMobileCol === c.id ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>
-                     {c.title}
-                 </button>
-             ))}
-          </div>
-
-          <div className="flex gap-4 md:gap-6 min-h-full items-start">
-              {/* Desktop: All Columns. Mobile: Active Column */}
-              <div className="hidden md:contents">
-                  {columns.map(col => (
-                      <div key={col.id} className="flex-1 min-w-[320px]">
-                          {renderColumn(col)}
-                      </div>
-                  ))}
-              </div>
-              <div className="md:hidden w-full">
-                  {renderColumn(columns.find(c => c.id === activeMobileCol)!)}
-              </div>
-          </div>
+         <div className="flex flex-col md:flex-row gap-4 h-full min-h-0">
+            {columns.map(col => (
+               <div key={col.id} className="flex-1 min-w-[280px] flex flex-col min-h-0 h-full">
+                   {renderColumn(col)}
+               </div>
+            ))}
+         </div>
       </div>
 
-      {/* Modal */}
       {activeModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setActiveModal(null)}>
-            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-               {/* Modal Content Logic */}
-               {(() => {
-                   const task = tasks.find(t => t.id === activeModal.taskId);
-                   if (!task) return null;
+        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setActiveModal(null)}>
+            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col" onClick={(e) => e.stopPropagation()}>
+                
+                <div className="flex justify-between items-start mb-4 shrink-0">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                        {activeModal.type === 'stuck' && 'Психолог продуктивности'}
+                        {activeModal.type === 'details' && 'Детали задачи'}
+                    </h3>
+                    <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button>
+                </div>
 
-                   return (
-                       <>
-                           <div className="flex justify-between items-start mb-6">
-                               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                                   {activeModal.type === 'stuck' ? 'Терапия продуктивности' : 'Детали задачи'}
-                               </h3>
-                               <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24}/></button>
-                           </div>
+                <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0">
+                    {activeModal.type === 'stuck' && (
+                        <div className="space-y-4">
+                            {isLoading ? (
+                                <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+                                    <Bot size={48} className="animate-bounce mb-4 text-violet-400" />
+                                    <p className="text-sm">Анализирую ситуацию...</p>
+                                </div>
+                            ) : aiResponse ? (
+                                <div className="space-y-4">
+                                    <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-800">
+                                        <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase mb-2"><Bot size={14}/> Совет</div>
+                                        <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown></div>
+                                    </div>
+                                    <button onClick={saveTherapyResponse} className="w-full py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm">Сохранить в историю</button>
+                                </div>
+                            ) : (
+                                <div className="text-center text-slate-400 py-10">Не удалось получить ответ.</div>
+                            )}
+                        </div>
+                    )}
 
-                           <div className="mb-6">
-                               <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 mb-4">
-                                   <div className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
-                                       <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
-                                   </div>
-                               </div>
-                               
-                               {/* Restore Sphere Selector */}
-                               {activeModal.type === 'details' && (
-                                   <div className="mb-4">
-                                       <span className="text-xs font-bold text-slate-400 uppercase mb-2 block">Сферы</span>
-                                       <SphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
-                                   </div>
-                               )}
-                               
-                               {/* Subtasks Section for Details Modal */}
-                               {activeModal.type === 'details' && (
-                                   <div className="mb-6">
-                                       {/* DEFAULT CLOSED (isOpen=false implied by default) */}
-                                       <CollapsibleSection title={`Чек-лист (${task.subtasks?.filter(s => s.isCompleted).length || 0}/${task.subtasks?.length || 0})`} icon={<ListTodo size={14}/>}>
-                                           <div className="space-y-2 mb-3">
-                                               {task.subtasks?.map(subtask => (
-                                                   <div 
-                                                        key={subtask.id} 
-                                                        className="flex items-start gap-2 group min-h-[28px] items-center"
-                                                        draggable
-                                                        onDragStart={(e) => handleSubtaskDragStart(e, subtask.id, task.id)}
-                                                        onDragOver={handleDragOver}
-                                                        onDrop={(e) => handleSubtaskDrop(e, subtask.id, task)}
-                                                   >
-                                                       <div className="mt-0.5 cursor-move text-slate-300 hover:text-slate-500">
-                                                            <GripVertical size={14} />
-                                                       </div>
-                                                       <button onClick={() => handleToggleSubtask(subtask.id)} className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 hover:text-indigo-500'}`}>
-                                                           {subtask.isCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
-                                                       </button>
-                                                       <span className={`text-sm flex-1 break-words min-w-0 ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{subtask.text}</span>
-                                                       
-                                                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                           {/* Manual Reorder Arrows (Mobile Friendly) */}
-                                                           <div className="flex flex-col gap-0.5">
-                                                                <button onClick={(e) => moveSubtaskManual(e, subtask.id, 'up', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded p-0.5"><ChevronUp size={10} /></button>
-                                                                <button onClick={(e) => moveSubtaskManual(e, subtask.id, 'down', task)} className="text-slate-300 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded p-0.5"><ChevronDown size={10} /></button>
-                                                           </div>
-                                                           
-                                                           <button 
-                                                               onClick={() => handleDeleteSubtask(subtask.id)} 
-                                                               className="text-slate-300 hover:text-red-500 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                                                           >
-                                                               <X size={14}/>
-                                                           </button>
-                                                       </div>
-                                                   </div>
-                                               ))}
-                                           </div>
-                                           
-                                           <div className="flex gap-2">
-                                               <input 
-                                                   type="text" 
-                                                   placeholder="Добавить подзадачу..." 
-                                                   className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
-                                                   value={newSubtaskText}
-                                                   onChange={(e) => setNewSubtaskText(e.target.value)}
-                                                   onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
-                                               />
-                                               <button onClick={handleAddSubtask} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40"><Plus size={18}/></button>
-                                           </div>
-                                       </CollapsibleSection>
-                                   </div>
-                               )}
-
-                               {getTaskForModal()?.activeChallenge && (
-                                  <CollapsibleSection 
-                                    title={getTaskForModal()?.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
-                                    icon={<Zap size={14}/>}
-                                    actions={
-                                        <button onClick={(e) => { e.stopPropagation(); deleteActiveChallenge(); }} className="text-slate-400 hover:text-red-500 transition-colors p-1">
-                                            <Trash2 size={14} />
+                    {activeModal.type === 'details' && (() => {
+                        const task = getTaskForModal();
+                        if (!task) return null;
+                        
+                        return (
+                            <div className="space-y-4">
+                                {isEditingTask ? (
+                                    <div className="space-y-2">
+                                        <textarea 
+                                            value={editTaskContent} 
+                                            onChange={(e) => setEditTaskContent(e.target.value)} 
+                                            className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-800 dark:text-slate-200"
+                                        />
+                                        <div className="flex justify-end gap-2">
+                                            <button onClick={() => setIsEditingTask(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">Отмена</button>
+                                            <button onClick={handleSaveTaskContent} className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">Сохранить</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="group relative pr-8">
+                                        <div className="text-slate-800 dark:text-slate-200 text-sm font-normal leading-relaxed">
+                                            <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
+                                        </div>
+                                        <button 
+                                            onClick={() => { setEditTaskContent(task.content); setIsEditingTask(true); }}
+                                            className="absolute top-0 right-0 p-1 text-slate-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <Edit3 size={16} />
                                         </button>
-                                    }
-                                  >
-                                     <div className={`p-3 rounded-lg border relative group ${getTaskForModal()?.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
-                                        
-                                        {!getTaskForModal()?.isChallengeCompleted && (
-                                            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                                <Tooltip content="Завершить челлендж">
-                                                    <button 
-                                                        onClick={(e) => { 
-                                                            const t = getTaskForModal();
-                                                            if (t) toggleChallengeComplete(e, t); 
-                                                        }}
-                                                        className="w-6 h-6 rounded-full bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-700 hover:border-emerald-500 dark:hover:border-emerald-500 text-transparent hover:text-emerald-500 flex items-center justify-center transition-all shadow-sm"
-                                                    >
-                                                        <Check size={14} strokeWidth={3} />
-                                                    </button>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
+                                    <SphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
+                                </div>
+
+                                {task.activeChallenge && (
+                                    <CollapsibleSection title="Активный Челлендж" icon={<Zap size={14}/>}>
+                                        <div className="space-y-2">
+                                            <InteractiveChallenge 
+                                                content={task.activeChallenge} 
+                                                onToggle={(i) => toggleChallengeCheckbox(i, task)} 
+                                                onPin={(i) => handleToggleChallengeStepPin(i)}
+                                                pinnedIndices={task.pinnedChallengeIndices}
+                                            />
+                                            <div className="flex justify-end pt-2">
+                                                <button onClick={deleteActiveChallenge} className="text-xs text-red-400 hover:text-red-600 flex items-center gap-1"><Trash2 size={12}/> Удалить челлендж</button>
+                                            </div>
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+
+                                <CollapsibleSection title="Чек-лист" icon={<ListTodo size={14}/>}>
+                                    <div className="space-y-2">
+                                        {task.subtasks?.map(s => (
+                                            <div key={s.id} className="flex items-center gap-2 group">
+                                                <button onClick={() => handleToggleSubtask(s.id)} className={s.isCompleted ? "text-emerald-500" : "text-slate-300 dark:text-slate-600"}>
+                                                    {s.isCompleted ? <CheckCircle2 size={16}/> : <Square size={16}/>}
+                                                </button>
+                                                <span className={`flex-1 text-sm ${s.isCompleted ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-300"}`}>{s.text}</span>
+                                                <Tooltip content={s.isPinned ? "Открепить" : "Закрепить"}>
+                                                    <button onClick={() => handleToggleSubtaskPin(s.id)} className={`opacity-0 group-hover:opacity-100 p-1 ${s.isPinned ? "text-indigo-500" : "text-slate-300 dark:text-slate-600 hover:text-slate-500"}`}><Pin size={14}/></button>
                                                 </Tooltip>
+                                                <button onClick={() => handleDeleteSubtask(s.id)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-red-500"><X size={14}/></button>
                                             </div>
-                                        )}
-
-                                        <span className={`text-[10px] font-bold uppercase tracking-wider block mb-2 ${getTaskForModal()?.isChallengeCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>
-                                           {getTaskForModal()?.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}
-                                        </span>
-                                        
-                                        {getTaskForModal()?.isChallengeCompleted ? (
-                                            <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
-                                              <StaticChallengeRenderer content={getTaskForModal()?.activeChallenge || ''} mode="history" />
-                                            </div>
-                                        ) : (
-                                            <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
-                                              <InteractiveChallenge 
-                                                content={getTaskForModal()?.activeChallenge || ''} 
-                                                onToggle={(idx) => {
-                                                    if (getTaskForModal()) {
-                                                        toggleChallengeCheckbox(idx, getTaskForModal()!);
-                                                    }
-                                                }}
-                                                onPin={(idx) => handleToggleChallengeStepPin(idx)}
-                                                pinnedIndices={getTaskForModal()?.pinnedChallengeIndices} 
-                                              />
-                                            </div>
-                                        )}
-                                     </div>
-                                  </CollapsibleSection>
-                                )}
-
-                                {getTaskForModal()?.challengeHistory && getTaskForModal()!.challengeHistory!.length > 0 && (
-                                  <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
-                                     <div className="space-y-4">
-                                        {getTaskForModal()!.challengeHistory!.map((challenge, index) => (
-                                           <div key={index} className="py-2 border-b border-slate-100 dark:border-slate-700 last:border-0 relative group">
-                                              <div className="absolute right-0 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                  <button onClick={() => deleteChallengeFromHistory(index)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={14}/></button>
-                                              </div>
-                                              <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200 pr-6">
-                                                 <StaticChallengeRenderer content={challenge} mode="history" />
-                                              </div>
-                                           </div>
                                         ))}
-                                     </div>
-                                  </CollapsibleSection>
-                                )}
-                                
-                                {getTaskForModal()?.consultationHistory && getTaskForModal()!.consultationHistory!.length > 0 && (
-                                  <CollapsibleSection title="История консультаций" icon={<Bot size={14}/>}>
-                                     <ul className="space-y-4">
-                                        {getTaskForModal()!.consultationHistory!.map((consultation, index) => (
-                                           <li key={index} className="text-sm text-slate-900 dark:text-slate-200 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0 relative group">
-                                              <div className="absolute right-0 top-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                  <button onClick={() => deleteConsultation(index)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={14}/></button>
-                                              </div>
-                                              <div className="pr-6">
-                                                  <ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown>
-                                              </div>
-                                           </li>
-                                        ))}
-                                     </ul>
-                                  </CollapsibleSection>
-                                )}
+                                        <div className="flex gap-2 mt-2">
+                                            <input 
+                                                type="text" 
+                                                className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm outline-none text-slate-800 dark:text-slate-200"
+                                                placeholder="Новый пункт..."
+                                                value={newSubtaskText}
+                                                onChange={(e) => setNewSubtaskText(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                                            />
+                                            <button onClick={handleAddSubtask} disabled={!newSubtaskText.trim()} className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-50"><Plus size={16}/></button>
+                                        </div>
+                                    </div>
+                                </CollapsibleSection>
 
-                               {activeModal.type === 'stuck' && (
-                                   <div className="space-y-4">
-                                       {isLoading ? (
-                                           <div className="flex flex-col items-center justify-center py-8 text-slate-400">
-                                               <div className="animate-spin mb-2"><RotateCw size={24} /></div>
-                                               <p className="text-xs">Анализируем контекст...</p>
-                                           </div>
-                                       ) : aiResponse ? (
-                                           <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-100 dark:border-amber-800/50">
-                                               <div className="flex items-center gap-2 mb-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase"><Bot size={14} /> Совет Консультанта</div>
-                                               <div className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed"><ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown></div>
-                                           </div>
-                                       ) : null}
-                                       
-                                       {aiResponse && (
-                                           <button onClick={saveTherapyResponse} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"><Save size={18} /> Сохранить в историю</button>
-                                       )}
-                                   </div>
-                               )}
-                           </div>
-                           
-                           {activeModal.type === 'details' && (
-                               <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-700">
-                                   <button onClick={() => setActiveModal(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium">Готово</button>
-                               </div>
-                           )}
-                       </>
-                   );
-               })()}
+                                {(task.challengeHistory?.length > 0 || task.consultationHistory?.length > 0) && (
+                                    <CollapsibleSection title="История и Консультации" icon={<History size={14}/>}>
+                                        <div className="space-y-4">
+                                            {task.challengeHistory?.map((h, i) => (
+                                                <div key={`ch-${i}`} className="text-sm bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 relative group">
+                                                    <div className="text-[10px] font-bold text-slate-400 mb-1">Архивный челлендж</div>
+                                                    <StaticChallengeRenderer content={h} mode="history" />
+                                                    <button onClick={() => deleteChallengeFromHistory(i)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500"><X size={14}/></button>
+                                                </div>
+                                            ))}
+                                            {task.consultationHistory?.map((h, i) => (
+                                                <div key={`cons-${i}`} className="text-sm bg-violet-50 dark:bg-violet-900/10 p-3 rounded-lg border border-violet-100 dark:border-violet-900/30 relative group">
+                                                    <div className="text-[10px] font-bold text-violet-400 mb-1 flex items-center gap-1"><Bot size={10}/> Консультация</div>
+                                                    <ReactMarkdown components={markdownComponents}>{h}</ReactMarkdown>
+                                                    <button onClick={() => deleteConsultation(i)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500"><X size={14}/></button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+                            </div>
+                        );
+                    })()}
+                </div>
             </div>
         </div>
       )}
