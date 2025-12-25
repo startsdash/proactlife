@@ -763,7 +763,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         
                         {/* Sphere Indicators */}
                         {task.spheres && task.spheres.length > 0 && (
-                            <div className="absolute top-2 left-3 flex gap-1 z-10">
+                            <div className="absolute top-4 left-3 flex gap-1 z-10">
                                 {task.spheres.map(s => {
                                     const sp = SPHERES.find(x => x.id === s);
                                     return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
@@ -857,7 +857,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                      <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
                                                          <button 
                                                             onClick={(e) => toggleChallengeCompleteFromCard(e, task)}
-                                                            className={`w-5 h-5 rounded-full border flex items-center justify-center bg-white dark:bg-slate-800 transition-colors ${task.isChallengeCompleted ? 'border-emerald-500 text-emerald-500' : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 hover:text-emerald-500'}`}
+                                                            className={`w-5 h-5 rounded-full border flex items-center justify-center bg-white dark:bg-slate-800 transition-colors ${task.isChallengeCompleted ? 'border-emerald-500 text-emerald-500' : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 hover:text-emerald-500 text-transparent'}`}
                                                          >
                                                              <Check size={12} />
                                                          </button>
@@ -1030,7 +1030,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                        )}
                                    </div>
                                    
-                                   <div className="flex gap-2 pl-4 border-l border-slate-100 dark:border-slate-700">
+                                   <div className="flex gap-2">
                                        <Tooltip content="Редактировать">
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); setActiveModal({taskId: task.id, type: 'details'}); setIsEditingTask(true); }}
@@ -1056,18 +1056,20 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                
                                {col.id === 'done' && (
                                     <>
-                                        <div className="flex gap-2 ml-auto">
+                                        <div className="flex gap-2">
                                             <Tooltip content="В Зал славы">
                                                 <button 
                                                     onClick={(e) => { 
                                                         e.stopPropagation(); 
                                                         if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
                                                     }} 
-                                                    className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
+                                                    className="p-2 text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg border border-transparent hover:border-amber-100 dark:hover:border-amber-800 transition-colors"
                                                 >
                                                     <History size={18} /> 
                                                 </button>
                                             </Tooltip>
+                                        </div>
+                                        <div className="flex gap-2 ml-auto">
                                             <Tooltip content="Удалить">
                                                <button 
                                                     onClick={(e) => { 
@@ -1307,7 +1309,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                      <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
                                                          <button 
                                                             onClick={() => toggleChallengeComplete()}
-                                                            className={`w-5 h-5 rounded-full border flex items-center justify-center bg-white dark:bg-slate-800 transition-colors ${task.isChallengeCompleted ? 'border-emerald-500 text-emerald-500' : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 hover:text-emerald-500'}`}
+                                                            className={`w-5 h-5 rounded-full border flex items-center justify-center bg-white dark:bg-slate-800 transition-colors ${task.isChallengeCompleted ? 'border-emerald-500 text-emerald-500' : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 hover:text-emerald-500 text-transparent'}`}
                                                          >
                                                              <Check size={12} />
                                                          </button>
