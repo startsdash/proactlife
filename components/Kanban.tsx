@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
@@ -1072,12 +1073,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                            <Tooltip content="Челлендж">
                                                <button 
                                                     onClick={(e) => {
+                                                        e.stopPropagation();
                                                         if (task.activeChallenge && !task.isChallengeCompleted) {
-                                                            e.stopPropagation();
                                                             alert("Необходимо завершить активный челлендж");
                                                             return;
                                                         }
-                                                        generateChallenge(e, task.id, task.content);
+                                                        if (window.confirm("Создать челлендж?")) {
+                                                            generateChallenge(e, task.id, task.content);
+                                                        }
                                                     }} 
                                                     disabled={generatingChallengeFor === task.id} 
                                                     className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors disabled:opacity-50"
@@ -1090,7 +1093,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                        {hasKanbanTherapist && (
                                            <Tooltip content="Консультант (ИИ)">
                                                <button 
-                                                    onClick={(e) => openTherapy(e, task)} 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (window.confirm("Запустить ИИ-консультанта?")) {
+                                                            openTherapy(e, task);
+                                                        }
+                                                    }} 
                                                     className="p-2 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg border border-transparent hover:border-violet-100 dark:hover:border-violet-800"
                                                >
                                                    <Bot size={18} /> 
