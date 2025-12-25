@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP } from '../constants';
@@ -561,6 +561,54 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
       updateTask({ ...task, subtasks: task.subtasks.filter(s => s.id !== subtaskId) });
   };
 
+  // Subtask DnD Handlers
+  const handleSubtaskDragStart = (e: React.DragEvent, subtaskId: string) => {
+      e.dataTransfer.setData('subtaskId', subtaskId);
+      e.dataTransfer.effectAllowed = 'move';
+      // Prevent bubble up to column DnD
+      e.stopPropagation();
+  };
+
+  const handleSubtaskDrop = (e: React.DragEvent, targetSubtaskId: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const draggedSubtaskId = e.dataTransfer.getData('subtaskId');
+      if (!draggedSubtaskId) return;
+
+      const task = getTaskForModal();
+      if (!task || !task.subtasks) return;
+
+      const subtasks = [...task.subtasks];
+      const dragIdx = subtasks.findIndex(s => s.id === draggedSubtaskId);
+      const targetIdx = subtasks.findIndex(s => s.id === targetSubtaskId);
+
+      if (dragIdx === -1 || targetIdx === -1 || dragIdx === targetIdx) return;
+
+      const [moved] = subtasks.splice(dragIdx, 1);
+      subtasks.splice(targetIdx, 0, moved);
+
+      updateTask({ ...task, subtasks });
+  };
+
+  const moveSubtaskManual = (subtaskId: string, direction: 'up' | 'down') => {
+      const task = getTaskForModal();
+      if (!task || !task.subtasks) return;
+      
+      const subtasks = [...task.subtasks];
+      const index = subtasks.findIndex(s => s.id === subtaskId);
+      if (index === -1) return;
+
+      if (direction === 'up' && index > 0) {
+          [subtasks[index], subtasks[index - 1]] = [subtasks[index - 1], subtasks[index]];
+      } else if (direction === 'down' && index < subtasks.length - 1) {
+          [subtasks[index], subtasks[index + 1]] = [subtasks[index + 1], subtasks[index]];
+      } else {
+          return;
+      }
+      
+      updateTask({ ...task, subtasks });
+  };
+
   // Delete Helpers
   const deleteActiveChallenge = () => {
       const task = getTaskForModal();
@@ -1075,17 +1123,32 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, updateTask, de
                                        <CollapsibleSection title={`Чек-лист (${task.subtasks?.filter(s => s.isCompleted).length || 0}/${task.subtasks?.length || 0})`} icon={<ListTodo size={14}/>}>
                                            <div className="space-y-2 mb-3">
                                                {task.subtasks?.map(subtask => (
-                                                   <div key={subtask.id} className="flex items-start gap-2 group min-h-[28px] items-center">
+                                                   <div 
+                                                        key={subtask.id} 
+                                                        className="flex items-start gap-2 group min-h-[28px] items-center"
+                                                        draggable
+                                                        onDragStart={(e) => handleSubtaskDragStart(e, subtask.id)}
+                                                        onDragOver={handleDragOver}
+                                                        onDrop={(e) => handleSubtaskDrop(e, subtask.id)}
+                                                   >
+                                                       <div className="mt-0.5 cursor-move text-slate-300 hover:text-slate-500">
+                                                            <GripVertical size={14} />
+                                                       </div>
                                                        <button onClick={() => handleToggleSubtask(subtask.id)} className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 hover:text-indigo-500'}`}>
                                                            {subtask.isCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
                                                        </button>
                                                        <span className={`text-sm flex-1 break-words min-w-0 ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{subtask.text}</span>
                                                        
-                                                       <div className="flex items-center gap-1">
-                                                           {/* Pin button removed from modal as requested */}
+                                                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                           {/* Manual Reorder Arrows (Mobile Friendly) */}
+                                                           <div className="flex flex-col gap-0.5">
+                                                                <button onClick={() => moveSubtaskManual(subtask.id, 'up')} className="text-slate-300 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded p-0.5"><ChevronUp size={10} /></button>
+                                                                <button onClick={() => moveSubtaskManual(subtask.id, 'down')} className="text-slate-300 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded p-0.5"><ChevronDown size={10} /></button>
+                                                           </div>
+                                                           
                                                            <button 
                                                                onClick={() => handleDeleteSubtask(subtask.id)} 
-                                                               className="text-slate-300 hover:text-red-500 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                                               className="text-slate-300 hover:text-red-500 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                                                            >
                                                                <X size={14}/>
                                                            </button>
