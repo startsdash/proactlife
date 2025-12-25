@@ -915,16 +915,21 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     return (
                     <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group border-l-4 ${borderClass} overflow-hidden`}>
                         
-                        {/* Sphere Selector (Top Right) */}
-                        <div className="absolute top-3 right-3 z-20">
-                            <CardSphereSelector task={task} updateTask={updateTask} />
+                        {/* HEADER: Title + Sphere Selector */}
+                        <div className="flex justify-between items-start gap-2 mb-2">
+                             <div className="flex-1 pt-1 min-w-0">
+                                {task.title ? (
+                                    <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-snug break-words">{task.title}</h4>
+                                ) : null}
+                             </div>
+                             
+                             <div className="shrink-0 z-20 -mr-1 -mt-1">
+                                <CardSphereSelector task={task} updateTask={updateTask} />
+                             </div>
                         </div>
 
                         {/* CONTENT */}
-                        <div className="mt-4 mb-3 pr-20">
-                            {task.title && (
-                                <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-1 leading-snug">{task.title}</h4>
-                            )}
+                        <div className="mb-3">
                             <div className={`text-slate-700 dark:text-slate-300 font-normal text-xs leading-relaxed line-clamp-4 ${!task.title ? 'text-sm' : ''}`}>
                                  <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
                             </div>
