@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
@@ -768,15 +767,28 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 {task.subtasks?.map(subtask => (
                     <div
                     key={subtask.id}
+                    draggable
+                    onDragStart={(e) => handleSubtaskDragStart(e, subtask.id, task.id)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleSubtaskDrop(e, subtask.id, task)}
                     className="flex items-center gap-2 group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 p-1 rounded"
                     onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
                     >
+                        <div className="text-slate-300 dark:text-slate-600 cursor-move opacity-0 group-hover:opacity-100 -ml-1 transition-opacity">
+                             <GripVertical size={12} />
+                        </div>
                         <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500'}`}>
                             {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
                         </div>
                         <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
                             {subtask.text}
                         </span>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(subtask.id, task.id); }}
+                            className="text-slate-300 dark:text-slate-600 hover:text-red-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <X size={12} />
+                        </button>
                     </div>
                 ))}
                 {/* Input for new subtask */}
