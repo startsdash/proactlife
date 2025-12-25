@@ -258,15 +258,7 @@ const App: React.FC = () => {
   });
 
   const addTask = (t: Task) => setData(p => ({ ...p, tasks: [...p.tasks, t] }));
-  const updateTask = (t: Task) => setData(p => {
-      // Check if task exists, if not add it (allows updateTask to handle creation if ID not found)
-      const exists = p.tasks.some(x => x.id === t.id);
-      if (exists) {
-          return { ...p, tasks: p.tasks.map(x => x.id === t.id ? t : x) };
-      } else {
-          return { ...p, tasks: [...p.tasks, t] };
-      }
-  });
+  const updateTask = (t: Task) => setData(p => ({ ...p, tasks: p.tasks.map(x => x.id === t.id ? t : x) }));
   const deleteTask = (id: string) => setData(p => ({ ...p, tasks: p.tasks.filter(t => t.id !== id) }));
   const archiveTask = (id: string) => setData(p => ({ ...p, tasks: p.tasks.map(t => t.id === id ? { ...t, isArchived: true } : t) }));
   const restoreTask = (id: string) => setData(p => ({ ...p, tasks: p.tasks.map(t => t.id === id ? { ...t, isArchived: false, column: 'done' } : t) }));
