@@ -59,6 +59,19 @@ const markdownComponents = {
 };
 
 const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const toggleSphere = (id: string) => {
         if (selected.includes(id)) {
             onChange(selected.filter(s => s !== id));
@@ -68,25 +81,52 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
     };
 
     return (
-        <div className="flex gap-2">
-            {SPHERES.map(s => {
-                const isSelected = selected.includes(s.id);
-                const Icon = ICON_MAP[s.icon];
-                return (
-                    <button
-                        key={s.id}
-                        onClick={() => toggleSphere(s.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all border ${
-                            isSelected 
-                            ? `${s.bg} ${s.text} ${s.border}` 
-                            : 'bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                        }`}
-                    >
-                        {Icon && <Icon size={12} />}
-                        {s.label}
-                    </button>
-                );
-            })}
+        <div className="relative" ref={dropdownRef}>
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all outline-none ${
+                  isOpen ? 'border-indigo-400 ring-2 ring-indigo-50 dark:ring-indigo-900 bg-white dark:bg-[#1e293b]' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+                }`}
+            >
+                <div className="flex items-center gap-2 overflow-hidden">
+                    {selected.length > 0 ? (
+                        <>
+                            <div className="flex -space-x-1 shrink-0">
+                                {selected.map(s => {
+                                    const sp = SPHERES.find(x => x.id === s);
+                                    return sp ? <div key={s} className={`w-3 h-3 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
+                                })}
+                            </div>
+                            <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                                {selected.map(id => SPHERES.find(s => s.id === id)?.label).join(', ')}
+                            </span>
+                        </>
+                    ) : (
+                        <span className="text-sm text-slate-400">Выберите сферы</span>
+                    )}
+                </div>
+                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5">
+                    {SPHERES.map(s => {
+                        const isSelected = selected.includes(s.id);
+                        const Icon = ICON_MAP[s.icon];
+                        return (
+                            <button
+                                key={s.id}
+                                onClick={() => toggleSphere(s.id)}
+                                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                            >
+                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-slate-400'} />}
+                                <span className="flex-1">{s.label}</span>
+                                {isSelected && <Check size={14} className="text-indigo-500" />}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };
@@ -1489,6 +1529,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         );
                     })()}
                 </div>
+                <div className="mt-8 flex justify-end"><button onClick={() => setActiveModal(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button></div>
             </div>
         </div>
       )}
