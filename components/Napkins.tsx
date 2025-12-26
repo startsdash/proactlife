@@ -376,7 +376,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <GripVertical size={14} />
              </div>
              <div className="flex items-center -mr-2 -mt-2 gap-1">
-                 <div className="flex gap-0.5 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                 <div className="flex gap-0.5 md:hidden">
                     <button onClick={(e) => moveNoteVertical(e, note.id, 'up')} className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400"><ChevronUp size={12}/></button>
                     <button onClick={(e) => moveNoteVertical(e, note.id, 'down')} className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400"><ChevronDown size={12}/></button>
                  </div>
@@ -408,10 +408,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     ))}
                 </div>
             )}
-            <div className="flex justify-between items-center w-full">
-                 <Tooltip content="Удалить">
-                    <button onClick={(e) => { e.stopPropagation(); if(window.confirm('Удалить заметку?')) deleteNote(note.id); }} className="p-2 -ml-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={14} /></button>
-                 </Tooltip>
+            <div className="flex justify-end items-center w-full">
                  <div className="flex gap-2 justify-end">
                     <Tooltip content="В Спринты">
                         <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-emerald-100 dark:border-emerald-800/50"><Kanban size={14} /></button>
@@ -624,7 +621,20 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         </Tooltip>
                     </h3>
                     <div className="flex gap-2">
-                        {!isEditing && (<Tooltip content="Редактировать"><button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40"><Edit3 size={18} /></button></Tooltip>)}
+                        {!isEditing && (
+                            <>
+                                <Tooltip content="Редактировать">
+                                    <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40">
+                                        <Edit3 size={18} />
+                                    </button>
+                                </Tooltip>
+                                <Tooltip content="Удалить">
+                                    <button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40 transition-colors">
+                                        <Trash2 size={18} />
+                                    </button>
+                                </Tooltip>
+                            </>
+                        )}
                         <button onClick={() => setSelectedNote(null)} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40"><X size={20}/></button>
                     </div>
                 </div>
@@ -652,15 +662,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         <button key={c.id} onClick={() => setColor(c.id)} className={`w-6 h-6 rounded-full border shadow-sm transition-transform hover:scale-110 ${selectedNote.color === c.id ? 'ring-2 ring-slate-400 ring-offset-2' : ''}`} style={{ backgroundColor: c.hex, borderColor: '#e2e8f0' }} title={c.id} />
                     ))}
                 </div>
-                <div className="flex flex-col-reverse md:flex-row justify-between items-stretch md:items-center gap-3 pt-4 border-t border-slate-900/5 dark:border-white/5">
-                    <button onClick={() => { if(window.confirm('Вы уверены, что хотите удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="px-4 py-2 bg-white/50 dark:bg-black/20 hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg text-sm transition-colors border border-transparent hover:border-red-100 dark:hover:border-red-800 w-full md:w-auto">Удалить</button>
-                    {isEditing && (
+                {isEditing && (
+                    <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-4 border-t border-slate-900/5 dark:border-white/5">
                         <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
                             <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 w-full md:w-auto text-center">Отмена</button>
                             <button onClick={handleSaveEdit} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm flex items-center justify-center gap-2 w-full md:w-auto"><Check size={16} /> Сохранить</button>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         </div>
       )}
