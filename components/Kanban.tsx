@@ -844,7 +844,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     if (col.id === 'done') emptyText = "Готово? Перетащи задачу сюда";
 
     return (
-    <div key={col.id} className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3`} onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
+    <div key={col.id} className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3 h-full md:h-auto`} onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
         <h3 className="font-semibold text-slate-600 dark:text-slate-400 mb-3 flex justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
         
         {col.id === 'todo' && (
@@ -893,7 +893,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             </div>
         )}
 
-        <div className="space-y-3 pb-2 px-1">
+        <div className="space-y-3 pb-2 px-1 flex-1 overflow-y-auto md:overflow-visible md:flex-none min-h-0 custom-scrollbar-light">
             {tasksInCol.length === 0 ? (
                 <div className="py-10">
                    <EmptyState 
@@ -1222,10 +1222,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       </header>
 
       {/* Columns */}
-      <div className="flex-1 overflow-auto p-4 md:p-8 pt-4 custom-scrollbar-light">
-         <div className="flex flex-col md:flex-row gap-4 h-full min-h-0">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden md:overflow-auto p-4 md:p-8 pt-4 custom-scrollbar-light snap-x snap-mandatory md:snap-none scroll-p-4">
+         <div className="flex flex-row md:flex-row gap-4 h-full min-h-0 w-max md:w-full">
             {columns.map(col => (
-               <div key={col.id} className="flex-1 min-w-[280px] flex flex-col min-h-0 h-full">
+               <div key={col.id} className="flex-none w-[85vw] md:w-auto md:flex-1 md:min-w-[280px] flex flex-col min-h-0 h-full snap-center">
                    {renderColumn(col)}
                </div>
             ))}
