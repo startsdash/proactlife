@@ -643,11 +643,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                   <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
                       <Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
                       <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} />
-                      {entry.isInsight && (
-                          <Tooltip content="Инсайт">
-                            <span className="ml-1 text-amber-500 animate-pulse"><Lightbulb size={12} className="fill-current"/></span>
-                          </Tooltip>
-                      )}
                   </div>
                   {entry.linkedTaskId && getTaskPreview(entry.linkedTaskId)}
                   {isEditing ? (
