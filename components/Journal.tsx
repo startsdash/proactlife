@@ -708,52 +708,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
           </div>
       )}
 
-      {viewingTask && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setViewingTask(null)}>
-            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">Контекст мысли</h3><button onClick={() => setViewingTask(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
-                <div className="space-y-4">
-                    <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
-                        <div className="flex justify-between items-center mb-3"><span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${viewingTask.column === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.column === 'done' ? <CheckCircle2 size={12} /> : <Circle size={12} />}{viewingTask.column === 'done' ? 'Сделано' : 'В процессе'}{viewingTask.isArchived && " (В архиве)"}</span></div>
-                        <div className="text-sm text-slate-800 dark:text-slate-200 font-normal leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.content}</ReactMarkdown></div>
-                        {viewingTask.spheres && viewingTask.spheres.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
-                                <SphereBadgeList spheres={viewingTask.spheres} />
-                            </div>
-                        )}
-                    </div>
-                    {viewingTask.description && (<CollapsibleSection title="Источник" icon={<FileText size={14}/>}><div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.description}</ReactMarkdown></div></CollapsibleSection>)}
-                    {viewingTask.activeChallenge && (
-                      <CollapsibleSection title={viewingTask.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} icon={<Zap size={14}/>}>
-                         <div className={`p-3 rounded-lg border ${viewingTask.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${viewingTask.isChallengeCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}</span>
-                            <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200"><StaticChallengeRenderer content={viewingTask.activeChallenge} mode={viewingTask.isChallengeCompleted ? 'history' : 'draft'} /></div>
-                         </div>
-                      </CollapsibleSection>
-                    )}
-                     {viewingTask.challengeHistory && viewingTask.challengeHistory.length > 0 && (
-                        <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
-                            <div className="space-y-4">
-                                {viewingTask.challengeHistory.map((challenge, index) => (
-                                   <div key={index} className="py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
-                                      <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
-                                         <StaticChallengeRenderer content={challenge} mode="history" />
-                                      </div>
-                                   </div>
-                                ))}
-                             </div>
-                        </CollapsibleSection>
-                     )}
-                    {viewingTask.consultationHistory && viewingTask.consultationHistory.length > 0 && (
-                       <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}><ul className="space-y-4">{viewingTask.consultationHistory.map((consultation, index) => (<li key={index} className="text-sm text-slate-900 dark:text-slate-200 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0"><ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown></li>))}</ul></CollapsibleSection>
-                    )}
-                </div>
-                <div className="mt-8 flex justify-end"><button onClick={() => setViewingTask(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button></div>
-            </div>
-        </div>
-      )}
-
       {selectedEntry && (
         <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedEntryId(null)}>
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -825,6 +779,52 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 <div className="mt-8 flex justify-end">
                     <button onClick={() => setSelectedEntryId(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button>
                 </div>
+            </div>
+        </div>
+      )}
+
+      {viewingTask && (
+        <div className="fixed inset-0 z-[110] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setViewingTask(null)}>
+            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">Контекст мысли</h3><button onClick={() => setViewingTask(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
+                <div className="space-y-4">
+                    <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
+                        <div className="flex justify-between items-center mb-3"><span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${viewingTask.column === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.column === 'done' ? <CheckCircle2 size={12} /> : <Circle size={12} />}{viewingTask.column === 'done' ? 'Сделано' : 'В процессе'}{viewingTask.isArchived && " (В архиве)"}</span></div>
+                        <div className="text-sm text-slate-800 dark:text-slate-200 font-normal leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.content}</ReactMarkdown></div>
+                        {viewingTask.spheres && viewingTask.spheres.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
+                                <SphereBadgeList spheres={viewingTask.spheres} />
+                            </div>
+                        )}
+                    </div>
+                    {viewingTask.description && (<CollapsibleSection title="Источник" icon={<FileText size={14}/>}><div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.description}</ReactMarkdown></div></CollapsibleSection>)}
+                    {viewingTask.activeChallenge && (
+                      <CollapsibleSection title={viewingTask.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} icon={<Zap size={14}/>}>
+                         <div className={`p-3 rounded-lg border ${viewingTask.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${viewingTask.isChallengeCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}</span>
+                            <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200"><StaticChallengeRenderer content={viewingTask.activeChallenge} mode={viewingTask.isChallengeCompleted ? 'history' : 'draft'} /></div>
+                         </div>
+                      </CollapsibleSection>
+                    )}
+                     {viewingTask.challengeHistory && viewingTask.challengeHistory.length > 0 && (
+                        <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
+                            <div className="space-y-4">
+                                {viewingTask.challengeHistory.map((challenge, index) => (
+                                   <div key={index} className="py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                                      <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
+                                         <StaticChallengeRenderer content={challenge} mode="history" />
+                                      </div>
+                                   </div>
+                                ))}
+                             </div>
+                        </CollapsibleSection>
+                     )}
+                    {viewingTask.consultationHistory && viewingTask.consultationHistory.length > 0 && (
+                       <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}><ul className="space-y-4">{viewingTask.consultationHistory.map((consultation, index) => (<li key={index} className="text-sm text-slate-900 dark:text-slate-200 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0"><ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown></li>))}</ul></CollapsibleSection>
+                    )}
+                </div>
+                <div className="mt-8 flex justify-end"><button onClick={() => setViewingTask(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button></div>
             </div>
         </div>
       )}
