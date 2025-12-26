@@ -620,11 +620,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             <button onClick={(e) => togglePin(e, selectedNote)} className={`p-1.5 rounded-full transition-colors ${selectedNote.isPinned ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-indigo-500'}`}><Pin size={16} fill={selectedNote.isPinned ? "currentColor" : "none"} /></button>
                         </Tooltip>
                     </h3>
-                    <div className="flex gap-2">
+                    <div className="flex items-center">
                         {!isEditing && (
                             <>
                                 <Tooltip content="Редактировать">
-                                    <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40">
+                                    <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40 mr-1">
                                         <Edit3 size={18} />
                                     </button>
                                 </Tooltip>
@@ -633,6 +633,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         <Trash2 size={18} />
                                     </button>
                                 </Tooltip>
+                                <div className="w-px h-5 bg-slate-400/30 dark:bg-white/20 mx-2"></div>
                             </>
                         )}
                         <button onClick={() => setSelectedNote(null)} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40"><X size={20}/></button>
