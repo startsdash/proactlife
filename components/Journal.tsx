@@ -542,7 +542,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
              <div className="flex justify-between items-center">
                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Хроника</h3>
                 {hasMentorTool && (
-                  <Tooltip content="Наставник (ИИ)">
+                  <Tooltip content="Наставник (ИИ)" side="left">
                     <button onClick={handleAnalyzePath} disabled={isAnalyzing || displayedEntries.length === 0} className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all shadow-sm ${isAnalyzing ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-400 cursor-wait' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}>
                         {isAnalyzing ? <Loader2 size={14} className="animate-spin" /> : <Bot size={14} />}
                         <span>Наставник</span>
@@ -597,7 +597,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     <button onClick={() => setShowHistory(true)} className="p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><Scroll size={18} /></button>
                   </Tooltip>
                 )}
-                <Tooltip content="Сортировка">
+                <Tooltip content={sortOrder === 'desc' ? "Новые сверху" : "Старые сверху"}>
                     <button 
                         onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
                         className="p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"
