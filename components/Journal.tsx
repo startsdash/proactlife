@@ -626,17 +626,17 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
               return (
                 <div key={entry.id} className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 md:p-6 relative group hover:shadow-md transition-shadow">
                   {!isEditing && (
-                    <div className="absolute top-4 right-4 flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-4 right-4 flex gap-1">
                          <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
-                            <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-colors ${entry.isInsight ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-300 dark:text-slate-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
+                            <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-all ${entry.isInsight ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 opacity-100' : 'text-slate-300 dark:text-slate-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 opacity-100 md:opacity-0 group-hover:opacity-100'}`}>
                                 <Lightbulb size={16} className={entry.isInsight ? "fill-current" : ""} />
                             </button>
                          </Tooltip>
                          <Tooltip content="Редактировать">
-                            <button onClick={() => startEditing(entry)} className="text-slate-300 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"><Edit3 size={16} /></button>
+                            <button onClick={() => startEditing(entry)} className="text-slate-300 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all opacity-100 md:opacity-0 group-hover:opacity-100"><Edit3 size={16} /></button>
                          </Tooltip>
                          <Tooltip content="Удалить">
-                            <button onClick={() => { if (window.confirm("Удалить запись из дневника?")) deleteEntry(entry.id); }} className="text-slate-300 dark:text-slate-500 hover:text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                            <button onClick={() => { if (window.confirm("Удалить запись из дневника?")) deleteEntry(entry.id); }} className="text-slate-300 dark:text-slate-500 hover:text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-100 md:opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
                          </Tooltip>
                     </div>
                   )}
