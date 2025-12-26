@@ -133,7 +133,7 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
 ];
 
 export const DEFAULT_CONFIG: AppConfig = {
-  "_version": 1766505181734,
+  "_version": 1766509999999,
   "isGuestModeEnabled": false,
   "inviteCodes": [],
   "coreLibrary": DEFAULT_CORE_LIBRARY,
@@ -242,7 +242,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   {
     "id": "popper",
     "name": "Поппер",
-    "systemPrompt": "Ты действует в режиме Карла Поппера. Задача: Сгенерируй ОДИН Челлендж фальсификации (Челлендж на опровержение текущего убеждения или стратегии).\nВключи чекбоксы для пошагового выполнения.",
+    "systemPrompt": "Ты действует в режиме Карла Поппера. Задача: Сгенерируй ОДИН Челлендж фальсификации (Челлендж на опровержение текущего убеждения или стратегии).",
     "model": "gemma-3-27b-it",
     "isDisabled": false,
     "accessLevel": "owner_only"

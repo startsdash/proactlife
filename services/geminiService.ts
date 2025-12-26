@@ -239,7 +239,7 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
     if (!author) return "No challenge author configured.";
     
     const model = author.model || DEFAULT_MODEL;
-    const fullPrompt = `${author.systemPrompt}\n\nTASK: "${taskContent}"\n\nGenerate a challenge checklist (Markdown).`;
+    const fullPrompt = `${author.systemPrompt}\n\nTASK: "${taskContent}"\n\nGenerate a challenge description (Markdown). Do not use checklists.`;
     const ai = getAiClient();
 
     try {
