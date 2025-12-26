@@ -631,23 +631,13 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                   {!isEditing && (
                     <div className="absolute top-4 right-4 flex items-center gap-1 z-10" onClick={(e) => e.stopPropagation()}>
                          <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
-                            <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-all ${entry.isInsight ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 opacity-100' : 'text-slate-300 dark:text-slate-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 opacity-100 md:opacity-0 group-hover:opacity-100'}`}>
+                            <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-all ${entry.isInsight ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-300 dark:text-slate-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
                                 <Lightbulb size={16} className={entry.isInsight ? "fill-current" : ""} />
                             </button>
                          </Tooltip>
-                         <div className="opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                         <div>
                             <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} />
                          </div>
-                         {!isEditing && (
-                            <>
-                                <Tooltip content="Редактировать">
-                                    <button onClick={() => startEditing(entry)} className="text-slate-300 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all opacity-100 md:opacity-0 group-hover:opacity-100"><Edit3 size={16} /></button>
-                                </Tooltip>
-                                <Tooltip content="Удалить">
-                                    <button onClick={() => { if (window.confirm("Удалить запись из дневника?")) deleteEntry(entry.id); }} className="text-slate-300 dark:text-slate-500 hover:text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-100 md:opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
-                                </Tooltip>
-                            </>
-                         )}
                     </div>
                   )}
                   <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
