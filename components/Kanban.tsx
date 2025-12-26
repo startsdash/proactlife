@@ -6,7 +6,7 @@ import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiServi
 import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Shuffle, Edit3, AlignLeft, Target } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { SPHERES, ICON_MAP } from '../constants';
+import { SPHERES, ICON_MAP, applyTypography } from '../constants';
 
 interface Props {
   tasks: Task[];
@@ -209,7 +209,7 @@ const InteractiveChallenge: React.FC<{
             if (trimmedBuffer) {
                 renderedParts.push(
                     <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 dark:text-slate-200 mb-1 last:mb-0">
-                        <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
+                        <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
                     </div>
                 );
             }
@@ -237,7 +237,7 @@ const InteractiveChallenge: React.FC<{
                             {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                         </div>
                         <span className={`text-sm ${isChecked ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                            <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
+                            <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{applyTypography(label)}</ReactMarkdown>
                         </span>
                     </button>
                     {onPin && (
@@ -276,7 +276,7 @@ const StaticChallengeRenderer: React.FC<{
              if (trimmedBuffer) {
                 renderedParts.push(
                     <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 dark:text-slate-200 mb-1 last:mb-0">
-                        <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
+                        <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
                     </div>
                 );
              }
@@ -317,7 +317,7 @@ const StaticChallengeRenderer: React.FC<{
                         <Icon size={16} />
                     </div>
                     <span className={`text-sm text-slate-700 dark:text-slate-300`}>
-                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
+                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{applyTypography(label)}</ReactMarkdown>
                     </span>
                 </div>
             );
@@ -409,8 +409,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       if (!newTaskTitle.trim() && !newTaskContent.trim()) return;
       const newTask: Task = {
           id: Date.now().toString(),
-          title: newTaskTitle.trim(),
-          content: newTaskContent.trim(),
+          title: applyTypography(newTaskTitle.trim()),
+          content: applyTypography(newTaskContent.trim()),
           column: 'todo',
           createdAt: Date.now(),
       };
@@ -430,7 +430,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const task = getTaskForModal();
       if (!task) return;
       if (editTaskContent.trim() || editTaskTitle.trim()) {
-          updateTask({ ...task, title: editTaskTitle.trim(), content: editTaskContent });
+          updateTask({ 
+              ...task, 
+              title: applyTypography(editTaskTitle.trim()), 
+              content: applyTypography(editTaskContent) 
+          });
           setIsEditingTask(false);
       }
   };
@@ -919,7 +923,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <div className="flex justify-between items-start gap-2 mb-2">
                              <div className="flex-1 pt-1 min-w-0">
                                 {task.title ? (
-                                    <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-snug break-words">{task.title}</h4>
+                                    <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-snug break-words">{applyTypography(task.title)}</h4>
                                 ) : null}
                              </div>
                              
@@ -931,7 +935,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         {/* CONTENT */}
                         <div className="mb-3">
                             <div className={`text-slate-700 dark:text-slate-300 font-normal text-xs leading-relaxed line-clamp-4 ${!task.title ? 'text-sm' : ''}`}>
-                                 <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
+                                 <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
                             </div>
                         </div>
 
@@ -1238,7 +1242,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         {activeModal.type === 'stuck' && 'Психолог продуктивности'}
                         {activeModal.type === 'details' && (() => {
                             const task = getTaskForModal();
-                            if (task?.title) return task.title;
+                            if (task?.title) return applyTypography(task.title);
                             if (task) return 'Детали задачи'; // Fallback if no title
                             return '';
                         })()}
@@ -1330,7 +1334,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 ) : (
                                     <div className="group relative pr-1">
                                         <div className="text-slate-800 dark:text-slate-200 text-sm font-normal leading-relaxed">
-                                            <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
+                                            <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
                                         </div>
                                     </div>
                                 )}
@@ -1345,7 +1349,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 {task.description && (
                                     <CollapsibleSection title="Контекст" icon={<FileText size={14}/>}>
                                         <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                                            <ReactMarkdown components={markdownComponents}>{task.description}</ReactMarkdown>
+                                            <ReactMarkdown components={markdownComponents}>{applyTypography(task.description)}</ReactMarkdown>
                                         </div>
                                     </CollapsibleSection>
                                 )}
@@ -1468,7 +1472,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             {task.consultationHistory?.map((h, i) => (
                                                 <div key={`cons-${i}`} className="text-sm bg-violet-50 dark:bg-violet-900/10 p-3 rounded-lg border border-violet-100 dark:border-violet-900/30 relative group">
                                                     <div className="text-[10px] font-bold text-violet-400 mb-1 flex items-center gap-1"><Bot size={10}/> Консультация</div>
-                                                    <ReactMarkdown components={markdownComponents}>{h}</ReactMarkdown>
+                                                    <ReactMarkdown components={markdownComponents}>{applyTypography(h)}</ReactMarkdown>
                                                     {!isDone && (
                                                         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <Tooltip content="Удалить">
