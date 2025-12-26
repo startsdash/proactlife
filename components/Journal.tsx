@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll, XCircle, Send, Lightbulb } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll, XCircle, Send, Lightbulb, Target } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 
@@ -192,6 +192,63 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                     </button>
                 );
             })}
+        </div>
+    );
+};
+
+const JournalEntrySphereSelector: React.FC<{ entry: JournalEntry, updateEntry: (e: JournalEntry) => void }> = ({ entry, updateEntry }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    const toggleSphere = (sphereId: string) => {
+        const current = entry.spheres || [];
+        const newSpheres = current.includes(sphereId) 
+            ? current.filter(s => s !== sphereId)
+            : [...current, sphereId];
+        updateEntry({ ...entry, spheres: newSpheres });
+    };
+
+    return (
+        <div className="relative">
+            <button 
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg transition-colors border border-slate-100 dark:border-slate-700 hover:border-indigo-100 dark:hover:border-indigo-800"
+            >
+                {entry.spheres && entry.spheres.length > 0 ? (
+                    <div className="flex -space-x-1">
+                        {entry.spheres.map(s => {
+                            const sp = SPHERES.find(x => x.id === s);
+                            return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
+                        })}
+                    </div>
+                ) : (
+                    <Target size={12} />
+                )}
+                <span>Сфера</span>
+                <ChevronDown size={10} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isOpen && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
+                    <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
+                        {SPHERES.map(s => {
+                            const isSelected = entry.spheres?.includes(s.id);
+                            const Icon = ICON_MAP[s.icon];
+                            return (
+                                <button
+                                    key={s.id}
+                                    onClick={() => toggleSphere(s.id)}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                >
+                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} />}
+                                    <span className="flex-1">{s.label}</span>
+                                    {isSelected && <Check size={12} className="text-indigo-500" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
         </div>
     );
 };
@@ -453,7 +510,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         <div className="bg-white dark:bg-[#1e293b] rounded-2xl md:shadow-sm md:border border-slate-200 dark:border-slate-700 md:p-4 flex flex-col gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1">
-              <Link size={12} /> Контекст
+              <Link size={12} /> Контекст (Задача)
             </label>
             <TaskSelect tasks={availableTasks} selectedId={linkedTaskId} onSelect={setLinkedTaskId} />
           </div>
@@ -484,14 +541,14 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         <div className="flex flex-col gap-3 mb-4 md:mb-6 shrink-0 max-w-3xl mx-auto w-full">
              <div className="flex justify-between items-center">
                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Хроника</h3>
-                <button 
-                    onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                    className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition-all shadow-sm"
-                >
-                    {sortOrder === 'desc' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
-                    <span className="hidden md:inline">{sortOrder === 'desc' ? 'Сначала новые' : 'Сначала старые'}</span>
-                    <span className="md:hidden">{sortOrder === 'desc' ? 'Новые' : 'Старые'}</span>
-                </button>
+                {hasMentorTool && (
+                  <Tooltip content="Наставник (ИИ)">
+                    <button onClick={handleAnalyzePath} disabled={isAnalyzing || displayedEntries.length === 0} className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all shadow-sm ${isAnalyzing ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-400 cursor-wait' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}>
+                        {isAnalyzing ? <Loader2 size={14} className="animate-spin" /> : <Bot size={14} />}
+                        <span>Наставник</span>
+                    </button>
+                  </Tooltip>
+                )}
             </div>
             <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -536,15 +593,18 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     )}
                 </div>
                 {hasMentorTool && (
-                  <>
                   <Tooltip content="История Наставника">
                     <button onClick={() => setShowHistory(true)} className="p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><Scroll size={18} /></button>
                   </Tooltip>
-                  <Tooltip content="Наставник (ИИ)">
-                    <button onClick={handleAnalyzePath} disabled={isAnalyzing || displayedEntries.length === 0} className={`p-2 rounded-xl border transition-all h-full flex items-center justify-center gap-2 px-3 ${isAnalyzing ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-400 cursor-wait' : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm'}`}>{isAnalyzing ? <Loader2 size={18} className="animate-spin" /> : <Bot size={18} />}<span className="hidden md:inline text-xs font-bold uppercase tracking-wide">Наставник</span></button>
-                  </Tooltip>
-                  </>
                 )}
+                <Tooltip content="Сортировка">
+                    <button 
+                        onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                        className="p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"
+                    >
+                        {sortOrder === 'desc' ? <ArrowDown size={18} /> : <ArrowUp size={18} />}
+                    </button>
+                </Tooltip>
             </div>
         </div>
         
@@ -582,13 +642,13 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                   )}
                   <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
                       <Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
+                      <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} />
                       {entry.isInsight && (
-                          <span className="ml-1 text-amber-500 animate-pulse" title="Инсайт"><Lightbulb size={12} className="fill-current"/></span>
+                          <Tooltip content="Инсайт">
+                            <span className="ml-1 text-amber-500 animate-pulse"><Lightbulb size={12} className="fill-current"/></span>
+                          </Tooltip>
                       )}
                   </div>
-                  {entry.spheres && entry.spheres.length > 0 && (
-                      <SphereBadgeList spheres={entry.spheres} />
-                  )}
                   {entry.linkedTaskId && getTaskPreview(entry.linkedTaskId)}
                   {isEditing ? (
                       <div className="mb-4">
@@ -662,7 +722,12 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
                         <div className="flex justify-between items-center mb-3"><span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${viewingTask.column === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.column === 'done' ? <CheckCircle2 size={12} /> : <Circle size={12} />}{viewingTask.column === 'done' ? 'Сделано' : 'В процессе'}{viewingTask.isArchived && " (В архиве)"}</span></div>
                         <div className="text-sm text-slate-800 dark:text-slate-200 font-normal leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.content}</ReactMarkdown></div>
-                        {viewingTask.spheres && viewingTask.spheres.length > 0 && <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700"><SphereBadgeList spheres={viewingTask.spheres} /></div>}
+                        {viewingTask.spheres && viewingTask.spheres.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
+                                <SphereBadgeList spheres={viewingTask.spheres} />
+                            </div>
+                        )}
                     </div>
                     {viewingTask.description && (<CollapsibleSection title="Источник" icon={<FileText size={14}/>}><div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.description}</ReactMarkdown></div></CollapsibleSection>)}
                     {viewingTask.activeChallenge && (
