@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Shuffle, Edit3, AlignLeft, Target } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
@@ -546,11 +546,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   const toggleSortOrder = () => { 
-      setSortOrder(prev => {
-          if (prev === 'manual') return 'desc';
-          if (prev === 'desc') return 'asc';
-          return 'manual';
-      }); 
+      setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); 
   };
 
   const triggerAI = async (content: string, type: 'stuck' | 'completed') => {
@@ -1253,9 +1249,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                  <button onClick={() => setFilterChallenge('none')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'none' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Обычные</button>
              </div>
              
-             <Tooltip content={sortOrder === 'manual' ? "Ручная сортировка" : sortOrder === 'desc' ? "Новые сверху" : "Старые сверху"}>
+             <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"}>
                  <button onClick={toggleSortOrder} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400">
-                     {sortOrder === 'manual' ? <Shuffle size={16} /> : sortOrder === 'desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
+                     {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
                  </button>
              </Tooltip>
         </div>
