@@ -236,7 +236,12 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
     );
 };
 
-const JournalEntrySphereSelector: React.FC<{ entry: JournalEntry, updateEntry: (e: JournalEntry) => void }> = ({ entry, updateEntry }) => {
+const JournalEntrySphereSelector: React.FC<{ 
+    entry: JournalEntry, 
+    updateEntry: (e: JournalEntry) => void,
+    align?: 'left' | 'right',
+    direction?: 'up' | 'down'
+}> = ({ entry, updateEntry, align = 'right', direction = 'down' }) => {
     const [isOpen, setIsOpen] = useState(false);
     
     const toggleSphere = (sphereId: string) => {
@@ -270,7 +275,10 @@ const JournalEntrySphereSelector: React.FC<{ entry: JournalEntry, updateEntry: (
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
-                    <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
+                    <div 
+                        className={`absolute ${direction === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'} ${align === 'left' ? 'left-0' : 'right-0'} w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5`} 
+                        onClick={e => e.stopPropagation()}
+                    >
                         {SPHERES.map(s => {
                             const isSelected = entry.spheres?.includes(s.id);
                             const Icon = ICON_MAP[s.icon];
@@ -815,7 +823,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     )}
                     
                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} />
+                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="left" direction="up" />
                         <Tooltip content={selectedEntry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
                             <button onClick={() => toggleInsight(selectedEntry)} className={`p-2 rounded-lg transition-all flex items-center gap-2 ${selectedEntry.isInsight ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
                                 <Lightbulb size={16} className={selectedEntry.isInsight ? "fill-current" : ""} />
