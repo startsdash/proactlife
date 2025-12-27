@@ -1275,7 +1275,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 {/* MODAL HEADER */}
                 <div className="flex justify-between items-start mb-4 shrink-0">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex-1 mr-4">
-                        {activeModal.type === 'stuck' && 'Психолог продуктивности'}
+                        {activeModal.type === 'stuck' && 'Личный консультант'}
                         {activeModal.type === 'details' && (() => {
                             const task = getTaskForModal();
                             if (task?.title) return applyTypography(task.title);
@@ -1325,7 +1325,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase mb-2"><Bot size={14}/> Совет</div>
                                         <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown></div>
                                     </div>
-                                    <button onClick={saveTherapyResponse} className="w-full py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm">Сохранить в историю</button>
                                 </div>
                             ) : (
                                 <div className="text-center text-slate-400 py-10">Не удалось получить ответ.</div>
@@ -1525,7 +1524,19 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         );
                     })()}
                 </div>
-                <div className="mt-8 flex justify-end"><button onClick={() => setActiveModal(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button></div>
+                <div className="mt-8 flex justify-end gap-2">
+                    {activeModal.type === 'stuck' && aiResponse && (
+                        <Tooltip content="Сохранить в историю">
+                            <button 
+                                onClick={saveTherapyResponse} 
+                                className="p-2 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
+                            >
+                                <Save size={20} />
+                            </button>
+                        </Tooltip>
+                    )}
+                    <button onClick={() => setActiveModal(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button>
+                </div>
             </div>
         </div>
       )}
