@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
@@ -101,7 +102,7 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                             </span>
                         </>
                     ) : (
-                        <span className="text-sm text-slate-400">Выберите сферы</span>
+                        <span className="text-sm text-slate-400">Выбери сферу</span>
                     )}
                 </div>
                 <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -377,6 +378,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'completed' | 'none'>('all');
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
   const [sortOrder, setSortOrder] = useState<'manual' | 'desc' | 'asc'>('manual');
+  const [searchQuery, setSearchQuery] = useState('');
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [cardSubtaskInputs, setCardSubtaskInputs] = useState<{[taskId: string]: string}>({});
   
@@ -396,6 +398,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const baseActiveTasks = tasks.filter(t => !t.isArchived);
 
   const activeTasks = baseActiveTasks.filter(task => {
+      if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const inTitle = task.title?.toLowerCase().includes(q);
+          const inContent = task.content.toLowerCase().includes(q);
+          if (!inTitle && !inContent) return false;
+      }
       if (filterChallenge === 'active') {
           if (!task.activeChallenge || task.isChallengeCompleted) return false;
       }
@@ -1240,8 +1248,24 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Фокус на главном</p>
         </div>
         
-        {/* Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none">
+        {/* Filters & Search */}
+        <div className="flex flex-col md:flex-row items-end md:items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none">
+             
+             {/* Search Input */}
+             <div className="relative group">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <input 
+                    type="text" 
+                    placeholder="Поиск..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-32 focus:w-48 transition-all pl-8 pr-7 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 placeholder:text-slate-400 outline-none ring-1 ring-transparent focus:ring-indigo-500/20"
+                />
+                {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={12} /></button>
+                )}
+             </div>
+
              <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
                  <button onClick={() => setFilterChallenge('all')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'all' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Все</button>
                  <button onClick={() => setFilterChallenge('active')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'active' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Активные</button>
