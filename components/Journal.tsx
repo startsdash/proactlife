@@ -544,6 +544,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
           alert("Нет записей для анализа в текущем фильтре.");
           return;
       }
+
+      if (!window.confirm("Запустить ИИ-наставника?")) return;
+
       setIsAnalyzing(true);
       analysisAbortController.current = new AbortController();
       
