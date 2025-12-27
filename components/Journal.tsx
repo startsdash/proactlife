@@ -408,6 +408,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   }, [config.aiTools]);
 
   const selectedEntry = useMemo(() => entries.find(e => e.id === selectedEntryId), [entries, selectedEntryId]);
+  const selectedLinkedTask = useMemo(() => selectedEntry ? tasks.find(t => t.id === selectedEntry.linkedTaskId) : null, [selectedEntry, tasks]);
 
   useEffect(() => {
     if (initialTaskId) {
@@ -483,31 +484,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const RenderIcon = ({ name, className }: { name: string, className?: string }) => {
     const Icon = ICON_MAP[name] || ICON_MAP['User'];
     return <Icon className={className} size={14} />;
-  };
-
-  const getTaskPreview = (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return null;
-    return (
-      <div 
-        onClick={(e) => { e.stopPropagation(); setViewingTask(task); }}
-        className={`mt-2 mb-3 p-3 rounded-lg border text-xs flex items-center gap-3 cursor-pointer transition-all hover:shadow-md group ${task.column === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800 text-emerald-800 dark:text-emerald-400' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800 text-indigo-800 dark:text-indigo-400'}`}
-      >
-         <div className="shrink-0">
-            {task.column === 'done' ? <CheckCircle2 size={16} /> : <Circle size={16} />}
-         </div>
-         <div className="flex-1 min-w-0">
-            <div className="font-bold uppercase tracking-wider mb-0.5 opacity-70 text-[10px]">
-               {task.column === 'done' ? 'Сделано' : 'В процессе'}
-               {task.isArchived && " (В архиве)"}
-            </div>
-            <p className="truncate font-medium text-slate-800 dark:text-slate-200">{task.content}</p>
-         </div>
-         <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-             <Eye size={16} className="text-current opacity-50" />
-         </div>
-      </div>
-    );
   };
 
   const filteredEntries = entries.filter(entry => {
@@ -723,26 +699,30 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                   
                   {/* CARD HEADER - ALIGNED */}
                   <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-2">
-                          <Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
+                      <div className="flex flex-col gap-2 pt-1">
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              <Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
+                          </div>
+                          {!isEditing && linkedTask && (
+                                <div className="-ml-2">
+                                    <Tooltip content="Контекст (задача)">
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setViewingTask(linkedTask); }}
+                                            className={`p-2 rounded-lg transition-all hover:bg-slate-50 dark:hover:bg-slate-800 ${
+                                                linkedTask.column === 'done' ? 'text-emerald-500' :
+                                                linkedTask.column === 'doing' ? 'text-indigo-500' :
+                                                'text-slate-400'
+                                            }`}
+                                        >
+                                            <Link size={16} />
+                                        </button>
+                                    </Tooltip>
+                                </div>
+                          )}
                       </div>
 
                       {!isEditing && (
                         <div className="flex items-center gap-1 z-10 -mt-1 -mr-2" onClick={(e) => e.stopPropagation()}>
-                             {linkedTask && (
-                                <Tooltip content="Контекст (задача)">
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); setViewingTask(linkedTask); }}
-                                        className={`p-2 rounded-lg transition-all hover:bg-slate-50 dark:hover:bg-slate-800 ${
-                                            linkedTask.column === 'done' ? 'text-emerald-500' :
-                                            linkedTask.column === 'doing' ? 'text-indigo-500' :
-                                            'text-slate-400'
-                                        }`}
-                                    >
-                                        <Link size={16} />
-                                    </button>
-                                </Tooltip>
-                             )}
                              <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
                                 <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-all ${entry.isInsight ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-300 dark:text-slate-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
                                     <Lightbulb size={16} className={entry.isInsight ? "fill-current" : ""} />
@@ -790,7 +770,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                   <div className="mt-8 flex justify-end gap-2">
                       <Tooltip content="Сохранить в историю">
                           <button onClick={handleSaveAnalysis} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"><Save size={20} /></button>
-                      </Tooltip>
+                      Tooltip>
                   </div>
               </div>
           </div>
@@ -823,11 +803,27 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseModal}>
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-start mb-6">
-                    <div>
+                    <div className="flex flex-col gap-1">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">Детали записи</h3>
                         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             <Calendar size={12} /> {new Date(selectedEntry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
                         </div>
+                        {selectedLinkedTask && (
+                             <div className="-ml-2 mt-1">
+                                <Tooltip content="Контекст (задача)">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); setViewingTask(selectedLinkedTask); }}
+                                        className={`p-2 rounded-lg transition-all hover:bg-slate-50 dark:hover:bg-slate-800 ${
+                                            selectedLinkedTask.column === 'done' ? 'text-emerald-500' :
+                                            selectedLinkedTask.column === 'doing' ? 'text-indigo-500' :
+                                            'text-slate-400'
+                                        }`}
+                                    >
+                                        <Link size={16} />
+                                    </button>
+                                </Tooltip>
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center shrink-0">
                         {editingId !== selectedEntry.id && (
@@ -850,8 +846,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 </div>
 
                 <div className="space-y-4">
-                    {selectedEntry.linkedTaskId && getTaskPreview(selectedEntry.linkedTaskId)}
-                    
                     {editingId === selectedEntry.id ? (
                       <div className="mb-4">
                           <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-40 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
@@ -876,14 +870,13 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                         </div>
                     )}
                     
-                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="left" direction="up" />
+                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end items-center gap-1">
                         <Tooltip content={selectedEntry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
-                            <button onClick={() => toggleInsight(selectedEntry)} className={`p-2 rounded-lg transition-all flex items-center gap-2 ${selectedEntry.isInsight ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
+                            <button onClick={() => toggleInsight(selectedEntry)} className={`p-2 rounded-lg transition-all ${selectedEntry.isInsight ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
                                 <Lightbulb size={16} className={selectedEntry.isInsight ? "fill-current" : ""} />
-                                <span className="text-xs font-bold uppercase">{selectedEntry.isInsight ? 'Инсайт' : 'Обычная запись'}</span>
                             </button>
                         </Tooltip>
+                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="right" direction="up" />
                     </div>
                 </div>
             </div>
