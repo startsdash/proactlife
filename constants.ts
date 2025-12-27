@@ -133,7 +133,8 @@ export const DEFAULT_AI_TOOLS: AIToolConfig[] = [
 ];
 
 export const DEFAULT_CONFIG: AppConfig = {
-  "_version": 1766509999999,
+  "_version": 1766510000001,
+  "ownerEmail": "rukomrus@gmail.com",
   "isGuestModeEnabled": false,
   "inviteCodes": [],
   "coreLibrary": DEFAULT_CORE_LIBRARY,

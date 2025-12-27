@@ -61,7 +61,7 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
                         strokeDasharray="1 1"
                         transform="rotate(90 65 140)"
                     />
-                    <text x="65" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#10b981" className="uppercase tracking-widest pointer-events-none">РОСТ</text>
+                    <text x="65" y="140" textAnchor="middle" dy=".3em" fontSize="10" fontWeight="bold" fill="#10b981" className="uppercase tracking-widest pointer-events-none">РОСТ</text>
                     <motion.circle 
                         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5 }}
                         cx={growthPos.x} cy={growthPos.y} r="3" fill="white" stroke="#10b981" strokeWidth="2" 
@@ -78,7 +78,7 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
                         className="opacity-90"
                         transform="rotate(90 135 140)"
                     />
-                    <text x="135" y="140" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#f43f5e" className="uppercase tracking-widest pointer-events-none">ЛЮДИ</text>
+                    <text x="135" y="140" textAnchor="middle" dy=".3em" fontSize="10" fontWeight="bold" fill="#f43f5e" className="uppercase tracking-widest pointer-events-none">ЛЮДИ</text>
                     <motion.circle 
                         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.7 }}
                         cx={relPos.x} cy={relPos.y} r="3" fill="white" stroke="#f43f5e" strokeWidth="2" 
@@ -95,7 +95,7 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
                         className="opacity-90"
                         transform="rotate(90 100 80)"
                     />
-                    <text x="100" y="80" textAnchor="middle" dy=".3em" fontSize="8" fontWeight="bold" fill="#6366f1" className="uppercase tracking-widest pointer-events-none">ДЕЛО</text>
+                    <text x="100" y="80" textAnchor="middle" dy=".3em" fontSize="10" fontWeight="bold" fill="#6366f1" className="uppercase tracking-widest pointer-events-none">ДЕЛО</text>
                     <motion.circle 
                         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.9 }}
                         cx={prodPos.x} cy={prodPos.y} r="3" fill="white" stroke="#6366f1" strokeWidth="2" 
@@ -108,7 +108,11 @@ const EnergyVennDiagram = ({ productivity, growth, relationships }: { productivi
 
 // 2. Smooth Area Chart
 const SmoothAreaChart = ({ data, color = '#6366f1', height = 100, showAxes = false }: { data: number[], color?: string, height?: number, showAxes?: boolean }) => {
-    if (!data || data.length < 2) return null;
+    // FIX: Handle cases with 0 or 1 data point to avoid division by zero
+    if (!data || data.length < 2) return (
+        <div className="w-full h-full flex items-center justify-center text-xs text-slate-300">Нет данных</div>
+    );
+    
     const max = Math.max(...data, 5);
     
     const viewBoxWidth = 300;
@@ -592,7 +596,6 @@ const useDashboardStats = (notes: Note[], tasks: Task[], habits: Habit[], journa
             const d = new Date(monday);
             d.setDate(monday.getDate() + i);
             const dStr = getLocalDateKey(d);
-            const scores = calculateDayScore(d);
             // Sum all sphere scores for total habit rhythm? No, revert to habit specific logic for this chart?
             // Let's use the Base Habit % from calculation logic.
             // Re-calculate raw habit % for this chart to keep it specific to "Habits"

@@ -4,16 +4,10 @@ import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig, JournalEn
 import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL, applyTypography, BASE_OUTPUT_INSTRUCTION } from '../constants';
 
 // --- API Access ---
-// Safely obtain API key to prevent "Uncaught ReferenceError: process is not defined"
 const getApiKey = (): string => {
   try {
-    // Check global process (bundlers often replace this)
     if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
       return process.env.API_KEY;
-    }
-    // Check manual window polyfill
-    if (typeof window !== 'undefined' && (window as any).process?.env?.API_KEY) {
-      return (window as any).process.env.API_KEY;
     }
   } catch (e) {
     console.warn("Error reading API key:", e);
@@ -27,7 +21,7 @@ const getAiClient = () => {
     return new GoogleGenAI({ apiKey: apiKey || 'MISSING_KEY' });
 };
 
-// Helper to check if model requires legacy/chat handling (Gemma doesn't support systemInstruction in config)
+// Helper to check if model requires legacy/chat handling
 const isGemmaModel = (model: string) => model.toLowerCase().includes('gemma');
 
 // Helper to get dynamic config for Gemma to prevent determinism
@@ -38,22 +32,41 @@ const getGemmaConfig = () => ({
   seed: Math.floor(Math.random() * 2147483647), // Use a random seed to force variety
 });
 
-// Helper for safe JSON parsing to handle potential markdown formatting or extra text
+// Improved JSON Parser that finds the first valid JSON object block
 const parseJSON = <T>(text: string | undefined, fallback: T): T => {
   if (!text) return fallback;
   try {
-    // Locate the JSON object within the text (handles markdown blocks or preamble text)
+    // 1. Try simple strict parse first (fastest)
+    try {
+        return JSON.parse(text) as T;
+    } catch (e) {}
+
+    // 2. Locate the first '{' and attempt to find its matching '}' by counting depth
     const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    
-    if (start === -1 || end === -1 || start > end) {
-       // If no object braces found, try cleaning markdown just in case it's a bare value or array (unlikely for our schemas)
-       const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
-       return JSON.parse(cleanText) as T;
+    if (start === -1) return fallback;
+
+    let depth = 0;
+    let end = -1;
+
+    for (let i = start; i < text.length; i++) {
+        if (text[i] === '{') depth++;
+        else if (text[i] === '}') depth--;
+
+        if (depth === 0) {
+            end = i;
+            break;
+        }
     }
 
-    const jsonStr = text.substring(start, end + 1);
-    return JSON.parse(jsonStr) as T;
+    if (end !== -1) {
+        const jsonStr = text.substring(start, end + 1);
+        return JSON.parse(jsonStr) as T;
+    }
+    
+    // 3. Last resort: Try cleaning markdown code blocks
+    const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+    return JSON.parse(cleanText) as T;
+
   } catch (e) {
     console.error("JSON Parse Error:", e, "Text:", text);
     return fallback;

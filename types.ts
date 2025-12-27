@@ -164,6 +164,7 @@ export interface InviteCode {
 
 export interface AppConfig {
   _version?: number; 
+  ownerEmail?: string; // NEW: Explicit owner definition
   isGuestModeEnabled?: boolean; // NEW: Controls whether unauthenticated users can access the app
   inviteCodes?: InviteCode[]; // NEW: List of active invite codes
   coreLibrary: string;

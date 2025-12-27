@@ -19,8 +19,6 @@ import UserSettings from './components/UserSettings';
 import Onboarding from './components/Onboarding';
 import { LogIn, Shield, CloudOff, ArrowRight } from 'lucide-react';
 
-const OWNER_EMAIL = 'rukomrus@gmail.com';
-
 const App: React.FC = () => {
   // --- THEME LOGIC ---
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -115,7 +113,7 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log('LIVE.ACT Pro v2.0.0 (Owner Mode)');
+    console.log('LIVE.ACT Pro v2.0.0');
     const failSafeTimer = setTimeout(() => { if (!isLoaded) setIsLoaded(true); }, 4000);
 
     const initializeApp = async () => {
@@ -299,7 +297,8 @@ const App: React.FC = () => {
 
   const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
   
-  const isOwner = data.user?.email === OWNER_EMAIL;
+  // Use config owner email
+  const isOwner = data.user?.email === data.config.ownerEmail;
 
   const visibleConfig = useMemo(() => {
     const configToFilter = data.config;
