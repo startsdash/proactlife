@@ -453,6 +453,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     return base;
   };
 
+  const handleCloseModal = () => {
+      setActiveModal(null);
+      setDraftChallenge(null);
+      setAiResponse(null);
+      setIsEditingTask(false);
+      setGeneratingChallengeFor(null);
+      setGeneratingTherapyFor(null);
+  };
+
   const handleCreateTask = () => {
       if (!newTaskTitle.trim() && !newTaskContent.trim()) return;
       const newTask: Task = {
@@ -582,7 +591,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     if (task) {
         updateTask({ ...task, consultationHistory: [...(task.consultationHistory || []), aiResponse] });
         alert("Сохранено в Историю консультаций");
-        setActiveModal(null);
+        handleCloseModal();
     }
   };
 
@@ -619,8 +628,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
           updatedTask.activeChallenge = draftChallenge;
           updatedTask.isChallengeCompleted = false;
           updateTask(updatedTask);
-          setDraftChallenge(null);
-          setActiveModal(null);
+          
+          handleCloseModal();
       }
   };
 
@@ -1319,7 +1328,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       </div>
 
       {activeModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setActiveModal(null)}>
+        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseModal}>
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col" onClick={(e) => e.stopPropagation()}>
                 
                 {/* MODAL HEADER */}
@@ -1347,7 +1356,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 </button>
                                             </Tooltip>
                                             <Tooltip content="Удалить">
-                                                <button onClick={() => { if(window.confirm('Удалить задачу?')) { deleteTask(task.id); setActiveModal(null); } }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                                                <button onClick={() => { if(window.confirm('Удалить задачу?')) { deleteTask(task.id); handleCloseModal(); } }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
                                                     <Trash2 size={20} />
                                                 </button>
                                             </Tooltip>
@@ -1358,7 +1367,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 return null;
                             })()
                         )}
-                        <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1"><X size={24} /></button>
+                        <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1"><X size={24} /></button>
                     </div>
                 </div>
 
