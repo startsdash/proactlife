@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
@@ -370,11 +370,12 @@ const StaticChallengeRenderer: React.FC<{
 };
 
 const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
-  const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details' | 'challenge_draft'} | null>(null);
+  const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details'} | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<'todo' | 'doing' | 'done'>('todo');
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [generatingChallengeFor, setGeneratingChallengeFor] = useState<string | null>(null);
   const [generatingTherapyFor, setGeneratingTherapyFor] = useState<string | null>(null);
+  const [challengeDrafts, setChallengeDrafts] = useState<{[taskId: string]: string}>({});
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
   const [sortOrder, setSortOrder] = useState<'manual' | 'desc' | 'asc'>('manual');
   const [searchQuery, setSearchQuery] = useState('');
@@ -588,14 +589,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const generateChallenge = async (e: React.MouseEvent, taskId: string, content: string) => {
     e.stopPropagation();
     setGeneratingChallengeFor(taskId);
-    setAiResponse(null);
     try {
         const challenge = await generateTaskChallenge(content, config);
         // Check if still generating this specific task (not cancelled)
         setGeneratingChallengeFor(current => {
             if (current === taskId) {
-                setAiResponse(challenge);
-                setActiveModal({ taskId, type: 'challenge_draft' });
+                setChallengeDrafts(prev => ({ ...prev, [taskId]: challenge }));
                 return null;
             }
             return current;
@@ -610,19 +609,20 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       setGeneratingChallengeFor(null);
   };
 
-  const acceptChallengeFromModal = () => {
-      if (!activeModal || !aiResponse) return;
-      const task = tasks.find(t => t.id === activeModal.taskId);
-      if (!task) return;
-
-      const updatedTask: Task = { ...task };
-      if (task.column === 'todo') updatedTask.column = 'doing'; // Auto-move to doing
-      if (task.activeChallenge) updatedTask.challengeHistory = [...(task.challengeHistory || []), task.activeChallenge];
-      updatedTask.activeChallenge = aiResponse;
-      updatedTask.isChallengeCompleted = false;
-      updateTask(updatedTask);
-      setActiveModal(null);
-      setAiResponse(null);
+  const acceptChallenge = (e: React.MouseEvent, task: Task) => {
+      e.stopPropagation();
+      const draft = challengeDrafts[task.id];
+      if (draft) {
+          const updatedTask: Task = { ...task };
+          if (task.column === 'todo') updatedTask.column = 'doing';
+          if (task.activeChallenge) updatedTask.challengeHistory = [...(task.challengeHistory || []), task.activeChallenge];
+          updatedTask.activeChallenge = draft;
+          updatedTask.isChallengeCompleted = false;
+          updateTask(updatedTask);
+          const newDrafts = {...challengeDrafts};
+          delete newDrafts[task.id];
+          setChallengeDrafts(newDrafts);
+      }
   };
 
   const toggleChallengeComplete = (e?: React.MouseEvent) => {
@@ -738,6 +738,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       updateTask({ ...task, subtasks: updatedSubtasks });
   };
 
+  const handleToggleSubtaskPin = (subtaskId: string) => {
+      const task = getTaskForModal();
+      if (!task || !task.subtasks) return;
+      
+      const updatedSubtasks = task.subtasks.map(s => 
+          s.id === subtaskId ? { ...s, isPinned: !s.isPinned } : s
+      );
+      updateTask({ ...task, subtasks: updatedSubtasks });
+  };
+
   const handleDeleteSubtask = (subtaskId: string, taskId?: string) => {
       const targetTaskId = taskId || activeModal?.taskId;
       if (!targetTaskId) return;
@@ -777,6 +787,25 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const [moved] = subtasks.splice(dragIdx, 1);
       subtasks.splice(targetIdx, 0, moved);
 
+      updateTask({ ...task, subtasks });
+  };
+
+  const moveSubtaskManual = (e: React.MouseEvent, subtaskId: string, direction: 'up' | 'down', task: Task) => {
+      e.stopPropagation();
+      if (!task || !task.subtasks) return;
+      
+      const subtasks = [...task.subtasks];
+      const index = subtasks.findIndex(s => s.id === subtaskId);
+      if (index === -1) return;
+
+      if (direction === 'up' && index > 0) {
+          [subtasks[index], subtasks[index - 1]] = [subtasks[index - 1], subtasks[index]];
+      } else if (direction === 'down' && index < subtasks.length - 1) {
+          [subtasks[index], subtasks[index + 1]] = [subtasks[index + 1], subtasks[index]];
+      } else {
+          return;
+      }
+      
       updateTask({ ...task, subtasks });
   };
 
@@ -1005,7 +1034,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 {renderCardChecklist(task)}
 
                                 {/* ACTIVE CHALLENGE (Collapsed) */}
-                                {task.activeChallenge && (
+                                {task.activeChallenge && !challengeDrafts[task.id] && (
                                     <div className="mt-2 mb-2">
                                         <CollapsibleSection 
                                             title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
@@ -1093,6 +1122,20 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             </>
                         )}
 
+                        {/* CHALLENGE DRAFTS (Usually for Todo/Doing) */}
+                        {challengeDrafts[task.id] && (
+                            <div className="mt-2 mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 animate-in fade-in slide-in-from-top-2 relative">
+                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase mb-2"><Zap size={10} /> {config.challengeAuthors[0]?.name || 'Popper'}</div>
+                                <div className="text-sm text-slate-900 dark:text-slate-200 leading-relaxed mb-3">
+                                    <StaticChallengeRenderer content={challengeDrafts[task.id]} mode="draft" />
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={(e) => acceptChallenge(e, task)} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold py-1.5 rounded flex items-center justify-center gap-1 shadow-sm"><Play size={10} className="fill-current" /> Принять</button>
+                                    <button onClick={(e) => { e.stopPropagation(); const d = {...challengeDrafts}; delete d[task.id]; setChallengeDrafts(d); }} className="text-amber-400 hover:text-amber-700 px-2"><X size={14} /></button>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="mt-auto border-t border-slate-50 dark:border-slate-700 pt-3 flex flex-col gap-3">
                             <div className="flex justify-end items-center w-full gap-2">
                                {col.id === 'todo' && (
@@ -1126,13 +1169,17 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                            </button>
                                        </Tooltip>
 
-                                       {!task.activeChallenge && hasChallengeAuthors && (
+                                       {!challengeDrafts[task.id] && hasChallengeAuthors && (
                                            <Tooltip content={generatingChallengeFor === task.id ? "Остановить" : "Челлендж"}>
                                                <button 
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         if (generatingChallengeFor === task.id) {
                                                             stopGeneration(e);
+                                                            return;
+                                                        }
+                                                        if (task.activeChallenge && !task.isChallengeCompleted) {
+                                                            alert("Необходимо завершить активный челлендж");
                                                             return;
                                                         }
                                                         if (window.confirm("Создать челлендж?")) {
@@ -1291,7 +1338,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 <div className="flex justify-between items-start mb-4 shrink-0">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex-1 mr-4">
                         {activeModal.type === 'stuck' && 'Личный консультант'}
-                        {activeModal.type === 'challenge_draft' && 'Новый Челлендж'}
                         {activeModal.type === 'details' && (() => {
                             const task = getTaskForModal();
                             if (task?.title) return applyTypography(task.title);
@@ -1340,24 +1386,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             ) : (
                                 <div className="text-center text-slate-400 py-10">Не удалось получить ответ.</div>
                             )}
-                        </div>
-                    )}
-
-                    {activeModal.type === 'challenge_draft' && aiResponse && (
-                        <div className="flex flex-col h-full">
-                            <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 leading-relaxed text-sm flex-1 overflow-y-auto custom-scrollbar-light">
-                                <StaticChallengeRenderer content={aiResponse} mode="draft" />
-                            </div>
-                            <div className="mt-6 flex justify-end">
-                                 <Tooltip content="Принять вызов">
-                                    <button 
-                                        onClick={acceptChallengeFromModal} 
-                                        className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg hover:shadow-indigo-500/30 transition-all active:scale-95 flex items-center justify-center"
-                                    >
-                                        <Rocket size={20} strokeWidth={2} />
-                                    </button>
-                                </Tooltip>
-                            </div>
                         </div>
                     )}
 
