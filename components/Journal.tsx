@@ -621,25 +621,33 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         <div className="flex flex-col gap-3 mb-4 md:mb-6 shrink-0 max-w-3xl mx-auto w-full">
              <div className="flex justify-between items-center">
                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Хроника</h3>
-                {hasMentorTool && (
-                  <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="left">
-                    <button 
-                        onClick={handleAnalyzePath} 
-                        disabled={displayedEntries.length === 0} 
-                        className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all shadow-sm ${isAnalyzing ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-400 cursor-pointer' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
-                    >
-                        {isAnalyzing ? (
-                            <div className="relative w-3.5 h-3.5 flex items-center justify-center">
-                                <Loader2 size={14} className="animate-spin absolute inset-0" />
-                                <div className="w-1.5 h-1.5 bg-current rounded-[1px] relative z-10" />
-                            </div>
-                        ) : (
-                            <Bot size={14} />
-                        )}
-                        <span>Наставник</span>
-                    </button>
-                  </Tooltip>
-                )}
+                <div className="flex items-center gap-2">
+                    {hasMentorTool && (
+                        <>
+                            <Tooltip content="История Наставника" side="left">
+                                <button onClick={() => setShowHistory(true)} className="p-2 rounded-lg border transition-all flex items-center justify-center bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm">
+                                    <Scroll size={16} />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="left">
+                                <button 
+                                    onClick={handleAnalyzePath} 
+                                    disabled={displayedEntries.length === 0} 
+                                    className={`flex items-center justify-center p-2 rounded-lg border transition-all shadow-sm ${isAnalyzing ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-400 cursor-pointer' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
+                                >
+                                    {isAnalyzing ? (
+                                        <div className="relative w-3.5 h-3.5 flex items-center justify-center">
+                                            <Loader2 size={14} className="animate-spin absolute inset-0" />
+                                            <div className="w-1.5 h-1.5 bg-current rounded-[1px] relative z-10" />
+                                        </div>
+                                    ) : (
+                                        <Bot size={16} />
+                                    )}
+                                </button>
+                            </Tooltip>
+                        </>
+                    )}
+                </div>
             </div>
             <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -683,11 +691,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                         </div>
                     )}
                 </div>
-                {hasMentorTool && (
-                  <Tooltip content="История Наставника">
-                    <button onClick={() => setShowHistory(true)} className="p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><Scroll size={18} /></button>
-                  </Tooltip>
-                )}
                 <Tooltip content={sortOrder === 'desc' ? "Новые сверху" : "Старые сверху"}>
                     <button 
                         onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
