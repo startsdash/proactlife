@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
@@ -56,79 +56,6 @@ const markdownComponents = {
             ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400 border border-slate-200 dark:border-slate-700" {...props}>{children}</code>
             : <code className="block bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     }
-};
-
-const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const toggleSphere = (id: string) => {
-        if (selected.includes(id)) {
-            onChange(selected.filter(s => s !== id));
-        } else {
-            onChange([...selected, id]);
-        }
-    };
-
-    return (
-        <div className="relative" ref={dropdownRef}>
-            <button 
-                onClick={() => setIsOpen(!isOpen)}
-                className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all outline-none ${
-                  isOpen ? 'border-indigo-400 ring-2 ring-indigo-50 dark:ring-indigo-900 bg-white dark:bg-[#1e293b]' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
-                }`}
-            >
-                <div className="flex items-center gap-2 overflow-hidden">
-                    {selected.length > 0 ? (
-                        <>
-                            <div className="flex -space-x-1 shrink-0">
-                                {selected.map(s => {
-                                    const sp = SPHERES.find(x => x.id === s);
-                                    return sp ? <div key={s} className={`w-3 h-3 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
-                                })}
-                            </div>
-                            <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
-                                {selected.map(id => SPHERES.find(s => s.id === id)?.label).join(', ')}
-                            </span>
-                        </>
-                    ) : (
-                        <span className="text-sm text-slate-400">Выбери сферу</span>
-                    )}
-                </div>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5">
-                    {SPHERES.map(s => {
-                        const isSelected = selected.includes(s.id);
-                        const Icon = ICON_MAP[s.icon];
-                        return (
-                            <button
-                                key={s.id}
-                                onClick={() => toggleSphere(s.id)}
-                                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                            >
-                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-slate-400'} />}
-                                <span className="flex-1">{s.label}</span>
-                                {isSelected && <Check size={14} className="text-indigo-500" />}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
 };
 
 const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }> = ({ task, updateTask }) => {
@@ -224,12 +151,6 @@ const CollapsibleSection: React.FC<{
       )}
     </div>
   );
-};
-
-const getChallengeStats = (content: string) => {
-    const total = (content.match(/\[[xX ]\]/gm) || []).length;
-    const checked = (content.match(/\[[xX]\]/gm) || []).length;
-    return { total, checked, percent: total > 0 ? Math.round((checked / total) * 100) : 0 };
 };
 
 const InteractiveChallenge: React.FC<{ 
@@ -370,12 +291,11 @@ const StaticChallengeRenderer: React.FC<{
 };
 
 const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
-  const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details'} | null>(null);
+  const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details' | 'challenge'} | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<'todo' | 'doing' | 'done'>('todo');
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [generatingChallengeFor, setGeneratingChallengeFor] = useState<string | null>(null);
   const [generatingTherapyFor, setGeneratingTherapyFor] = useState<string | null>(null);
-  const [challengeDrafts, setChallengeDrafts] = useState<{[taskId: string]: string}>({});
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
   const [sortOrder, setSortOrder] = useState<'manual' | 'desc' | 'asc'>('manual');
   const [searchQuery, setSearchQuery] = useState('');
@@ -393,8 +313,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [editTaskContent, setEditTaskContent] = useState('');
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
-  const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
-
+  
   const baseActiveTasks = tasks.filter(t => !t.isArchived);
 
   const activeTasks = baseActiveTasks.filter(task => {
@@ -442,16 +361,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     { id: 'doing', title: 'В процессе', color: 'border-indigo-400' },
     { id: 'done', title: 'Сделано', color: 'border-emerald-400' }
   ];
-
-  const getTabClass = (id: string, active: boolean) => {
-    const base = "flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors text-center";
-    if (!active) return `${base} border-transparent text-slate-400 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50`;
-    
-    if (id === 'todo') return `${base} border-slate-400 text-slate-700 dark:text-slate-200 bg-white dark:bg-[#1e293b]`;
-    if (id === 'doing') return `${base} border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-900/10`;
-    if (id === 'done') return `${base} border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-900/10`;
-    return base;
-  };
 
   const handleCreateTask = () => {
       if (!newTaskTitle.trim() && !newTaskContent.trim()) return;
@@ -528,7 +437,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       if (draggedTask.column !== targetTask.column) {
            if (!canMoveTask(draggedTask, targetTask.column)) return;
            updateTask({ ...draggedTask, column: targetTask.column });
-           // Optionally reorder as well, but primary action is moving column
            return; 
       }
       
@@ -542,38 +450,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
   const toggleSortOrder = () => { 
       setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); 
-  };
-
-  const openTherapy = async (e: React.MouseEvent, task: Task) => {
-    e.stopPropagation();
-    
-    // STOP logic
-    if (generatingTherapyFor === task.id) {
-        setGeneratingTherapyFor(null);
-        return;
-    }
-
-    // START logic
-    if (window.confirm("Запустить ИИ-консультанта?")) {
-        setGeneratingTherapyFor(task.id);
-        setAiResponse(null);
-        try {
-            const response = await getKanbanTherapy(task.content, 'stuck', config);
-            
-            // Check if cancelled during generation
-            setGeneratingTherapyFor(current => {
-                if (current === task.id) {
-                    setAiResponse(response);
-                    setActiveModal({ taskId: task.id, type: 'stuck' });
-                    return null;
-                }
-                return current;
-            });
-        } catch (error) {
-            console.error(error);
-            setGeneratingTherapyFor(current => current === task.id ? null : current);
-        }
-    }
   };
 
   const saveTherapyResponse = () => {
@@ -591,10 +467,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     setGeneratingChallengeFor(taskId);
     try {
         const challenge = await generateTaskChallenge(content, config);
-        // Check if still generating this specific task (not cancelled)
         setGeneratingChallengeFor(current => {
             if (current === taskId) {
-                setChallengeDrafts(prev => ({ ...prev, [taskId]: challenge }));
+                setAiResponse(challenge);
+                setActiveModal({ taskId: taskId, type: 'challenge' });
                 return null;
             }
             return current;
@@ -609,28 +485,23 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       setGeneratingChallengeFor(null);
   };
 
-  const acceptChallenge = (e: React.MouseEvent, task: Task) => {
-      e.stopPropagation();
-      const draft = challengeDrafts[task.id];
-      if (draft) {
-          const updatedTask: Task = { ...task };
-          if (task.column === 'todo') updatedTask.column = 'doing';
-          if (task.activeChallenge) updatedTask.challengeHistory = [...(task.challengeHistory || []), task.activeChallenge];
-          updatedTask.activeChallenge = draft;
-          updatedTask.isChallengeCompleted = false;
-          updateTask(updatedTask);
-          const newDrafts = {...challengeDrafts};
-          delete newDrafts[task.id];
-          setChallengeDrafts(newDrafts);
-      }
-  };
-
-  const toggleChallengeComplete = (e?: React.MouseEvent) => {
-      if(e) e.stopPropagation();
+  const acceptChallenge = () => {
       const task = getTaskForModal();
-      if(task) {
-          updateTask({ ...task, isChallengeCompleted: !task.isChallengeCompleted });
+      if (!task || !aiResponse) return;
+      
+      const updatedTask: Task = { ...task };
+      // Optional: Auto move to doing if in todo
+      if (task.column === 'todo') updatedTask.column = 'doing';
+      
+      if (task.activeChallenge) {
+          updatedTask.challengeHistory = [...(task.challengeHistory || []), task.activeChallenge];
       }
+      updatedTask.activeChallenge = aiResponse;
+      updatedTask.isChallengeCompleted = false;
+      
+      updateTask(updatedTask);
+      setActiveModal(null);
+      setAiResponse(null);
   };
   
   const toggleChallengeCompleteFromCard = (e: React.MouseEvent, task: Task) => {
@@ -656,34 +527,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       updateTask({ ...task, activeChallenge: newLines.join('\n') });
   };
   
-  const handleToggleChallengeStepPin = (globalIndex: number) => {
-      const task = getTaskForModal();
-      if (!task) return;
-      const currentPinned = task.pinnedChallengeIndices || [];
-      const isPinned = currentPinned.includes(globalIndex);
-      
-      const newPinned = isPinned 
-        ? currentPinned.filter(i => i !== globalIndex)
-        : [...currentPinned, globalIndex];
-      
-      updateTask({ ...task, pinnedChallengeIndices: newPinned });
-  };
-
   const moveToDoing = (e: React.MouseEvent, task: Task) => {
       e.stopPropagation();
       if (!canMoveTask(task, 'doing')) return;
       updateTask({ ...task, column: 'doing' });
-  };
-
-  const handleQuickComplete = (e: React.MouseEvent, task: Task) => {
-      e.stopPropagation();
-      if (task.activeChallenge && !task.isChallengeCompleted) {
-          alert('Необходимо завершить активный челлендж перед закрытием задачи!');
-          return;
-      }
-      
-      const newCol = task.column === 'done' ? 'todo' : 'done';
-      updateTask({ ...task, column: newCol });
   };
 
   // Subtask Management
@@ -738,16 +585,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       updateTask({ ...task, subtasks: updatedSubtasks });
   };
 
-  const handleToggleSubtaskPin = (subtaskId: string) => {
-      const task = getTaskForModal();
-      if (!task || !task.subtasks) return;
-      
-      const updatedSubtasks = task.subtasks.map(s => 
-          s.id === subtaskId ? { ...s, isPinned: !s.isPinned } : s
-      );
-      updateTask({ ...task, subtasks: updatedSubtasks });
-  };
-
   const handleDeleteSubtask = (subtaskId: string, taskId?: string) => {
       const targetTaskId = taskId || activeModal?.taskId;
       if (!targetTaskId) return;
@@ -763,7 +600,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       e.dataTransfer.setData('subtaskId', subtaskId);
       e.dataTransfer.setData('sourceTaskId', taskId);
       e.dataTransfer.effectAllowed = 'move';
-      // Prevent bubble up to column DnD
       e.stopPropagation();
   };
 
@@ -788,55 +624,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       subtasks.splice(targetIdx, 0, moved);
 
       updateTask({ ...task, subtasks });
-  };
-
-  const moveSubtaskManual = (e: React.MouseEvent, subtaskId: string, direction: 'up' | 'down', task: Task) => {
-      e.stopPropagation();
-      if (!task || !task.subtasks) return;
-      
-      const subtasks = [...task.subtasks];
-      const index = subtasks.findIndex(s => s.id === subtaskId);
-      if (index === -1) return;
-
-      if (direction === 'up' && index > 0) {
-          [subtasks[index], subtasks[index - 1]] = [subtasks[index - 1], subtasks[index]];
-      } else if (direction === 'down' && index < subtasks.length - 1) {
-          [subtasks[index], subtasks[index + 1]] = [subtasks[index + 1], subtasks[index]];
-      } else {
-          return;
-      }
-      
-      updateTask({ ...task, subtasks });
-  };
-
-  // Delete Helpers
-  const deleteActiveChallenge = (e?: React.MouseEvent) => {
-      if (e) e.stopPropagation();
-      const task = getTaskForModal();
-      if (!task) return;
-      if (window.confirm('Удалить активный челлендж?')) {
-          updateTask({ ...task, activeChallenge: undefined, isChallengeCompleted: undefined });
-      }
-  };
-
-  const deleteChallengeFromHistory = (index: number) => {
-      const task = getTaskForModal();
-      if (!task || !task.challengeHistory) return;
-      if (window.confirm('Удалить челлендж из истории?')) {
-          const newHistory = [...task.challengeHistory];
-          newHistory.splice(index, 1);
-          updateTask({ ...task, challengeHistory: newHistory });
-      }
-  };
-
-  const deleteConsultation = (index: number) => {
-      const task = getTaskForModal();
-      if (!task || !task.consultationHistory) return;
-      if (window.confirm('Удалить консультацию?')) {
-          const newHistory = [...task.consultationHistory];
-          newHistory.splice(index, 1);
-          updateTask({ ...task, consultationHistory: newHistory });
-      }
   };
 
   const getTaskForModal = () => tasks.find(t => t.id === activeModal?.taskId);
@@ -906,7 +693,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
     return (
     <div className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3 h-full md:h-auto md:min-h-0`}>
-        {/* On mobile, we hide the redundant column header as tabs are used */}
         <h3 className="hidden md:flex font-semibold text-slate-600 dark:text-slate-400 mb-3 justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
         
         {col.id === 'todo' && (
@@ -968,7 +754,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             ) : (
                 tasksInCol.map(task => {
                     const isDoneColumn = col.id === 'done';
-                    // Specific border color classes to color ONLY the left border
                     let borderClass = 'border-l-slate-300 dark:border-l-slate-600';
                     if (col.id === 'done') borderClass = 'border-l-emerald-400';
                     else if (col.id === 'doing') borderClass = 'border-l-indigo-400';
@@ -981,7 +766,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     return (
                     <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group border-l-4 ${borderClass} overflow-hidden`}>
                         
-                        {/* HEADER: Title + Sphere Selector */}
                         <div className="flex justify-between items-start gap-2 mb-2">
                              <div className="flex-1 pt-1 min-w-0">
                                 {task.title ? (
@@ -994,25 +778,20 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                              </div>
                         </div>
 
-                        {/* CONTENT */}
                         <div className="mb-3">
                             <div className={`text-slate-700 dark:text-slate-300 font-normal text-xs leading-relaxed line-clamp-4 ${!task.title ? 'text-sm' : ''}`}>
                                  <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
                             </div>
                         </div>
 
-                        {/* TODO SPECIFIC MODULES */}
                         {col.id === 'todo' && (
                             <>
-                                {/* CHECKLIST (Collapsed by default, always visible) */}
                                 {renderCardChecklist(task)}
                             </>
                         )}
 
-                        {/* DOING SPECIFIC MODULES */}
                         {col.id === 'doing' && (
                             <>
-                                {/* STATUS BAR */}
                                 {subtasksTotal > 0 && (
                                     <div className="flex items-center gap-3 mt-2 mb-2 h-6 w-full">
                                         <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
@@ -1030,11 +809,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     </div>
                                 )}
 
-                                {/* CHECKLIST (Collapsed by default, always visible) */}
                                 {renderCardChecklist(task)}
 
-                                {/* ACTIVE CHALLENGE (Collapsed) */}
-                                {task.activeChallenge && !challengeDrafts[task.id] && (
+                                {task.activeChallenge && (
                                     <div className="mt-2 mb-2">
                                         <CollapsibleSection 
                                             title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
@@ -1043,7 +820,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         >
                                             <div className={`p-2 rounded-lg border transition-all relative group ${task.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
                                                  
-                                                 {/* COMPLETE CHALLENGE CHECK (Hover) */}
                                                  <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                                                      <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
                                                          <button 
@@ -1072,10 +848,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             </>
                         )}
 
-                        {/* DONE COLUMN SPECIFIC RENDER ORDER */}
                         {col.id === 'done' && (
                             <>
-                                {/* STATUS BAR */}
                                 {subtasksTotal > 0 && (
                                     <div className="flex items-center gap-3 mt-2 mb-2 h-6 w-full">
                                         <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
@@ -1093,7 +867,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     </div>
                                 )}
                                 
-                                {/* CHECKLIST (Only if items exist) */}
                                 {task.subtasks && task.subtasks.length > 0 && (
                                      <div className="mt-2 mb-2">
                                          <CollapsibleSection 
@@ -1120,20 +893,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                      </div>
                                 )}
                             </>
-                        )}
-
-                        {/* CHALLENGE DRAFTS (Usually for Todo/Doing) */}
-                        {challengeDrafts[task.id] && (
-                            <div className="mt-2 mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 animate-in fade-in slide-in-from-top-2 relative">
-                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase mb-2"><Zap size={10} /> {config.challengeAuthors[0]?.name || 'Popper'}</div>
-                                <div className="text-sm text-slate-900 dark:text-slate-200 leading-relaxed mb-3">
-                                    <StaticChallengeRenderer content={challengeDrafts[task.id]} mode="draft" />
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={(e) => acceptChallenge(e, task)} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold py-1.5 rounded flex items-center justify-center gap-1 shadow-sm"><Play size={10} className="fill-current" /> Принять</button>
-                                    <button onClick={(e) => { e.stopPropagation(); const d = {...challengeDrafts}; delete d[task.id]; setChallengeDrafts(d); }} className="text-amber-400 hover:text-amber-700 px-2"><X size={14} /></button>
-                                </div>
-                            </div>
                         )}
 
                         <div className="mt-auto border-t border-slate-50 dark:border-slate-700 pt-3 flex flex-col gap-3">
@@ -1169,7 +928,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                            </button>
                                        </Tooltip>
 
-                                       {!challengeDrafts[task.id] && hasChallengeAuthors && (
+                                       {!task.activeChallenge && hasChallengeAuthors && (
                                            <Tooltip content={generatingChallengeFor === task.id ? "Остановить" : "Челлендж"}>
                                                <button 
                                                     onClick={(e) => {
@@ -1196,71 +955,38 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                     ) : (
                                                         <Zap size={18} />
                                                     )}
-                                                </button>
-                                           </Tooltip>
-                                       )}
-
-                                       {hasKanbanTherapist && (
-                                           <Tooltip content={generatingTherapyFor === task.id ? "Остановить" : "Консультант (ИИ)"}>
-                                               <button 
-                                                    onClick={(e) => openTherapy(e, task)} 
-                                                    className="p-2 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg border border-transparent hover:border-violet-100 dark:hover:border-violet-800 transition-colors"
-                                               >
-                                                   {generatingTherapyFor === task.id ? (
-                                                        <div className="relative w-[18px] h-[18px] flex items-center justify-center">
-                                                            <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                                            <div className="w-2 h-2 bg-current rounded-[1px] relative z-10"></div>
-                                                        </div>
-                                                   ) : (
-                                                       <Bot size={18} /> 
-                                                   )}
                                                </button>
                                            </Tooltip>
                                        )}
                                    </div>
-                                   <Tooltip content="Завершить">
-                                        <button 
-                                            onClick={(e) => handleQuickComplete(e, task)} 
-                                            className="p-2 rounded-lg border border-transparent hover:border-emerald-500 dark:hover:border-emerald-400 text-slate-300 dark:text-slate-500 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
-                                        >
-                                            <Check size={18} strokeWidth={3} />
-                                        </button>
-                                    </Tooltip>
                                    </>
                                )}
-                               
+
                                {col.id === 'done' && (
-                                    <>
-                                        <div className="flex gap-2">
-                                            <Tooltip content="В Зал славы">
-                                                <button 
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
-                                                    }} 
-                                                    className="p-2 text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg border border-transparent hover:border-amber-100 dark:hover:border-amber-800 transition-colors"
-                                                >
-                                                    <Trophy size={18} /> 
-                                                </button>
-                                            </Tooltip>
-                                            <Tooltip content="Вернуть в работу">
-                                                <button 
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        updateTask({ ...task, column: 'doing' }); 
-                                                    }} 
-                                                    className="p-2 rounded-lg border border-transparent hover:border-indigo-500 dark:hover:border-indigo-400 text-slate-300 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
-                                                >
-                                                    <RotateCcw size={18} strokeWidth={2} />
-                                                </button>
-                                            </Tooltip>
-                                        </div>
-                                    </>
+                                   <div className="flex gap-2">
+                                       <Tooltip content="В Архив">
+                                           <button 
+                                                onClick={(e) => { e.stopPropagation(); if(window.confirm('В Архив?')) archiveTask(task.id); }}
+                                                className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
+                                           >
+                                                <ArchiveIcon size={18} />
+                                           </button>
+                                       </Tooltip>
+                                       <Tooltip content="Удалить">
+                                           <button 
+                                                onClick={(e) => { e.stopPropagation(); if(window.confirm('Удалить?')) deleteTask(task.id); }}
+                                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg border border-transparent hover:border-red-100 dark:hover:border-red-800 transition-colors"
+                                           >
+                                                <Trash2 size={18} />
+                                           </button>
+                                       </Tooltip>
+                                   </div>
                                )}
                             </div>
                         </div>
                     </div>
-                )})
+                    );
+                })
             )}
         </div>
     </div>
@@ -1268,334 +994,177 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   return (
-    <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden">
-      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc] md:dark:bg-[#0f172a] md:pb-6 transition-colors duration-300">
-        <div>
-            <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Спринты</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Фокус на главном</p>
-        </div>
-        
-        {/* Search */}
-        <div className="flex flex-col md:flex-row items-end md:items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none w-full md:w-auto">
-             
-             {/* Search Input */}
-             <div className="relative group w-full md:w-auto">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                <input 
-                    type="text" 
-                    placeholder="Поиск..." 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full md:w-64 focus:w-full md:focus:w-80 transition-all pl-8 pr-7 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 placeholder:text-slate-400 outline-none ring-1 ring-transparent focus:ring-indigo-500/20"
-                />
-                {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={12} /></button>
-                )}
-             </div>
-             
-             <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
-                 <button onClick={toggleSortOrder} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0">
-                     {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-                 </button>
-             </Tooltip>
-        </div>
-      </header>
+    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] p-2 md:p-8 overflow-hidden">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4 shrink-0 px-2 md:px-0">
+            <div>
+                <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Спринты</h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Фокус и поток</p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+                 <div className="relative">
+                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                     <input 
+                        type="text" 
+                        placeholder="Поиск..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 pr-4 py-2 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 w-40 md:w-64 transition-all"
+                     />
+                     {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300"><X size={14}/></button>}
+                 </div>
+                 
+                 <Tooltip content={filterJournal === 'all' ? "Показать задачи с Дневником" : "Показать все"}>
+                     <button 
+                        onClick={() => setFilterJournal(prev => prev === 'all' ? 'linked' : 'all')}
+                        className={`p-2 rounded-xl border transition-all ${filterJournal === 'linked' ? 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800 text-cyan-600 dark:text-cyan-400' : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                     >
+                         <Book size={18} />
+                     </button>
+                 </Tooltip>
+                 
+                 <Tooltip content={sortOrder === 'desc' ? "Новые сверху" : "Старые сверху"}>
+                     <button 
+                        onClick={toggleSortOrder}
+                        className="p-2 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all"
+                     >
+                         {sortOrder === 'desc' ? <ArrowDown size={18} /> : <ArrowUp size={18} />}
+                     </button>
+                 </Tooltip>
+            </div>
+        </header>
 
-      {/* Columns */}
-      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-0 overflow-hidden md:overflow-visible">
-         {/* Mobile Tabs */}
-         <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10">
+        <div className="flex md:hidden bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-4 shrink-0">
             {columns.map(col => (
                 <button
                     key={col.id}
                     onClick={() => setActiveMobileTab(col.id as any)}
-                    className={getTabClass(col.id, activeMobileTab === col.id)}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeMobileTab === col.id ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
                 >
-                    {col.title} <span className="opacity-60 text-[10px]">({activeTasks.filter(t => t.column === col.id).length})</span>
+                    {col.title}
                 </button>
             ))}
-         </div>
+        </div>
 
-         <div className="flex-1 overflow-x-hidden md:overflow-visible p-4 md:p-0">
-             <div className="flex flex-col md:flex-row gap-4 h-full md:h-auto min-h-0 md:items-start">
-                {columns.map(col => {
-                   const isHiddenOnMobile = activeMobileTab !== col.id;
-                   return (
-                       <div key={col.id} className={`flex-1 min-w-[280px] flex-col min-h-0 h-full md:h-auto ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}>
-                           {renderColumn(col)}
-                       </div>
-                   );
-                })}
-             </div>
-         </div>
-      </div>
-
-      {activeModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setActiveModal(null)}>
-            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col" onClick={(e) => e.stopPropagation()}>
-                
-                {/* MODAL HEADER */}
-                <div className="flex justify-between items-start mb-4 shrink-0">
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex-1 mr-4">
-                        {activeModal.type === 'stuck' && 'Личный консультант'}
-                        {activeModal.type === 'details' && (() => {
-                            const task = getTaskForModal();
-                            if (task?.title) return applyTypography(task.title);
-                            if (task) return 'Детали задачи'; // Fallback if no title
-                            return '';
-                        })()}
-                    </h3>
-                    <div className="flex items-center shrink-0">
-                        {activeModal.type === 'details' && !isEditingTask && (
-                            (() => {
-                                const task = getTaskForModal();
-                                if (task && task.column !== 'done') {
-                                    return (
-                                        <>
-                                            <Tooltip content="Редактировать">
-                                                <button onClick={() => setIsEditingTask(true)} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                                    <Edit3 size={20} />
-                                                </button>
-                                            </Tooltip>
-                                            <Tooltip content="Удалить">
-                                                <button onClick={() => { if(window.confirm('Удалить задачу?')) { deleteTask(task.id); setActiveModal(null); } }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
-                                                    <Trash2 size={20} />
-                                                </button>
-                                            </Tooltip>
-                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-2"></div>
-                                        </>
-                                    );
-                                }
-                                return null;
-                            })()
-                        )}
-                        <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1"><X size={24} /></button>
-                    </div>
+        <div className="flex-1 overflow-x-auto overflow-y-hidden">
+            <div className="h-full grid grid-cols-1 md:grid-cols-3 gap-4 min-w-[300px] md:min-w-0">
+                <div className={`h-full ${activeMobileTab === 'todo' ? 'block' : 'hidden md:block'}`}>
+                    {renderColumn(columns[0])}
                 </div>
-
-                <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0">
-                    {activeModal.type === 'stuck' && (
-                        <div className="space-y-4">
-                            {aiResponse ? (
-                                <div className="space-y-4">
-                                    <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-800">
-                                        <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase mb-2"><Bot size={14}/> Совет</div>
-                                        <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown></div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-center text-slate-400 py-10">Не удалось получить ответ.</div>
-                            )}
-                        </div>
-                    )}
-
-                    {activeModal.type === 'details' && (() => {
-                        const task = getTaskForModal();
-                        if (!task) return null;
-                        
-                        const isDone = task.column === 'done';
-
-                        return (
-                            <div className="space-y-4">
-                                {/* TEXT EDITING */}
-                                {isEditingTask ? (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Название</label>
-                                            <input 
-                                                value={editTaskTitle} 
-                                                onChange={(e) => setEditTaskTitle(e.target.value)} 
-                                                className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-sm font-bold text-slate-800 dark:text-slate-200 box-border focus:border-slate-300 dark:focus:border-slate-600 transition-colors"
-                                                placeholder="Название задачи..."
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Описание</label>
-                                            <textarea 
-                                                value={editTaskContent} 
-                                                onChange={(e) => setEditTaskContent(e.target.value)} 
-                                                className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-sm text-slate-800 dark:text-slate-200 resize-none box-border focus:border-slate-300 dark:focus:border-slate-600 transition-colors"
-                                                placeholder="Описание (Markdown)..."
-                                            />
-                                        </div>
-                                        <div className="flex justify-end gap-2 pt-2">
-                                            <button onClick={() => setIsEditingTask(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">Отмена</button>
-                                            <button onClick={handleSaveTaskContent} className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">Сохранить</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="group relative pr-1">
-                                        <div className="text-slate-800 dark:text-slate-200 text-sm font-normal leading-relaxed">
-                                            <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* SPHERES */}
-                                <div>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
-                                    <SphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
-                                </div>
-
-                                {/* CONTEXT (DESCRIPTION) - Collapsed by default */}
-                                {task.description && (
-                                    <CollapsibleSection title="Контекст" icon={<FileText size={14}/>}>
-                                        <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                                            <ReactMarkdown components={markdownComponents}>{applyTypography(task.description)}</ReactMarkdown>
-                                        </div>
-                                    </CollapsibleSection>
-                                )}
-
-                                {/* CHECKLIST - Collapsed by default */}
-                                {(task.subtasks && task.subtasks.length > 0 || !isDone) && (
-                                    <CollapsibleSection title="Чек-лист" icon={<ListTodo size={14}/>}>
-                                        <div className="space-y-2">
-                                            {task.subtasks?.map(s => (
-                                                <div 
-                                                    key={s.id} 
-                                                    className={`flex items-center gap-2 group ${isDone ? 'opacity-70' : ''}`}
-                                                    draggable={!isDone}
-                                                    onDragStart={!isDone ? (e) => handleSubtaskDragStart(e, s.id, task.id) : undefined}
-                                                    onDragOver={handleDragOver}
-                                                    onDrop={!isDone ? (e) => handleSubtaskDrop(e, s.id, task) : undefined}
-                                                >
-                                                    {!isDone && (
-                                                        <div className="hidden md:block text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                                             <GripVertical size={14} />
-                                                        </div>
-                                                    )}
-                                                    <button onClick={() => !isDone && handleToggleSubtask(s.id)} disabled={isDone} className={`${s.isCompleted ? "text-emerald-500" : "text-slate-300 dark:text-slate-600"} ${!isDone && "hover:text-indigo-500"}`}>
-                                                        {s.isCompleted ? <CheckCircle2 size={16}/> : <Circle size={16}/>}
-                                                    </button>
-                                                    <span className={`flex-1 text-sm ${s.isCompleted ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-300"}`}>{s.text}</span>
-                                                    {!isDone && (
-                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button onClick={() => handleDeleteSubtask(s.id)} className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-500"><X size={14}/></button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            {!isDone && (
-                                                <div className="flex gap-2 mt-2">
-                                                    <input 
-                                                        type="text" 
-                                                        className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm outline-none text-slate-800 dark:text-slate-200"
-                                                        placeholder="Новый пункт..."
-                                                        value={newSubtaskText}
-                                                        onChange={(e) => setNewSubtaskText(e.target.value)}
-                                                        onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
-                                                    />
-                                                    <button onClick={handleAddSubtask} disabled={!newSubtaskText.trim()} className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-50"><Plus size={16}/></button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </CollapsibleSection>
-                                )}
-
-                                {/* ACTIVE/FINAL CHALLENGE */}
-                                {task.activeChallenge && (
-                                    <CollapsibleSection 
-                                        title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
-                                        icon={<Zap size={14} className={task.isChallengeCompleted ? "text-emerald-500" : "text-indigo-500"} fill="currentColor"/>}
-                                        actions={
-                                            !isDone ? (
-                                                <Tooltip content="Удалить челлендж">
-                                                    <button onClick={(e) => deleteActiveChallenge(e)} className="text-slate-400 hover:text-red-500 transition-colors p-1 opacity-0 group-hover/header:opacity-100">
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </Tooltip>
-                                            ) : undefined
-                                        }
-                                    >
-                                        <div className="relative group">
-                                            {/* COMPLETE CHALLENGE CHECK (Hover) - Only if not done */}
-                                            {!isDone && (
-                                                <div className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                     <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
-                                                         <button 
-                                                            onClick={() => toggleChallengeComplete()}
-                                                            className={`w-5 h-5 rounded-full border flex items-center justify-center bg-white dark:bg-slate-800 transition-colors ${task.isChallengeCompleted ? 'border-emerald-500 text-emerald-500' : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 hover:text-emerald-500 text-transparent'}`}
-                                                         >
-                                                             <Check size={12} />
-                                                         </button>
-                                                     </Tooltip>
-                                                </div>
-                                            )}
-
-                                            <div className="space-y-2">
-                                                {task.isChallengeCompleted ? (
-                                                    <StaticChallengeRenderer content={task.activeChallenge} mode="history" />
-                                                ) : (
-                                                    <InteractiveChallenge 
-                                                        content={task.activeChallenge} 
-                                                        onToggle={(i) => !isDone && toggleChallengeCheckbox(i, task)} 
-                                                        onPin={!isDone ? (i) => handleToggleChallengeStepPin(i) : undefined}
-                                                        pinnedIndices={task.pinnedChallengeIndices}
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
-                                    </CollapsibleSection>
-                                )}
-
-                                {/* HISTORY & CONSULTATIONS */}
-                                {(task.challengeHistory && task.challengeHistory.length > 0) && (
-                                    <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
-                                        <div className="space-y-4">
-                                            {task.challengeHistory?.map((h, i) => (
-                                                <div key={`ch-${i}`} className="text-sm bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 relative group">
-                                                    <div className="text-[10px] font-bold text-slate-400 mb-1">Архивный челлендж</div>
-                                                    <StaticChallengeRenderer content={h} mode="history" />
-                                                    {!isDone && (
-                                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <Tooltip content="Удалить">
-                                                                <button onClick={() => deleteChallengeFromHistory(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={14}/></button>
-                                                            </Tooltip>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </CollapsibleSection>
-                                )}
-                                {(task.consultationHistory && task.consultationHistory.length > 0) && (
-                                    <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}>
-                                        <div className="space-y-4">
-                                            {task.consultationHistory?.map((h, i) => (
-                                                <div key={`cons-${i}`} className="text-sm bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 relative group">
-                                                    <div className="text-[10px] font-bold text-violet-400 mb-1 flex items-center gap-1"><Bot size={10}/> Консультация</div>
-                                                    <ReactMarkdown components={markdownComponents}>{applyTypography(h)}</ReactMarkdown>
-                                                    {!isDone && (
-                                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <Tooltip content="Удалить">
-                                                                <button onClick={() => deleteConsultation(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={14}/></button>
-                                                            </Tooltip>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </CollapsibleSection>
-                                )}
-                            </div>
-                        );
-                    })()}
+                <div className={`h-full ${activeMobileTab === 'doing' ? 'block' : 'hidden md:block'}`}>
+                    {renderColumn(columns[1])}
                 </div>
-                {activeModal.type === 'stuck' && aiResponse && (
-                    <div className="mt-8 flex justify-end gap-2">
-                        <Tooltip content="Сохранить в историю">
-                            <button 
-                                onClick={saveTherapyResponse} 
-                                className="p-2 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
-                            >
-                                <Save size={20} />
-                            </button>
-                        </Tooltip>
-                    </div>
-                )}
+                <div className={`h-full ${activeMobileTab === 'done' ? 'block' : 'hidden md:block'}`}>
+                    {renderColumn(columns[2])}
+                </div>
             </div>
         </div>
-      )}
+
+        {activeModal?.type === 'details' && (
+            <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setActiveModal(null)}>
+                <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 border border-slate-100 dark:border-slate-700 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1 mr-4">
+                            {isEditingTask ? (
+                                <input 
+                                    className="w-full text-lg font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1"
+                                    value={editTaskTitle} 
+                                    onChange={(e) => setEditTaskTitle(e.target.value)} 
+                                    placeholder="Название задачи"
+                                />
+                            ) : (
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{getTaskForModal()?.title || 'Без названия'}</h3>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                            {!isEditingTask ? (
+                                <button onClick={() => setIsEditingTask(true)} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"><Edit3 size={18} /></button>
+                            ) : (
+                                <button onClick={handleSaveTaskContent} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded"><Check size={18} /></button>
+                            )}
+                            <button onClick={() => setActiveModal(null)} className="p-1.5 text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                        </div>
+                    </div>
+                    
+                    <div className="max-h-[60vh] overflow-y-auto custom-scrollbar-light space-y-4">
+                        {isEditingTask ? (
+                            <textarea 
+                                className="w-full h-40 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-sm resize-none"
+                                value={editTaskContent}
+                                onChange={(e) => setEditTaskContent(e.target.value)}
+                            />
+                        ) : (
+                            <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                                <ReactMarkdown components={markdownComponents}>{getTaskForModal()?.content || ''}</ReactMarkdown>
+                            </div>
+                        )}
+
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Чек-лист</h4>
+                            <div className="space-y-2">
+                                {getTaskForModal()?.subtasks?.map(s => (
+                                    <div key={s.id} className="flex items-center gap-2 group">
+                                        <button onClick={() => handleToggleSubtask(s.id)} className={s.isCompleted ? "text-emerald-500" : "text-slate-300"}>
+                                            {s.isCompleted ? <CheckCircle2 size={16} /> : <Circle size={16} />}
+                                        </button>
+                                        <span className={`flex-1 text-sm ${s.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{s.text}</span>
+                                        <div className="opacity-0 group-hover:opacity-100 flex items-center">
+                                            <button onClick={() => handleDeleteSubtask(s.id)} className="text-slate-300 hover:text-red-500 p-1"><X size={14} /></button>
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="flex gap-2 mt-2">
+                                    <input 
+                                        className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm"
+                                        placeholder="Новый пункт..."
+                                        value={newSubtaskText}
+                                        onChange={(e) => setNewSubtaskText(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                                    />
+                                    <button onClick={handleAddSubtask} className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 px-3 rounded text-slate-600 dark:text-slate-300"><Plus size={16}/></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {activeModal?.type === 'challenge' && aiResponse && (
+            <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 border border-indigo-100 dark:border-slate-700 animate-in zoom-in-95 duration-200">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><Zap className="text-indigo-500" /> Новый Челлендж</h3>
+                        <button onClick={() => { setActiveModal(null); setAiResponse(null); }} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+                    </div>
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl text-sm leading-relaxed text-slate-800 dark:text-slate-200 mb-6 border border-indigo-100 dark:border-indigo-800/50">
+                        <ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown>
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={() => { setActiveModal(null); setAiResponse(null); }} className="flex-1 py-3 text-slate-500 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">Отклонить</button>
+                        <button onClick={acceptChallenge} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 dark:shadow-none">Принять вызов</button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {activeModal?.type === 'stuck' && aiResponse && (
+            <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 border border-amber-100 dark:border-slate-700 animate-in zoom-in-95 duration-200">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><Bot className="text-amber-500" /> Совет Мудреца</h3>
+                        <button onClick={() => { setActiveModal(null); setAiResponse(null); }} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+                    </div>
+                    <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl text-sm leading-relaxed text-slate-800 dark:text-slate-200 mb-6 border border-amber-100 dark:border-amber-800/50 italic">
+                        <ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown>
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={() => { setActiveModal(null); setAiResponse(null); }} className="flex-1 py-3 text-slate-500 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">Спасибо, понял</button>
+                        <button onClick={saveTherapyResponse} className="flex-1 py-3 bg-amber-500 text-white font-bold rounded-xl hover:bg-amber-600 transition-colors shadow-lg shadow-amber-200 dark:shadow-none">Сохранить в историю</button>
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
   );
 };
