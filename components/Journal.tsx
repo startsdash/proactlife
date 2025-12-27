@@ -716,21 +716,27 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
               return (
                 <div key={entry.id} onClick={() => setSelectedEntryId(entry.id)} className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 md:p-6 relative group hover:shadow-md transition-shadow cursor-pointer">
-                  {!isEditing && (
-                    <div className="absolute top-4 right-4 flex items-center gap-1 z-10" onClick={(e) => e.stopPropagation()}>
-                         <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
-                            <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-all ${entry.isInsight ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-300 dark:text-slate-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
-                                <Lightbulb size={16} className={entry.isInsight ? "fill-current" : ""} />
-                            </button>
-                         </Tooltip>
-                         <div>
-                            <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} />
-                         </div>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
-                      <Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
+                  
+                  {/* CARD HEADER - ALIGNED */}
+                  <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-2">
+                          <Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
+                      </div>
+
+                      {!isEditing && (
+                        <div className="flex items-center gap-1 z-10 -mt-1 -mr-2" onClick={(e) => e.stopPropagation()}>
+                             <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
+                                <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-all ${entry.isInsight ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-300 dark:text-slate-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
+                                    <Lightbulb size={16} className={entry.isInsight ? "fill-current" : ""} />
+                                </button>
+                             </Tooltip>
+                             <div>
+                                <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} />
+                             </div>
+                        </div>
+                      )}
                   </div>
+
                   {entry.linkedTaskId && getTaskPreview(entry.linkedTaskId)}
                   {isEditing ? (
                       <div className="mb-4" onClick={(e) => e.stopPropagation()}>
