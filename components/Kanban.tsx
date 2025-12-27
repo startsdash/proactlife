@@ -372,8 +372,8 @@ const StaticChallengeRenderer: React.FC<{
 const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
   const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details'} | null>(null);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [generatingChallengeFor, setGeneratingChallengeFor] = useState<string | null>(null);
+  const [generatingTherapyFor, setGeneratingTherapyFor] = useState<string | null>(null);
   const [challengeDrafts, setChallengeDrafts] = useState<{[taskId: string]: string}>({});
   const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'completed' | 'none'>('all');
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
@@ -556,18 +556,36 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); 
   };
 
-  const triggerAI = async (content: string, type: 'stuck' | 'completed') => {
-    setIsLoading(true);
-    setAiResponse(null);
-    const response = await getKanbanTherapy(content, type, config);
-    setAiResponse(response);
-    setIsLoading(false);
-  };
-
-  const openTherapy = (e: React.MouseEvent, task: Task) => {
+  const openTherapy = async (e: React.MouseEvent, task: Task) => {
     e.stopPropagation();
-    setActiveModal({ taskId: task.id, type: 'stuck' });
-    triggerAI(task.content, 'stuck');
+    
+    // STOP logic
+    if (generatingTherapyFor === task.id) {
+        setGeneratingTherapyFor(null);
+        return;
+    }
+
+    // START logic
+    if (window.confirm("Запустить ИИ-консультанта?")) {
+        setGeneratingTherapyFor(task.id);
+        setAiResponse(null);
+        try {
+            const response = await getKanbanTherapy(task.content, 'stuck', config);
+            
+            // Check if cancelled during generation
+            setGeneratingTherapyFor(current => {
+                if (current === task.id) {
+                    setAiResponse(response);
+                    setActiveModal({ taskId: task.id, type: 'stuck' });
+                    return null;
+                }
+                return current;
+            });
+        } catch (error) {
+            console.error(error);
+            setGeneratingTherapyFor(current => current === task.id ? null : current);
+        }
+    }
   };
 
   const saveTherapyResponse = () => {
@@ -1194,17 +1212,19 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                        )}
 
                                        {hasKanbanTherapist && (
-                                           <Tooltip content="Консультант (ИИ)">
+                                           <Tooltip content={generatingTherapyFor === task.id ? "Остановить" : "Консультант (ИИ)"}>
                                                <button 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (window.confirm("Запустить ИИ-консультанта?")) {
-                                                            openTherapy(e, task);
-                                                        }
-                                                    }} 
-                                                    className="p-2 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg border border-transparent hover:border-violet-100 dark:hover:border-violet-800"
+                                                    onClick={(e) => openTherapy(e, task)} 
+                                                    className="p-2 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg border border-transparent hover:border-violet-100 dark:hover:border-violet-800 transition-colors"
                                                >
-                                                   <Bot size={18} /> 
+                                                   {generatingTherapyFor === task.id ? (
+                                                        <div className="relative w-[18px] h-[18px] flex items-center justify-center">
+                                                            <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                            <div className="w-2 h-2 bg-current rounded-[1px] relative z-10"></div>
+                                                        </div>
+                                                   ) : (
+                                                       <Bot size={18} /> 
+                                                   )}
                                                </button>
                                            </Tooltip>
                                        )}
@@ -1359,12 +1379,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0">
                     {activeModal.type === 'stuck' && (
                         <div className="space-y-4">
-                            {isLoading ? (
-                                <div className="flex flex-col items-center justify-center py-10 text-slate-400">
-                                    <Bot size={48} className="animate-bounce mb-4 text-violet-400" />
-                                    <p className="text-sm">Анализирую ситуацию...</p>
-                                </div>
-                            ) : aiResponse ? (
+                            {aiResponse ? (
                                 <div className="space-y-4">
                                     <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-800">
                                         <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase mb-2"><Bot size={14}/> Совет</div>
