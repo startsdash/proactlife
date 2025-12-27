@@ -400,6 +400,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const analysisAbortController = useRef<AbortController | null>(null);
 
   const hasMentorTool = useMemo(() => {
       const tool = config.aiTools.find(t => t.id === 'journal_mentor');
@@ -532,14 +533,31 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   });
 
   const handleAnalyzePath = async () => {
+      // STOP LOGIC
+      if (isAnalyzing) {
+          analysisAbortController.current?.abort();
+          setIsAnalyzing(false);
+          return;
+      }
+
       if (displayedEntries.length === 0) {
           alert("Нет записей для анализа в текущем фильтре.");
           return;
       }
       setIsAnalyzing(true);
-      const result = await analyzeJournalPath(displayedEntries, config);
-      setAnalysisResult(result);
-      setIsAnalyzing(false);
+      analysisAbortController.current = new AbortController();
+      
+      try {
+        const result = await analyzeJournalPath(displayedEntries, config);
+        if (!analysisAbortController.current?.signal.aborted) {
+            setAnalysisResult(result);
+            setIsAnalyzing(false);
+        }
+      } catch (e) {
+        if (!analysisAbortController.current?.signal.aborted) {
+            setIsAnalyzing(false);
+        }
+      }
   };
 
   const handleSaveAnalysis = () => {
@@ -601,9 +619,20 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
              <div className="flex justify-between items-center">
                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Хроника</h3>
                 {hasMentorTool && (
-                  <Tooltip content="Наставник (ИИ)" side="left">
-                    <button onClick={handleAnalyzePath} disabled={isAnalyzing || displayedEntries.length === 0} className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all shadow-sm ${isAnalyzing ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-400 cursor-wait' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}>
-                        {isAnalyzing ? <Loader2 size={14} className="animate-spin" /> : <Bot size={14} />}
+                  <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="left">
+                    <button 
+                        onClick={handleAnalyzePath} 
+                        disabled={displayedEntries.length === 0} 
+                        className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all shadow-sm ${isAnalyzing ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-400 cursor-pointer' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
+                    >
+                        {isAnalyzing ? (
+                            <div className="relative w-3.5 h-3.5 flex items-center justify-center">
+                                <Loader2 size={14} className="animate-spin absolute inset-0" />
+                                <div className="w-1.5 h-1.5 bg-current rounded-[1px] relative z-10" />
+                            </div>
+                        ) : (
+                            <Bot size={14} />
+                        )}
                         <span>Наставник</span>
                     </button>
                   </Tooltip>
