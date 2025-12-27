@@ -746,7 +746,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
               <div className="bg-white dark:bg-[#1e293b] w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                   <div className="flex justify-between items-center mb-6 shrink-0"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><Scroll className="text-indigo-600 dark:text-indigo-400" /> История Наставника</h3><button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
                   <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar-light space-y-4">
-                      {mentorAnalyses.length === 0 ? (<div className="py-10"><EmptyState icon={Bot} title="Пусто" description="Посоветуйся с Наставником, чтобы начать историю." color="indigo" /></div>) : (
+                      {mentorAnalyses.length === 0 ? (<div className="py-10"><EmptyState icon={Bot} title="Пусто" description="Посоветуйся с Наставником, чтобы начать историю" color="indigo" /></div>) : (
                           mentorAnalyses.sort((a,b) => b.date - a.date).map(analysis => (
                               <div key={analysis.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-100 dark:border-slate-700 group">
                                   <div className="flex justify-between items-start mb-3">
@@ -760,7 +760,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                           ))
                       )}
                   </div>
-                  <div className="mt-6 flex justify-end shrink-0 pt-4 border-t border-slate-50 dark:border-slate-700"><button onClick={() => setShowHistory(false)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button></div>
               </div>
           </div>
       )}
