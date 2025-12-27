@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, ChevronLeft, ChevronRight, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
@@ -549,19 +549,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); };
-
-  const moveTask = (e: React.MouseEvent, task: Task, direction: 'left' | 'right') => {
-    e.stopPropagation();
-    const colOrder = ['todo', 'doing', 'done'];
-    const currentIdx = colOrder.indexOf(task.column);
-    if (currentIdx === -1) return;
-    const newIdx = direction === 'left' ? currentIdx - 1 : currentIdx + 1;
-    if (newIdx >= 0 && newIdx < colOrder.length) {
-        const newCol = colOrder[newIdx];
-        if (!canMoveTask(task, newCol)) return;
-        updateTask({ ...task, column: newCol as any });
-    }
-  };
 
   const toggleSortOrder = () => { 
       setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); 
@@ -1280,16 +1267,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         </div>
                                     </>
                                )}
-                            </div>
-                            <div className="flex gap-2 items-center justify-between">
-                                {/* Hide desktop-only move buttons on mobile as we use DnD or Tabs but maybe keep them if drag is hard? 
-                                    Since tabs are exclusive, moving means disappearing from current tab. 
-                                    It's better to hide these on mobile to simplify UI and rely on actions. 
-                                    Or keep them but they just move the task to another tab. 
-                                    Let's keep them hidden on mobile to reduce clutter, relying on actions in footer.
-                                */}
-                                <div className="w-8 flex justify-start">{col.id !== 'todo' && <button onClick={(e) => moveTask(e, task, 'left')} className="p-1.5 bg-slate-100 dark:bg-slate-700 hidden md:block rounded-lg text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600"><ChevronLeft size={16} /></button>}</div>
-                                <div className="w-8 flex justify-end">{col.id !== 'done' && <button onClick={(e) => moveTask(e, task, 'right')} className="p-1.5 bg-slate-100 dark:bg-slate-700 hidden md:block rounded-lg text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600"><ChevronRight size={16} /></button>}</div>
                             </div>
                         </div>
                     </div>
