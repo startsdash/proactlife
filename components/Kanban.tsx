@@ -376,7 +376,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [generatingChallengeFor, setGeneratingChallengeFor] = useState<string | null>(null);
   const [generatingTherapyFor, setGeneratingTherapyFor] = useState<string | null>(null);
   const [challengeDrafts, setChallengeDrafts] = useState<{[taskId: string]: string}>({});
-  const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'completed' | 'none'>('all');
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
   const [sortOrder, setSortOrder] = useState<'manual' | 'desc' | 'asc'>('manual');
   const [searchQuery, setSearchQuery] = useState('');
@@ -404,15 +403,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
           const inTitle = task.title?.toLowerCase().includes(q);
           const inContent = task.content.toLowerCase().includes(q);
           if (!inTitle && !inContent) return false;
-      }
-      if (filterChallenge === 'active') {
-          if (!task.activeChallenge || task.isChallengeCompleted) return false;
-      }
-      if (filterChallenge === 'completed') {
-          if (!task.activeChallenge || !task.isChallengeCompleted) return false;
-      }
-      if (filterChallenge === 'none') {
-          if (task.activeChallenge) return false;
       }
       if (filterJournal === 'linked') {
           const hasEntry = journalEntries.some(e => e.linkedTaskId === task.id);
@@ -1279,13 +1269,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
   return (
     <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden">
-      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc] md:dark:bg-[#0f172a] md:pb-2 transition-colors duration-300">
+      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc] md:dark:bg-[#0f172a] md:pb-2 transition-colors duration-300">
         <div>
             <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Спринты</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Фокус на главном</p>
         </div>
         
-        {/* Filters & Search */}
+        {/* Search */}
         <div className="flex flex-col md:flex-row items-end md:items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none w-full md:w-auto">
              
              {/* Search Input */}
@@ -1296,17 +1286,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     placeholder="Поиск..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full md:w-32 focus:w-full md:focus:w-48 transition-all pl-8 pr-7 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 placeholder:text-slate-400 outline-none ring-1 ring-transparent focus:ring-indigo-500/20"
+                    className="w-full md:w-64 focus:w-full md:focus:w-80 transition-all pl-8 pr-7 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 placeholder:text-slate-400 outline-none ring-1 ring-transparent focus:ring-indigo-500/20"
                 />
                 {searchQuery && (
                     <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={12} /></button>
                 )}
-             </div>
-
-             <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1 shrink-0">
-                 <button onClick={() => setFilterChallenge('all')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'all' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Все</button>
-                 <button onClick={() => setFilterChallenge('active')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'active' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Активные</button>
-                 <button onClick={() => setFilterChallenge('none')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'none' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Обычные</button>
              </div>
              
              <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
