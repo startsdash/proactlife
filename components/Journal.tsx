@@ -207,7 +207,7 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                             </span>
                         </>
                     ) : (
-                        <span className="text-sm text-slate-400">Выберите сферы</span>
+                        <span className="text-sm text-slate-400">Выбери сферу</span>
                     )}
                 </div>
                 <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -814,10 +814,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                             </button>
                         </Tooltip>
                     </div>
-                </div>
-                
-                <div className="mt-8 flex justify-end">
-                    <button onClick={() => setSelectedEntryId(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button>
                 </div>
             </div>
         </div>
