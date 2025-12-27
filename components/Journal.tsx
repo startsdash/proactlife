@@ -44,7 +44,7 @@ const markdownComponents = {
     a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-slate-800 dark:text-slate-300" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-slate-800 dark:text-slate-300" {...props} />,
-    li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed" {...props} />,
+    li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed [&>p]:mb-0" {...props} />,
     h1: ({node, children, ...props}: any) => <h1 className="text-base font-bold mt-3 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
     h2: ({node, children, ...props}: any) => <h2 className="text-sm font-bold mt-2 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
     h3: ({node, children, ...props}: any) => <h3 className="text-xs font-bold mt-2 mb-1 text-slate-900 dark:text-slate-100 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
@@ -738,7 +738,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                           </div>
                       </div>
                   ) : (
-                    <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed whitespace-pre-wrap mb-4 font-normal mt-2 pr-16 md:pr-0"><ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown></div>
+                    <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed mb-4 font-normal mt-2 pr-16 md:pr-0"><ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown></div>
                   )}
                   {entry.aiFeedback && (
                     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 relative mt-4">
@@ -835,7 +835,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                           </div>
                       </div>
                     ) : (
-                      <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed whitespace-pre-wrap font-normal">
+                      <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed font-normal">
                           <ReactMarkdown components={markdownComponents}>{selectedEntry.content}</ReactMarkdown>
                       </div>
                     )}
