@@ -713,6 +713,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
             {displayedEntries.map(entry => {
               const mentor = config.mentors.find(m => m.id === entry.mentorId);
               const isEditing = editingId === entry.id;
+              const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
 
               return (
                 <div key={entry.id} onClick={() => setSelectedEntryId(entry.id)} className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 md:p-6 relative group hover:shadow-md transition-shadow cursor-pointer">
@@ -725,6 +726,20 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
                       {!isEditing && (
                         <div className="flex items-center gap-1 z-10 -mt-1 -mr-2" onClick={(e) => e.stopPropagation()}>
+                             {linkedTask && (
+                                <Tooltip content="Контекст (задача)">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); setViewingTask(linkedTask); }}
+                                        className={`p-2 rounded-lg transition-all hover:bg-slate-50 dark:hover:bg-slate-800 ${
+                                            linkedTask.column === 'done' ? 'text-emerald-500' :
+                                            linkedTask.column === 'doing' ? 'text-indigo-500' :
+                                            'text-slate-400'
+                                        }`}
+                                    >
+                                        <Link size={16} />
+                                    </button>
+                                </Tooltip>
+                             )}
                              <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
                                 <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-all ${entry.isInsight ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-300 dark:text-slate-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
                                     <Lightbulb size={16} className={entry.isInsight ? "fill-current" : ""} />
@@ -737,7 +752,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                       )}
                   </div>
 
-                  {entry.linkedTaskId && getTaskPreview(entry.linkedTaskId)}
                   {isEditing ? (
                       <div className="mb-4" onClick={(e) => e.stopPropagation()}>
                           <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
