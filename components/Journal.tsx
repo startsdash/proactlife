@@ -463,6 +463,14 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       updateEntry({ ...entry, isInsight: !entry.isInsight });
   };
 
+  const handleCloseModal = (e?: React.MouseEvent) => {
+      if (e) e.stopPropagation();
+      setSelectedEntryId(null);
+      // Clear edit mode state to prevent persistence
+      setEditingId(null);
+      setEditContent('');
+  };
+
   const RenderIcon = ({ name, className }: { name: string, className?: string }) => {
     const Icon = ICON_MAP[name] || ICON_MAP['User'];
     return <Icon className={className} size={14} />;
@@ -749,7 +757,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       )}
 
       {selectedEntry && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedEntryId(null)}>
+        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseModal}>
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-start mb-6">
                     <div>
@@ -767,14 +775,14 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     </button>
                                 </Tooltip>
                                 <Tooltip content="Удалить">
-                                    <button onClick={() => { if(window.confirm('Удалить запись?')) { deleteEntry(selectedEntry.id); setSelectedEntryId(null); } }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                                    <button onClick={() => { if(window.confirm('Удалить запись?')) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
                                         <Trash2 size={20} />
                                     </button>
                                 </Tooltip>
                                 <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-2"></div>
                             </>
                         )}
-                        <button onClick={() => setSelectedEntryId(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1"><X size={24} /></button>
+                        <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1"><X size={24} /></button>
                     </div>
                 </div>
 
