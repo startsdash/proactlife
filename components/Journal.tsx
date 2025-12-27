@@ -600,16 +600,15 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 <div className="flex items-center gap-2">
                     {hasMentorTool && (
                         <>
-                            <Tooltip content="История Наставника" side="left">
-                                <button onClick={() => setShowHistory(true)} className="p-2 rounded-lg border transition-all flex items-center justify-center bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm">
-                                    <Scroll size={16} />
-                                </button>
-                            </Tooltip>
-                            <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="left">
+                            {/* Mentor Button (Moved First) */}
+                            <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="bottom">
                                 <button 
                                     onClick={handleAnalyzePath} 
                                     disabled={displayedEntries.length === 0} 
-                                    className={`flex items-center justify-center p-2 rounded-lg border transition-all shadow-sm ${isAnalyzing ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-400 cursor-pointer' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
+                                    className={`flex items-center justify-center p-2 rounded-lg border transition-all shadow-sm ${
+                                        // Highlighted style always active
+                                        'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
+                                    } ${isAnalyzing ? 'animate-pulse' : ''}`}
                                 >
                                     {isAnalyzing ? (
                                         <div className="relative w-3.5 h-3.5 flex items-center justify-center">
@@ -619,6 +618,14 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     ) : (
                                         <Bot size={16} />
                                     )}
+                                </button>
+                            </Tooltip>
+
+                            {/* History Button (Moved Second, Added Label) */}
+                            <Tooltip content="История диалогов" side="left">
+                                <button onClick={() => setShowHistory(true)} className="px-3 py-2 rounded-lg border transition-all flex items-center justify-center gap-2 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm">
+                                    <Scroll size={16} />
+                                    <span className="text-xs font-medium">История</span>
                                 </button>
                             </Tooltip>
                         </>
