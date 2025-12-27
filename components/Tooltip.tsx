@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -73,7 +74,8 @@ export const Tooltip: React.FC<TooltipProps> = ({ content, children, side = 'top
                     top: coords.top, 
                     left: coords.left,
                     zIndex: 9999,
-                    translateX: side === 'top' || side === 'bottom' ? '-50%' : '0',
+                    // Correctly translate based on side to center or offset the tooltip
+                    translateX: side === 'top' || side === 'bottom' ? '-50%' : (side === 'left' ? '-100%' : '0'),
                     translateY: side === 'right' || side === 'left' ? '-50%' : (side === 'top' ? '-100%' : '0'),
                 }}
                 className="pointer-events-none"
@@ -84,8 +86,8 @@ export const Tooltip: React.FC<TooltipProps> = ({ content, children, side = 'top
                     <div className={`absolute w-2 h-2 bg-black border-r border-b border-white/10 transform rotate-45 
                         ${side === 'top' ? '-bottom-1 left-1/2 -translate-x-1/2' : ''}
                         ${side === 'bottom' ? '-top-1 left-1/2 -translate-x-1/2 rotate-180 border-t border-l border-b-0 border-r-0' : ''}
-                        ${side === 'left' ? '-right-1 top-1/2 -translate-y-1/2' : ''}
-                        ${side === 'right' ? '-left-1 top-1/2 -translate-y-1/2' : ''}
+                        ${side === 'left' ? '-right-1 top-1/2 -translate-y-1/2 rotate-[-45deg]' : ''}
+                        ${side === 'right' ? '-left-1 top-1/2 -translate-y-1/2 rotate-[135deg]' : ''}
                     `} />
                 </div>
             </motion.div>
