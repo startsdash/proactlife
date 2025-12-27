@@ -1332,7 +1332,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                  <button onClick={() => setFilterChallenge('none')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'none' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Обычные</button>
              </div>
              
-             <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"}>
+             <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
                  <button onClick={toggleSortOrder} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0">
                      {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
                  </button>
