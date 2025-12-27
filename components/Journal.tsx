@@ -770,7 +770,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                   <div className="mt-8 flex justify-end gap-2">
                       <Tooltip content="Сохранить в историю">
                           <button onClick={handleSaveAnalysis} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"><Save size={20} /></button>
-                      Tooltip>
+                      </Tooltip>
                   </div>
               </div>
           </div>
