@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Palette } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip } from './Tooltip';
 
@@ -45,6 +45,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
 
   const navItems = [
     { id: Module.NAPKINS, icon: StickyNote, label: 'Заметки' },
+    { id: Module.SKETCHPAD, icon: Palette, label: 'Sketchpad' },
     { id: Module.SANDBOX, icon: Box, label: 'Хаб' },
     { id: Module.KANBAN, icon: KanbanIcon, label: 'Спринты' },
     { id: Module.RITUALS, icon: Flame, label: 'Трекер' },

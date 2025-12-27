@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AppConfig, AIToolConfig } from "./types";
-import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book, Flame, Repeat, Calendar, CheckCircle, LayoutDashboard, Briefcase, Sprout, Heart, Target } from 'lucide-react';
+import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book, Flame, Repeat, Calendar, CheckCircle, LayoutDashboard, Briefcase, Sprout, Heart, Target, Image, Palette } from 'lucide-react';
 
 // --- ICON REGISTRY ---
 export const ICON_MAP: Record<string, React.ElementType> = {
@@ -26,7 +26,9 @@ export const ICON_MAP: Record<string, React.ElementType> = {
   'Briefcase': Briefcase,
   'Sprout': Sprout,
   'Heart': Heart,
-  'Target': Target
+  'Target': Target,
+  'Image': Image,
+  'Palette': Palette
 };
 
 export const AVAILABLE_ICONS = Object.keys(ICON_MAP);

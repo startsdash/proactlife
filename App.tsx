@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit } from './types';
+import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem } from './types';
 import { loadState, saveState } from './services/storageService';
 import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Napkins from './components/Napkins';
+import Sketchpad from './components/Sketchpad'; // NEW IMPORT
 import Sandbox from './components/Sandbox';
 import MentalGym from './components/MentalGym';
 import Kanban from './components/Kanban';
@@ -85,7 +86,7 @@ const App: React.FC = () => {
   // ------------------------
 
   const [data, setData] = useState<AppState>({
-    notes: [], tasks: [], flashcards: [], habits: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG
+    notes: [], sketchpad: [], tasks: [], flashcards: [], habits: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG
   });
   
   const [isLoaded, setIsLoaded] = useState(false);
@@ -158,6 +159,7 @@ const App: React.FC = () => {
               if (!driveData.journal) driveData.journal = [];
               if (!driveData.mentorAnalyses) driveData.mentorAnalyses = [];
               if (!driveData.habits) driveData.habits = [];
+              if (!driveData.sketchpad) driveData.sketchpad = [];
               
               setData(prev => ({...driveData, user: prev.user})); 
               saveState(driveData);
@@ -230,8 +232,6 @@ const App: React.FC = () => {
   const moveNoteToSandbox = (id: string) => setData(p => {
     const originalNote = p.notes.find(n => n.id === id);
     if (!originalNote) return p;
-    // Don't modify original note status - just clone it to sandbox
-    // This allows the user to keep the note in Inbox while working on it in Hub
     const sandboxClone: Note = {
       ...originalNote,
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
@@ -254,6 +254,11 @@ const App: React.FC = () => {
       notes.splice(tIdx, 0, item);
       return { ...p, notes };
   });
+
+  // SKETCHPAD METHODS
+  const addSketchItem = (item: SketchItem) => setData(p => ({ ...p, sketchpad: [item, ...p.sketchpad] }));
+  const deleteSketchItem = (id: string) => setData(p => ({ ...p, sketchpad: p.sketchpad.filter(i => i.id !== id) }));
+  const updateSketchItem = (item: SketchItem) => setData(p => ({ ...p, sketchpad: p.sketchpad.map(i => i.id === item.id ? item : i) }));
 
   const addTask = (t: Task) => setData(p => ({ ...p, tasks: [...p.tasks, t] }));
   const updateTask = (t: Task) => setData(p => ({ ...p, tasks: p.tasks.map(x => x.id === t.id ? t : x) }));
@@ -409,6 +414,7 @@ const App: React.FC = () => {
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
       {module === Module.DASHBOARD && <Dashboard notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} onNavigate={handleNavigate} />}
       {module === Module.NAPKINS && <Napkins notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} />}
+      {module === Module.SKETCHPAD && <Sketchpad items={data.sketchpad || []} addItem={addSketchItem} deleteItem={deleteSketchItem} updateItem={updateSketchItem} />}
       {module === Module.SANDBOX && <Sandbox notes={data.notes} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}

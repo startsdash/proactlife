@@ -9,6 +9,7 @@ export const loadState = (): AppState => {
     const stored = localStorage.getItem(KEY);
     const emptyState: AppState = {
       notes: [],
+      sketchpad: [], // NEW
       tasks: [],
       flashcards: [],
       habits: [], // NEW
@@ -36,6 +37,8 @@ export const loadState = (): AppState => {
         tags: Array.isArray(n.tags) ? n.tags : []
       }));
     }
+
+    if (!parsed.sketchpad) parsed.sketchpad = [];
 
     if (parsed.journal) {
         parsed.journal = parsed.journal.map((j: any) => ({
@@ -68,6 +71,7 @@ export const loadState = (): AppState => {
     console.error("Failed to load state:", error);
     return {
       notes: [],
+      sketchpad: [],
       tasks: [],
       flashcards: [],
       habits: [],

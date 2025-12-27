@@ -8,6 +8,7 @@ declare global {
 export enum Module {
   DASHBOARD = 'dashboard',
   NAPKINS = 'napkins',
+  SKETCHPAD = 'sketchpad', // NEW
   SANDBOX = 'sandbox',
   MENTAL_GYM = 'mental_gym',
   KANBAN = 'kanban',
@@ -27,6 +28,17 @@ export interface Note {
   status: 'inbox' | 'sandbox' | 'archived';
   isPinned?: boolean;
   color?: string;
+}
+
+// NEW: Sketchpad Types
+export interface SketchItem {
+  id: string;
+  type: 'text' | 'image';
+  content: string; // Text string or Base64 Image
+  createdAt: number;
+  color?: string; // For text notes (tailwind class)
+  rotation: number; // -3 to 3 degrees for realism
+  widthClass?: string; // col-span-1 or col-span-2
 }
 
 export interface Subtask {
@@ -181,6 +193,7 @@ export interface UserProfile {
 
 export interface AppState {
   notes: Note[];
+  sketchpad: SketchItem[]; // NEW
   tasks: Task[];
   flashcards: Flashcard[];
   habits: Habit[]; 
