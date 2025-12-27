@@ -585,10 +585,22 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     setGeneratingChallengeFor(taskId);
     try {
         const challenge = await generateTaskChallenge(content, config);
-        setChallengeDrafts(prev => ({ ...prev, [taskId]: challenge }));
-    } finally {
-        setGeneratingChallengeFor(null);
+        // Check if still generating this specific task (not cancelled)
+        setGeneratingChallengeFor(current => {
+            if (current === taskId) {
+                setChallengeDrafts(prev => ({ ...prev, [taskId]: challenge }));
+                return null;
+            }
+            return current;
+        });
+    } catch (e) {
+        setGeneratingChallengeFor(current => current === taskId ? null : current);
     }
+  };
+
+  const stopGeneration = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setGeneratingChallengeFor(null);
   };
 
   const acceptChallenge = (e: React.MouseEvent, task: Task) => {
@@ -1151,10 +1163,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                        </Tooltip>
 
                                        {!challengeDrafts[task.id] && hasChallengeAuthors && (
-                                           <Tooltip content="Челлендж">
+                                           <Tooltip content={generatingChallengeFor === task.id ? "Остановить" : "Челлендж"}>
                                                <button 
                                                     onClick={(e) => {
                                                         e.stopPropagation();
+                                                        if (generatingChallengeFor === task.id) {
+                                                            stopGeneration(e);
+                                                            return;
+                                                        }
                                                         if (task.activeChallenge && !task.isChallengeCompleted) {
                                                             alert("Необходимо завершить активный челлендж");
                                                             return;
@@ -1163,10 +1179,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                             generateChallenge(e, task.id, task.content);
                                                         }
                                                     }} 
-                                                    disabled={generatingChallengeFor === task.id} 
-                                                    className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors disabled:opacity-50"
+                                                    className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
                                                >
-                                                    <Zap size={18} className={generatingChallengeFor === task.id ? "opacity-50" : ""} />
+                                                    {generatingChallengeFor === task.id ? (
+                                                        <div className="relative w-[18px] h-[18px] flex items-center justify-center">
+                                                            <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                            <div className="w-2 h-2 bg-current rounded-[1px]"></div>
+                                                        </div>
+                                                    ) : (
+                                                        <Zap size={18} />
+                                                    )}
                                                 </button>
                                            </Tooltip>
                                        )}
