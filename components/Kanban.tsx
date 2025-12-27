@@ -915,7 +915,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     if (col.id === 'done') emptyText = "Готово? Перетащи задачу сюда";
 
     return (
-    <div className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3 h-full`}>
+    <div className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3 h-full md:h-auto md:min-h-0`}>
         {/* On mobile, we hide the redundant column header as tabs are used */}
         <h3 className="hidden md:flex font-semibold text-slate-600 dark:text-slate-400 mb-3 justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
         
@@ -965,7 +965,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             </div>
         )}
 
-        <div className="flex-1 overflow-y-auto min-h-0 space-y-3 pb-2 px-1 custom-scrollbar-light" onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
+        <div className="flex-1 overflow-y-auto md:overflow-visible min-h-0 space-y-3 pb-2 px-1 custom-scrollbar-light md:flex-none" onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
             {tasksInCol.length === 0 ? (
                 <div className="py-10">
                    <EmptyState 
@@ -1278,8 +1278,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden relative">
-      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+    <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden">
+      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc] md:dark:bg-[#0f172a] md:pb-2 transition-colors duration-300">
         <div>
             <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Спринты</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Фокус на главном</p>
@@ -1318,7 +1318,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       </header>
 
       {/* Columns */}
-      <div className="flex-1 overflow-hidden p-0 md:p-8 md:pt-4 custom-scrollbar-light flex flex-col">
+      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-0 overflow-hidden md:overflow-visible">
          {/* Mobile Tabs */}
          <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10">
             {columns.map(col => (
@@ -1332,12 +1332,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             ))}
          </div>
 
-         <div className="flex-1 overflow-x-hidden md:overflow-auto p-4 md:p-0">
-             <div className="flex flex-col md:flex-row gap-4 h-full min-h-0">
+         <div className="flex-1 overflow-x-hidden md:overflow-visible p-4 md:p-0">
+             <div className="flex flex-col md:flex-row gap-4 h-full md:h-auto min-h-0 md:items-start">
                 {columns.map(col => {
                    const isHiddenOnMobile = activeMobileTab !== col.id;
                    return (
-                       <div key={col.id} className={`flex-1 min-w-[280px] flex-col min-h-0 h-full ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}>
+                       <div key={col.id} className={`flex-1 min-w-[280px] flex-col min-h-0 h-full md:h-auto ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}>
                            {renderColumn(col)}
                        </div>
                    );
