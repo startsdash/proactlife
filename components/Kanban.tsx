@@ -1523,8 +1523,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         );
                     })()}
                 </div>
-                <div className="mt-8 flex justify-end gap-2">
-                    {activeModal.type === 'stuck' && aiResponse && (
+                {activeModal.type === 'stuck' && aiResponse && (
+                    <div className="mt-8 flex justify-end gap-2">
                         <Tooltip content="Сохранить в историю">
                             <button 
                                 onClick={saveTherapyResponse} 
@@ -1533,9 +1533,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 <Save size={20} />
                             </button>
                         </Tooltip>
-                    )}
-                    <button onClick={() => setActiveModal(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button>
-                </div>
+                    </div>
+                )}
             </div>
         </div>
       )}
