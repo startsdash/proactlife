@@ -912,7 +912,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     const tasksInCol = activeTasks.filter(t => t.column === col.id);
     
     let emptyText = "Перетащите задачи сюда";
-    if (col.id === 'todo') emptyText = "Добавь задачу из «Входящих» или «Хаба»";
+    if (col.id === 'todo') emptyText = "Создай задачу, чтобы начать";
     if (col.id === 'doing') emptyText = "Перетащи задачу из «Выполнить»";
     if (col.id === 'done') emptyText = "Готово? Перетащи задачу сюда";
 
