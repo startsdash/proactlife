@@ -680,10 +680,10 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
   };
 
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar-light p-4 md:p-8 bg-[#f8fafc] dark:bg-[#0f172a]">
+    <div className="h-full overflow-y-auto custom-scrollbar-light p-3 md:p-8 bg-[#f8fafc] dark:bg-[#0f172a]">
       
       {/* BENTO GRID LAYOUT */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-7xl mx-auto pb-20 auto-rows-min">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 max-w-7xl mx-auto pb-20 auto-rows-min">
         
         {/* 1. ENERGY OF THE DAY (Large Square - Top Left) */}
         <motion.div 

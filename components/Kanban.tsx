@@ -371,6 +371,7 @@ const StaticChallengeRenderer: React.FC<{
 
 const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
   const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details'} | null>(null);
+  const [activeMobileTab, setActiveMobileTab] = useState<'todo' | 'doing' | 'done'>('todo');
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [generatingChallengeFor, setGeneratingChallengeFor] = useState<string | null>(null);
   const [generatingTherapyFor, setGeneratingTherapyFor] = useState<string | null>(null);
@@ -451,6 +452,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     { id: 'doing', title: 'В процессе', color: 'border-indigo-400' },
     { id: 'done', title: 'Сделано', color: 'border-emerald-400' }
   ];
+
+  const getTabClass = (id: string, active: boolean) => {
+    const base = "flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors text-center";
+    if (!active) return `${base} border-transparent text-slate-400 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50`;
+    
+    if (id === 'todo') return `${base} border-slate-400 text-slate-700 dark:text-slate-200 bg-white dark:bg-[#1e293b]`;
+    if (id === 'doing') return `${base} border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-900/10`;
+    if (id === 'done') return `${base} border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-900/10`;
+    return base;
+  };
 
   const handleCreateTask = () => {
       if (!newTaskTitle.trim() && !newTaskContent.trim()) return;
@@ -917,8 +928,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     if (col.id === 'done') emptyText = "Готово? Перетащи задачу сюда";
 
     return (
-    <div key={col.id} className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3`} onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
-        <h3 className="font-semibold text-slate-600 dark:text-slate-400 mb-3 flex justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
+    <div className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3 h-full`}>
+        {/* On mobile, we hide the redundant column header as tabs are used */}
+        <h3 className="hidden md:flex font-semibold text-slate-600 dark:text-slate-400 mb-3 justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
         
         {col.id === 'todo' && (
              <div className="mb-3 px-1">
@@ -966,7 +978,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             </div>
         )}
 
-        <div className="space-y-3 pb-2 px-1">
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-3 pb-2 px-1 custom-scrollbar-light" onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
             {tasksInCol.length === 0 ? (
                 <div className="py-10">
                    <EmptyState 
@@ -1270,8 +1282,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                )}
                             </div>
                             <div className="flex gap-2 items-center justify-between">
-                                <div className="w-8 flex justify-start">{col.id !== 'todo' && <button onClick={(e) => moveTask(e, task, 'left')} className="p-1.5 bg-slate-100 dark:bg-slate-700 md:hidden rounded-lg text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600"><ChevronLeft size={16} /></button>}</div>
-                                <div className="w-8 flex justify-end">{col.id !== 'done' && <button onClick={(e) => moveTask(e, task, 'right')} className="p-1.5 bg-slate-100 dark:bg-slate-700 md:hidden rounded-lg text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600"><ChevronRight size={16} /></button>}</div>
+                                {/* Hide desktop-only move buttons on mobile as we use DnD or Tabs but maybe keep them if drag is hard? 
+                                    Since tabs are exclusive, moving means disappearing from current tab. 
+                                    It's better to hide these on mobile to simplify UI and rely on actions. 
+                                    Or keep them but they just move the task to another tab. 
+                                    Let's keep them hidden on mobile to reduce clutter, relying on actions in footer.
+                                */}
+                                <div className="w-8 flex justify-start">{col.id !== 'todo' && <button onClick={(e) => moveTask(e, task, 'left')} className="p-1.5 bg-slate-100 dark:bg-slate-700 hidden md:block rounded-lg text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600"><ChevronLeft size={16} /></button>}</div>
+                                <div className="w-8 flex justify-end">{col.id !== 'done' && <button onClick={(e) => moveTask(e, task, 'right')} className="p-1.5 bg-slate-100 dark:bg-slate-700 hidden md:block rounded-lg text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600"><ChevronRight size={16} /></button>}</div>
                             </div>
                         </div>
                     </div>
@@ -1291,31 +1309,31 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
         </div>
         
         {/* Filters & Search */}
-        <div className="flex flex-col md:flex-row items-end md:items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none">
+        <div className="flex flex-col md:flex-row items-end md:items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none w-full md:w-auto">
              
              {/* Search Input */}
-             <div className="relative group">
+             <div className="relative group w-full md:w-auto">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                 <input 
                     type="text" 
                     placeholder="Поиск..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-32 focus:w-48 transition-all pl-8 pr-7 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 placeholder:text-slate-400 outline-none ring-1 ring-transparent focus:ring-indigo-500/20"
+                    className="w-full md:w-32 focus:w-full md:focus:w-48 transition-all pl-8 pr-7 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 placeholder:text-slate-400 outline-none ring-1 ring-transparent focus:ring-indigo-500/20"
                 />
                 {searchQuery && (
                     <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={12} /></button>
                 )}
              </div>
 
-             <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+             <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1 shrink-0">
                  <button onClick={() => setFilterChallenge('all')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'all' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Все</button>
                  <button onClick={() => setFilterChallenge('active')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'active' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Активные</button>
                  <button onClick={() => setFilterChallenge('none')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'none' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Обычные</button>
              </div>
              
              <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"}>
-                 <button onClick={toggleSortOrder} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400">
+                 <button onClick={toggleSortOrder} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0">
                      {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
                  </button>
              </Tooltip>
@@ -1323,13 +1341,31 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       </header>
 
       {/* Columns */}
-      <div className="flex-1 overflow-auto p-4 md:p-8 pt-4 custom-scrollbar-light">
-         <div className="flex flex-col md:flex-row gap-4 h-full min-h-0">
+      <div className="flex-1 overflow-hidden p-0 md:p-8 md:pt-4 custom-scrollbar-light flex flex-col">
+         {/* Mobile Tabs */}
+         <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10">
             {columns.map(col => (
-               <div key={col.id} className="flex-1 min-w-[280px] flex flex-col min-h-0 h-full">
-                   {renderColumn(col)}
-               </div>
+                <button
+                    key={col.id}
+                    onClick={() => setActiveMobileTab(col.id as any)}
+                    className={getTabClass(col.id, activeMobileTab === col.id)}
+                >
+                    {col.title} <span className="opacity-60 text-[10px]">({activeTasks.filter(t => t.column === col.id).length})</span>
+                </button>
             ))}
+         </div>
+
+         <div className="flex-1 overflow-x-hidden md:overflow-auto p-4 md:p-0">
+             <div className="flex flex-col md:flex-row gap-4 h-full min-h-0">
+                {columns.map(col => {
+                   const isHiddenOnMobile = activeMobileTab !== col.id;
+                   return (
+                       <div key={col.id} className={`flex-1 min-w-[280px] flex-col min-h-0 h-full ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}>
+                           {renderColumn(col)}
+                       </div>
+                   );
+                })}
+             </div>
          </div>
       </div>
 
