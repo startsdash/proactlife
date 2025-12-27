@@ -725,8 +725,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                   <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><Bot className="text-indigo-600 dark:text-indigo-400" /> Анализ Пути (Наставник)</h3><button onClick={() => setAnalysisResult(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
                   <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 leading-relaxed text-sm"><ReactMarkdown components={markdownComponents}>{analysisResult}</ReactMarkdown></div>
                   <div className="mt-8 flex justify-end gap-2">
-                      <button onClick={handleSaveAnalysis} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm flex items-center gap-2"><Save size={16} /> Сохранить в историю</button>
-                      <button onClick={() => setAnalysisResult(null)} className="px-6 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 font-medium text-sm">Закрыть</button>
+                      <Tooltip content="Сохранить в историю">
+                          <button onClick={handleSaveAnalysis} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"><Save size={20} /></button>
+                      </Tooltip>
                   </div>
               </div>
           </div>
