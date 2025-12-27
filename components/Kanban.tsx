@@ -376,7 +376,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [generatingChallengeFor, setGeneratingChallengeFor] = useState<string | null>(null);
   const [generatingTherapyFor, setGeneratingTherapyFor] = useState<string | null>(null);
   const [challengeDrafts, setChallengeDrafts] = useState<{[taskId: string]: string}>({});
-  const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'completed' | 'none'>('all');
+  const [filterChallenge, setFilterChallenge] = useState<'all' | 'active' | 'challenges'>('all');
   const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
   const [sortOrder, setSortOrder] = useState<'manual' | 'desc' | 'asc'>('manual');
   const [searchQuery, setSearchQuery] = useState('');
@@ -408,11 +408,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       if (filterChallenge === 'active') {
           if (!task.activeChallenge || task.isChallengeCompleted) return false;
       }
-      if (filterChallenge === 'completed') {
-          if (!task.activeChallenge || !task.isChallengeCompleted) return false;
-      }
-      if (filterChallenge === 'none') {
-          if (task.activeChallenge) return false;
+      if (filterChallenge === 'challenges') {
+          if (!task.activeChallenge) return false;
       }
       if (filterJournal === 'linked') {
           const hasEntry = journalEntries.some(e => e.linkedTaskId === task.id);
@@ -1306,7 +1303,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
              <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1 shrink-0">
                  <button onClick={() => setFilterChallenge('all')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'all' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Все</button>
                  <button onClick={() => setFilterChallenge('active')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'active' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Активные</button>
-                 <button onClick={() => setFilterChallenge('none')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'none' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Обычные</button>
+                 <button onClick={() => setFilterChallenge('challenges')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterChallenge === 'challenges' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Челленджи</button>
              </div>
              
              <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
