@@ -7,7 +7,7 @@ import { DEFAULT_CONFIG } from './constants';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Napkins from './components/Napkins';
-import Sketchpad from './components/Sketchpad'; // NEW IMPORT
+import Sketchpad from './components/Sketchpad';
 import Sandbox from './components/Sandbox';
 import MentalGym from './components/MentalGym';
 import Kanban from './components/Kanban';
@@ -15,6 +15,7 @@ import Rituals from './components/Rituals';
 import Archive from './components/Archive';
 import Settings from './components/Settings';
 import Journal from './components/Journal';
+import Moodbar from './components/Moodbar'; // NEW IMPORT
 import LearningMode from './components/LearningMode';
 import UserSettings from './components/UserSettings';
 import Onboarding from './components/Onboarding';
@@ -420,6 +421,7 @@ const App: React.FC = () => {
       {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
       {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} />}
       {module === Module.JOURNAL && <Journal entries={data.journal} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
+      {module === Module.MOODBAR && <Moodbar entries={data.journal} onAddEntry={addJournalEntry} />}
       {module === Module.ARCHIVE && <Archive tasks={data.tasks} restoreTask={restoreTask} deleteTask={deleteTask} />}
       {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
       {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}

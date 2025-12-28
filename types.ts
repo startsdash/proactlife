@@ -8,12 +8,13 @@ declare global {
 export enum Module {
   DASHBOARD = 'dashboard',
   NAPKINS = 'napkins',
-  SKETCHPAD = 'sketchpad', // NEW
+  SKETCHPAD = 'sketchpad',
   SANDBOX = 'sandbox',
   MENTAL_GYM = 'mental_gym',
   KANBAN = 'kanban',
   RITUALS = 'rituals',
   JOURNAL = 'journal',
+  MOODBAR = 'moodbar', // NEW
   ARCHIVE = 'archive',
   SETTINGS = 'settings',
   LEARNING = 'learning',
@@ -122,6 +123,10 @@ export interface JournalEntry {
   mentorId?: string;
   spheres?: string[]; // Manual sphere selection
   isInsight?: boolean; // Toggle for dashboard stats
+  
+  // NEW: Mood Tracking
+  mood?: number; // 1 (Worst) to 5 (Best)
+  moodTags?: string[]; // e.g. ["Work", "Sleep", "Social"]
 }
 
 export interface MentorAnalysis {

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AppConfig, AIToolConfig } from "./types";
-import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book, Flame, Repeat, Calendar, CheckCircle, LayoutDashboard, Briefcase, Sprout, Heart, Target, Image, Palette } from 'lucide-react';
+import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book, Flame, Repeat, Calendar, CheckCircle, LayoutDashboard, Briefcase, Sprout, Heart, Target, Image, Palette, Smile, Frown, Meh, Activity, Thermometer } from 'lucide-react';
 
 // --- ICON REGISTRY ---
 export const ICON_MAP: Record<string, React.ElementType> = {
@@ -28,7 +28,12 @@ export const ICON_MAP: Record<string, React.ElementType> = {
   'Heart': Heart,
   'Target': Target,
   'Image': Image,
-  'Palette': Palette
+  'Palette': Palette,
+  'Smile': Smile,
+  'Frown': Frown,
+  'Meh': Meh,
+  'Activity': Activity,
+  'Thermometer': Thermometer
 };
 
 export const AVAILABLE_ICONS = Object.keys(ICON_MAP);
@@ -61,6 +66,17 @@ export const SPHERES = [
     text: 'text-rose-600 dark:text-rose-400',
     border: 'border-rose-200 dark:border-rose-800'
   }
+];
+
+export const MOOD_TAGS = [
+    { id: 'sleep', label: 'Сон', emoji: '🛌' },
+    { id: 'work', label: 'Работа', emoji: '💼' },
+    { id: 'social', label: 'Общение', emoji: '💬' },
+    { id: 'health', label: 'Здоровье', emoji: '🍏' },
+    { id: 'hobby', label: 'Хобби', emoji: '🎨' },
+    { id: 'weather', label: 'Погода', emoji: '🌧' },
+    { id: 'stress', label: 'Стресс', emoji: '🤯' },
+    { id: 'flow', label: 'Поток', emoji: '🌊' },
 ];
 
 export const AVAILABLE_MODELS = [
