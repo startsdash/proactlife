@@ -6,7 +6,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -55,6 +55,84 @@ const markdownComponents = {
             : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     },
     img: ({node, ...props}: any) => <img className="rounded-lg max-h-60 object-cover my-2" {...props} />
+};
+
+// --- HELPER: HTML <-> MARKDOWN CONVERTERS ---
+const markdownToHtml = (md: string) => {
+    if (!md) return '';
+    let html = md
+        .replace(/\n/g, '<br>')
+        // Images: ![alt](src) -> <img src="src" alt="alt">
+        .replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />')
+        // Bold: **text** -> <b>text</b>
+        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+        // Italic: _text_ -> <i>text</i>
+        .replace(/_(.*?)_/g, '<i>$1</i>')
+        // Code: `text` -> <code>text</code>
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+    return html;
+};
+
+const htmlToMarkdown = (html: string) => {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    let md = '';
+    
+    const process = (node: Node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            md += node.textContent;
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            switch(el.tagName) {
+                case 'B': case 'STRONG':
+                    md += '**';
+                    el.childNodes.forEach(process);
+                    md += '**';
+                    break;
+                case 'I': case 'EM':
+                    md += '_';
+                    el.childNodes.forEach(process);
+                    md += '_';
+                    break;
+                case 'CODE':
+                    md += '`';
+                    el.childNodes.forEach(process);
+                    md += '`';
+                    break;
+                case 'DIV':
+                    md += '\n';
+                    el.childNodes.forEach(process);
+                    break;
+                case 'P':
+                    if (md.length > 0 && !md.endsWith('\n')) md += '\n';
+                    el.childNodes.forEach(process);
+                    md += '\n';
+                    break;
+                case 'BR':
+                    md += '\n';
+                    break;
+                case 'IMG':
+                    const img = el as HTMLImageElement;
+                    md += `\n![${img.alt || 'image'}](${img.src})\n`;
+                    break;
+                case 'UL':
+                    md += '\n';
+                    el.childNodes.forEach(process);
+                    md += '\n';
+                    break;
+                case 'LI':
+                    md += '- ';
+                    el.childNodes.forEach(process);
+                    md += '\n';
+                    break;
+                default:
+                    el.childNodes.forEach(process);
+            }
+        }
+    };
+    
+    temp.childNodes.forEach(process);
+    return md.trim();
 };
 
 // --- INTERNAL COMPONENT: TAG SELECTOR ---
@@ -162,7 +240,6 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
 
 const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask }) => {
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'inbox' | 'library'>('inbox');
@@ -171,7 +248,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   // Editor State
   const [isExpanded, setIsExpanded] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const contentEditableRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -193,8 +270,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
-  const [editContent, setEditContent] = useState('');
+  // const [editContent, setEditContent] = useState(''); // Removed in favor of DOM reading
   const [editTagsList, setEditTagsList] = useState<string[]>([]);
+  const editContentRef = useRef<HTMLDivElement>(null);
 
   const allExistingTags = useMemo(() => {
       const uniqueTagsMap = new Map<string, string>();
@@ -221,31 +299,20 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         if (editorRef.current && !editorRef.current.contains(event.target as Node)) {
             if (isExpanded) {
                 // If clicked outside, try to save if content exists
-                if (content.trim() || title.trim()) {
-                    handleDump();
-                } else {
-                    setIsExpanded(false);
-                }
+                handleDump();
             }
         }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isExpanded, content, title]);
+  }, [isExpanded, title]); // Removed content dep, we read DOM now
 
-  useEffect(() => {
-      if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
-          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-      }
-  }, [content, isExpanded]);
-
-  // Handle Paste for Images
+  // Handle Paste for Images in Rich Editor
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
-        if (!isExpanded) return;
-        // Only handle if this specific textarea is focused
-        if (document.activeElement !== textareaRef.current) return;
+        // Find which editor is active
+        const target = e.target as HTMLElement;
+        if (!target.isContentEditable) return;
 
         const items = e.clipboardData?.items;
         if (!items) return;
@@ -258,7 +325,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         const base64 = event.target?.result as string;
-                        insertAtCursor(`\n![Image](${base64})\n`);
+                        document.execCommand('insertImage', false, base64);
                     };
                     reader.readAsDataURL(blob);
                 }
@@ -267,22 +334,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     };
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, [isExpanded]);
-
-  const insertAtCursor = (textToInsert: string) => {
-      if (!textareaRef.current) return;
-      const start = textareaRef.current.selectionStart;
-      const end = textareaRef.current.selectionEnd;
-      const newContent = content.substring(0, start) + textToInsert + content.substring(end);
-      setContent(newContent);
-      // Wait for render to update height
-      setTimeout(() => {
-          if (textareaRef.current) {
-              textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + textToInsert.length;
-              textareaRef.current.focus();
-          }
-      }, 0);
-  };
+  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -290,27 +342,42 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           const reader = new FileReader();
           reader.onload = (ev) => {
               if (ev.target?.result) {
-                  insertAtCursor(`\n![Image](${ev.target.result})\n`);
+                  // Focus back to editor before inserting
+                  if (contentEditableRef.current) contentEditableRef.current.focus();
+                  else if (editContentRef.current) editContentRef.current.focus();
+                  
+                  document.execCommand('insertImage', false, ev.target.result as string);
               }
           };
           reader.readAsDataURL(file);
       }
   };
 
+  const execCmd = (command: string, value: string | undefined = undefined) => {
+      document.execCommand(command, false, value);
+      // Ensure focus remains on the editable div
+      if (contentEditableRef.current && isExpanded) contentEditableRef.current.focus();
+      else if (editContentRef.current && isEditing) editContentRef.current.focus();
+  };
+
   const handleDump = async () => {
-    if (!content.trim() && !title.trim()) {
+    const rawHtml = contentEditableRef.current?.innerHTML || '';
+    // Strip empty HTML tags if just <br>
+    const cleanHtml = rawHtml.replace(/^(<br>)+$/, '').trim();
+    
+    if (!cleanHtml && !title.trim()) {
         setIsExpanded(false);
         return;
     }
     
     setIsProcessing(true);
-    // await new Promise(resolve => setTimeout(resolve, 600)); // Remove fake delay for smoother UX
+    const markdownContent = htmlToMarkdown(cleanHtml);
 
     let autoTags: string[] = [];
-    if (hasTagger && creationTags.length === 0 && content.length > 20) {
-        autoTags = await autoTagNote(content, config);
+    if (hasTagger && creationTags.length === 0 && markdownContent.length > 20) {
+        autoTags = await autoTagNote(markdownContent, config);
     }
-    const formattedContent = applyTypography(content);
+    const formattedContent = applyTypography(markdownContent);
     const newNote: Note = {
       id: Date.now().toString(),
       title: title.trim() ? applyTypography(title.trim()) : undefined,
@@ -323,7 +390,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     };
     addNote(newNote);
     setTitle('');
-    setContent('');
+    if (contentEditableRef.current) contentEditableRef.current.innerHTML = '';
     setCreationTags([]);
     setIsProcessing(false);
     setIsExpanded(false);
@@ -394,23 +461,27 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const handleOpenNote = (note: Note) => {
       setSelectedNote(note);
       setEditTitle(note.title || '');
-      setEditContent(note.content);
       setEditTagsList(note.tags ? note.tags.map(t => t.replace(/^#/, '')) : []);
       setIsEditing(false);
   };
 
   const handleSaveEdit = () => {
-      if (selectedNote && (editContent.trim() !== '' || editTitle.trim() !== '')) {
-          const formattedContent = applyTypography(editContent);
-          const updated = { 
-              ...selectedNote, 
-              title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
-              content: formattedContent, 
-              tags: editTagsList 
-          };
-          updateNote(updated);
-          setSelectedNote(updated);
-          setIsEditing(false);
+      if (selectedNote) {
+          const rawHtml = editContentRef.current?.innerHTML || '';
+          const markdownContent = htmlToMarkdown(rawHtml);
+          
+          if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
+              const formattedContent = applyTypography(markdownContent);
+              const updated = { 
+                  ...selectedNote, 
+                  title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
+                  content: formattedContent, 
+                  tags: editTagsList 
+              };
+              updateNote(updated);
+              setSelectedNote(updated);
+              setIsEditing(false);
+          }
       }
   };
 
@@ -625,7 +696,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 >
                     {!isExpanded ? (
                         <div 
-                            onClick={() => setIsExpanded(true)}
+                            onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }}
                             className="p-3 md:p-4 text-slate-500 dark:text-slate-400 cursor-text text-sm font-medium flex items-center justify-between"
                         >
                             <span>Заметка...</span>
@@ -643,13 +714,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 onChange={(e) => setTitle(e.target.value)}
                                 className="px-4 pt-4 pb-2 bg-transparent text-base font-bold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none"
                             />
-                            <textarea 
-                                ref={textareaRef}
-                                className="w-full min-h-[120px] resize-none outline-none text-sm text-slate-700 dark:text-slate-200 bg-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 px-4 py-2" 
-                                placeholder="О чём ты думаешь?" 
-                                value={content} 
-                                onChange={(e) => setContent(e.target.value)} 
-                                autoFocus
+                            
+                            {/* Rich Editor Area */}
+                            <div
+                                ref={contentEditableRef}
+                                contentEditable
+                                className="w-full min-h-[120px] outline-none text-sm text-slate-700 dark:text-slate-200 px-4 py-2 leading-relaxed"
+                                style={{ whiteSpace: 'pre-wrap' }}
+                                data-placeholder="О чём ты думаешь?"
                             />
                             
                             <div className="px-4 py-2">
@@ -671,22 +743,22 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         </label>
                                     </Tooltip>
                                     <Tooltip content="Жирный">
-                                        <button onClick={() => insertAtCursor('**Text**')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
                                             <Bold size={18} />
                                         </button>
                                     </Tooltip>
                                     <Tooltip content="Курсив">
-                                        <button onClick={() => insertAtCursor('_Text_')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
                                             <Italic size={18} />
                                         </button>
                                     </Tooltip>
                                     <Tooltip content="Список">
-                                        <button onClick={() => insertAtCursor('\n- ')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('insertUnorderedList'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
                                             <List size={18} />
                                         </button>
                                     </Tooltip>
                                     <Tooltip content="Код">
-                                        <button onClick={() => insertAtCursor('`Code`')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'PRE'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
                                             <Code size={18} />
                                         </button>
                                     </Tooltip>
@@ -827,7 +899,21 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         </div>
                         <div>
                             <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Содержание</label>
-                            <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 focus:ring focus:ring-indigo-100 dark:focus:ring-indigo-900 outline-none resize-none leading-relaxed font-mono text-sm" placeholder="Поддерживается Markdown..." />
+                            <div className="relative">
+                                {/* TOOLBAR FOR EDIT MODAL */}
+                                <div className="flex items-center gap-1 mb-1 pb-1 border-b border-slate-200 dark:border-slate-600/50 overflow-x-auto">
+                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Bold size={14} /></button>
+                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Italic size={14} /></button>
+                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('insertUnorderedList'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><List size={14} /></button>
+                                    <label className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded cursor-pointer text-slate-500 dark:text-slate-400"><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={14} /></label>
+                                </div>
+                                <div 
+                                    ref={editContentRef}
+                                    contentEditable
+                                    className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto"
+                                    dangerouslySetInnerHTML={{ __html: markdownToHtml(selectedNote.content) }} // Initialize with HTML
+                                />
+                            </div>
                         </div>
                         <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Теги</label><TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} /></div>
                     </div>
