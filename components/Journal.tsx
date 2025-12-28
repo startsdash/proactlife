@@ -601,7 +601,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     {hasMentorTool && (
                         <>
                             {/* Mentor Button (Moved First) */}
-                            <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="bottom">
+                            <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="bottom" disabled={isAnalyzing}>
                                 <button 
                                     onClick={handleAnalyzePath} 
                                     disabled={displayedEntries.length === 0} 

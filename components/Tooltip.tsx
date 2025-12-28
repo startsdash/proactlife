@@ -91,7 +91,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ content, children, side = 'top
                     {/* Arrow */}
                     <div className={`absolute w-2 h-2 bg-black border-r border-b border-white/10 transform rotate-45 
                         ${side === 'top' ? '-bottom-1 left-1/2 -translate-x-1/2' : ''}
-                        ${side === 'bottom' ? '-top-1 left-1/2 -translate-x-1/2 rotate-180 border-t border-l border-b-0 border-r-0' : ''}
+                        ${side === 'bottom' ? '-top-1 left-1/2 -translate-x-1/2 border-t border-l border-b-0 border-r-0' : ''}
                         ${side === 'left' ? '-right-1 top-1/2 -translate-y-1/2 rotate-[-45deg]' : ''}
                         ${side === 'right' ? '-left-1 top-1/2 -translate-y-1/2 rotate-[135deg]' : ''}
                     `} />
