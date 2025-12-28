@@ -274,7 +274,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     <div className="h-full overflow-y-auto custom-scrollbar-light p-4 md:p-8 relative">
       <header className="mb-6 flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Трекер</h1>
+          <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Трекер</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Автопилот полезных привычек</p>
         </div>
         {!isFormOpen && (
@@ -289,180 +289,252 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
         )}
       </header>
 
-      {/* STATS */}
-      {!isFormOpen && habits.length > 0 && (
-          <div className="mb-8">
-              <ProgressStats habits={habits} />
-          </div>
+      {/* PROGRESS VISUALIZATION */}
+      {habits.length > 0 && !isFormOpen && (
+          <ProgressStats habits={habits} />
       )}
 
-      {/* FORM */}
+      {/* NOTIFICATION BANNER */}
+      {!permissionGranted && (
+         <div className="mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-white dark:bg-indigo-800 rounded-lg text-indigo-500"><Bell size={18} /></div>
+                <div className="text-sm text-indigo-900 dark:text-indigo-200">
+                    <div className="font-bold">Включите напоминания</div>
+                    <div className="opacity-80">Чтобы ничего не пропустить</div>
+                </div>
+            </div>
+            <button onClick={requestNotificationPermission} className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700">Включить</button>
+         </div>
+      )}
+
+      {/* HABIT FORM */}
       <AnimatePresence>
-        {isFormOpen && (
-            <motion.div 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="bg-white dark:bg-[#1e293b] p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 mb-8"
-            >
-                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">{editingId ? 'Редактировать привычку' : 'Новый ритуал'}</h3>
-                
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Название</label>
-                        <input 
-                            className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900"
-                            placeholder="Например: Читать 30 минут"
-                            value={newTitle}
-                            onChange={(e) => setNewTitle(e.target.value)}
-                        />
-                    </div>
+      {isFormOpen && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="mb-6 overflow-hidden"
+          >
+              <div className="bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{editingId ? 'Редактировать привычку' : 'Новая привычка'}</h3>
+                      <button onClick={() => { setIsFormOpen(false); resetForm(); }} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                      <input 
+                        className="w-full text-lg font-medium border-b-2 border-slate-100 dark:border-slate-700 bg-transparent py-2 outline-none focus:border-indigo-500 placeholder:text-slate-300 dark:text-slate-200"
+                        placeholder="Название (например: Медитация)"
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        autoFocus
+                      />
 
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Сферы</label>
-                        <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
-                    </div>
+                      <div className="flex flex-col gap-4">
+                          <div>
+                             <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Сферы (Для статистики)</label>
+                             <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
+                          </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Частота</label>
-                            <select 
-                                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none"
-                                value={frequency}
-                                onChange={(e) => setFrequency(e.target.value as HabitFrequency)}
-                            >
-                                <option value="daily">Ежедневно</option>
-                                <option value="specific_days">Дни недели</option>
-                                <option value="times_per_week">Раз в неделю</option>
-                                <option value="times_per_day">Раз в день (Счетчик)</option>
-                            </select>
-                        </div>
-                        
-                        {(frequency === 'times_per_week' || frequency === 'times_per_day') && (
-                            <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Цель (Кол-во)</label>
-                                <input 
-                                    type="number"
-                                    min="1"
-                                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none"
-                                    value={targetCount}
-                                    onChange={(e) => setTargetCount(parseInt(e.target.value))}
-                                />
-                            </div>
-                        )}
-
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Напоминание</label>
-                            <input 
-                                type="time"
-                                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none"
+                          <div className="space-y-2">
+                              <label className="text-xs font-bold text-slate-400 uppercase">Частота</label>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                  <button onClick={() => setFrequency('daily')} className={`py-2 px-3 rounded-lg border text-sm transition-colors ${frequency === 'daily' ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>Каждый день</button>
+                                  <button onClick={() => setFrequency('specific_days')} className={`py-2 px-3 rounded-lg border text-sm transition-colors ${frequency === 'specific_days' ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>Дни недели</button>
+                                  <button onClick={() => setFrequency('times_per_week')} className={`py-2 px-3 rounded-lg border text-sm transition-colors ${frequency === 'times_per_week' ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>X раз в неделю</button>
+                                  <button onClick={() => setFrequency('times_per_day')} className={`py-2 px-3 rounded-lg border text-sm transition-colors ${frequency === 'times_per_day' ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>X раз в день</button>
+                              </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                              <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Clock size={12}/> Напоминание</label>
+                              <input 
+                                type="time" 
+                                className="w-full md:w-40 py-2 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm outline-none focus:border-indigo-500 dark:text-slate-200"
                                 value={reminderTime}
                                 onChange={(e) => setReminderTime(e.target.value)}
-                            />
-                        </div>
-                    </div>
+                              />
+                          </div>
+                      </div>
 
-                    {frequency === 'specific_days' && (
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Дни недели</label>
-                            <div className="flex gap-2">
-                                {daysOfWeek.map((day, idx) => (
-                                    <button
-                                        key={day}
-                                        onClick={() => toggleDay(idx)}
-                                        className={`w-10 h-10 rounded-lg text-xs font-bold transition-all ${targetDays.includes(idx) ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                                    >
-                                        {day}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                      {frequency === 'specific_days' && (
+                          <div className="flex justify-between gap-1 pt-2">
+                              {daysOfWeek.map((day, idx) => (
+                                  <button 
+                                    key={day}
+                                    onClick={() => toggleDay(idx)}
+                                    className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all ${targetDays.includes(idx) ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
+                                  >
+                                      {day}
+                                  </button>
+                              ))}
+                          </div>
+                      )}
 
-                    <div className="flex items-center gap-2 mt-2">
-                        <button onClick={requestNotificationPermission} className={`text-xs flex items-center gap-1 ${permissionGranted ? 'text-emerald-500' : 'text-slate-400 hover:text-indigo-500'}`}>
-                            <Bell size={12} /> {permissionGranted ? 'Уведомления включены' : 'Включить уведомления'}
-                        </button>
-                    </div>
+                      {(frequency === 'times_per_week' || frequency === 'times_per_day') && (
+                          <div className="pt-2">
+                              <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">
+                                  {frequency === 'times_per_week' ? `Сколько раз в неделю: ${targetCount}` : `Сколько раз в день: ${targetCount}`}
+                              </label>
+                              <input 
+                                type="range" 
+                                min="1" 
+                                max={frequency === 'times_per_week' ? "7" : "20"} 
+                                value={targetCount} 
+                                onChange={(e) => setTargetCount(parseInt(e.target.value))}
+                                className="w-full accent-indigo-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                              />
+                              <div className="flex justify-between text-xs text-slate-300 mt-1"><span>1</span><span>{frequency === 'times_per_week' ? '7' : '20'}</span></div>
+                          </div>
+                      )}
 
-                    <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
-                        <button onClick={() => setIsFormOpen(false)} className="flex-1 py-3 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors">Отмена</button>
-                        <button onClick={handleSaveHabit} className="flex-1 py-3 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl font-medium shadow-lg hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors">Сохранить</button>
-                    </div>
-                </div>
-            </motion.div>
-        )}
+                      <div className="pt-4 flex justify-end">
+                          <button 
+                            onClick={handleSaveHabit}
+                            disabled={!newTitle.trim()}
+                            className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                          >
+                              {editingId ? 'Сохранить изменения' : 'Создать'}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </motion.div>
+      )}
       </AnimatePresence>
 
-      {/* HABIT LIST */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20 md:pb-0">
+      <div className="space-y-3 pb-20">
           {habits.length === 0 && !isFormOpen ? (
-              <div className="col-span-full py-10">
+              <div className="py-10">
                   <EmptyState 
-                      icon={Flame} 
-                      title="Нет привычек" 
-                      description="Создай свой первый ритуал, чтобы начать серию побед" 
-                      color="orange"
-                      actionLabel="Создать привычку"
-                      onAction={openNewForm}
+                    icon={Flame} 
+                    title="Стриков пока нет" 
+                    description="Заведи полезные привычки и отслеживай прогресс" 
+                    color="orange"
+                    actionLabel="Завести первую привычку"
+                    onAction={openNewForm}
                   />
               </div>
           ) : (
               habits.map(habit => {
-                  const isDoneToday = isDayCompleted(habit, todayStr, habit.history[todayStr]);
-                  const historyValue = habit.history[todayStr];
-                  const progress = habit.frequency === 'times_per_day' && typeof historyValue === 'number' 
-                        ? Math.min(100, Math.round((historyValue / (habit.targetCount || 1)) * 100))
-                        : (isDoneToday ? 100 : 0);
+                  const history = habit.history || {};
+                  const todayVal = history[todayStr];
+                  const isCompletedToday = isDayCompleted(habit, todayStr, todayVal);
+                  
+                  // Progress Calculation
+                  let progressPercent = 0;
+                  if (habit.frequency === 'daily' || habit.frequency === 'specific_days') {
+                      progressPercent = isCompletedToday ? 100 : 0;
+                  } else if (habit.frequency === 'times_per_week') {
+                      const weekProgress = getWeekProgress(habit);
+                      progressPercent = Math.min(100, (weekProgress / (habit.targetCount || 1)) * 100);
+                  } else if (habit.frequency === 'times_per_day') {
+                      const count = typeof todayVal === 'number' ? todayVal : (todayVal ? (habit.targetCount || 1) : 0);
+                      progressPercent = Math.min(100, (count / (habit.targetCount || 1)) * 100);
+                  }
+
+                  const streak = habit.streak || 0;
+                  const isFire = streak > 2;
+                  
+                  // Render Value inside circle for counters
+                  const currentCountDisplay = typeof todayVal === 'number' ? todayVal : (todayVal ? (habit.targetCount || 1) : 0);
+                  const targetDisplay = habit.targetCount || 1;
+                  const countLabel = habit.frequency === 'times_per_day' 
+                    ? `${currentCountDisplay}/${targetDisplay}` 
+                    : null;
 
                   return (
-                      <div key={habit.id} className="bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                          {/* Progress Bar Background */}
+                      <div key={habit.id} className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4 relative overflow-hidden group">
+                          {/* PROGRESS BAR BACKGROUND */}
                           <div className="absolute bottom-0 left-0 h-1 bg-slate-100 dark:bg-slate-800 w-full">
-                              <div className={`h-full transition-all duration-500 ${getBarColorClass(progress)}`} style={{ width: `${progress}%` }} />
+                              <motion.div 
+                                className={`h-full ${getBarColorClass(progressPercent)}`}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progressPercent}%` }}
+                                transition={{ duration: 0.5 }}
+                              />
                           </div>
 
-                          <div className="flex justify-between items-start mb-4 relative z-10">
-                              <div className="flex flex-col">
-                                  <h3 className="font-bold text-slate-800 dark:text-slate-200 text-lg leading-tight">{habit.title}</h3>
-                                  <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
-                                      <span className="flex items-center gap-1"><Flame size={12} className={habit.streak > 0 ? "text-orange-500" : ""} /> {habit.streak} дн.</span>
-                                      <span>•</span>
-                                      <span className="flex items-center gap-1"><Calendar size={12} /> {getWeekProgress(habit)}/7</span>
+                          <motion.button 
+                             whileTap={{ scale: 0.9 }}
+                             onClick={() => checkHabit(habit)}
+                             className={`shrink-0 w-14 h-14 rounded-full flex items-center justify-center border-4 relative overflow-hidden transition-all shadow-sm ${
+                                 isCompletedToday 
+                                 ? 'bg-emerald-500 border-emerald-200 text-white shadow-emerald-200' 
+                                 : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-300 hover:border-orange-200 hover:text-orange-400'
+                             }`}
+                          >
+                                <AnimatePresence mode="wait">
+                                    {isCompletedToday ? (
+                                        <motion.div
+                                            key="check"
+                                            initial={{ scale: 0, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            exit={{ scale: 0, opacity: 0 }}
+                                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                        >
+                                            <Check size={24} strokeWidth={3} />
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div
+                                            key="circle"
+                                            initial={{ scale: 0, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            exit={{ scale: 0, opacity: 0 }}
+                                        >
+                                            {countLabel ? <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{countLabel}</span> : <Circle size={24} />}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                          </motion.button>
+
+                          <div className="flex-1 min-w-0">
+                              <h3 className={`text-lg font-bold truncate transition-colors ${isCompletedToday ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-800 dark:text-slate-200'}`}>{habit.title}</h3>
+                              <div className="flex items-center gap-2 mt-1">
+                                  {habit.spheres && habit.spheres.length > 0 && (
+                                      <div className="flex -space-x-1 mr-2">
+                                          {habit.spheres.map(s => {
+                                              const sp = SPHERES.find(x => x.id === s);
+                                              return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
+                                          })}
+                                      </div>
+                                  )}
+                                  <div className="flex items-center gap-3 text-xs text-slate-400">
+                                      <div className={`flex items-center gap-1 font-medium ${isFire ? 'text-orange-500 animate-pulse' : ''}`}>
+                                          <Flame size={12} fill={isFire ? "currentColor" : "none"} /> {streak} дней
+                                      </div>
+                                      {habit.frequency === 'times_per_week' && (
+                                          <div className="flex items-center gap-1">
+                                              <Repeat size={12} /> {getWeekProgress(habit)}/{habit.targetCount || 1} на этой неделе
+                                          </div>
+                                      )}
+                                      {habit.frequency === 'specific_days' && (
+                                          <div className="flex items-center gap-1">
+                                              <Calendar size={12} /> По дням
+                                          </div>
+                                      )}
+                                      {habit.frequency === 'times_per_day' && (
+                                          <div className="flex items-center gap-1 text-indigo-500">
+                                              <Repeat size={12} /> Цель: {habit.targetCount || 1} в день
+                                          </div>
+                                      )}
                                   </div>
                               </div>
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={() => openEditForm(habit)} className="p-1.5 text-slate-400 hover:text-indigo-500 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20"><Edit2 size={16} /></button>
-                                  <button onClick={() => { if(confirm("Удалить привычку?")) deleteHabit(habit.id); }} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 size={16} /></button>
-                              </div>
                           </div>
-
-                          <div className="flex justify-between items-end relative z-10">
-                              <div className="flex gap-1">
-                                  {habit.spheres?.map(sid => {
-                                      const s = SPHERES.find(x => x.id === sid);
-                                      if (!s) return null;
-                                      return (
-                                          <div key={sid} className={`w-2 h-2 rounded-full ${s.bg.replace('50', '400').replace('/30', '')}`} title={s.label} />
-                                      );
-                                  })}
-                              </div>
-                              <button 
-                                  onClick={() => checkHabit(habit)}
-                                  className={`
-                                      flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-sm active:scale-95
-                                      ${isDoneToday 
-                                          ? 'bg-emerald-500 text-white hover:bg-emerald-600' 
-                                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                      }
-                                  `}
-                              >
-                                  {isDoneToday ? <Check size={18} strokeWidth={3} /> : <div className="w-[18px] h-[18px] rounded-full border-2 border-slate-300 dark:border-slate-500" />}
-                                  {habit.frequency === 'times_per_day' 
-                                    ? `${historyValue || 0}/${habit.targetCount}`
-                                    : (isDoneToday ? 'Готово' : 'Сделать')
-                                  }
-                              </button>
+                          
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Tooltip content="Редактировать">
+                                  <button onClick={() => openEditForm(habit)} className="p-2 text-slate-300 hover:text-indigo-500 transition-colors">
+                                      <Edit2 size={18} />
+                                  </button>
+                              </Tooltip>
+                              <Tooltip content="Удалить">
+                                  <button onClick={() => { if(confirm("Удалить привычку?")) deleteHabit(habit.id); }} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                                      <Trash2 size={18} />
+                                  </button>
+                              </Tooltip>
                           </div>
                       </div>
                   );

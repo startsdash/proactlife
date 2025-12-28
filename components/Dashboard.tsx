@@ -681,10 +681,6 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
 
   return (
     <div className="h-full overflow-y-auto custom-scrollbar-light p-3 md:p-8 bg-[#f8fafc] dark:bg-[#0f172a]">
-      <header className="mb-8">
-        <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Обзор</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Пульс твоей продуктивности</p>
-      </header>
       
       {/* BENTO GRID LAYOUT */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 max-w-7xl mx-auto pb-20 auto-rows-min">
