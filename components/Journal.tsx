@@ -695,76 +695,95 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                />
            </div>
         ) : (
-          <div className="space-y-6 max-w-3xl pb-20 md:pb-0 mx-auto w-full">
-            {displayedEntries.map(entry => {
-              const mentor = config.mentors.find(m => m.id === entry.mentorId);
-              const isEditing = editingId === entry.id;
-              const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
+          <div className="relative max-w-3xl mx-auto w-full pb-20 md:pb-0">
+            {/* TIMELINE LINE */}
+            <div className="absolute left-[19px] md:left-[27px] top-6 bottom-6 w-0.5 bg-slate-200 dark:bg-slate-800" />
+            
+            <div className="space-y-6">
+                {displayedEntries.map((entry, index) => {
+                    const mentor = config.mentors.find(m => m.id === entry.mentorId);
+                    const isEditing = editingId === entry.id;
+                    const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
 
-              return (
-                <div key={entry.id} onClick={() => setSelectedEntryId(entry.id)} className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 md:p-6 relative group hover:shadow-md transition-shadow cursor-pointer">
-                  
-                  {/* CARD HEADER - ALIGNED */}
-                  <div className="flex justify-between items-start mb-3">
-                      <div className="flex flex-col gap-2 pt-1">
-                          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                              <Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
-                          </div>
-                          {!isEditing && linkedTask && (
-                                <div className="-ml-2">
-                                    <Tooltip content="Контекст (задача)">
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); setViewingTask(linkedTask); }}
-                                            className={`p-2 rounded-lg transition-all hover:bg-slate-50 dark:hover:bg-slate-800 ${
-                                                linkedTask.column === 'done' ? 'text-emerald-500' :
-                                                linkedTask.column === 'doing' ? 'text-indigo-500' :
-                                                'text-slate-400'
-                                            }`}
-                                        >
-                                            <Link size={16} />
-                                        </button>
-                                    </Tooltip>
+                    return (
+                        <div key={entry.id} className="relative pl-10 md:pl-14 group">
+                            {/* TIMELINE DOT */}
+                            <div className={`
+                                absolute left-[13px] md:left-[21px] top-8 
+                                w-3.5 h-3.5 rounded-full z-10 
+                                ring-4 ring-[#f9fbfc] dark:ring-[#101927] 
+                                transition-all duration-300
+                                ${entry.isInsight 
+                                    ? 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.6)] scale-110' 
+                                    : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-500 group-hover:scale-110'
+                                }
+                            `}></div>
+
+                            {/* CARD */}
+                            <div onClick={() => setSelectedEntryId(entry.id)} className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 md:p-6 relative group-hover:shadow-md transition-shadow cursor-pointer">
+                                {/* CARD HEADER */}
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="flex flex-col gap-2 pt-1">
+                                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                            <Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
+                                        </div>
+                                        {!isEditing && linkedTask && (
+                                                <div className="-ml-2">
+                                                    <Tooltip content="Контекст (задача)">
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); setViewingTask(linkedTask); }}
+                                                            className={`p-2 rounded-lg transition-all hover:bg-slate-50 dark:hover:bg-slate-800 ${
+                                                                linkedTask.column === 'done' ? 'text-emerald-500' :
+                                                                linkedTask.column === 'doing' ? 'text-indigo-500' :
+                                                                'text-slate-400'
+                                                            }`}
+                                                        >
+                                                            <Link size={16} />
+                                                        </button>
+                                                    </Tooltip>
+                                                </div>
+                                        )}
+                                    </div>
+
+                                    {!isEditing && (
+                                        <div className="flex items-center gap-1 z-10 -mt-1 -mr-2" onClick={(e) => e.stopPropagation()}>
+                                            <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
+                                                <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-all ${entry.isInsight ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-300 dark:text-slate-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
+                                                    <Lightbulb size={16} className={entry.isInsight ? "fill-current" : ""} />
+                                                </button>
+                                            </Tooltip>
+                                            <div>
+                                                <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                          )}
-                      </div>
 
-                      {!isEditing && (
-                        <div className="flex items-center gap-1 z-10 -mt-1 -mr-2" onClick={(e) => e.stopPropagation()}>
-                             <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
-                                <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-all ${entry.isInsight ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-300 dark:text-slate-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
-                                    <Lightbulb size={16} className={entry.isInsight ? "fill-current" : ""} />
-                                </button>
-                             </Tooltip>
-                             <div>
-                                <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} />
-                             </div>
+                                {isEditing ? (
+                                    <div className="mb-4" onClick={(e) => e.stopPropagation()}>
+                                        <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
+                                        <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
+                                            <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
+                                            <button onClick={() => saveEdit(entry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed mb-4 font-normal mt-2 pr-16 md:pr-0"><ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown></div>
+                                )}
+                                {entry.aiFeedback && (
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 relative mt-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className={`p-1 rounded bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 shadow-sm ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
+                                        <span className={`text-xs font-bold ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
+                                    </div>
+                                    <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                      )}
-                  </div>
-
-                  {isEditing ? (
-                      <div className="mb-4" onClick={(e) => e.stopPropagation()}>
-                          <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
-                          <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
-                              <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
-                              <button onClick={() => saveEdit(entry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
-                          </div>
-                      </div>
-                  ) : (
-                    <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed mb-4 font-normal mt-2 pr-16 md:pr-0"><ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown></div>
-                  )}
-                  {entry.aiFeedback && (
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 relative mt-4">
-                      <div className="flex items-center gap-2 mb-2">
-                         <div className={`p-1 rounded bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 shadow-sm ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
-                         <span className={`text-xs font-bold ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
-                      </div>
-                      <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    )
+                })}
+            </div>
           </div>
         )}
       </div>
