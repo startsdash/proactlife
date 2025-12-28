@@ -38,6 +38,52 @@ const ORACLE_VIBES = [
     { id: 'luck', icon: Clover, label: 'Случай', color: 'from-slate-700 to-slate-900', text: 'text-slate-200' },
 ];
 
+// --- HELPER: IMAGE COMPRESSION ---
+// Compresses images to prevent base64 lag in localStorage and rendering
+const processImage = (file: File | Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800; // Limit width to prevent massive strings
+                const MAX_HEIGHT = 800;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    // Compress to JPEG with 0.7 quality
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    resolve(dataUrl);
+                } else {
+                    reject(new Error('Canvas context failed'));
+                }
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+};
+
 // Markdown Styles for Notes
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
@@ -54,31 +100,24 @@ const markdownComponents = {
             ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
             : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     },
-    img: ({node, ...props}: any) => <img className="rounded-lg max-h-60 object-cover my-2" {...props} />
+    img: ({node, ...props}: any) => <img className="rounded-lg max-h-60 object-cover my-2 block" {...props} loading="lazy" />
 };
 
 // --- HELPER: HTML <-> MARKDOWN CONVERTERS ---
 const markdownToHtml = (md: string) => {
     if (!md) return '';
-    // Basic Markdown to HTML for the editor initialization
     let html = md;
     
-    // 1. Optimized Image Replacement for Base64 (Prevents lag on huge regex matches)
-    // Matches ![alt](data:...) specifically without greedy back-tracking
+    // 1. Optimized Image Replacement
+    // Use simpler regex that doesn't choke on large strings, assume compressed images are cleaner
     html = html.replace(/!\[(.*?)\]\((data:image\/[^;]+;base64,[^)]+)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />');
-    
-    // 2. Standard Image Replacement for URLs
     html = html.replace(/!\[(.*?)\]\((?!data:)(.*?)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />');
 
-    // 3. Formatting
+    // 2. Formatting
     html = html
-        // Bold: **text** -> <b>text</b>
         .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-        // Italic: _text_ -> <i>text</i>
         .replace(/_(.*?)_/g, '<i>$1</i>')
-        // Code: `text` -> <code>text</code>
         .replace(/`([^`]+)`/g, '<code>$1</code>')
-        // Newlines to BR
         .replace(/\n/g, '<br>');
         
     return html;
@@ -91,7 +130,6 @@ const htmlToMarkdown = (html: string) => {
     
     const process = (node: Node) => {
         if (node.nodeType === Node.TEXT_NODE) {
-            // Apply typography ONLY to text content, not image data or markup
             md += applyTypography(node.textContent || '');
         } else if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as HTMLElement;
@@ -112,7 +150,6 @@ const htmlToMarkdown = (html: string) => {
                     md += '`';
                     break;
                 case 'DIV':
-                    // Divs usually imply block breaks
                     if (md.length > 0 && !md.endsWith('\n')) md += '\n';
                     el.childNodes.forEach(process);
                     md += '\n';
@@ -127,7 +164,7 @@ const htmlToMarkdown = (html: string) => {
                     break;
                 case 'IMG':
                     const img = el as HTMLImageElement;
-                    // CRITICAL FIX: Clean base64 string of newlines/whitespace to prevent Markdown breakage and lag
+                    // Clean base64 string
                     const cleanSrc = img.src.replace(/\s/g, '');
                     md += `\n![${img.alt || 'image'}](${cleanSrc})\n`;
                     break;
@@ -313,19 +350,17 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     const handleClickOutside = (event: MouseEvent) => {
         if (editorRef.current && !editorRef.current.contains(event.target as Node)) {
             if (isExpanded) {
-                // If clicked outside, try to save if content exists
                 handleDump();
             }
         }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isExpanded, title]); // Removed content dep, we read DOM now
+  }, [isExpanded, title]);
 
-  // Handle Paste for Images in Rich Editor
+  // Handle Paste for Images with Compression
   useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-        // Find which editor is active
+    const handlePaste = async (e: ClipboardEvent) => {
         const target = e.target as HTMLElement;
         if (!target.isContentEditable) return;
 
@@ -337,12 +372,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 e.preventDefault();
                 const blob = items[i].getAsFile();
                 if (blob) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const base64 = event.target?.result as string;
-                        document.execCommand('insertImage', false, base64);
-                    };
-                    reader.readAsDataURL(blob);
+                    try {
+                        const compressedBase64 = await processImage(blob);
+                        document.execCommand('insertImage', false, compressedBase64);
+                    } catch (err) {
+                        console.error("Image paste failed", err);
+                    }
                 }
             }
         }
@@ -351,33 +386,30 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     return () => window.removeEventListener('paste', handlePaste);
   }, []);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-              if (ev.target?.result) {
-                  // Focus back to editor before inserting
-                  if (contentEditableRef.current) contentEditableRef.current.focus();
-                  else if (editContentRef.current) editContentRef.current.focus();
-                  
-                  document.execCommand('insertImage', false, ev.target.result as string);
-              }
-          };
-          reader.readAsDataURL(file);
+          try {
+              const compressedBase64 = await processImage(file);
+              // Focus back before inserting
+              if (contentEditableRef.current) contentEditableRef.current.focus();
+              else if (editContentRef.current) editContentRef.current.focus();
+              
+              document.execCommand('insertImage', false, compressedBase64);
+          } catch (err) {
+              console.error("Image upload failed", err);
+          }
       }
   };
 
   const execCmd = (command: string, value: string | undefined = undefined) => {
       document.execCommand(command, false, value);
-      // Ensure focus remains on the editable div
       if (contentEditableRef.current && isExpanded) contentEditableRef.current.focus();
       else if (editContentRef.current && isEditing) editContentRef.current.focus();
   };
 
   const handleDump = async () => {
     const rawHtml = contentEditableRef.current?.innerHTML || '';
-    // Strip empty HTML tags if just <br>
     const cleanHtml = rawHtml.replace(/^(<br>)+$/, '').trim();
     
     if (!cleanHtml && !title.trim()) {
@@ -386,15 +418,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     }
     
     setIsProcessing(true);
-    // Convert HTML to Markdown (Typography is applied inside to text nodes only)
     const markdownContent = htmlToMarkdown(cleanHtml);
 
     let autoTags: string[] = [];
     if (hasTagger && creationTags.length === 0 && markdownContent.length > 20) {
         autoTags = await autoTagNote(markdownContent, config);
     }
-    
-    // Note: Typography is applied within htmlToMarkdown to separate text nodes
     
     const newNote: Note = {
       id: Date.now().toString(),
@@ -465,17 +494,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       if (draggedId && draggedId !== targetId) reorderNote(draggedId, targetId);
   };
 
-  const moveNoteVertical = (e: React.MouseEvent, noteId: string, direction: 'up' | 'down') => {
-      e.stopPropagation();
-      const list = activeTab === 'inbox' ? inboxNotes : archivedNotes;
-      const currentIndex = list.findIndex(n => n.id === noteId);
-      if (currentIndex === -1) return;
-      let targetId = '';
-      if (direction === 'up' && currentIndex > 0) targetId = list[currentIndex - 1].id;
-      else if (direction === 'down' && currentIndex < list.length - 1) targetId = list[currentIndex + 1].id;
-      if (targetId) reorderNote(noteId, targetId);
-  };
-
   const handleOpenNote = (note: Note) => {
       setSelectedNote(note);
       setEditTitle(note.title || '');
@@ -489,7 +507,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           const markdownContent = htmlToMarkdown(rawHtml);
           
           if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
-              // Typography applied in htmlToMarkdown
               const updated = { 
                   ...selectedNote, 
                   title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
@@ -558,9 +575,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onClick={() => handleOpenNote(note)}
         className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
-        {/* Action Row - Drag Handle & Pin (NOW ON TOP) */}
-        <div className="flex justify-between items-center mb-2">
-             <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Перетащить">
+        {/* Action Row - Left aligned Grip, Right aligned Pin */}
+        <div className="flex justify-between items-start mb-2">
+             <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity -ml-1 p-1" title="Перетащить">
                 <GripVertical size={16} />
              </div>
              
@@ -580,7 +597,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
              </div>
         </div>
 
-        {/* Title Block (NOW BELOW ACTIONS) */}
+        {/* Title Block */}
         {note.title && (
             <div className="font-bold text-slate-800 dark:text-slate-100 mb-2 text-sm md:text-base leading-snug line-clamp-2">
                 {note.title}
@@ -588,7 +605,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         )}
 
         {/* Content */}
-        <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm`}>
+        <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm overflow-hidden`}>
             <ReactMarkdown components={markdownComponents}>{note.content}</ReactMarkdown>
         </div>
 
