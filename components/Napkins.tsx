@@ -411,14 +411,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             <div className="flex justify-end items-center w-full">
                  <div className="flex gap-2 justify-end">
                     <Tooltip content="В Спринты">
-                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-emerald-100 dark:border-emerald-800/50"><Kanban size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 md:px-3 py-1.5 rounded-lg transition-colors"><Kanban size={14} /></button>
                     </Tooltip>
                     <Tooltip content="В Хаб">
-                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Хаб?')) moveNoteToSandbox(note.id); }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-amber-100 dark:border-amber-800/50"><Box size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Хаб?')) moveNoteToSandbox(note.id); }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 md:px-3 py-1.5 rounded-lg transition-colors"><Box size={14} /></button>
                     </Tooltip>
                     {!isArchived && (
                         <Tooltip content="В Библиотеку">
-                            <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Библиотеку?')) archiveNote(note.id); }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-sky-500 dark:text-sky-400 hover:text-sky-600 dark:hover:text-sky-300 bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/40 px-2 md:px-3 py-1.5 rounded-lg transition-colors border border-sky-200 dark:border-sky-800/50"><Library size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Библиотеку?')) archiveNote(note.id); }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 md:px-3 py-1.5 rounded-lg transition-colors"><Library size={14} /></button>
                         </Tooltip>
                     )}
                  </div>
@@ -475,10 +475,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             {!showMoodInput && !showTagInput && (
                 <>
                     <Tooltip content="Поиск по тегам" side="bottom">
-                        <button onClick={() => setShowTagInput(true)} className="p-2 rounded-xl border transition-all bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800"><TagIcon size={18} /></button>
+                        <button onClick={() => setShowTagInput(true)} className="p-2 rounded-xl border transition-all bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-200 dark:hover:border-indigo-800"><TagIcon size={18} /></button>
                     </Tooltip>
                     <Tooltip content="Фильтр по цвету" side="bottom">
-                        <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border transition-all ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800/50 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}><Palette size={18} /></button>
+                        <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border transition-all ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800/50 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={18} /></button>
                     </Tooltip>
                     {hasMoodMatcher && (
                         <Tooltip content="Подбор по теме (ИИ)" side="bottom">
@@ -624,7 +624,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         {!isEditing && (
                             <>
                                 <Tooltip content="Редактировать">
-                                    <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40 mr-1">
+                                    <button onClick={() => setIsEditing(true)} className="p-1.5 text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 bg-transparent hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded mr-1">
                                         <Edit3 size={18} />
                                     </button>
                                 </Tooltip>
