@@ -116,12 +116,12 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden" ref={containerRef}>
       
       {/* HEADER */}
-      <header className="p-4 md:p-6 shrink-0 flex justify-between items-center z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+      <header className="p-4 md:p-8 shrink-0 flex justify-between items-center z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
           <div>
-              <h1 className="text-2xl font-light text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-2">
+              <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-2">
                   Sketchpad <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold uppercase tracking-wider dark:bg-indigo-900 dark:text-indigo-300">Beta</span>
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 hidden md:block">Вставляй картинки (Ctrl+V), пиши мысли, смешивай контексты.</p>
+              <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm hidden md:block">Вставляй картинки (Ctrl+V), пиши мысли, смешивай контексты.</p>
           </div>
           <div className="flex items-center gap-2">
               <Tooltip content="Перемешать (Инсайт)">
