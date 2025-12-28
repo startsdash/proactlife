@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Task, Subtask, JournalEntry, AppConfig } from '../types';
-import { generateTaskChallenge, getKanbanTherapy } from '../services/geminiService';
-import { applyTypography } from '../constants';
+import { Task, AppConfig, JournalEntry, Subtask } from '../types';
+import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { 
-  Plus, MoreHorizontal, Calendar, Zap, MessageCircle, 
-  Trash2, X, Check, GripVertical, CheckCircle2, Circle, 
-  Play, Pause, Book, Archive, Layout, ListTodo, AlertTriangle, 
-  ChevronRight, ChevronDown, Minus, Edit3
-} from 'lucide-react';
+import { SPHERES, ICON_MAP, applyTypography } from '../constants';
 
 interface Props {
   tasks: Task[];
@@ -58,8 +54,138 @@ const markdownComponents = {
     code: ({node, inline, className, children, ...props}: any) => {
          return inline 
             ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400 border border-slate-200 dark:border-slate-700" {...props}>{children}</code>
-            : <code className="block bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+            : <code className="block bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     }
+};
+
+const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const toggleSphere = (id: string) => {
+        if (selected.includes(id)) {
+            onChange(selected.filter(s => s !== id));
+        } else {
+            onChange([...selected, id]);
+        }
+    };
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all outline-none ${
+                  isOpen ? 'border-indigo-400 ring-2 ring-indigo-50 dark:ring-indigo-900 bg-white dark:bg-[#1e293b]' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+                }`}
+            >
+                <div className="flex items-center gap-2 overflow-hidden">
+                    {selected.length > 0 ? (
+                        <>
+                            <div className="flex -space-x-1 shrink-0">
+                                {selected.map(s => {
+                                    const sp = SPHERES.find(x => x.id === s);
+                                    return sp ? <div key={s} className={`w-3 h-3 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
+                                })}
+                            </div>
+                            <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                                {selected.map(id => SPHERES.find(s => s.id === id)?.label).join(', ')}
+                            </span>
+                        </>
+                    ) : (
+                        <span className="text-sm text-slate-400">Выбери сферу</span>
+                    )}
+                </div>
+                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5">
+                    {SPHERES.map(s => {
+                        const isSelected = selected.includes(s.id);
+                        const Icon = ICON_MAP[s.icon];
+                        return (
+                            <button
+                                key={s.id}
+                                onClick={() => toggleSphere(s.id)}
+                                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                            >
+                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-slate-400'} />}
+                                <span className="flex-1">{s.label}</span>
+                                {isSelected && <Check size={14} className="text-indigo-500" />}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }> = ({ task, updateTask }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    const toggleSphere = (sphereId: string) => {
+        const current = task.spheres || [];
+        const newSpheres = current.includes(sphereId) 
+            ? current.filter(s => s !== sphereId)
+            : [...current, sphereId];
+        updateTask({ ...task, spheres: newSpheres });
+    };
+
+    return (
+        <div className="relative">
+            <button 
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg transition-colors border border-slate-100 dark:border-slate-700 hover:border-indigo-100 dark:hover:border-indigo-800"
+            >
+                {task.spheres && task.spheres.length > 0 ? (
+                    <div className="flex -space-x-1">
+                        {task.spheres.map(s => {
+                            const sp = SPHERES.find(x => x.id === s);
+                            return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
+                        })}
+                    </div>
+                ) : (
+                    <Target size={12} />
+                )}
+                <span>Сфера</span>
+                <ChevronDown size={10} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isOpen && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
+                    <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
+                        {SPHERES.map(s => {
+                            const isSelected = task.spheres?.includes(s.id);
+                            const Icon = ICON_MAP[s.icon];
+                            return (
+                                <button
+                                    key={s.id}
+                                    onClick={() => toggleSphere(s.id)}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                >
+                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} />}
+                                    <span className="flex-1">{s.label}</span>
+                                    {isSelected && <Check size={12} className="text-indigo-500" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
+        </div>
+    );
 };
 
 const CollapsibleSection: React.FC<{
@@ -67,23 +193,28 @@ const CollapsibleSection: React.FC<{
   children: React.ReactNode;
   icon?: React.ReactNode;
   isCard?: boolean;
-}> = ({ title, children, icon, isCard }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  actions?: React.ReactNode;
+  defaultOpen?: boolean;
+}> = ({ title, children, icon, isCard = false, actions, defaultOpen = false }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className={`rounded-lg border overflow-hidden transition-all ${isCard ? 'bg-slate-50/50 dark:bg-slate-800/30 border-slate-100 dark:border-slate-700' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 mb-3'}`}>
-      <button 
+    <div className={`${isCard ? 'bg-slate-50/80 dark:bg-slate-800/50 mb-2 shadow-sm' : 'bg-slate-50 dark:bg-slate-800 mb-3'} rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden`}>
+      <div 
         onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} 
-        className={`w-full flex items-center justify-between text-left hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors ${isCard ? 'p-2' : 'p-4'}`}
+        className={`w-full flex items-center justify-between ${isCard ? 'p-2' : 'p-4'} cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group/header`}
       >
         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
            {icon}
            {title}
         </div>
-        <div className="text-slate-400">
-          {isOpen ? <Minus size={12} /> : <Plus size={12} />}
+        <div className="flex items-center gap-3">
+            {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
+            <div className="text-slate-400">
+                {isOpen ? <Minus size={14} /> : <Plus size={14} />}
+            </div>
         </div>
-      </button>
+      </div>
       {isOpen && (
         <div className={`${isCard ? 'px-2 pb-2' : 'px-4 pb-4'} pt-0 animate-in slide-in-from-top-1 duration-200`}>
            <div className="pt-2 border-t border-slate-200/50 dark:border-slate-700/50 text-sm">
@@ -95,41 +226,284 @@ const CollapsibleSection: React.FC<{
   );
 };
 
+const getChallengeStats = (content: string) => {
+    const total = (content.match(/\[[xX ]\]/gm) || []).length;
+    const checked = (content.match(/\[[xX]\]/gm) || []).length;
+    return { total, checked, percent: total > 0 ? Math.round((checked / total) * 100) : 0 };
+};
+
+const InteractiveChallenge: React.FC<{ 
+    content: string, 
+    onToggle: (index: number) => void,
+    onPin?: (index: number) => void,
+    pinnedIndices?: number[]
+}> = ({ content, onToggle, onPin, pinnedIndices = [] }) => {
+    const lines = content.split('\n');
+    let checkboxIndex = 0;
+    const renderedParts: React.ReactNode[] = [];
+    let textBuffer = '';
+
+    const flushBuffer = (keyPrefix: string) => {
+        if (textBuffer) {
+            const trimmedBuffer = textBuffer.trim(); 
+            if (trimmedBuffer) {
+                renderedParts.push(
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 dark:text-slate-200 mb-1 last:mb-0">
+                        <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
+                    </div>
+                );
+            }
+            textBuffer = '';
+        }
+    };
+
+    lines.forEach((line, i) => {
+        const match = line.match(/^(\s*)(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
+        if (match) {
+            flushBuffer(`line-${i}`);
+            const currentIdx = checkboxIndex++;
+            const isChecked = match[2].toLowerCase() === 'x';
+            const label = match[3];
+            const indent = match[1].length * 6; 
+            const isPinned = pinnedIndices.includes(currentIdx);
+
+            renderedParts.push(
+                <div key={`cb-row-${i}`} className="flex items-start gap-2 group px-1 mb-0.5 w-full" style={{ marginLeft: `${indent}px` }}>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onToggle(currentIdx); }}
+                        className="flex-1 flex items-start gap-2 text-left py-1 hover:bg-black/5 dark:hover:bg-white/5 rounded"
+                    >
+                        <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-400'}`}>
+                            {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
+                        </div>
+                        <span className={`text-sm ${isChecked ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                            <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{applyTypography(label)}</ReactMarkdown>
+                        </span>
+                    </button>
+                    {onPin && (
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Tooltip content={isPinned ? "Открепить от карточки" : "Закрепить на карточке"}>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); onPin(currentIdx); }}
+                                    className={`p-1.5 rounded transition-colors ${isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-300 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                                >
+                                    <Pin size={14} className={isPinned ? "fill-current" : ""} />
+                                </button>
+                            </Tooltip>
+                        </div>
+                    )}
+                </div>
+            );
+        } else {
+            textBuffer += line + '\n';
+        }
+    });
+    flushBuffer('end');
+    return <>{renderedParts}</>;
+};
+
+const StaticChallengeRenderer: React.FC<{ 
+    content: string,
+    mode: 'draft' | 'history'
+}> = ({ content, mode }) => {
+    const lines = content.split('\n');
+    const renderedParts: React.ReactNode[] = [];
+    let textBuffer = '';
+
+    const flushBuffer = (keyPrefix: string) => {
+        if (textBuffer) {
+             const trimmedBuffer = textBuffer.trim();
+             if (trimmedBuffer) {
+                renderedParts.push(
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 dark:text-slate-200 mb-1 last:mb-0">
+                        <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
+                    </div>
+                );
+             }
+            textBuffer = '';
+        }
+    };
+
+    lines.forEach((line, i) => {
+        const match = line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
+        if (match) {
+            flushBuffer(`line-${i}`);
+            const isChecked = match[1].toLowerCase() === 'x';
+            const label = match[2];
+            const leadingSpaces = line.search(/\S|$/);
+            const indent = leadingSpaces * 4; 
+
+            let Icon = Circle;
+            let iconClass = "text-slate-300 dark:text-slate-600";
+            
+            if (isChecked) {
+                Icon = CheckCircle2;
+                iconClass = "text-emerald-500";
+            } else if (mode === 'history') {
+                Icon = XCircle;
+                iconClass = "text-red-400";
+            } else {
+                Icon = Circle;
+                iconClass = "text-slate-300 dark:text-slate-600";
+            }
+
+            renderedParts.push(
+                <div 
+                    key={`cb-${i}`}
+                    className="flex items-start gap-2 w-full text-left py-1 px-1 mb-0.5 cursor-default"
+                    style={{ marginLeft: `${indent}px` }}
+                >
+                    <div className={`mt-0.5 shrink-0 ${iconClass}`}>
+                        <Icon size={16} />
+                    </div>
+                    <span className={`text-sm text-slate-700 dark:text-slate-300`}>
+                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{applyTypography(label)}</ReactMarkdown>
+                    </span>
+                </div>
+            );
+        } else {
+            textBuffer += line + '\n';
+        }
+    });
+    flushBuffer('end');
+    return <>{renderedParts}</>;
+};
+
 const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
-  const [activeColumn, setActiveColumn] = useState<'todo' | 'doing' | 'done'>('doing');
+  const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details' | 'challenge'} | null>(null);
+  const [activeMobileTab, setActiveMobileTab] = useState<'todo' | 'doing' | 'done'>('todo');
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [generatingChallengeFor, setGeneratingChallengeFor] = useState<string | null>(null);
+  const [generatingTherapyFor, setGeneratingTherapyFor] = useState<string | null>(null);
+  const [draftChallenge, setDraftChallenge] = useState<string | null>(null);
+  const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
+  const [sortOrder, setSortOrder] = useState<'manual' | 'desc' | 'asc'>('manual');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [newSubtaskText, setNewSubtaskText] = useState('');
+  const [cardSubtaskInputs, setCardSubtaskInputs] = useState<{[taskId: string]: string}>({});
+  
+  // NEW TASK CREATION STATE
+  const [isCreatorOpen, setIsCreatorOpen] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskContent, setNewTaskContent] = useState('');
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  
-  // States for subtasks in card view
-  const [cardSubtaskInputs, setCardSubtaskInputs] = useState<Record<string, string>>({});
-  
-  // Task Editing Modal State
-  const [isEditingContent, setIsEditingContent] = useState(false);
-  const [editContent, setEditContent] = useState('');
-  const [editChallenge, setEditChallenge] = useState('');
-  const [isGeneratingChallenge, setIsGeneratingChallenge] = useState(false);
-  const [isTherapistThinking, setIsTherapistThinking] = useState(false);
+
+  // EDIT TASK STATE
+  const [isEditingTask, setIsEditingTask] = useState(false);
+  const [editTaskTitle, setEditTaskTitle] = useState('');
+  const [editTaskContent, setEditTaskContent] = useState('');
+
+  const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
+  const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
+
+  const baseActiveTasks = tasks.filter(t => !t.isArchived);
+
+  const activeTasks = baseActiveTasks.filter(task => {
+      if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const inTitle = task.title?.toLowerCase().includes(q);
+          const inContent = task.content.toLowerCase().includes(q);
+          if (!inTitle && !inContent) return false;
+      }
+      if (filterJournal === 'linked') {
+          const hasEntry = journalEntries.some(e => e.linkedTaskId === task.id);
+          if (!hasEntry) return false;
+      }
+      return true;
+  }).sort((a, b) => {
+      if (sortOrder === 'manual') return 0;
+      if (sortOrder === 'desc') return b.createdAt - a.createdAt;
+      return a.createdAt - b.createdAt;
+  });
 
   useEffect(() => {
     if (initialTaskId) {
-      const task = tasks.find(t => t.id === initialTaskId);
-      if (task) {
-        setSelectedTask(task);
-        onClearInitialTask?.();
+      const taskExists = tasks.some(t => t.id === initialTaskId);
+      if (taskExists) {
+        setActiveModal({ taskId: initialTaskId, type: 'details' });
       }
+      onClearInitialTask?.();
     }
   }, [initialTaskId, tasks, onClearInitialTask]);
 
-  const handleAddTask = (column: 'todo' | 'doing') => {
-    if (!newTaskContent.trim()) return;
-    const newTask: Task = {
-      id: Date.now().toString(),
-      content: applyTypography(newTaskContent),
-      column,
-      createdAt: Date.now()
-    };
-    addTask(newTask);
-    setNewTaskContent('');
+  useEffect(() => {
+      if (activeModal?.type === 'details') {
+          const task = tasks.find(t => t.id === activeModal.taskId);
+          if (task) {
+              setEditTaskTitle(task.title || '');
+              setEditTaskContent(task.content || '');
+          }
+      } else {
+          setIsEditingTask(false);
+      }
+  }, [activeModal, tasks]);
+
+  const columns = [
+    { id: 'todo', title: 'Выполнить', color: 'border-slate-200 dark:border-slate-700' },
+    { id: 'doing', title: 'В процессе', color: 'border-indigo-400' },
+    { id: 'done', title: 'Сделано', color: 'border-emerald-400' }
+  ];
+
+  const getTabClass = (id: string, active: boolean) => {
+    const base = "flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors text-center";
+    if (!active) return `${base} border-transparent text-slate-400 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50`;
+    
+    if (id === 'todo') return `${base} border-slate-400 text-slate-700 dark:text-slate-200 bg-white dark:bg-[#1e293b]`;
+    if (id === 'doing') return `${base} border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-900/10`;
+    if (id === 'done') return `${base} border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-900/10`;
+    return base;
+  };
+
+  const handleCloseModal = () => {
+      setActiveModal(null);
+      setDraftChallenge(null);
+      setAiResponse(null);
+      setIsEditingTask(false);
+      setGeneratingChallengeFor(null);
+      setGeneratingTherapyFor(null);
+  };
+
+  const handleCreateTask = () => {
+      if (!newTaskTitle.trim() && !newTaskContent.trim()) return;
+      const newTask: Task = {
+          id: Date.now().toString(),
+          title: applyTypography(newTaskTitle.trim()),
+          content: applyTypography(newTaskContent.trim()),
+          column: 'todo',
+          createdAt: Date.now(),
+      };
+      addTask(newTask);
+      setNewTaskTitle('');
+      setNewTaskContent('');
+      setIsCreatorOpen(false);
+  };
+
+  const cancelCreateTask = () => {
+      setNewTaskTitle('');
+      setNewTaskContent('');
+      setIsCreatorOpen(false);
+  };
+
+  const handleSaveTaskContent = () => {
+      const task = getTaskForModal();
+      if (!task) return;
+      if (editTaskContent.trim() || editTaskTitle.trim()) {
+          updateTask({ 
+              ...task, 
+              title: applyTypography(editTaskTitle.trim()), 
+              content: applyTypography(editTaskContent) 
+          });
+          setIsEditingTask(false);
+      }
+  };
+
+  const canMoveTask = (task: Task, targetColId: string): boolean => {
+    if (task.column === 'doing' && targetColId !== 'doing') {
+        if (task.activeChallenge && !task.isChallengeCompleted) {
+            alert('Необходимо завершить активный челлендж');
+            return false;
+        }
+    }
+    return true;
   };
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -137,120 +511,344 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     e.dataTransfer.effectAllowed = "move";
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleColumnDrop = async (e: React.DragEvent, colId: string) => {
     e.preventDefault();
+    const taskId = e.dataTransfer.getData('taskId');
+    if (!taskId) return;
+    const task = activeTasks.find(t => t.id === taskId);
+    if (!task || task.column === colId) return;
+    
+    if (!canMoveTask(task, colId)) return;
+    updateTask({ ...task, column: colId as any });
   };
 
-  const handleDrop = (e: React.DragEvent, targetColumn: 'todo' | 'doing' | 'done') => {
-    e.preventDefault();
-    const id = e.dataTransfer.getData('taskId');
-    const task = tasks.find(t => t.id === id);
-    if (task && task.column !== targetColumn) {
-      updateTask({ ...task, column: targetColumn });
+  const handleTaskDrop = (e: React.DragEvent, targetTaskId: string) => {
+      e.preventDefault(); e.stopPropagation();
+      const draggedTaskId = e.dataTransfer.getData('taskId');
+      if (!draggedTaskId) return;
+      const draggedTask = activeTasks.find(t => t.id === draggedTaskId);
+      const targetTask = activeTasks.find(t => t.id === targetTaskId);
+      if (!draggedTask || !targetTask) return;
+      
+      // Auto-switch to manual sort to prevent snapping back
+      if (sortOrder !== 'manual') setSortOrder('manual');
+
+      // If dropping onto a task in a DIFFERENT column
+      if (draggedTask.column !== targetTask.column) {
+           if (!canMoveTask(draggedTask, targetTask.column)) return;
+           updateTask({ ...draggedTask, column: targetTask.column });
+           // Optionally reorder as well, but primary action is moving column
+           return; 
+      }
+      
+      // If dropping onto a task in the SAME column -> Reorder
+      if (draggedTask.column === targetTask.column) {
+          reorderTask(draggedTaskId, targetTaskId);
+      }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); };
+
+  const toggleSortOrder = () => { 
+      setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); 
+  };
+
+  const openTherapy = async (e: React.MouseEvent, task: Task) => {
+    e.stopPropagation();
+    
+    // STOP logic
+    if (generatingTherapyFor === task.id) {
+        setGeneratingTherapyFor(null);
+        return;
+    }
+
+    // START logic
+    if (window.confirm("Запустить ИИ-консультанта?")) {
+        setGeneratingTherapyFor(task.id);
+        setAiResponse(null);
+        try {
+            const response = await getKanbanTherapy(task.content, 'stuck', config);
+            
+            // Check if cancelled during generation
+            setGeneratingTherapyFor(current => {
+                if (current === task.id) {
+                    setAiResponse(response);
+                    setActiveModal({ taskId: task.id, type: 'stuck' });
+                    return null;
+                }
+                return current;
+            });
+        } catch (error) {
+            console.error(error);
+            setGeneratingTherapyFor(current => current === task.id ? null : current);
+        }
     }
   };
 
-  const handleTaskDrop = (e: React.DragEvent, targetId: string) => {
-      e.stopPropagation(); // Stop bubbling to column drop
-      e.preventDefault();
-      const draggedId = e.dataTransfer.getData('taskId');
-      if (draggedId && draggedId !== targetId) {
-          reorderTask(draggedId, targetId);
+  const saveTherapyResponse = () => {
+    if (!activeModal || !aiResponse) return;
+    const task = tasks.find(t => t.id === activeModal.taskId);
+    if (task) {
+        updateTask({ ...task, consultationHistory: [...(task.consultationHistory || []), aiResponse] });
+        alert("Сохранено в Историю консультаций");
+        handleCloseModal();
+    }
+  };
+
+  const generateChallenge = async (e: React.MouseEvent, taskId: string, content: string) => {
+    e.stopPropagation();
+    setGeneratingChallengeFor(taskId);
+    try {
+        const challenge = await generateTaskChallenge(content, config);
+        // Check if still generating this specific task (not cancelled)
+        setGeneratingChallengeFor(current => {
+            if (current === taskId) {
+                setDraftChallenge(challenge);
+                setActiveModal({ taskId, type: 'challenge' });
+                return null;
+            }
+            return current;
+        });
+    } catch (e) {
+        setGeneratingChallengeFor(current => current === taskId ? null : current);
+    }
+  };
+
+  const stopGeneration = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setGeneratingChallengeFor(null);
+  };
+
+  const acceptDraftChallenge = () => {
+      const task = getTaskForModal();
+      if (task && draftChallenge) {
+          const updatedTask: Task = { ...task };
+          if (task.column === 'todo') updatedTask.column = 'doing';
+          if (task.activeChallenge) updatedTask.challengeHistory = [...(task.challengeHistory || []), task.activeChallenge];
+          updatedTask.activeChallenge = draftChallenge;
+          updatedTask.isChallengeCompleted = false;
+          updateTask(updatedTask);
+          
+          handleCloseModal();
       }
   };
 
-  // --- SUBTASK DRAG LOGIC ---
-  const handleSubtaskDragStart = (e: React.DragEvent, subtaskId: string, taskId: string) => {
+  const toggleChallengeComplete = (e?: React.MouseEvent) => {
+      if(e) e.stopPropagation();
+      const task = getTaskForModal();
+      if(task) {
+          updateTask({ ...task, isChallengeCompleted: !task.isChallengeCompleted });
+      }
+  };
+  
+  const toggleChallengeCompleteFromCard = (e: React.MouseEvent, task: Task) => {
       e.stopPropagation();
-      e.dataTransfer.setData('subtaskId', subtaskId);
-      e.dataTransfer.setData('parentId', taskId);
-      e.dataTransfer.effectAllowed = "move";
+      updateTask({ ...task, isChallengeCompleted: !task.isChallengeCompleted });
   };
 
-  const handleSubtaskDrop = (e: React.DragEvent, targetSubtaskId: string, task: Task) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const droppedSubtaskId = e.dataTransfer.getData('subtaskId');
-      const parentId = e.dataTransfer.getData('parentId');
+  const toggleChallengeCheckbox = (globalIndex: number, task: Task) => {
+      if (!task.activeChallenge) return;
+      const lines = task.activeChallenge.split('\n');
+      let checkboxCounter = 0;
+      const newLines = lines.map(line => {
+          if (line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[[xX ]\]/)) {
+              if (checkboxCounter === globalIndex) {
+                  const isChecked = line.includes('[x]') || line.includes('[X]');
+                  checkboxCounter++;
+                  return line.replace(/\[([ xX])\]/, isChecked ? '[ ]' : '[x]');
+              }
+              checkboxCounter++;
+          }
+          return line;
+      });
+      updateTask({ ...task, activeChallenge: newLines.join('\n') });
+  };
+  
+  const handleToggleChallengeStepPin = (globalIndex: number) => {
+      const task = getTaskForModal();
+      if (!task) return;
+      const currentPinned = task.pinnedChallengeIndices || [];
+      const isPinned = currentPinned.includes(globalIndex);
       
-      if (parentId !== task.id || !droppedSubtaskId || droppedSubtaskId === targetSubtaskId) return;
+      const newPinned = isPinned 
+        ? currentPinned.filter(i => i !== globalIndex)
+        : [...currentPinned, globalIndex];
+      
+      updateTask({ ...task, pinnedChallengeIndices: newPinned });
+  };
 
-      const subtasks = [...(task.subtasks || [])];
-      const draggedIdx = subtasks.findIndex(s => s.id === droppedSubtaskId);
-      const targetIdx = subtasks.findIndex(s => s.id === targetSubtaskId);
-      
-      if (draggedIdx > -1 && targetIdx > -1) {
-          const [removed] = subtasks.splice(draggedIdx, 1);
-          subtasks.splice(targetIdx, 0, removed);
-          updateTask({ ...task, subtasks });
+  const moveToDoing = (e: React.MouseEvent, task: Task) => {
+      e.stopPropagation();
+      if (!canMoveTask(task, 'doing')) return;
+      updateTask({ ...task, column: 'doing' });
+  };
+
+  const handleQuickComplete = (e: React.MouseEvent, task: Task) => {
+      e.stopPropagation();
+      if (task.activeChallenge && !task.isChallengeCompleted) {
+          alert('Необходимо завершить активный челлендж перед закрытием задачи!');
+          return;
       }
+      
+      const newCol = task.column === 'done' ? 'todo' : 'done';
+      updateTask({ ...task, column: newCol });
+  };
+
+  // Subtask Management
+  const handleAddSubtask = () => {
+      const task = getTaskForModal();
+      if (!task || !newSubtaskText.trim()) return;
+      
+      const newSubtask: Subtask = {
+          id: Date.now().toString(),
+          text: newSubtaskText.trim(),
+          isCompleted: false,
+          isPinned: false
+      };
+      
+      updateTask({
+          ...task,
+          subtasks: [...(task.subtasks || []), newSubtask]
+      });
+      setNewSubtaskText('');
   };
 
   const handleAddSubtaskFromCard = (taskId: string) => {
       const text = cardSubtaskInputs[taskId]?.trim();
       if (!text) return;
       const task = tasks.find(t => t.id === taskId);
-      if (task) {
-          const newSubtask: Subtask = {
-              id: Date.now().toString(),
-              text,
-              isCompleted: false
-          };
-          updateTask({ ...task, subtasks: [...(task.subtasks || []), newSubtask] });
-          setCardSubtaskInputs(prev => ({...prev, [taskId]: ''}));
-      }
-  };
+      if (!task) return;
 
-  const handleDeleteSubtask = (subtaskId: string, taskId: string) => {
-      const task = tasks.find(t => t.id === taskId);
-      if (task && task.subtasks) {
-          updateTask({ ...task, subtasks: task.subtasks.filter(s => s.id !== subtaskId) });
-      }
-  };
-
-  const handleToggleSubtask = (subtaskId: string, taskId: string) => {
-      const task = tasks.find(t => t.id === taskId);
-      if (task && task.subtasks) {
-          const updatedSubtasks = task.subtasks.map(s => s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s);
-          updateTask({ ...task, subtasks: updatedSubtasks });
-      }
-  };
-
-  // --- CHALLENGE LOGIC ---
-  const generateChallenge = async () => {
-      if (!selectedTask) return;
-      setIsGeneratingChallenge(true);
-      const challenge = await generateTaskChallenge(selectedTask.content, config);
-      setEditChallenge(challenge);
-      updateTask({ ...selectedTask, activeChallenge: challenge, isChallengeCompleted: false, challengeHistory: [...(selectedTask.challengeHistory || [])] });
-      setIsGeneratingChallenge(false);
-  };
-
-  const completeChallenge = () => {
-      if (!selectedTask) return;
-      const updated = { 
-          ...selectedTask, 
-          isChallengeCompleted: true, 
-          challengeHistory: selectedTask.activeChallenge ? [selectedTask.activeChallenge, ...(selectedTask.challengeHistory || [])] : selectedTask.challengeHistory,
-          activeChallenge: undefined // Clear active challenge or keep it as completed? Usually keep it to show completion status.
-          // Let's keep activeChallenge but mark it completed. When generating new one, we push old one to history.
+      const newSubtask: Subtask = {
+          id: Date.now().toString(),
+          text: text,
+          isCompleted: false,
+          isPinned: false
       };
-      updateTask(updated);
-      setSelectedTask(updated);
+      updateTask({ ...task, subtasks: [...(task.subtasks || []), newSubtask] });
+      setCardSubtaskInputs(prev => ({...prev, [taskId]: ''}));
   };
 
-  const askTherapist = async (type: 'stuck' | 'completed') => {
-      if (!selectedTask) return;
-      setIsTherapistThinking(true);
-      const advice = await getKanbanTherapy(selectedTask.content, type, config);
-      const newConsultation = `**Консультант (${type === 'stuck' ? 'Затор' : 'Успех'}):**\n${advice}`;
-      const updated = { ...selectedTask, consultationHistory: [newConsultation, ...(selectedTask.consultationHistory || [])] };
-      updateTask(updated);
-      setSelectedTask(updated);
-      setIsTherapistThinking(false);
+  const handleToggleSubtask = (subtaskId: string, taskId?: string) => {
+      const targetTaskId = taskId || activeModal?.taskId;
+      if (!targetTaskId) return;
+      
+      const task = tasks.find(t => t.id === targetTaskId);
+      if (!task || !task.subtasks) return;
+      
+      // If Done column, do not toggle
+      if (task.column === 'done') return;
+
+      const updatedSubtasks = task.subtasks.map(s => 
+          s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s
+      );
+      
+      updateTask({ ...task, subtasks: updatedSubtasks });
   };
 
-  // Renders
+  const handleToggleSubtaskPin = (subtaskId: string) => {
+      const task = getTaskForModal();
+      if (!task || !task.subtasks) return;
+      
+      const updatedSubtasks = task.subtasks.map(s => 
+          s.id === subtaskId ? { ...s, isPinned: !s.isPinned } : s
+      );
+      updateTask({ ...task, subtasks: updatedSubtasks });
+  };
+
+  const handleDeleteSubtask = (subtaskId: string, taskId?: string) => {
+      const targetTaskId = taskId || activeModal?.taskId;
+      if (!targetTaskId) return;
+      
+      const task = tasks.find(t => t.id === targetTaskId);
+      if (!task || !task.subtasks) return;
+      
+      updateTask({ ...task, subtasks: task.subtasks.filter(s => s.id !== subtaskId) });
+  };
+
+  // Subtask DnD Handlers
+  const handleSubtaskDragStart = (e: React.DragEvent, subtaskId: string, taskId: string) => {
+      e.dataTransfer.setData('subtaskId', subtaskId);
+      e.dataTransfer.setData('sourceTaskId', taskId);
+      e.dataTransfer.effectAllowed = 'move';
+      // Prevent bubble up to column DnD
+      e.stopPropagation();
+  };
+
+  const handleSubtaskDrop = (e: React.DragEvent, targetSubtaskId: string, task: Task) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const draggedSubtaskId = e.dataTransfer.getData('subtaskId');
+      const sourceTaskId = e.dataTransfer.getData('sourceTaskId');
+
+      if (!draggedSubtaskId || !sourceTaskId) return;
+      if (sourceTaskId !== task.id) return; // Only reorder within same task
+
+      if (!task.subtasks) return;
+
+      const subtasks = [...task.subtasks];
+      const dragIdx = subtasks.findIndex(s => s.id === draggedSubtaskId);
+      const targetIdx = subtasks.findIndex(s => s.id === targetSubtaskId);
+
+      if (dragIdx === -1 || targetIdx === -1 || dragIdx === targetIdx) return;
+
+      const [moved] = subtasks.splice(dragIdx, 1);
+      subtasks.splice(targetIdx, 0, moved);
+
+      updateTask({ ...task, subtasks });
+  };
+
+  const moveSubtaskManual = (e: React.MouseEvent, subtaskId: string, direction: 'up' | 'down', task: Task) => {
+      e.stopPropagation();
+      if (!task || !task.subtasks) return;
+      
+      const subtasks = [...task.subtasks];
+      const index = subtasks.findIndex(s => s.id === subtaskId);
+      if (index === -1) return;
+
+      if (direction === 'up' && index > 0) {
+          [subtasks[index], subtasks[index - 1]] = [subtasks[index - 1], subtasks[index]];
+      } else if (direction === 'down' && index < subtasks.length - 1) {
+          [subtasks[index], subtasks[index + 1]] = [subtasks[index + 1], subtasks[index]];
+      } else {
+          return;
+      }
+      
+      updateTask({ ...task, subtasks });
+  };
+
+  // Delete Helpers
+  const deleteActiveChallenge = (e?: React.MouseEvent) => {
+      if (e) e.stopPropagation();
+      const task = getTaskForModal();
+      if (!task) return;
+      if (window.confirm('Удалить активный челлендж?')) {
+          updateTask({ ...task, activeChallenge: undefined, isChallengeCompleted: undefined });
+      }
+  };
+
+  const deleteChallengeFromHistory = (index: number) => {
+      const task = getTaskForModal();
+      if (!task || !task.challengeHistory) return;
+      if (window.confirm('Удалить челлендж из истории?')) {
+          const newHistory = [...task.challengeHistory];
+          newHistory.splice(index, 1);
+          updateTask({ ...task, challengeHistory: newHistory });
+      }
+  };
+
+  const deleteConsultation = (index: number) => {
+      const task = getTaskForModal();
+      if (!task || !task.consultationHistory) return;
+      if (window.confirm('Удалить консультацию?')) {
+          const newHistory = [...task.consultationHistory];
+          newHistory.splice(index, 1);
+          updateTask({ ...task, consultationHistory: newHistory });
+      }
+  };
+
+  const getTaskForModal = () => tasks.find(t => t.id === activeModal?.taskId);
+
   const renderCardChecklist = (task: Task) => (
     <div className="mt-2 mb-2">
         <CollapsibleSection
@@ -275,7 +873,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500'}`}>
                             {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
                         </div>
-                        <span className={`text-sm flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
+                        <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
                             {subtask.text}
                         </span>
                         <button 
@@ -290,7 +888,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 <div className="flex gap-1 mt-2" onClick={e => e.stopPropagation()}>
                     <input
                         type="text"
-                        className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
+                        className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-[10px] outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
                         placeholder="Добавить..."
                         value={cardSubtaskInputs[task.id] || ''}
                         onChange={(e) => setCardSubtaskInputs(prev => ({...prev, [task.id]: e.target.value}))}
@@ -305,251 +903,722 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     </div>
   );
 
-  const renderColumn = (colId: 'todo' | 'doing' | 'done', title: string, icon: React.ReactNode) => {
-    const colTasks = tasks.filter(t => t.column === colId && !t.isArchived).sort((a, b) => b.createdAt - a.createdAt);
-    const isMobileHidden = window.innerWidth < 768 && activeColumn !== colId;
+  const renderColumn = (col: typeof columns[0]) => {
+    if (!col) return null;
+    const tasksInCol = activeTasks.filter(t => t.column === col.id);
+    
+    let emptyText = "Перетащите задачи сюда";
+    if (col.id === 'todo') emptyText = "Создай задачу, чтобы начать";
+    if (col.id === 'doing') emptyText = "Перетащи задачу из «Выполнить»";
+    if (col.id === 'done') emptyText = "Готово? Перетащи задачу сюда";
 
     return (
-      <div 
-        className={`flex-1 flex flex-col h-full min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 ${isMobileHidden ? 'hidden' : 'flex'}`}
-        onDragOver={handleDragOver}
-        onDrop={(e) => handleDrop(e, colId)}
-      >
-        <div className="p-4 flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-2">
-            <div className={`p-2 rounded-lg ${colId === 'todo' ? 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' : colId === 'doing' ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400'}`}>
-                {icon}
-            </div>
-            <h3 className="font-bold text-slate-700 dark:text-slate-200">{title}</h3>
-            <span className="bg-white dark:bg-slate-800 px-2 py-0.5 rounded text-xs font-bold text-slate-400 border border-slate-100 dark:border-slate-700">{colTasks.length}</span>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar-light min-h-0">
-          {colTasks.map(task => (
-            <div 
-              key={task.id} 
-              draggable
-              onDragStart={(e) => handleDragStart(e, task.id)}
-              onDrop={(e) => handleTaskDrop(e, task.id)}
-              onClick={() => { setSelectedTask(task); setEditContent(task.content); setEditChallenge(task.activeChallenge || ''); }}
-              className="bg-white dark:bg-[#1e293b] p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
-            >
-              <div className="flex justify-between items-start mb-2">
-                 <div className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-                    <Calendar size={10} /> {new Date(task.createdAt).toLocaleDateString()}
-                 </div>
-                 {task.activeChallenge && !task.isChallengeCompleted && (
-                     <Tooltip content="Активный челлендж">
-                        <Zap size={12} className="text-amber-500 animate-pulse" />
-                     </Tooltip>
-                 )}
-              </div>
-              
-              <div className="text-sm text-slate-800 dark:text-slate-200 leading-snug line-clamp-3 mb-2">
-                  <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
-              </div>
-
-              {/* Quick Subtask View/Add */}
-              {renderCardChecklist(task)}
-
-              <div className="flex justify-between items-center mt-3 pt-2 border-t border-slate-50 dark:border-slate-800/50">
-                  <div className="flex -space-x-1">
-                      {/* Avatars or Tags placeholder */}
-                  </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {colId === 'done' && (
-                          <Tooltip content="В архив">
-                              <button onClick={(e) => { e.stopPropagation(); archiveTask(task.id); }} className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-slate-400 hover:text-emerald-600 rounded"><Archive size={14} /></button>
-                          </Tooltip>
-                      )}
-                      <Tooltip content="Удалить">
-                          <button onClick={(e) => { e.stopPropagation(); if(confirm('Удалить задачу?')) deleteTask(task.id); }} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-600 rounded"><Trash2 size={14} /></button>
-                      </Tooltip>
-                  </div>
-              </div>
-            </div>
-          ))}
-          {colTasks.length === 0 && (
-              <div className="h-24 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-center text-xs text-slate-400">
-                  Нет задач
-              </div>
-          )}
-        </div>
-
-        {/* Quick Add (Only for Todo/Doing) */}
-        {colId !== 'done' && (
-            <div className="p-3 border-t border-slate-100 dark:border-slate-800">
-               <div className="relative">
-                   <input 
-                      type="text" 
-                      placeholder="Новая задача..." 
-                      className="w-full pl-3 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition-all dark:text-slate-200"
-                      value={activeColumn === colId ? newTaskContent : ''}
-                      onChange={(e) => {
-                          if (activeColumn !== colId) setActiveColumn(colId);
-                          setNewTaskContent(e.target.value);
-                      }}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddTask(colId)}
-                   />
-                   <button 
-                      onClick={() => handleAddTask(colId)}
-                      className="absolute right-1.5 top-1.5 p-1.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:opacity-90 transition-opacity"
-                   >
-                       <Plus size={14} />
-                   </button>
-               </div>
+    <div className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3 h-full md:h-auto md:min-h-0`}>
+        {/* On mobile, we hide the redundant column header as tabs are used */}
+        <h3 className="hidden md:flex font-semibold text-slate-600 dark:text-slate-400 mb-3 justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
+        
+        {col.id === 'todo' && (
+             <div className="mb-3 px-1">
+                {!isCreatorOpen ? (
+                    <button 
+                        onClick={() => setIsCreatorOpen(true)}
+                        className="w-full flex items-center justify-between bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-all shadow-sm"
+                    >
+                        <span>Новая задача...</span>
+                        <Plus size={16} />
+                    </button>
+                ) : (
+                    <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-md animate-in slide-in-from-top-2">
+                        <input
+                            type="text"
+                            placeholder="Название"
+                            className="w-full text-sm font-bold text-slate-800 dark:text-slate-200 bg-transparent outline-none mb-2 placeholder:font-normal placeholder:text-slate-400"
+                            value={newTaskTitle}
+                            onChange={(e) => setNewTaskTitle(e.target.value)}
+                            autoFocus
+                        />
+                        <textarea
+                            placeholder="Задача..."
+                            className="w-full h-20 text-sm text-slate-700 dark:text-slate-300 bg-transparent outline-none resize-none placeholder:text-slate-400 leading-relaxed"
+                            value={newTaskContent}
+                            onChange={(e) => setNewTaskContent(e.target.value)}
+                        />
+                        <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                            <button 
+                                onClick={cancelCreateTask}
+                                className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 rounded transition-colors"
+                            >
+                                Отменить
+                            </button>
+                            <button 
+                                onClick={handleCreateTask}
+                                disabled={!newTaskTitle.trim() && !newTaskContent.trim()}
+                                className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 font-medium transition-colors"
+                            >
+                                Добавить
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         )}
-      </div>
+
+        <div className="flex-1 overflow-y-auto md:overflow-visible min-h-0 space-y-3 pb-2 px-1 custom-scrollbar-light md:flex-none" onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
+            {tasksInCol.length === 0 ? (
+                <div className="py-10">
+                   <EmptyState 
+                        icon={KanbanIcon} 
+                        title="Пусто" 
+                        description={emptyText} 
+                        color="slate"
+                    /> 
+                </div>
+            ) : (
+                tasksInCol.map(task => {
+                    const isDoneColumn = col.id === 'done';
+                    // Specific border color classes to color ONLY the left border
+                    let borderClass = 'border-l-slate-300 dark:border-l-slate-600';
+                    if (col.id === 'done') borderClass = 'border-l-emerald-400';
+                    else if (col.id === 'doing') borderClass = 'border-l-indigo-400';
+                    
+                    const subtasksTotal = task.subtasks?.length || 0;
+                    const subtasksDone = task.subtasks?.filter(s => s.isCompleted).length || 0;
+                    const progressPercent = subtasksTotal > 0 ? Math.round((subtasksDone / subtasksTotal) * 100) : 0;
+                    const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
+                    const hasActiveChallenge = task.activeChallenge && !task.isChallengeCompleted;
+
+                    return (
+                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group border-l-4 ${borderClass} overflow-hidden`}>
+                        
+                        {/* HEADER: Title + Sphere Selector */}
+                        <div className="flex justify-between items-start gap-2 mb-2">
+                             <div className="flex-1 pt-1 min-w-0">
+                                {task.title ? (
+                                    <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-snug break-words">{applyTypography(task.title)}</h4>
+                                ) : null}
+                             </div>
+                             
+                             <div className="shrink-0 z-20 -mr-1 -mt-1">
+                                <CardSphereSelector task={task} updateTask={updateTask} />
+                             </div>
+                        </div>
+
+                        {/* CONTENT */}
+                        <div className="mb-3">
+                            <div className={`text-slate-700 dark:text-slate-300 font-normal text-xs leading-relaxed line-clamp-4 ${!task.title ? 'text-sm' : ''}`}>
+                                 <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
+                            </div>
+                        </div>
+
+                        {/* TODO SPECIFIC MODULES */}
+                        {col.id === 'todo' && (
+                            <>
+                                {/* CHECKLIST (Collapsed by default, always visible) */}
+                                {renderCardChecklist(task)}
+                            </>
+                        )}
+
+                        {/* DOING SPECIFIC MODULES */}
+                        {col.id === 'doing' && (
+                            <>
+                                {/* STATUS BAR */}
+                                {subtasksTotal > 0 && (
+                                    <div className="flex items-center gap-3 mt-2 mb-2 h-6 w-full">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
+                                            <ListTodo size={12} />
+                                            <span>{subtasksDone}/{subtasksTotal}</span>
+                                        </div>
+                                        <div className="flex-1 flex flex-col justify-center h-full">
+                                            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                                                <div 
+                                                    className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
+                                                    style={{ width: `${progressPercent}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* CHECKLIST (Collapsed by default, always visible) */}
+                                {renderCardChecklist(task)}
+
+                                {/* ACTIVE CHALLENGE (Collapsed) */}
+                                {task.activeChallenge && !draftChallenge && (
+                                    <div className="mt-2 mb-2">
+                                        <CollapsibleSection 
+                                            title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
+                                            icon={<Zap size={12} className={task.isChallengeCompleted ? "text-emerald-500" : "text-indigo-500"} fill="currentColor" />} 
+                                            isCard
+                                        >
+                                            <div className={`p-2 rounded-lg border transition-all relative group ${task.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
+                                                 
+                                                 {/* COMPLETE CHALLENGE CHECK (Hover) */}
+                                                 <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                     <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
+                                                         <button 
+                                                            onClick={(e) => toggleChallengeCompleteFromCard(e, task)}
+                                                            className={`w-5 h-5 rounded-full border flex items-center justify-center bg-white dark:bg-slate-800 transition-colors ${task.isChallengeCompleted ? 'border-emerald-500 text-emerald-500' : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 hover:text-emerald-500 text-transparent'}`}
+                                                         >
+                                                             <Check size={12} />
+                                                         </button>
+                                                     </Tooltip>
+                                                 </div>
+
+                                                 {task.isChallengeCompleted ? (
+                                                    <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
+                                                       <StaticChallengeRenderer content={task.activeChallenge || ''} mode="history" />
+                                                    </div>
+                                                 ) : (
+                                                    <InteractiveChallenge 
+                                                        content={task.activeChallenge || ''} 
+                                                        onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
+                                                    />
+                                                 )}
+                                            </div>
+                                        </CollapsibleSection>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* DONE COLUMN SPECIFIC RENDER ORDER */}
+                        {col.id === 'done' && (
+                            <>
+                                {/* STATUS BAR */}
+                                {subtasksTotal > 0 && (
+                                    <div className="flex items-center gap-3 mt-2 mb-2 h-6 w-full">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
+                                            <ListTodo size={12} />
+                                            <span>{subtasksDone}/{subtasksTotal}</span>
+                                        </div>
+                                        <div className="flex-1 flex flex-col justify-center h-full">
+                                            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                                                <div 
+                                                    className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
+                                                    style={{ width: `${progressPercent}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {/* CHECKLIST (Only if items exist) */}
+                                {task.subtasks && task.subtasks.length > 0 && (
+                                     <div className="mt-2 mb-2">
+                                         <CollapsibleSection 
+                                            title="Чек-лист" 
+                                            icon={<ListTodo size={12}/>} 
+                                            isCard
+                                         >
+                                             <div className="space-y-1.5">
+                                                 {task.subtasks.map(subtask => (
+                                                     <div 
+                                                        key={subtask.id} 
+                                                        className="flex items-center gap-2 p-1 rounded opacity-70"
+                                                     >
+                                                         <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'}`}>
+                                                             {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                                                         </div>
+                                                         <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                             {subtask.text}
+                                                         </span>
+                                                     </div>
+                                                 ))}
+                                             </div>
+                                         </CollapsibleSection>
+                                     </div>
+                                )}
+                            </>
+                        )}
+
+                        <div className="mt-auto border-t border-slate-50 dark:border-slate-700 pt-3 flex flex-col gap-3">
+                            <div className="flex justify-end items-center w-full gap-2">
+                               {col.id === 'todo' && (
+                                    <>
+                                        <div className="flex gap-2">
+                                            <Tooltip content="В работу">
+                                                <button 
+                                                    onClick={(e) => moveToDoing(e, task)} 
+                                                    className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
+                                                >
+                                                    <Play size={18} className="fill-current" />
+                                                </button>
+                                            </Tooltip>
+                                        </div>
+                                    </>
+                               )}
+
+                               {col.id === 'doing' && (
+                                   <>
+                                   <div className="flex gap-2">
+                                       <Tooltip content={hasJournalEntry ? "В Дневнике" : "В Дневник"}>
+                                           <button 
+                                                onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }}
+                                                className={`p-2 rounded-lg border transition-colors ${
+                                                    hasJournalEntry 
+                                                    ? 'border-cyan-200 dark:border-cyan-800 text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100 dark:hover:bg-cyan-900/40' 
+                                                    : 'border-transparent text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 hover:border-cyan-100'
+                                                }`}
+                                           >
+                                                <Book size={18} />
+                                           </button>
+                                       </Tooltip>
+
+                                       {!draftChallenge && hasChallengeAuthors && (
+                                           <Tooltip 
+                                                content={generatingChallengeFor === task.id ? "Остановить" : "Челлендж (ИИ)"}
+                                                disabled={generatingChallengeFor === task.id}
+                                           >
+                                               <button 
+                                                    disabled={hasActiveChallenge}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (generatingChallengeFor === task.id) {
+                                                            stopGeneration(e);
+                                                            return;
+                                                        }
+                                                        if (hasActiveChallenge) return;
+                                                        if (window.confirm("Создать челлендж?")) {
+                                                            generateChallenge(e, task.id, task.content);
+                                                        }
+                                                    }} 
+                                                    className={`p-2 rounded-lg border border-transparent transition-colors
+                                                        ${hasActiveChallenge 
+                                                            ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed' 
+                                                            : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-100 dark:hover:border-indigo-800'
+                                                        }`}
+                                               >
+                                                    {generatingChallengeFor === task.id ? (
+                                                        <div className="relative w-[18px] h-[18px] flex items-center justify-center">
+                                                            <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                            <div className="w-2 h-2 bg-current rounded-[1px]"></div>
+                                                        </div>
+                                                    ) : (
+                                                        <Zap size={18} />
+                                                    )}
+                                                </button>
+                                           </Tooltip>
+                                       )}
+
+                                       {hasKanbanTherapist && (
+                                           <Tooltip 
+                                                content={generatingTherapyFor === task.id ? "Остановить" : "Консультант (ИИ)"}
+                                                disabled={generatingTherapyFor === task.id}
+                                           >
+                                               <button 
+                                                    onClick={(e) => openTherapy(e, task)} 
+                                                    className="p-2 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg border border-transparent hover:border-violet-100 dark:hover:border-violet-800 transition-colors"
+                                               >
+                                                   {generatingTherapyFor === task.id ? (
+                                                        <div className="relative w-[18px] h-[18px] flex items-center justify-center">
+                                                            <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                            <div className="w-2 h-2 bg-current rounded-[1px] relative z-10"></div>
+                                                        </div>
+                                                   ) : (
+                                                       <Bot size={18} /> 
+                                                   )}
+                                               </button>
+                                           </Tooltip>
+                                       )}
+                                   </div>
+                                   <Tooltip content="Завершить">
+                                        <button 
+                                            onClick={(e) => handleQuickComplete(e, task)} 
+                                            className="p-2 rounded-lg border border-transparent hover:border-emerald-500 dark:hover:border-emerald-400 text-slate-300 dark:text-slate-500 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                                        >
+                                            <Check size={18} strokeWidth={3} />
+                                        </button>
+                                    </Tooltip>
+                                   </>
+                               )}
+                               
+                               {col.id === 'done' && (
+                                    <>
+                                        <div className="flex gap-2">
+                                            <Tooltip content="В Зал славы">
+                                                <button 
+                                                    onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
+                                                    }} 
+                                                    className="p-2 text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg border border-transparent hover:border-amber-100 dark:hover:border-amber-800 transition-colors"
+                                                >
+                                                    <Trophy size={18} /> 
+                                                </button>
+                                            </Tooltip>
+                                            <Tooltip content="Вернуть в работу">
+                                                <button 
+                                                    onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        updateTask({ ...task, column: 'doing' }); 
+                                                    }} 
+                                                    className="p-2 rounded-lg border border-transparent hover:border-indigo-500 dark:hover:border-indigo-400 text-slate-300 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+                                                >
+                                                    <RotateCcw size={18} strokeWidth={2} />
+                                                </button>
+                                            </Tooltip>
+                                        </div>
+                                    </>
+                               )}
+                            </div>
+                        </div>
+                    </div>
+                )})
+            )}
+        </div>
+    </div>
     );
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
-      
-      {/* Mobile Column Switcher */}
-      <div className="md:hidden p-4 pb-0 flex gap-2 overflow-x-auto">
-          {['todo', 'doing', 'done'].map((col) => (
-              <button 
-                key={col}
-                onClick={() => setActiveColumn(col as any)}
-                className={`flex-1 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors border ${activeColumn === col ? 'bg-slate-800 text-white border-slate-800 dark:bg-indigo-600 dark:border-indigo-600' : 'bg-white text-slate-500 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'}`}
-              >
-                  {col === 'todo' ? 'Надо' : col === 'doing' ? 'В работе' : 'Готово'}
-              </button>
-          ))}
+    <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden">
+      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc] md:dark:bg-[#0f172a] md:pb-6 transition-colors duration-300">
+        <div>
+            <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Спринты</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Фокус на главном</p>
+        </div>
+        
+        {/* Search */}
+        <div className="flex flex-col md:flex-row items-end md:items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none w-full md:w-auto">
+             
+             {/* Search Input */}
+             <div className="relative group w-full md:w-auto">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <input 
+                    type="text" 
+                    placeholder="Поиск..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full md:w-64 focus:w-full md:focus:w-80 transition-all pl-8 pr-7 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 placeholder:text-slate-400 outline-none ring-1 ring-transparent focus:ring-indigo-500/20"
+                />
+                {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={12} /></button>
+                )}
+             </div>
+             
+             <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
+                 <button onClick={toggleSortOrder} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0">
+                     {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                 </button>
+             </Tooltip>
+        </div>
+      </header>
+
+      {/* Columns */}
+      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-0 overflow-hidden md:overflow-visible">
+         {/* Mobile Tabs */}
+         <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10">
+            {columns.map(col => (
+                <button
+                    key={col.id}
+                    onClick={() => setActiveMobileTab(col.id as any)}
+                    className={getTabClass(col.id, activeMobileTab === col.id)}
+                >
+                    {col.title} <span className="opacity-60 text-[10px]">({activeTasks.filter(t => t.column === col.id).length})</span>
+                </button>
+            ))}
+         </div>
+
+         <div className="flex-1 overflow-x-hidden md:overflow-visible p-4 md:p-0">
+             <div className="flex flex-col md:flex-row gap-4 h-full md:h-auto min-h-0 md:items-start">
+                {columns.map(col => {
+                   const isHiddenOnMobile = activeMobileTab !== col.id;
+                   return (
+                       <div key={col.id} className={`flex-1 min-w-[280px] flex-col min-h-0 h-full md:h-auto ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}>
+                           {renderColumn(col)}
+                       </div>
+                   );
+                })}
+             </div>
+         </div>
       </div>
 
-      <div className="flex-1 flex gap-4 p-4 md:p-8 overflow-hidden">
-          {renderColumn('todo', 'К исполнению', <Layout size={18} />)}
-          {renderColumn('doing', 'В процессе', <Play size={18} />)}
-          {renderColumn('done', 'Завершено', <CheckCircle2 size={18} />)}
-      </div>
+      {activeModal && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseModal}>
+            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col" onClick={(e) => e.stopPropagation()}>
+                
+                {/* MODAL HEADER */}
+                <div className="flex justify-between items-start mb-4 shrink-0">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex-1 mr-4 flex items-center">
+                        {activeModal.type === 'stuck' && <><Bot size={24} className="mr-2 text-violet-500"/> Личный консультант</>}
+                        {activeModal.type === 'challenge' && <><Zap size={24} className="mr-2 text-indigo-500"/> Новый вызов</>}
+                        {activeModal.type === 'details' && (() => {
+                            const task = getTaskForModal();
+                            if (task?.title) return applyTypography(task.title);
+                            if (task) return 'Детали задачи'; // Fallback if no title
+                            return '';
+                        })()}
+                    </h3>
+                    <div className="flex items-center shrink-0">
+                        {activeModal.type === 'details' && !isEditingTask && (
+                            (() => {
+                                const task = getTaskForModal();
+                                if (task && task.column !== 'done') {
+                                    return (
+                                        <>
+                                            <Tooltip content="Редактировать">
+                                                <button onClick={() => setIsEditingTask(true)} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                                    <Edit3 size={20} />
+                                                </button>
+                                            </Tooltip>
+                                            <Tooltip content="Удалить">
+                                                <button onClick={() => { if(window.confirm('Удалить задачу?')) { deleteTask(task.id); handleCloseModal(); } }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                                                    <Trash2 size={20} />
+                                                </button>
+                                            </Tooltip>
+                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-2"></div>
+                                        </>
+                                    );
+                                }
+                                return null;
+                            })()
+                        )}
+                        <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1"><X size={24} /></button>
+                    </div>
+                </div>
 
-      {/* Detail Modal */}
-      {selectedTask && (
-          <div className="fixed inset-0 z-50 bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedTask(null)}>
-              <div className="bg-white dark:bg-[#1e293b] w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col" onClick={(e) => e.stopPropagation()}>
-                  
-                  {/* Header */}
-                  <div className="flex justify-between items-start mb-6 shrink-0">
-                      <div>
-                          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                              {isEditingContent ? 'Редактирование' : 'Детали задачи'}
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${selectedTask.column === 'done' ? 'bg-emerald-100 text-emerald-600' : 'bg-indigo-100 text-indigo-600'}`}>{selectedTask.column}</span>
-                          </h3>
-                      </div>
-                      <div className="flex gap-2">
-                          <button onClick={() => onReflectInJournal(selectedTask.id)} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors flex items-center gap-2">
-                              <Book size={20} /> <span className="hidden md:inline text-sm font-medium">В дневник</span>
-                          </button>
-                          <button onClick={() => setSelectedTask(null)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg">
-                              <X size={24} />
-                          </button>
-                      </div>
-                  </div>
+                <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0">
+                    {activeModal.type === 'stuck' && (
+                        <div className="space-y-4">
+                            {aiResponse ? (
+                                <div className="space-y-4">
+                                    <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-800">
+                                        <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase mb-2">Совет</div>
+                                        <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown></div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center text-slate-400 py-10">Не удалось получить ответ.</div>
+                            )}
+                        </div>
+                    )}
 
-                  {/* Body */}
-                  <div className="flex-1 overflow-y-auto custom-scrollbar-light space-y-6">
-                      
-                      {/* Main Content */}
-                      <div className="group relative">
-                          {isEditingContent ? (
-                              <div>
-                                  <textarea 
-                                    className="w-full h-32 p-3 border border-indigo-300 dark:border-indigo-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
-                                    value={editContent}
-                                    onChange={(e) => setEditContent(e.target.value)}
-                                  />
-                                  <div className="flex justify-end gap-2 mt-2">
-                                      <button onClick={() => setIsEditingContent(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 rounded">Отмена</button>
-                                      <button onClick={() => { updateTask({...selectedTask, content: applyTypography(editContent)}); setIsEditingContent(false); }} className="px-3 py-1.5 text-xs bg-slate-900 text-white rounded hover:bg-slate-800">Сохранить</button>
-                                  </div>
-                              </div>
-                          ) : (
-                              <div className="text-lg text-slate-800 dark:text-slate-200 leading-relaxed p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                                  <ReactMarkdown components={markdownComponents}>{selectedTask.content}</ReactMarkdown>
-                                  <button onClick={() => { setEditContent(selectedTask.content); setIsEditingContent(true); }} className="absolute top-2 right-2 p-1.5 bg-white dark:bg-slate-700 shadow-sm rounded text-slate-400 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <Edit3 size={14} />
-                                  </button>
-                              </div>
-                          )}
-                      </div>
+                    {activeModal.type === 'challenge' && draftChallenge && (
+                        <div className="flex flex-col h-full">
+                            <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 leading-relaxed text-sm">
+                                <StaticChallengeRenderer content={draftChallenge} mode="draft" />
+                            </div>
+                        </div>
+                    )}
 
-                      {/* Subtasks in Modal */}
-                      {renderCardChecklist(selectedTask)}
+                    {activeModal.type === 'details' && (() => {
+                        const task = getTaskForModal();
+                        if (!task) return null;
+                        
+                        const isDone = task.column === 'done';
 
-                      {/* Challenge Section */}
-                      <div className="bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-slate-800 rounded-xl p-5 border border-indigo-100 dark:border-indigo-800/50">
-                          <div className="flex justify-between items-center mb-4">
-                              <h4 className="font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-2 text-sm uppercase tracking-wide">
-                                  <Zap size={16} /> Режим Челленджа
-                              </h4>
-                              {selectedTask.activeChallenge && !selectedTask.isChallengeCompleted && (
-                                  <button onClick={completeChallenge} className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-bold hover:bg-emerald-600 transition-colors shadow-sm">
-                                      <Check size={14} /> Выполнить
-                                  </button>
-                              )}
-                          </div>
-                          
-                          {selectedTask.activeChallenge ? (
-                              <div className={`p-4 rounded-lg bg-white dark:bg-slate-800 border ${selectedTask.isChallengeCompleted ? 'border-emerald-200 dark:border-emerald-800' : 'border-indigo-200 dark:border-indigo-800'} shadow-sm`}>
-                                  <div className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-                                      <ReactMarkdown components={markdownComponents}>{selectedTask.activeChallenge}</ReactMarkdown>
-                                  </div>
-                                  {selectedTask.isChallengeCompleted && (
-                                      <div className="mt-3 flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                                          <CheckCircle2 size={14} /> Челлендж завершен!
-                                      </div>
-                                  )}
-                              </div>
-                          ) : (
-                              <div className="text-center py-6 text-slate-400 text-sm italic">
-                                  Нет активного челленджа
-                              </div>
-                          )}
+                        return (
+                            <div className="space-y-4">
+                                {/* TEXT EDITING */}
+                                {isEditingTask ? (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Название</label>
+                                            <input 
+                                                value={editTaskTitle} 
+                                                onChange={(e) => setEditTaskTitle(e.target.value)} 
+                                                className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-sm font-bold text-slate-800 dark:text-slate-200 box-border focus:border-slate-300 dark:focus:border-slate-600 transition-colors"
+                                                placeholder="Название задачи..."
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Описание</label>
+                                            <textarea 
+                                                value={editTaskContent} 
+                                                onChange={(e) => setEditTaskContent(e.target.value)} 
+                                                className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-sm text-slate-800 dark:text-slate-200 resize-none box-border focus:border-slate-300 dark:focus:border-slate-600 transition-colors"
+                                                placeholder="Описание (Markdown)..."
+                                            />
+                                        </div>
+                                        <div className="flex justify-end gap-2 pt-2">
+                                            <button onClick={() => setIsEditingTask(false)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">Отмена</button>
+                                            <button onClick={handleSaveTaskContent} className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">Сохранить</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="group relative pr-1">
+                                        <div className="text-slate-800 dark:text-slate-200 text-sm font-normal leading-relaxed">
+                                            <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
+                                        </div>
+                                    </div>
+                                )}
 
-                          <div className="mt-4 flex justify-center">
-                              <button 
-                                onClick={generateChallenge} 
-                                disabled={isGeneratingChallenge}
-                                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-200 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"
-                              >
-                                  {isGeneratingChallenge ? <span className="animate-spin">⏳</span> : <Zap size={16} />}
-                                  {selectedTask.activeChallenge ? "Сгенерировать новый" : "Бросить вызов (AI)"}
-                              </button>
-                          </div>
-                      </div>
+                                {/* SPHERES */}
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
+                                    <SphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
+                                </div>
 
-                      {/* Therapy / Advice */}
-                      <div className="space-y-3">
-                          <h4 className="font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wide flex items-center gap-2">
-                              <MessageCircle size={14} /> Совет мудреца
-                          </h4>
-                          <div className="flex gap-2">
-                              <button onClick={() => askTherapist('stuck')} disabled={isTherapistThinking} className="flex-1 py-3 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-xl border border-amber-100 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors text-sm font-medium flex items-center justify-center gap-2">
-                                  <AlertTriangle size={16} /> Я застрял
-                              </button>
-                              <button onClick={() => askTherapist('completed')} disabled={isTherapistThinking} className="flex-1 py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-xl border border-emerald-100 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors text-sm font-medium flex items-center justify-center gap-2">
-                                  <CheckCircle2 size={16} /> Урок успеха
-                              </button>
-                          </div>
-                          
-                          {selectedTask.consultationHistory && selectedTask.consultationHistory.length > 0 && (
-                              <div className="mt-4 space-y-4">
-                                  {selectedTask.consultationHistory.map((consult, idx) => (
-                                      <div key={idx} className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300">
-                                          <ReactMarkdown components={markdownComponents}>{consult}</ReactMarkdown>
-                                      </div>
-                                  ))}
-                              </div>
-                          )}
-                      </div>
+                                {/* CONTEXT (DESCRIPTION) - Collapsed by default */}
+                                {task.description && (
+                                    <CollapsibleSection title="Контекст" icon={<FileText size={14}/>}>
+                                        <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                            <ReactMarkdown components={markdownComponents}>{applyTypography(task.description)}</ReactMarkdown>
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
 
-                  </div>
-              </div>
-          </div>
+                                {/* CHECKLIST - Collapsed by default */}
+                                {(task.subtasks && task.subtasks.length > 0 || !isDone) && (
+                                    <CollapsibleSection title="Чек-лист" icon={<ListTodo size={14}/>}>
+                                        <div className="space-y-2">
+                                            {task.subtasks?.map(s => (
+                                                <div 
+                                                    key={s.id} 
+                                                    className={`flex items-center gap-2 group ${isDone ? 'opacity-70' : ''}`}
+                                                    draggable={!isDone}
+                                                    onDragStart={!isDone ? (e) => handleSubtaskDragStart(e, s.id, task.id) : undefined}
+                                                    onDragOver={handleDragOver}
+                                                    onDrop={!isDone ? (e) => handleSubtaskDrop(e, s.id, task) : undefined}
+                                                >
+                                                    {!isDone && (
+                                                        <div className="hidden md:block text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                             <GripVertical size={14} />
+                                                        </div>
+                                                    )}
+                                                    <button onClick={() => !isDone && handleToggleSubtask(s.id)} disabled={isDone} className={`${s.isCompleted ? "text-emerald-500" : "text-slate-300 dark:text-slate-600"} ${!isDone && "hover:text-indigo-500"}`}>
+                                                        {s.isCompleted ? <CheckCircle2 size={16}/> : <Circle size={16}/>}
+                                                    </button>
+                                                    <span className={`flex-1 text-sm ${s.isCompleted ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-300"}`}>{s.text}</span>
+                                                    {!isDone && (
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button onClick={() => handleDeleteSubtask(s.id)} className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-500"><X size={14}/></button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {!isDone && (
+                                                <div className="flex gap-2 mt-2">
+                                                    <input 
+                                                        type="text" 
+                                                        className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm outline-none text-slate-800 dark:text-slate-200"
+                                                        placeholder="Новый пункт..."
+                                                        value={newSubtaskText}
+                                                        onChange={(e) => setNewSubtaskText(e.target.value)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                                                    />
+                                                    <button onClick={handleAddSubtask} disabled={!newSubtaskText.trim()} className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-50"><Plus size={16}/></button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+
+                                {/* ACTIVE/FINAL CHALLENGE */}
+                                {task.activeChallenge && (
+                                    <CollapsibleSection 
+                                        title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
+                                        icon={<Zap size={14} className={task.isChallengeCompleted ? "text-emerald-500" : "text-indigo-500"} fill="currentColor"/>}
+                                        actions={
+                                            !isDone ? (
+                                                <Tooltip content="Удалить челлендж">
+                                                    <button onClick={(e) => deleteActiveChallenge(e)} className="text-slate-400 hover:text-red-500 transition-colors p-1 opacity-0 group-hover/header:opacity-100">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </Tooltip>
+                                            ) : undefined
+                                        }
+                                    >
+                                        <div className="relative group">
+                                            {/* COMPLETE CHALLENGE CHECK (Hover) - Only if not done */}
+                                            {!isDone && (
+                                                <div className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                     <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
+                                                         <button 
+                                                            onClick={() => toggleChallengeComplete()}
+                                                            className={`w-5 h-5 rounded-full border flex items-center justify-center bg-white dark:bg-slate-800 transition-colors ${task.isChallengeCompleted ? 'border-emerald-500 text-emerald-500' : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 hover:text-emerald-500 text-transparent'}`}
+                                                         >
+                                                             <Check size={12} />
+                                                         </button>
+                                                     </Tooltip>
+                                                </div>
+                                            )}
+
+                                            <div className="space-y-2">
+                                                {task.isChallengeCompleted ? (
+                                                    <StaticChallengeRenderer content={task.activeChallenge} mode="history" />
+                                                ) : (
+                                                    <InteractiveChallenge 
+                                                        content={task.activeChallenge} 
+                                                        onToggle={(i) => !isDone && toggleChallengeCheckbox(i, task)} 
+                                                        onPin={!isDone ? (i) => handleToggleChallengeStepPin(i) : undefined}
+                                                        pinnedIndices={task.pinnedChallengeIndices}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+
+                                {/* HISTORY & CONSULTATIONS */}
+                                {(task.challengeHistory && task.challengeHistory.length > 0) && (
+                                    <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
+                                        <div className="space-y-4">
+                                            {task.challengeHistory?.map((h, i) => (
+                                                <div key={`ch-${i}`} className="text-sm bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 relative group">
+                                                    <div className="text-[10px] font-bold text-slate-400 mb-1">Архивный челлендж</div>
+                                                    <StaticChallengeRenderer content={h} mode="history" />
+                                                    {!isDone && (
+                                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Tooltip content="Удалить">
+                                                                <button onClick={() => deleteChallengeFromHistory(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={14}/></button>
+                                                            </Tooltip>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+                                {(task.consultationHistory && task.consultationHistory.length > 0) && (
+                                    <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}>
+                                        <div className="space-y-4">
+                                            {task.consultationHistory?.map((h, i) => (
+                                                <div key={`cons-${i}`} className="text-sm bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 relative group">
+                                                    <div className="text-[10px] font-bold text-violet-400 mb-1 flex items-center gap-1"><Bot size={10}/> Консультация</div>
+                                                    <ReactMarkdown components={markdownComponents}>{applyTypography(h)}</ReactMarkdown>
+                                                    {!isDone && (
+                                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Tooltip content="Удалить">
+                                                                <button onClick={() => deleteConsultation(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={14}/></button>
+                                                            </Tooltip>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+                            </div>
+                        );
+                    })()}
+                </div>
+                {activeModal.type === 'stuck' && aiResponse && (
+                    <div className="mt-8 flex justify-end gap-2">
+                        <Tooltip content="Сохранить в историю">
+                            <button 
+                                onClick={saveTherapyResponse} 
+                                className="p-2 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
+                            >
+                                <Save size={20} />
+                            </button>
+                        </Tooltip>
+                    </div>
+                )}
+                {activeModal.type === 'challenge' && draftChallenge && (
+                    <div className="mt-6 flex justify-end gap-2 shrink-0">
+                        <Tooltip content="Принять вызов">
+                            <button 
+                                onClick={acceptDraftChallenge} 
+                                className="p-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors shadow-sm"
+                            >
+                                <Rocket size={20} />
+                            </button>
+                        </Tooltip>
+                    </div>
+                )}
+            </div>
+        </div>
       )}
     </div>
   );
