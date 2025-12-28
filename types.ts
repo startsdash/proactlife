@@ -23,6 +23,7 @@ export enum Module {
 
 export interface Note {
   id: string;
+  title?: string; // NEW: Title field
   content: string;
   tags: string[];
   createdAt: number;

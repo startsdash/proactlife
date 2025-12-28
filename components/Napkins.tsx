@@ -6,7 +6,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -53,7 +53,8 @@ const markdownComponents = {
          return inline 
             ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
             : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
-    }
+    },
+    img: ({node, ...props}: any) => <img className="rounded-lg max-h-60 object-cover my-2" {...props} />
 };
 
 // --- INTERNAL COMPONENT: TAG SELECTOR ---
@@ -69,7 +70,6 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    // Close dropdown on click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -80,7 +80,6 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Filter suggestions
     const filteredSuggestions = existingTags.filter(
         tag => !selectedTags.some(st => st.toLowerCase() === tag.toLowerCase()) && 
                tag.toLowerCase().includes(input.toLowerCase())
@@ -121,9 +120,9 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
 
     return (
         <div className="relative" ref={wrapperRef}>
-            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900 focus-within:border-indigo-200 dark:focus-within:border-indigo-700 transition-all min-h-[42px]">
+            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-transparent transition-all min-h-[36px]">
                 {selectedTags.map(tag => (
-                    <span key={tag} className="flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-2 py-1 rounded-md animate-in zoom-in-95 duration-100">
+                    <span key={tag} className="flex items-center gap-1 text-[10px] font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md animate-in zoom-in-95 duration-100">
                         <TagIcon size={10} />
                         {tag}
                         <button onClick={() => removeTag(tag)} className="hover:text-red-500 dark:hover:text-red-400 ml-1">
@@ -138,26 +137,22 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
                     onFocus={() => setIsOpen(true)}
                     onKeyDown={handleKeyDown}
                     placeholder={selectedTags.length === 0 ? placeholder : ''}
-                    className="flex-1 min-w-[120px] bg-transparent text-sm outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                    className="flex-1 min-w-[80px] bg-transparent text-xs outline-none text-slate-600 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
             </div>
 
             {isOpen && (input.length > 0 || filteredSuggestions.length > 0) && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
                     {input.length > 0 && !isExactMatchInSuggestions && !isExactMatchInSelected && (
                         <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 flex items-center gap-2">
                             <Plus size={14} /> Создать «{input}»
                         </button>
                     )}
-                    {filteredSuggestions.length > 0 ? (
-                        filteredSuggestions.map(tag => (
-                            <button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2">
-                                <TagIcon size={14} className="text-slate-400" /> {tag}
-                            </button>
-                        ))
-                    ) : (
-                        input.length === 0 && <div className="px-3 py-2 text-xs text-slate-400 italic">Нет доступных тегов</div>
-                    )}
+                    {filteredSuggestions.map(tag => (
+                        <button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2">
+                            <TagIcon size={14} className="text-slate-400" /> {tag}
+                        </button>
+                    ))}
                 </div>
             )}
         </div>
@@ -166,12 +161,19 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
 
 
 const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask }) => {
-  const [input, setInput] = useState('');
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'inbox' | 'library'>('inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   
+  // Editor State
+  const [isExpanded, setIsExpanded] = useState(false);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeColorFilter, setActiveColorFilter] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -190,6 +192,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [oracleNote, setOracleNote] = useState<Note | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [editTagsList, setEditTagsList] = useState<string[]>([]);
 
@@ -212,18 +215,105 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const hasMoodMatcher = useMemo(() => config.aiTools.some(t => t.id === 'mood_matcher'), [config.aiTools]);
   const hasTagger = useMemo(() => config.aiTools.some(t => t.id === 'tagger'), [config.aiTools]);
 
+  // --- EDITOR LOGIC ---
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        if (editorRef.current && !editorRef.current.contains(event.target as Node)) {
+            if (isExpanded) {
+                // If clicked outside, try to save if content exists
+                if (content.trim() || title.trim()) {
+                    handleDump();
+                } else {
+                    setIsExpanded(false);
+                }
+            }
+        }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isExpanded, content, title]);
+
+  useEffect(() => {
+      if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+      }
+  }, [content, isExpanded]);
+
+  // Handle Paste for Images
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+        if (!isExpanded) return;
+        // Only handle if this specific textarea is focused
+        if (document.activeElement !== textareaRef.current) return;
+
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                e.preventDefault();
+                const blob = items[i].getAsFile();
+                if (blob) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const base64 = event.target?.result as string;
+                        insertAtCursor(`\n![Image](${base64})\n`);
+                    };
+                    reader.readAsDataURL(blob);
+                }
+            }
+        }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isExpanded]);
+
+  const insertAtCursor = (textToInsert: string) => {
+      if (!textareaRef.current) return;
+      const start = textareaRef.current.selectionStart;
+      const end = textareaRef.current.selectionEnd;
+      const newContent = content.substring(0, start) + textToInsert + content.substring(end);
+      setContent(newContent);
+      // Wait for render to update height
+      setTimeout(() => {
+          if (textareaRef.current) {
+              textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + textToInsert.length;
+              textareaRef.current.focus();
+          }
+      }, 0);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+              if (ev.target?.result) {
+                  insertAtCursor(`\n![Image](${ev.target.result})\n`);
+              }
+          };
+          reader.readAsDataURL(file);
+      }
+  };
+
   const handleDump = async () => {
-    if (!input.trim()) return;
+    if (!content.trim() && !title.trim()) {
+        setIsExpanded(false);
+        return;
+    }
+    
     setIsProcessing(true);
-    await new Promise(resolve => setTimeout(resolve, 600));
+    // await new Promise(resolve => setTimeout(resolve, 600)); // Remove fake delay for smoother UX
 
     let autoTags: string[] = [];
-    if (hasTagger && creationTags.length === 0) {
-        autoTags = await autoTagNote(input, config);
+    if (hasTagger && creationTags.length === 0 && content.length > 20) {
+        autoTags = await autoTagNote(content, config);
     }
-    const formattedContent = applyTypography(input);
+    const formattedContent = applyTypography(content);
     const newNote: Note = {
       id: Date.now().toString(),
+      title: title.trim() ? applyTypography(title.trim()) : undefined,
       content: formattedContent,
       tags: [...creationTags, ...autoTags],
       createdAt: Date.now(),
@@ -232,9 +322,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       isPinned: false
     };
     addNote(newNote);
-    setInput('');
+    setTitle('');
+    setContent('');
     setCreationTags([]);
     setIsProcessing(false);
+    setIsExpanded(false);
   };
 
   const handleMoodSearch = async () => {
@@ -301,15 +393,21 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const handleOpenNote = (note: Note) => {
       setSelectedNote(note);
+      setEditTitle(note.title || '');
       setEditContent(note.content);
       setEditTagsList(note.tags ? note.tags.map(t => t.replace(/^#/, '')) : []);
       setIsEditing(false);
   };
 
   const handleSaveEdit = () => {
-      if (selectedNote && editContent.trim() !== '') {
+      if (selectedNote && (editContent.trim() !== '' || editTitle.trim() !== '')) {
           const formattedContent = applyTypography(editContent);
-          const updated = { ...selectedNote, content: formattedContent, tags: editTagsList };
+          const updated = { 
+              ...selectedNote, 
+              title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
+              content: formattedContent, 
+              tags: editTagsList 
+          };
           updateNote(updated);
           setSelectedNote(updated);
           setIsEditing(false);
@@ -338,7 +436,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       }
       if (!showTagInput && searchQuery) {
           const query = searchQuery.toLowerCase();
-          const matchesSearch = note.content.toLowerCase().includes(query) || (note.tags && note.tags.some(t => t.toLowerCase().includes(query)));
+          const matchesSearch = note.content.toLowerCase().includes(query) || (note.title && note.title.toLowerCase().includes(query)) || (note.tags && note.tags.some(t => t.toLowerCase().includes(query)));
           if (!matchesSearch) return false;
       }
       const matchesColor = activeColorFilter === null || note.color === activeColorFilter;
@@ -371,11 +469,16 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onClick={() => handleOpenNote(note)}
         className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
-        <div className="flex justify-between items-start mb-2 relative">
-             <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 p-1 -ml-2 -mt-2" title="Перетащить">
+        {note.title && (
+            <div className="font-bold text-slate-800 dark:text-slate-100 mb-1 text-sm md:text-base leading-snug line-clamp-2">
+                {note.title}
+            </div>
+        )}
+        <div className="flex justify-between items-start mb-1 relative">
+             <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 p-1 -ml-2 -mt-2 opacity-0 group-hover:opacity-100 transition-opacity" title="Перетащить">
                 <GripVertical size={14} />
              </div>
-             <div className="flex items-center -mr-2 -mt-2 gap-1">
+             <div className="absolute top-0 right-0 flex items-center -mr-2 -mt-2 gap-1">
                  <div className="flex gap-0.5 md:hidden">
                     <button onClick={(e) => moveNoteVertical(e, note.id, 'up')} className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400"><ChevronUp size={12}/></button>
                     <button onClick={(e) => moveNoteVertical(e, note.id, 'down')} className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400"><ChevronDown size={12}/></button>
@@ -387,7 +490,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         className={`p-1 rounded transition-all ${
                             note.isPinned 
                             ? 'text-indigo-500 dark:text-indigo-400 opacity-100' 
-                            : 'text-slate-300 dark:text-slate-600 md:opacity-0 group-hover:opacity-100 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5'
+                            : 'text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5'
                         }`}
                      >
                         <Pin size={14} fill={note.isPinned ? "currentColor" : "none"} className={note.isPinned ? "transform rotate-45" : ""} />
@@ -395,7 +498,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                  </Tooltip>
              </div>
         </div>
-        <div className="text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-3 text-sm">
+        <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm ${!note.title ? 'mt-1' : ''}`}>
             <ReactMarkdown components={markdownComponents}>{note.content}</ReactMarkdown>
         </div>
         <div className="mt-auto flex flex-col gap-3 pt-3 border-t border-slate-900/5 dark:border-white/5">
@@ -408,10 +511,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     ))}
                 </div>
             )}
-            <div className="flex justify-end items-center w-full">
+            <div className="flex justify-end items-center w-full opacity-0 group-hover:opacity-100 transition-opacity">
                  <div className="flex gap-2 justify-end">
                     <Tooltip content="В Спринты">
-                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 md:px-3 py-1.5 rounded-lg transition-colors"><Kanban size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 md:px-3 py-1.5 rounded-lg transition-colors"><Kanban size={14} /></button>
                     </Tooltip>
                     <Tooltip content="В Хаб">
                         <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Хаб?')) moveNoteToSandbox(note.id); }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 md:px-3 py-1.5 rounded-lg transition-colors"><Box size={14} /></button>
@@ -516,12 +619,88 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       {activeTab === 'inbox' && (
         <>
             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
-                <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-3 md:p-4 shrink-0">
-                    <textarea className="w-full h-24 md:h-32 resize-none outline-none text-base text-slate-700 dark:text-slate-200 bg-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder="О чём ты думаешь? (Поддерживается Markdown)" value={input} onChange={(e) => setInput(e.target.value)} />
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 border-t border-slate-50 dark:border-slate-700 pt-3 gap-2">
-                        <div className="w-full md:w-2/3"><TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} placeholder="Добавить теги..." /></div>
-                        <button onClick={handleDump} disabled={isProcessing || !input.trim()} className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 text-sm font-medium h-[42px] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all">{isProcessing ? <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"/> : <Send size={16} />} Записать</button>
-                    </div>
+                <div 
+                    ref={editorRef}
+                    className={`bg-white dark:bg-[#1e293b] rounded-2xl border transition-all duration-300 shrink-0 ${isExpanded ? 'shadow-lg border-slate-300 dark:border-slate-600' : 'shadow-sm border-slate-200 dark:border-slate-700 hover:shadow-md'}`}
+                >
+                    {!isExpanded ? (
+                        <div 
+                            onClick={() => setIsExpanded(true)}
+                            className="p-3 md:p-4 text-slate-500 dark:text-slate-400 cursor-text text-sm font-medium flex items-center justify-between"
+                        >
+                            <span>Заметка...</span>
+                            <div className="flex gap-3 text-slate-400">
+                                <ImageIcon size={18} />
+                                <PenTool size={18} />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col animate-in fade-in duration-200">
+                            <input 
+                                type="text"
+                                placeholder="Заголовок"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                className="px-4 pt-4 pb-2 bg-transparent text-base font-bold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none"
+                            />
+                            <textarea 
+                                ref={textareaRef}
+                                className="w-full min-h-[120px] resize-none outline-none text-sm text-slate-700 dark:text-slate-200 bg-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 px-4 py-2" 
+                                placeholder="О чём ты думаешь?" 
+                                value={content} 
+                                onChange={(e) => setContent(e.target.value)} 
+                                autoFocus
+                            />
+                            
+                            <div className="px-4 py-2">
+                                <TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} placeholder="Теги..." />
+                            </div>
+
+                            <div className="flex items-center justify-between px-3 py-2 border-t border-slate-100 dark:border-slate-700/50">
+                                <div className="flex items-center gap-1">
+                                    <Tooltip content="Вставить картинку">
+                                        <label className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full cursor-pointer text-slate-500 dark:text-slate-400 transition-colors">
+                                            <input 
+                                                ref={fileInputRef}
+                                                type="file" 
+                                                accept="image/*" 
+                                                className="hidden" 
+                                                onChange={handleImageUpload} 
+                                            />
+                                            <ImageIcon size={18} />
+                                        </label>
+                                    </Tooltip>
+                                    <Tooltip content="Жирный">
+                                        <button onClick={() => insertAtCursor('**Text**')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
+                                            <Bold size={18} />
+                                        </button>
+                                    </Tooltip>
+                                    <Tooltip content="Курсив">
+                                        <button onClick={() => insertAtCursor('_Text_')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
+                                            <Italic size={18} />
+                                        </button>
+                                    </Tooltip>
+                                    <Tooltip content="Список">
+                                        <button onClick={() => insertAtCursor('\n- ')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
+                                            <List size={18} />
+                                        </button>
+                                    </Tooltip>
+                                    <Tooltip content="Код">
+                                        <button onClick={() => insertAtCursor('`Code`')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
+                                            <Code size={18} />
+                                        </button>
+                                    </Tooltip>
+                                </div>
+                                <button 
+                                    onClick={handleDump} 
+                                    disabled={isProcessing} 
+                                    className="text-sm font-medium px-4 py-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
+                                >
+                                    Закрыть
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
             
@@ -589,6 +768,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0 pr-2">
                                   <div className="min-h-full flex flex-col">
                                       <div className="m-auto w-full py-2">
+                                          {oracleNote.title && <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 text-center mb-2">{oracleNote.title}</h3>}
                                           <div className="text-base md:text-lg text-slate-800 dark:text-slate-200 font-normal leading-relaxed relative py-4 text-center">
                                               <div className="relative z-10 px-3"><ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}}>{oracleNote.content}</ReactMarkdown></div>
                                           </div>
@@ -641,11 +821,19 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 </div>
                 {isEditing ? (
                     <div className="mb-6 space-y-3">
-                        <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 focus:ring focus:ring-indigo-100 dark:focus:ring-indigo-900 outline-none resize-none leading-relaxed font-mono text-sm" placeholder="Поддерживается Markdown..." />
-                        <div><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Теги</label><TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} /></div>
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Заголовок</label>
+                            <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-white/50 dark:bg-black/20 rounded-lg p-2.5 text-base font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none" placeholder="Заголовок..." />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Содержание</label>
+                            <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 focus:ring focus:ring-indigo-100 dark:focus:ring-indigo-900 outline-none resize-none leading-relaxed font-mono text-sm" placeholder="Поддерживается Markdown..." />
+                        </div>
+                        <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Теги</label><TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} /></div>
                     </div>
                 ) : (
                     <div className="mb-6">
+                        {selectedNote.title && <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{selectedNote.title}</h2>}
                         <div className="text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-4 overflow-x-hidden">
                             <ReactMarkdown components={markdownComponents}>{selectedNote.content}</ReactMarkdown>
                         </div>
