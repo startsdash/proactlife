@@ -1165,7 +1165,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                        </Tooltip>
 
                                        {!draftChallenge && hasChallengeAuthors && (
-                                           <Tooltip content={generatingChallengeFor === task.id ? "Остановить" : "Челлендж"}>
+                                           <Tooltip 
+                                                content={generatingChallengeFor === task.id ? "Остановить" : "Челлендж (ИИ)"}
+                                                disabled={generatingChallengeFor === task.id}
+                                           >
                                                <button 
                                                     disabled={hasActiveChallenge}
                                                     onClick={(e) => {
@@ -1198,7 +1201,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                        )}
 
                                        {hasKanbanTherapist && (
-                                           <Tooltip content={generatingTherapyFor === task.id ? "Остановить" : "Консультант (ИИ)"}>
+                                           <Tooltip 
+                                                content={generatingTherapyFor === task.id ? "Остановить" : "Консультант (ИИ)"}
+                                                disabled={generatingTherapyFor === task.id}
+                                           >
                                                <button 
                                                     onClick={(e) => openTherapy(e, task)} 
                                                     className="p-2 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg border border-transparent hover:border-violet-100 dark:hover:border-violet-800 transition-colors"
@@ -1333,9 +1339,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 
                 {/* MODAL HEADER */}
                 <div className="flex justify-between items-start mb-4 shrink-0">
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex-1 mr-4">
-                        {activeModal.type === 'stuck' && 'Личный консультант'}
-                        {activeModal.type === 'challenge' && 'Новый вызов'}
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex-1 mr-4 flex items-center">
+                        {activeModal.type === 'stuck' && <><Bot size={24} className="mr-2 text-violet-500"/> Личный консультант</>}
+                        {activeModal.type === 'challenge' && <><Zap size={24} className="mr-2 text-indigo-500"/> Новый вызов</>}
                         {activeModal.type === 'details' && (() => {
                             const task = getTaskForModal();
                             if (task?.title) return applyTypography(task.title);
@@ -1377,7 +1383,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             {aiResponse ? (
                                 <div className="space-y-4">
                                     <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-800">
-                                        <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase mb-2"><Bot size={14}/> Совет</div>
+                                        <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase mb-2">Совет</div>
                                         <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown></div>
                                     </div>
                                 </div>
@@ -1606,7 +1612,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 onClick={acceptDraftChallenge} 
                                 className="p-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors shadow-sm"
                             >
-                                <Rocket size={24} />
+                                <Rocket size={20} />
                             </button>
                         </Tooltip>
                     </div>
