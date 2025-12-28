@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { JournalEntry } from '../types';
 import { MOOD_TAGS } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Thermometer, Calendar, TrendingUp, X } from 'lucide-react';
+import { Activity, Thermometer, Calendar, TrendingUp, X, Clock, Sun, Moon } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
 interface Props {
@@ -32,10 +32,10 @@ const getLocalDateKey = (date: Date) => {
 const MoodWave = ({ data }: { data: { date: number, mood: number }[] }) => {
     if (!data || data.length < 2) return <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">Мало данных для волны</div>;
 
-    const height = 100;
-    const width = 300;
+    const height = 120;
+    const width = 400; // Increased resolution
     const paddingX = 10;
-    const paddingY = 10;
+    const paddingY = 15;
     const chartHeight = height - paddingY * 2;
     const chartWidth = width - paddingX * 2;
 
@@ -49,6 +49,7 @@ const MoodWave = ({ data }: { data: { date: number, mood: number }[] }) => {
     const pathData = points.reduce((acc, [x, y], i, arr) => {
         if (i === 0) return `M ${x},${y}`;
         const [prevX, prevY] = arr[i - 1];
+        // Smoother curve
         const cp1x = prevX + (x - prevX) / 2;
         const cp1y = prevY;
         const cp2x = prevX + (x - prevX) / 2;
@@ -60,7 +61,7 @@ const MoodWave = ({ data }: { data: { date: number, mood: number }[] }) => {
     const areaPath = `${pathData} L ${width - paddingX},${height} L ${paddingX},${height} Z`;
 
     return (
-        <div className="w-full h-40 relative">
+        <div className="w-full h-48 relative">
             <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
                 <defs>
                     <linearGradient id="waveGradient" x1="0" y1="0" x2="0" y2="1">
@@ -167,11 +168,130 @@ const MoodCalendar = ({ history }: { history: Record<string, number> }) => {
     );
 };
 
+// 4. Chronos Heatmap (Day x Hour)
+const ChronosHeatmap = ({ entries }: { entries: JournalEntry[] }) => {
+    const buckets = [
+        { label: 'Ночь', hours: [0, 1, 2, 3] },
+        { label: 'Утро', hours: [4, 5, 6, 7] },
+        { label: 'Утро+', hours: [8, 9, 10, 11] },
+        { label: 'День', hours: [12, 13, 14, 15] },
+        { label: 'Вечер', hours: [16, 17, 18, 19] },
+        { label: 'Поздно', hours: [20, 21, 22, 23] },
+    ];
+    const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+    // 7 rows (Days) x 6 cols (Time Buckets)
+    const grid = Array.from({ length: 7 }, () => 
+        Array.from({ length: 6 }, () => ({ sum: 0, count: 0 }))
+    );
+
+    let peakHourSum = new Array(24).fill(0);
+    let peakHourCount = new Array(24).fill(0);
+
+    entries.forEach(e => {
+        if (!e.mood) return;
+        const d = new Date(e.date);
+        
+        // Day Index (0 = Mon, 6 = Sun)
+        let dayIdx = d.getDay() - 1;
+        if (dayIdx === -1) dayIdx = 6; 
+
+        const hour = d.getHours();
+        
+        // Find bucket index
+        const bucketIdx = Math.floor(hour / 4);
+
+        if (grid[dayIdx] && grid[dayIdx][bucketIdx]) {
+            grid[dayIdx][bucketIdx].sum += e.mood;
+            grid[dayIdx][bucketIdx].count += 1;
+        }
+
+        peakHourSum[hour] += e.mood;
+        peakHourCount[hour] += 1;
+    });
+
+    // Find happiest hour
+    let maxAvg = 0;
+    let happiestHour = -1;
+    peakHourSum.forEach((sum, h) => {
+        const count = peakHourCount[h];
+        if (count >= 2) { // Minimum threshold to be significant
+            const avg = sum / count;
+            if (avg > maxAvg) {
+                maxAvg = avg;
+                happiestHour = h;
+            }
+        }
+    });
+
+    const getCellColor = (avg: number, count: number) => {
+        if (count === 0) return 'bg-slate-50 dark:bg-slate-800/50';
+        // Opacity based on count (up to 5 entries for max opacity)
+        // Hue based on avg mood
+        const moodConfig = MOODS.find(m => m.value === Math.round(avg)) || MOODS[2];
+        
+        // Simplify: Just use mood color with some transparency logic if needed, 
+        // but simple mapping is cleaner.
+        return `bg-gradient-to-br ${moodConfig.color} text-white shadow-sm`;
+    };
+
+    return (
+        <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-1">
+                {/* Header Row */}
+                <div className="grid grid-cols-[30px_repeat(6,1fr)] gap-1 mb-1">
+                    <div />
+                    {buckets.map((b, i) => (
+                        <div key={i} className="text-center text-[9px] text-slate-400 uppercase font-bold tracking-tighter truncate" title={b.label}>
+                            {b.label}
+                        </div>
+                    ))}
+                </div>
+                {/* Rows */}
+                {weekDays.map((day, rowIdx) => (
+                    <div key={day} className="grid grid-cols-[30px_repeat(6,1fr)] gap-1">
+                        <div className="text-[10px] font-bold text-slate-400 flex items-center justify-center">{day}</div>
+                        {buckets.map((_, colIdx) => {
+                            const cell = grid[rowIdx][colIdx];
+                            const avg = cell.count > 0 ? cell.sum / cell.count : 0;
+                            return (
+                                <Tooltip key={colIdx} content={cell.count > 0 ? `Настроение: ${avg.toFixed(1)} (${cell.count} записей)` : 'Нет данных'}>
+                                    <div className={`aspect-video rounded-md flex items-center justify-center text-[10px] font-bold transition-all cursor-default ${getCellColor(avg, cell.count)}`}>
+                                        {cell.count > 0 && Math.round(avg)}
+                                    </div>
+                                </Tooltip>
+                            );
+                        })}
+                    </div>
+                ))}
+            </div>
+
+            {happiestHour !== -1 && (
+                <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4 flex items-center gap-4">
+                    <div className="p-3 bg-white dark:bg-indigo-800 rounded-full shadow-sm">
+                        {happiestHour >= 6 && happiestHour < 18 ? <Sun size={24} className="text-amber-500" /> : <Moon size={24} className="text-indigo-400" />}
+                    </div>
+                    <div>
+                        <div className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Пик счастья</div>
+                        <div className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                            {happiestHour}:00 – {happiestHour + 1}:00
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                            В это время ваше настроение в среднем <span className="font-bold text-indigo-500">{maxAvg.toFixed(1)}/5</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 const Moodbar: React.FC<Props> = ({ entries, onAddEntry }) => {
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'calendar'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'calendar' | 'chronos'>('overview');
+  const [waveDays, setWaveDays] = useState(14); // Default 14 days for wave
 
   // Compute Stats
   const { history, waveData, distribution, averageMood, dominantMood } = useMemo(() => {
@@ -185,8 +305,6 @@ const Moodbar: React.FC<Props> = ({ entries, onAddEntry }) => {
 
       moodEntries.forEach(e => {
           const k = getLocalDateKey(new Date(e.date));
-          // Simple logic: if multiple entries per day, take latest (or average if you prefer)
-          // Let's take average for smoother graphs
           if (!history[k]) history[k] = e.mood!;
           else history[k] = (history[k] + e.mood!) / 2;
           
@@ -195,15 +313,23 @@ const Moodbar: React.FC<Props> = ({ entries, onAddEntry }) => {
           moodCount++;
       });
 
-      // Wave Data (Last 14 days filled)
+      // Wave Data (Flexible Range)
       const waveData = [];
       const today = new Date();
-      for (let i = 13; i >= 0; i--) {
+      // Generate last N days based on waveDays
+      for (let i = waveDays - 1; i >= 0; i--) {
           const d = new Date(today);
           d.setDate(d.getDate() - i);
           const k = getLocalDateKey(d);
           if (history[k]) {
               waveData.push({ date: d.getTime(), mood: history[k] });
+          } else {
+              // Push null or keep sparse? 
+              // For smooth wave, better to have sparse or interpolated. 
+              // Chart handles sparse by drawing curves between existing points.
+              // If we want a continuous timeline even with gaps, we might push nulls, 
+              // but current MoodWave component expects data points to draw.
+              // Let's just push existing points within range.
           }
       }
 
@@ -213,7 +339,7 @@ const Moodbar: React.FC<Props> = ({ entries, onAddEntry }) => {
       const dominantMood = moodCount > 0 ? MOODS[dominantIndex] : null;
 
       return { history, waveData, distribution: counts, averageMood, dominantMood };
-  }, [entries]);
+  }, [entries, waveDays]);
 
   const handleSave = () => {
       if (!selectedMood) return;
@@ -341,13 +467,16 @@ const Moodbar: React.FC<Props> = ({ entries, onAddEntry }) => {
         </div>
 
         {/* STATS SECTION */}
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-6xl mx-auto pb-24">
             <div className="flex gap-4 mb-6 overflow-x-auto pb-2 scrollbar-none">
                 <button onClick={() => setActiveTab('overview')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'overview' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                     <Activity size={16} /> Обзор волны
                 </button>
                 <button onClick={() => setActiveTab('calendar')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'calendar' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                     <Calendar size={16} /> Календарь
+                </button>
+                <button onClick={() => setActiveTab('chronos')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'chronos' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                    <Clock size={16} /> Chronos
                 </button>
             </div>
 
@@ -358,13 +487,27 @@ const Moodbar: React.FC<Props> = ({ entries, onAddEntry }) => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* LEFT COL: WAVE & SPECTRUM */}
+                    {/* LEFT COL: CONTENT */}
                     <div className="md:col-span-2 space-y-6">
                         {activeTab === 'overview' && (
                             <>
                                 <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2"><TrendingUp size={16} /> Динамика (14 дней)</h3>
+                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+                                        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                            <TrendingUp size={16} /> Динамика ({waveDays} дн.)
+                                        </h3>
+                                        <div className="flex items-center gap-2 w-full md:w-auto">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Диапазон:</span>
+                                            <input 
+                                                type="range" 
+                                                min="3" 
+                                                max="30" 
+                                                value={waveDays} 
+                                                onChange={(e) => setWaveDays(parseInt(e.target.value))} 
+                                                className="w-full md:w-32 accent-indigo-600 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                            <span className="text-xs font-mono text-slate-500 w-6">{waveDays}</span>
+                                        </div>
                                     </div>
                                     <MoodWave data={waveData} />
                                 </div>
@@ -378,6 +521,12 @@ const Moodbar: React.FC<Props> = ({ entries, onAddEntry }) => {
                              <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
                                  <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-6">Хроника состояния (28 дней)</h3>
                                  <MoodCalendar history={history} />
+                             </div>
+                        )}
+                        {activeTab === 'chronos' && (
+                             <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
+                                 <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-6">Тепловая карта Chronos</h3>
+                                 <ChronosHeatmap entries={entries} />
                              </div>
                         )}
                     </div>
