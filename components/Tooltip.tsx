@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -15,6 +15,12 @@ export const Tooltip: React.FC<TooltipProps> = ({ content, children, side = 'top
   const [visible, setVisible] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (disabled && visible) {
+        setVisible(false);
+    }
+  }, [disabled, visible]);
 
   const updatePosition = () => {
     if (triggerRef.current) {
