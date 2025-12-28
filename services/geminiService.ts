@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig, JournalEntry, SketchItem } from "../types";
+import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig, JournalEntry } from "../types";
 import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL, applyTypography, BASE_OUTPUT_INSTRUCTION } from '../constants';
 
 // --- API Access ---
@@ -288,55 +288,5 @@ export const analyzeJournalPath = async (entries: JournalEntry[], config: AppCon
     } catch (e) {
         console.error("Journal Analysis Error", e);
         return "Analysis failed.";
-    }
-};
-
-// --- SKETCHPAD AI ---
-
-export const generateSketchpadIdea = async (items: SketchItem[], config: AppConfig): Promise<string> => {
-    if (items.length === 0) return "Add some items first!";
-    
-    const ai = getAiClient();
-    // Use gemini-2.5-flash for reliable multimodal support if default is gemma
-    const model = 'gemini-2.5-flash'; 
-
-    const parts: any[] = [];
-    
-    // Construct the parts array
-    for (const item of items) {
-        if (item.type === 'text') {
-            parts.push({ text: `[Note]: ${item.content}` });
-        } else if (item.type === 'image') {
-            // content is data:image/png;base64,.....
-            try {
-                const match = item.content.match(/^data:(.*?);base64,(.*)$/);
-                if (match) {
-                    parts.push({
-                        inlineData: {
-                            mimeType: match[1],
-                            data: match[2]
-                        }
-                    });
-                }
-            } catch (e) {
-                console.warn("Failed to parse image for AI", e);
-            }
-        }
-    }
-
-    parts.push({ text: "ИНСТРУКЦИЯ: Проанализируй этот хаос из заметок и изображений. Найди скрытую связь, неочевидную идею или творческий синтез. Сгенерируй ОДНУ глубокую, проницательную мысль или концепцию (на русском языке), которая объединяет эти элементы или предлагает новое направление. Будь краток и креативен." });
-
-    try {
-        const response = await ai.models.generateContent({
-            model,
-            contents: { parts },
-            config: {
-                temperature: 0.9, // High creativity
-            }
-        });
-        return applyTypography(response.text || "Не удалось сгенерировать идею.");
-    } catch (e) {
-        console.error("Sketchpad AI Error", e);
-        return "Ошибка соединения с космосом.";
     }
 };

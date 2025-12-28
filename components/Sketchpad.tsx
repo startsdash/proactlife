@@ -1,17 +1,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SketchItem, AppConfig } from '../types'; // Added AppConfig
-import { Shuffle, Image as ImageIcon, Type, Trash2, X, Plus, Maximize2, Sparkles, AlertCircle, Wand2 } from 'lucide-react';
+import { SketchItem } from '../types';
+import { Shuffle, Image as ImageIcon, Type, Trash2, X, Plus, Maximize2, Sparkles, AlertCircle } from 'lucide-react';
 import { Tooltip } from './Tooltip';
-import { generateSketchpadIdea } from '../services/geminiService'; // Import Service
 
 interface Props {
   items: SketchItem[];
   addItem: (item: SketchItem) => void;
   deleteItem: (id: string) => void;
   updateItem: (item: SketchItem) => void;
-  config: AppConfig; // Added Prop
 }
 
 const COLORS = [
@@ -22,10 +20,9 @@ const COLORS = [
     'bg-purple-100 dark:bg-purple-900/30 text-purple-900 dark:text-purple-100',
 ];
 
-const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem, config }) => {
+const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) => {
   const [textInput, setTextInput] = useState('');
   const [isShuffling, setIsShuffling] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false); // Loading state
   const [focusItem, setFocusItem] = useState<SketchItem | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -87,6 +84,11 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem, co
   // --- SHUFFLE LOGIC ---
   const handleShuffle = () => {
       setIsShuffling(true);
+      
+      // We simulate a shuffle by updating rotations and "widthClass" (layout)
+      // Actual array order shuffle in state is better done by parent or here if we pass a reorder function
+      // For this prototype, we'll just update properties to force re-render/layout shift
+      
       items.forEach(item => {
           updateItem({
               ...item,
@@ -94,31 +96,9 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem, co
               widthClass: Math.random() > 0.8 ? 'md:col-span-2' : 'md:col-span-1'
           });
       });
-      setTimeout(() => setIsShuffling(false), 600);
-  };
 
-  // --- AI GENERATION LOGIC ---
-  const handleGenerateIdea = async () => {
-      if (items.length === 0) {
-          alert("Добавь что-нибудь на холст для вдохновения!");
-          return;
-      }
-      setIsGenerating(true);
-      
-      const idea = await generateSketchpadIdea(items, config);
-      
-      const newItem: SketchItem = {
-          id: Date.now().toString(),
-          type: 'text',
-          content: idea,
-          createdAt: Date.now(),
-          color: 'bg-cyan-50 dark:bg-cyan-900/30 text-cyan-900 dark:text-cyan-100 border border-cyan-200 dark:border-cyan-700', // Distinct AI Color
-          rotation: 0,
-          widthClass: 'md:col-span-2' // Make it prominent
-      };
-      
-      addItem(newItem);
-      setIsGenerating(false);
+      // Simple timeout to reset visual state
+      setTimeout(() => setIsShuffling(false), 600);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,15 +124,6 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem, co
               <p className="text-xs text-slate-500 dark:text-slate-400 hidden md:block">Вставляй картинки (Ctrl+V), пиши мысли, смешивай контексты.</p>
           </div>
           <div className="flex items-center gap-2">
-              <Tooltip content="Синтез идей (AI)">
-                  <button 
-                    onClick={handleGenerateIdea} 
-                    disabled={isGenerating}
-                    className={`p-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-lg hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                      {isGenerating ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Wand2 size={20} />}
-                  </button>
-              </Tooltip>
               <Tooltip content="Перемешать (Инсайт)">
                   <button 
                     onClick={handleShuffle} 
