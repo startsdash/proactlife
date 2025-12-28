@@ -888,7 +888,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 <div className="flex gap-1 mt-2" onClick={e => e.stopPropagation()}>
                     <input
                         type="text"
-                        className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-[10px] outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
+                        className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded px-2 py-1 text-[10px] outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
                         placeholder="Добавить..."
                         value={cardSubtaskInputs[task.id] || ''}
                         onChange={(e) => setCardSubtaskInputs(prev => ({...prev, [task.id]: e.target.value}))}
@@ -922,7 +922,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 {!isCreatorOpen ? (
                     <button 
                         onClick={() => setIsCreatorOpen(true)}
-                        className="w-full flex items-center justify-between bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-all shadow-sm"
+                        className="w-full flex items-center justify-between bg-white dark:bg-[#1e293b] border border-slate-100 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-all shadow-sm"
                     >
                         <span>Новая задача...</span>
                         <Plus size={16} />
@@ -988,7 +988,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     const hasActiveChallenge = task.activeChallenge && !task.isChallengeCompleted;
 
                     return (
-                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group border-l-4 ${borderClass} overflow-hidden`}>
+                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all cursor-default relative group border-l-4 ${borderClass} overflow-hidden`}>
                         
                         {/* HEADER: Title + Sphere Selector */}
                         <div className="flex justify-between items-start gap-2 mb-2">
@@ -1131,7 +1131,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             </>
                         )}
 
-                        <div className="mt-auto border-t border-slate-50 dark:border-slate-700 pt-3 flex flex-col gap-3">
+                        <div className="mt-auto border-t border-slate-50 dark:border-slate-800 pt-3 flex flex-col gap-3">
                             <div className="flex justify-end items-center w-full gap-2">
                                {col.id === 'todo' && (
                                     <>
@@ -1274,7 +1274,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden">
       <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc] md:dark:bg-[#0f172a] md:pb-6 transition-colors duration-300">
         <div>
-            <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Спринты</h1>
+            <h1 className="text-3xl font-light tracking-tight text-slate-900 dark:text-white">Спринты</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Фокус на главном</p>
         </div>
         

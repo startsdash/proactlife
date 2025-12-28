@@ -687,7 +687,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         
         {/* 1. ENERGY OF THE DAY (Large Square - Top Left) */}
         <motion.div 
-            className="md:col-span-1 md:row-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col items-center justify-between relative overflow-hidden"
+            className="md:col-span-1 md:row-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-between relative overflow-hidden hover:shadow-md transition-shadow"
             whileHover={{ scale: 1.01 }}
             transition={{ type: "spring", stiffness: 300 }}
         >
@@ -707,7 +707,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         {/* 2. HABIT RHYTHM (Wide - Top Middle) */}
         <motion.div 
             onClick={() => onNavigate(Module.RITUALS)}
-            className="md:col-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col cursor-pointer group"
+            className="md:col-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col cursor-pointer group hover:shadow-md transition-shadow"
             whileHover={{ y: -2 }}
         >
             <div className="flex justify-between items-start mb-4">
@@ -724,7 +724,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         {/* 3. THOUGHTS (Small Square - Top Right) */}
         <motion.div 
             onClick={() => onNavigate(Module.NAPKINS)}
-            className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between cursor-pointer group"
+            className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col justify-between cursor-pointer group hover:shadow-md transition-shadow"
             whileHover={{ y: -2 }}
         >
              <div className="flex items-center gap-2">
@@ -741,7 +741,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         </motion.div>
 
         {/* 4. CHRONOTYPE ACTIVITY (Split Card: Area + Radar) */}
-        <motion.div className="md:col-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
+        <motion.div className="md:col-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                     <Clock size={16} className="text-slate-400" />
@@ -773,7 +773,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         {/* 5. CHALLENGES (Tall Light Card - Right) */}
         <motion.div 
             onClick={() => onNavigate(Module.KANBAN)}
-            className="md:col-span-1 md:row-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col relative overflow-hidden cursor-pointer group"
+            className="md:col-span-1 md:row-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col relative overflow-hidden cursor-pointer group hover:shadow-md transition-shadow"
         >
              <div className="flex items-center gap-2 mb-6">
                  <Zap size={16} className="text-indigo-500" />
@@ -813,7 +813,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         </motion.div>
 
         {/* 6. BALANCE (Bar Chart - Bottom Left) */}
-        <motion.div className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
+        <motion.div className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col hover:shadow-md transition-shadow">
              <div className="flex items-center gap-2 mb-4">
                  <Target size={16} className="text-emerald-500" />
                  <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Баланс сфер (7 дн)</span>
@@ -847,7 +847,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         </motion.div>
 
         {/* 8. TOTAL ACTIVITY (Bottom Right - Updated) */}
-        <motion.div className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
+        <motion.div className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col hover:shadow-md transition-shadow">
              <div className="flex items-center justify-between mb-4">
                  <div className="flex items-center gap-2">
                      <Calendar size={16} className="text-slate-400" />

@@ -22,7 +22,7 @@ interface Props {
 }
 
 const colors = [
-    { id: 'white', class: 'bg-white dark:bg-[#1e293b]', border: 'border-slate-100 dark:border-slate-700', hex: '#ffffff' },
+    { id: 'white', class: 'bg-white dark:bg-[#1e293b]', border: 'border-slate-100 dark:border-slate-800', hex: '#ffffff' },
     { id: 'red', class: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-100 dark:border-red-800/50', hex: '#fef2f2' },
     { id: 'amber', class: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-100 dark:border-amber-800/50', hex: '#fffbeb' },
     { id: 'emerald', class: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-100 dark:border-emerald-800/50', hex: '#ecfdf5' },
@@ -69,7 +69,6 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    // Close dropdown on click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -80,7 +79,6 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Filter suggestions
     const filteredSuggestions = existingTags.filter(
         tag => !selectedTags.some(st => st.toLowerCase() === tag.toLowerCase()) && 
                tag.toLowerCase().includes(input.toLowerCase())
@@ -121,7 +119,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
 
     return (
         <div className="relative" ref={wrapperRef}>
-            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900 focus-within:border-indigo-200 dark:focus-within:border-indigo-700 transition-all min-h-[42px]">
+            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-lg focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900 focus-within:border-indigo-200 dark:focus-within:border-indigo-700 transition-all min-h-[42px]">
                 {selectedTags.map(tag => (
                     <span key={tag} className="flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-2 py-1 rounded-md animate-in zoom-in-95 duration-100">
                         <TagIcon size={10} />
@@ -143,7 +141,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
             </div>
 
             {isOpen && (input.length > 0 || filteredSuggestions.length > 0) && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
                     {input.length > 0 && !isExactMatchInSuggestions && !isExactMatchInSelected && (
                         <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 flex items-center gap-2">
                             <Plus size={14} /> Создать «{input}»
@@ -358,7 +356,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   };
   const getNoteBorderClass = (colorId?: string) => {
       const c = colors.find(c => c.id === colorId);
-      return c ? c.border : 'border-slate-100 dark:border-slate-700';
+      return c ? c.border : 'border-slate-100 dark:border-slate-800';
   };
 
   const renderNoteCard = (note: Note, isArchived: boolean) => (
@@ -369,7 +367,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, note.id)}
         onClick={() => handleOpenNote(note)}
-        className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
+        className={`${getNoteColorClass(note.color)} p-4 rounded-2xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
         <div className="flex justify-between items-start mb-2 relative">
              <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 p-1 -ml-2 -mt-2" title="Перетащить">
@@ -431,10 +429,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     <div className="flex flex-col h-full max-w-4xl mx-auto p-3 md:p-8 space-y-4 md:space-y-6 relative overflow-y-auto">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
         <div>
-          <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Заметки</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 md:mt-2 text-sm">На скорости мысли</p>
+          <h1 className="text-3xl font-light tracking-tight text-slate-900 dark:text-white">Заметки</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">На скорости мысли</p>
         </div>
-        <div className="flex bg-white dark:bg-[#1e293b] p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 self-start md:self-auto w-full md:w-auto">
+        <div className="flex bg-white dark:bg-[#1e293b] p-1 rounded-lg border border-slate-100 dark:border-slate-800 shadow-sm shrink-0 self-start md:self-auto w-full md:w-auto">
             <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-2 text-sm rounded-md transition-all ${activeTab === 'inbox' ? 'bg-slate-900 dark:bg-indigo-600 text-white' : 'text-slate-500 dark:text-slate-400'}`}><LayoutGrid size={16} /> Входящие</button>
             <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-2 text-sm rounded-md transition-all ${activeTab === 'library' ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400'}`}><Library size={16} /> Библиотека</button>
         </div>
@@ -464,7 +462,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 ) : (
                     <>
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input type="text" placeholder="Поиск по ключевым словам..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 focus:border-indigo-200 dark:text-slate-200 transition-all shadow-sm" />
+                        <input type="text" placeholder="Поиск по ключевым словам..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-white dark:bg-[#1e293b] border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 focus:border-indigo-200 dark:text-slate-200 transition-all shadow-sm" />
                         {searchQuery && (
                             <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={14} /></button>
                         )}
@@ -475,14 +473,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             {!showMoodInput && !showTagInput && (
                 <>
                     <Tooltip content="Поиск по тегам" side="bottom">
-                        <button onClick={() => setShowTagInput(true)} className="p-2 rounded-xl border transition-all bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800"><TagIcon size={18} /></button>
+                        <button onClick={() => setShowTagInput(true)} className="p-2 rounded-xl border transition-all bg-white dark:bg-[#1e293b] border-slate-100 dark:border-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800"><TagIcon size={18} /></button>
                     </Tooltip>
                     <Tooltip content="Фильтр по цвету" side="bottom">
-                        <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border transition-all ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800/50 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}><Palette size={18} /></button>
+                        <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border transition-all ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800/50 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] border-slate-100 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}><Palette size={18} /></button>
                     </Tooltip>
                     {hasMoodMatcher && (
                         <Tooltip content="Подбор по теме (ИИ)" side="bottom">
-                            <button onClick={() => setShowMoodInput(true)} className={`p-2 rounded-xl border transition-all ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/50 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-purple-500 hover:border-purple-200'}`}><Sparkles size={18} /></button>
+                            <button onClick={() => setShowMoodInput(true)} className={`p-2 rounded-xl border transition-all ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/50 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] border-slate-100 dark:border-slate-800 text-slate-400 hover:text-purple-500 hover:border-purple-200'}`}><Sparkles size={18} /></button>
                         </Tooltip>
                     )}
                     <Tooltip content="Рандом" side="bottom">
@@ -516,9 +514,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       {activeTab === 'inbox' && (
         <>
             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
-                <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-3 md:p-4 shrink-0">
+                <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-3 md:p-4 shrink-0">
                     <textarea className="w-full h-24 md:h-32 resize-none outline-none text-base text-slate-700 dark:text-slate-200 bg-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder="О чём ты думаешь? (Поддерживается Markdown)" value={input} onChange={(e) => setInput(e.target.value)} />
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 border-t border-slate-50 dark:border-slate-700 pt-3 gap-2">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 border-t border-slate-50 dark:border-slate-800 pt-3 gap-2">
                         <div className="w-full md:w-2/3"><TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} placeholder="Добавить теги..." /></div>
                         <button onClick={handleDump} disabled={isProcessing || !input.trim()} className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 text-sm font-medium h-[42px] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all">{isProcessing ? <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"/> : <Send size={16} />} Записать</button>
                     </div>
