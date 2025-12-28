@@ -46,7 +46,7 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all border ${
                             isSelected 
                             ? `${s.bg} ${s.text} ${s.border}` 
-                            : 'bg-white dark:bg-slate-800 text-slate-400 border-slate-100 dark:border-slate-800 hover:border-slate-300'
+                            : 'bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
                         }`}
                     >
                         {Icon && <Icon size={12} />}
@@ -274,7 +274,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
     <div className="h-full overflow-y-auto custom-scrollbar-light p-4 md:p-8 relative">
       <header className="mb-6 flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-light tracking-tight text-slate-900 dark:text-white">Трекер</h1>
+          <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Трекер</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Автопилот полезных привычек</p>
         </div>
         {!isFormOpen && (
@@ -317,7 +317,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
             exit={{ height: 0, opacity: 0 }}
             className="mb-6 overflow-hidden"
           >
-              <div className="bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+              <div className="bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <div className="flex justify-between items-start mb-4">
                       <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{editingId ? 'Редактировать привычку' : 'Новая привычка'}</h3>
                       <button onClick={() => { setIsFormOpen(false); resetForm(); }} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
@@ -325,7 +325,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                   
                   <div className="space-y-4">
                       <input 
-                        className="w-full text-lg font-medium border-b-2 border-slate-100 dark:border-slate-800 bg-transparent py-2 outline-none focus:border-indigo-500 placeholder:text-slate-300 dark:text-slate-200"
+                        className="w-full text-lg font-medium border-b-2 border-slate-100 dark:border-slate-700 bg-transparent py-2 outline-none focus:border-indigo-500 placeholder:text-slate-300 dark:text-slate-200"
                         placeholder="Название (например: Медитация)"
                         value={newTitle}
                         onChange={(e) => setNewTitle(e.target.value)}
@@ -446,7 +446,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                     : null;
 
                   return (
-                      <div key={habit.id} className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 relative overflow-hidden group hover:shadow-md transition-shadow">
+                      <div key={habit.id} className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4 relative overflow-hidden group">
                           {/* PROGRESS BAR BACKGROUND */}
                           <div className="absolute bottom-0 left-0 h-1 bg-slate-100 dark:bg-slate-800 w-full">
                               <motion.div 
