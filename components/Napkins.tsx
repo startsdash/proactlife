@@ -61,11 +61,17 @@ const markdownComponents = {
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     // Basic Markdown to HTML for the editor initialization
-    // IMPORTANT: Handle images carefully with specific regex for potentially large Base64
-    let html = md
-        // Images: ![alt](src) -> <img src="src" alt="alt"> 
-        // We use [\s\S]*? to capture multiline base64 data safely
-        .replace(/!\[(.*?)\]\(([\s\S]*?)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />')
+    let html = md;
+    
+    // 1. Optimized Image Replacement for Base64 (Prevents lag on huge regex matches)
+    // Matches ![alt](data:...) specifically without greedy back-tracking
+    html = html.replace(/!\[(.*?)\]\((data:image\/[^;]+;base64,[^)]+)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />');
+    
+    // 2. Standard Image Replacement for URLs
+    html = html.replace(/!\[(.*?)\]\((?!data:)(.*?)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />');
+
+    // 3. Formatting
+    html = html
         // Bold: **text** -> <b>text</b>
         .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
         // Italic: _text_ -> <i>text</i>
@@ -86,7 +92,6 @@ const htmlToMarkdown = (html: string) => {
     const process = (node: Node) => {
         if (node.nodeType === Node.TEXT_NODE) {
             // Apply typography ONLY to text content, not image data or markup
-            // This prevents corruption of Base64 strings and improves performance
             md += applyTypography(node.textContent || '');
         } else if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as HTMLElement;
@@ -122,8 +127,9 @@ const htmlToMarkdown = (html: string) => {
                     break;
                 case 'IMG':
                     const img = el as HTMLImageElement;
-                    // Do NOT apply typography to src or alt, just raw data
-                    md += `\n![${img.alt || 'image'}](${img.src})\n`;
+                    // CRITICAL FIX: Clean base64 string of newlines/whitespace to prevent Markdown breakage and lag
+                    const cleanSrc = img.src.replace(/\s/g, '');
+                    md += `\n![${img.alt || 'image'}](${cleanSrc})\n`;
                     break;
                 case 'UL':
                     if (md.length > 0 && !md.endsWith('\n')) md += '\n';
@@ -552,14 +558,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onClick={() => handleOpenNote(note)}
         className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
-        {/* Title Block */}
-        {note.title && (
-            <div className="font-bold text-slate-800 dark:text-slate-100 mb-2 text-sm md:text-base leading-snug line-clamp-2">
-                {note.title}
-            </div>
-        )}
-
-        {/* Action Row - Drag Handle & Pin */}
+        {/* Action Row - Drag Handle & Pin (NOW ON TOP) */}
         <div className="flex justify-between items-center mb-2">
              <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Перетащить">
                 <GripVertical size={16} />
@@ -580,6 +579,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                  </Tooltip>
              </div>
         </div>
+
+        {/* Title Block (NOW BELOW ACTIONS) */}
+        {note.title && (
+            <div className="font-bold text-slate-800 dark:text-slate-100 mb-2 text-sm md:text-base leading-snug line-clamp-2">
+                {note.title}
+            </div>
+        )}
 
         {/* Content */}
         <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm`}>
