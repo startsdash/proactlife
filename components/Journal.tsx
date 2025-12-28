@@ -558,12 +558,12 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
     <div className="flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] custom-scrollbar-light">
       <div className="w-full md:w-1/3 flex flex-col p-4 md:p-8 md:border-r border-b md:border-b-0 border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1e293b] md:bg-transparent shrink-0">
         <header className="mb-4 md:mb-6">
-          <h1 className="text-2xl font-light text-slate-800 dark:text-slate-200 tracking-tight">
+          <h1 className="text-3xl font-light tracking-tight text-slate-900 dark:text-slate-100">
             Дневник
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Факты, эмоции, гипотезы</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Факты, эмоции, гипотезы</p>
         </header>
-        <div className="bg-white dark:bg-[#1e293b] rounded-2xl md:shadow-sm md:border border-slate-200 dark:border-slate-700 md:p-4 flex flex-col gap-4">
+        <div className="bg-white dark:bg-[#1e293b] rounded-2xl md:shadow-sm md:border border-slate-200/60 dark:border-slate-800/60 md:p-4 flex flex-col gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1">
               <Link size={12} /> Контекст (Задача)
@@ -702,7 +702,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
               const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
 
               return (
-                <div key={entry.id} onClick={() => setSelectedEntryId(entry.id)} className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 md:p-6 relative group hover:shadow-md transition-shadow cursor-pointer">
+                <div key={entry.id} onClick={() => setSelectedEntryId(entry.id)} className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200/60 dark:border-slate-800/60 shadow-sm p-5 md:p-6 relative group hover:shadow-md transition-shadow cursor-pointer">
                   
                   {/* CARD HEADER - ALIGNED */}
                   <div className="flex justify-between items-start mb-3">
@@ -841,101 +841,38 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     </button>
                                 </Tooltip>
                                 <Tooltip content="Удалить">
-                                    <button onClick={() => { if(window.confirm('Удалить запись?')) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                                    <button onClick={() => { if(confirm("Удалить запись?")) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors ml-1">
                                         <Trash2 size={20} />
                                     </button>
                                 </Tooltip>
                                 <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-2"></div>
                             </>
                         )}
-                        <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1"><X size={24} /></button>
+                        <button onClick={(e) => handleCloseModal(e)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button>
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    {editingId === selectedEntry.id ? (
-                      <div className="mb-4">
-                          <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-40 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
-                          <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
-                              <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
-                              <button onClick={() => saveEdit(selectedEntry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
-                          </div>
-                      </div>
-                    ) : (
-                      <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed font-normal">
-                          <ReactMarkdown components={markdownComponents}>{selectedEntry.content}</ReactMarkdown>
-                      </div>
-                    )}
-
+                <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0">
+                    <div className="text-slate-800 dark:text-slate-200 text-base leading-relaxed whitespace-pre-wrap mb-6">
+                        <ReactMarkdown components={markdownComponents}>{selectedEntry.content}</ReactMarkdown>
+                    </div>
+                    
                     {selectedEntry.aiFeedback && (
-                        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 relative mt-4 border border-slate-100 dark:border-slate-700">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1 rounded bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 shadow-sm text-slate-500"><Bot size={12} /></div>
-                                <span className="text-xs font-bold text-slate-500">Ментор</span>
+                        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                            <div className="flex items-center gap-2 mb-2 text-indigo-600 dark:text-indigo-400 font-bold text-xs uppercase tracking-wider">
+                                <Bot size={14} /> Отклик ментора
                             </div>
-                            <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1"><ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown></div>
+                            <div className="text-sm text-slate-700 dark:text-slate-300 italic leading-relaxed">
+                                <ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown>
+                            </div>
                         </div>
                     )}
-                    
-                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end items-center gap-1">
-                        <Tooltip content={selectedEntry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
-                            <button onClick={() => toggleInsight(selectedEntry)} className={`p-2 rounded-lg transition-all ${selectedEntry.isInsight ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
-                                <Lightbulb size={16} className={selectedEntry.isInsight ? "fill-current" : ""} />
-                            </button>
-                        </Tooltip>
-                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="right" direction="up" />
-                    </div>
                 </div>
-            </div>
-        </div>
-      )}
-
-      {viewingTask && (
-        <div className="fixed inset-0 z-[110] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setViewingTask(null)}>
-            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">Контекст мысли</h3><button onClick={() => setViewingTask(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
-                <div className="space-y-4">
-                    <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
-                        <div className="flex justify-between items-center mb-3"><span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${viewingTask.column === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.column === 'done' ? <CheckCircle2 size={12} /> : <Circle size={12} />}{viewingTask.column === 'done' ? 'Сделано' : 'В процессе'}{viewingTask.isArchived && " (В архиве)"}</span></div>
-                        <div className="text-sm text-slate-800 dark:text-slate-200 font-normal leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.content}</ReactMarkdown></div>
-                        {viewingTask.spheres && viewingTask.spheres.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
-                                <SphereBadgeList spheres={viewingTask.spheres} />
-                            </div>
-                        )}
-                    </div>
-                    {viewingTask.description && (<CollapsibleSection title="Источник" icon={<FileText size={14}/>}><div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.description}</ReactMarkdown></div></CollapsibleSection>)}
-                    {viewingTask.activeChallenge && (
-                      <CollapsibleSection title={viewingTask.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} icon={<Zap size={14}/>}>
-                         <div className={`p-3 rounded-lg border ${viewingTask.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${viewingTask.isChallengeCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}</span>
-                            <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200"><StaticChallengeRenderer content={viewingTask.activeChallenge} mode={viewingTask.isChallengeCompleted ? 'history' : 'draft'} /></div>
-                         </div>
-                      </CollapsibleSection>
-                    )}
-                     {viewingTask.challengeHistory && viewingTask.challengeHistory.length > 0 && (
-                        <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
-                            <div className="space-y-4">
-                                {viewingTask.challengeHistory.map((challenge, index) => (
-                                   <div key={index} className="py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
-                                      <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
-                                         <StaticChallengeRenderer content={challenge} mode="history" />
-                                      </div>
-                                   </div>
-                                ))}
-                             </div>
-                        </CollapsibleSection>
-                     )}
-                    {viewingTask.consultationHistory && viewingTask.consultationHistory.length > 0 && (
-                       <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}><ul className="space-y-4">{viewingTask.consultationHistory.map((consultation, index) => (<li key={index} className="text-sm text-slate-900 dark:text-slate-200 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0"><ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown></li>))}</ul></CollapsibleSection>
-                    )}
-                </div>
-                <div className="mt-8 flex justify-end"><button onClick={() => setViewingTask(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button></div>
             </div>
         </div>
       )}
     </div>
   );
 };
+
 export default Journal;

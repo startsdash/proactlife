@@ -922,13 +922,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 {!isCreatorOpen ? (
                     <button 
                         onClick={() => setIsCreatorOpen(true)}
-                        className="w-full flex items-center justify-between bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-all shadow-sm"
+                        className="w-full flex items-center justify-between bg-white dark:bg-[#1e293b] border border-slate-200/60 dark:border-slate-800/60 rounded-xl px-3 py-2.5 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-all shadow-sm"
                     >
                         <span>Новая задача...</span>
                         <Plus size={16} />
                     </button>
                 ) : (
-                    <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-md animate-in slide-in-from-top-2">
+                    <div className="bg-white dark:bg-[#1e293b] border border-slate-200/60 dark:border-slate-800/60 rounded-xl p-3 shadow-md animate-in slide-in-from-top-2">
                         <input
                             type="text"
                             placeholder="Название"
@@ -988,7 +988,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     const hasActiveChallenge = task.activeChallenge && !task.isChallengeCompleted;
 
                     return (
-                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group border-l-4 ${borderClass} overflow-hidden`}>
+                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-5 rounded-2xl shadow-sm border-y border-r border-slate-200/60 dark:border-slate-800/60 hover:shadow-md transition-all cursor-default relative group border-l-4 ${borderClass} overflow-hidden`}>
                         
                         {/* HEADER: Title + Sphere Selector */}
                         <div className="flex justify-between items-start gap-2 mb-2">
@@ -1274,8 +1274,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden">
       <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc] md:dark:bg-[#0f172a] md:pb-6 transition-colors duration-300">
         <div>
-            <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Спринты</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Фокус на главном</p>
+            <h1 className="text-3xl font-light tracking-tight text-slate-900 dark:text-slate-100">Спринты</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Фокус на главном</p>
         </div>
         
         {/* Search */}

@@ -22,13 +22,13 @@ interface Props {
 }
 
 const colors = [
-    { id: 'white', class: 'bg-white dark:bg-[#1e293b]', border: 'border-slate-100 dark:border-slate-700', hex: '#ffffff' },
-    { id: 'red', class: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-100 dark:border-red-800/50', hex: '#fef2f2' },
-    { id: 'amber', class: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-100 dark:border-amber-800/50', hex: '#fffbeb' },
-    { id: 'emerald', class: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-100 dark:border-emerald-800/50', hex: '#ecfdf5' },
-    { id: 'blue', class: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-100 dark:border-blue-800/50', hex: '#eff6ff' },
-    { id: 'indigo', class: 'bg-indigo-50 dark:bg-indigo-900/20', border: 'border-indigo-100 dark:border-indigo-800/50', hex: '#eef2ff' },
-    { id: 'purple', class: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-100 dark:border-purple-800/50', hex: '#faf5ff' },
+    { id: 'white', class: 'bg-white dark:bg-[#1e293b]', border: 'border-slate-200/60 dark:border-slate-800/60', hex: '#ffffff' },
+    { id: 'red', class: 'bg-red-50/50 dark:bg-red-900/10', border: 'border-red-100/60 dark:border-red-800/40', hex: '#fef2f2' },
+    { id: 'amber', class: 'bg-amber-50/50 dark:bg-amber-900/10', border: 'border-amber-100/60 dark:border-amber-800/40', hex: '#fffbeb' },
+    { id: 'emerald', class: 'bg-emerald-50/50 dark:bg-emerald-900/10', border: 'border-emerald-100/60 dark:border-emerald-800/40', hex: '#ecfdf5' },
+    { id: 'blue', class: 'bg-blue-50/50 dark:bg-blue-900/10', border: 'border-blue-100/60 dark:border-blue-800/40', hex: '#eff6ff' },
+    { id: 'indigo', class: 'bg-indigo-50/50 dark:bg-indigo-900/10', border: 'border-indigo-100/60 dark:border-indigo-800/40', hex: '#eef2ff' },
+    { id: 'purple', class: 'bg-purple-50/50 dark:bg-purple-900/10', border: 'border-purple-100/60 dark:border-purple-800/40', hex: '#faf5ff' },
 ];
 
 const ORACLE_VIBES = [
@@ -69,7 +69,6 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    // Close dropdown on click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -80,7 +79,6 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Filter suggestions
     const filteredSuggestions = existingTags.filter(
         tag => !selectedTags.some(st => st.toLowerCase() === tag.toLowerCase()) && 
                tag.toLowerCase().includes(input.toLowerCase())
@@ -358,7 +356,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   };
   const getNoteBorderClass = (colorId?: string) => {
       const c = colors.find(c => c.id === colorId);
-      return c ? c.border : 'border-slate-100 dark:border-slate-700';
+      return c ? c.border : 'border-slate-200/60 dark:border-slate-800/60';
   };
 
   const renderNoteCard = (note: Note, isArchived: boolean) => (
@@ -369,7 +367,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, note.id)}
         onClick={() => handleOpenNote(note)}
-        className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
+        className={`${getNoteColorClass(note.color)} p-5 rounded-2xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
         <div className="flex justify-between items-start mb-2 relative">
              <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 p-1 -ml-2 -mt-2" title="Перетащить">
@@ -431,8 +429,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     <div className="flex flex-col h-full max-w-4xl mx-auto p-3 md:p-8 space-y-4 md:space-y-6 relative overflow-y-auto">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
         <div>
-          <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Заметки</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 md:mt-2 text-sm">На скорости мысли</p>
+          <h1 className="text-3xl font-light tracking-tight text-slate-900 dark:text-slate-100">Заметки</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">На скорости мысли</p>
         </div>
         <div className="flex bg-white dark:bg-[#1e293b] p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 self-start md:self-auto w-full md:w-auto">
             <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-2 text-sm rounded-md transition-all ${activeTab === 'inbox' ? 'bg-slate-900 dark:bg-indigo-600 text-white' : 'text-slate-500 dark:text-slate-400'}`}><LayoutGrid size={16} /> Входящие</button>

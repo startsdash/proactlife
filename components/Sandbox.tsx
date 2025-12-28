@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Note, Task, Flashcard, AppConfig } from '../types';
@@ -126,8 +127,8 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]">
         <header className={`p-4 md:p-8 pb-0 shrink-0 ${selectedNoteId ? 'hidden md:block' : 'block'}`}>
-            <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Хаб</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Коворкинг с лучшими</p>
+            <h1 className="text-3xl font-light tracking-tight text-slate-900 dark:text-slate-100">Хаб</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Коворкинг с лучшими</p>
         </header>
 
         <div className="flex flex-1 overflow-hidden p-4 md:p-8 gap-6 relative">
@@ -146,7 +147,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                 ) : (
                     <div className="space-y-3 pb-20 md:pb-0">
                         {incomingNotes.map(note => (
-                            <div key={note.id} onClick={() => handleSelectNote(note)} className={`p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] group relative ${selectedNoteId === note.id ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 hover:border-amber-200 dark:hover:border-amber-800 shadow-sm'}`}>
+                            <div key={note.id} onClick={() => handleSelectNote(note)} className={`p-4 rounded-2xl border cursor-pointer transition-all active:scale-[0.98] group relative ${selectedNoteId === note.id ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-[#1e293b] border-slate-200/60 dark:border-slate-800/60 hover:border-amber-200 dark:hover:border-amber-800 shadow-sm'}`}>
                                 <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-4 leading-relaxed mb-3">
                                     <ReactMarkdown components={markdownComponents}>{note.content}</ReactMarkdown>
                                 </div>
@@ -207,14 +208,14 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                         <p className="text-lg font-light">Выбери заметку для работы</p>
                     </div>
                 ) : (
-                    <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-lg md:shadow-sm border border-slate-200 dark:border-slate-700 p-5 md:p-8 h-full md:h-auto overflow-y-auto flex flex-col relative custom-scrollbar-light">
+                    <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-5 md:p-8 h-full md:h-auto overflow-y-auto flex flex-col relative custom-scrollbar-light">
                         
                         {!isAnalyzing && !analysis && (
                             <div className="mb-8 animate-in fade-in slide-in-from-top-4 mt-8 md:mt-0">
                                 <h3 className="text-center text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">Выбери ИИ-ментора</h3>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                     {config.mentors.map(m => (
-                                        <button key={m.id} onClick={() => setMentorId(m.id)} className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${mentorId === m.id ? `bg-slate-50 dark:bg-slate-700 border-slate-400 dark:border-slate-500 ring-1 ring-slate-200 dark:ring-slate-600` : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500 hover:shadow-sm'}`}>
+                                        <button key={m.id} onClick={() => setMentorId(m.id)} className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${mentorId === m.id ? `bg-slate-50 dark:bg-slate-700 border-slate-400 dark:border-slate-500 ring-1 ring-slate-200 dark:ring-slate-600` : 'bg-white dark:bg-slate-800 border-slate-200/60 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500 hover:shadow-sm'}`}>
                                             <RenderIcon name={m.icon} className={`mb-2 ${mentorId === m.id ? m.color : 'text-slate-400'}`} />
                                             <span className={`text-xs font-medium ${mentorId === m.id ? 'text-slate-800 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400'}`}>{m.name}</span>
                                         </button>
@@ -240,18 +241,18 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                                     <button onClick={() => setAnalysis(null)} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Сменить ментора</button>
                                     <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 ${currentMentor?.color}`}>{currentMentor?.name} Mode</span>
                                 </div>
-                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border-l-4 border-slate-800 dark:border-slate-400">
+                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border-l-4 border-slate-800 dark:border-slate-400">
                                     <h4 className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-bold mb-3 text-[10px] uppercase tracking-wider"><Quote size={16} className="text-amber-600" /> Анализ смысла</h4>
                                     <div className="text-slate-700 dark:text-slate-300 italic leading-relaxed text-base">
                                         <ReactMarkdown components={markdownComponents}>{analysis.analysis}</ReactMarkdown>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-10">
-                                    <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-5 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all hover:shadow-md flex flex-col bg-white dark:bg-[#1e293b]">
+                                    <div className="border border-slate-200/60 dark:border-slate-700/60 rounded-2xl p-5 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all hover:shadow-md flex flex-col bg-white dark:bg-[#1e293b]">
                                         <div className="mb-6"><div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2">Путь Действия</div><div className="text-slate-800 dark:text-slate-200 mb-4 text-sm"><ReactMarkdown components={markdownComponents}>{analysis.suggestedTask}</ReactMarkdown></div></div>
                                         <button onClick={handleAcceptTask} className="mt-auto w-full py-3 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/50 font-medium text-sm flex items-center justify-center gap-2 transition-colors"><CheckSquare size={18} /> Создать задачу</button>
                                     </div>
-                                    <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-5 hover:border-blue-400 dark:hover:border-blue-600 transition-all hover:shadow-md flex flex-col bg-white dark:bg-[#1e293b]">
+                                    <div className="border border-slate-200/60 dark:border-slate-700/60 rounded-2xl p-5 hover:border-blue-400 dark:hover:border-blue-600 transition-all hover:shadow-md flex flex-col bg-white dark:bg-[#1e293b]">
                                         <div className="mb-6">
                                             <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2">Путь Знания</div>
                                             <div className="text-sm text-slate-500 dark:text-slate-400 mb-1 font-medium">Вопрос:</div><div className="text-slate-800 dark:text-slate-200 mb-4 text-sm"><ReactMarkdown components={markdownComponents}>{analysis.suggestedFlashcardFront}</ReactMarkdown></div>
