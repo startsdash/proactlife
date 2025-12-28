@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Module, SyncStatus } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Palette, Smile } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Palette, Smile, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip } from './Tooltip';
 
@@ -16,7 +16,6 @@ interface Props {
 }
 
 const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatus, onConnectDrive, isDriveConnected, isOwner }) => {
-  // FIX: Initialize state based on window width immediately to prevent "flash" of expanded sidebar on mobile
   const [isExpanded, setIsExpanded] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth >= 768;
@@ -27,18 +26,14 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Set initial mobile state
     setIsMobile(window.innerWidth < 768);
-
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      // Auto-collapse on resize to mobile, but don't auto-expand on desktop if user collapsed it
       if (mobile && isExpanded) {
         setIsExpanded(false);
       }
     };
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -59,10 +54,10 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
 
   const getSyncIcon = () => {
     switch (syncStatus) {
-      case 'syncing': return <RefreshCw size={16} className="animate-spin text-amber-500" />;
-      case 'synced': return <CheckCircle2 size={16} className="text-emerald-500" />;
-      case 'error': return <AlertCircle size={16} className="text-red-500" />;
-      case 'disconnected': default: return <CloudOff size={16} className="text-slate-400 dark:text-slate-500" />;
+      case 'syncing': return <RefreshCw size={14} className="animate-spin text-amber-500" />;
+      case 'synced': return <CheckCircle2 size={14} className="text-emerald-500" />;
+      case 'error': return <AlertCircle size={14} className="text-red-500" />;
+      case 'disconnected': default: return <CloudOff size={14} className="text-slate-400 dark:text-slate-500" />;
     }
   };
 
@@ -92,8 +87,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
             onClick={() => setIsExpanded(true)}
-            className="fixed bottom-6 left-4 z-40 p-3 bg-slate-900 dark:bg-slate-800 text-white rounded-full shadow-lg shadow-slate-300 dark:shadow-slate-900/50 md:hidden hover:bg-slate-800 dark:hover:bg-slate-700 active:scale-95"
-            title="Меню"
+            className="fixed bottom-6 left-4 z-40 p-3 bg-slate-900 dark:bg-indigo-600 text-white rounded-full shadow-lg shadow-slate-300 dark:shadow-slate-900/50 md:hidden active:scale-95"
           >
             <Menu size={24} />
           </motion.button>
@@ -109,174 +103,86 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
             ${isExpanded ? 'w-64 translate-x-0 shadow-2xl md:shadow-none' : 'w-64 md:w-[72px] -translate-x-full md:translate-x-0'}
         `}
       >
-        {/* HEADER / LOGO (Fixed Top) */}
-        <div className="shrink-0">
-          <div className={`h-16 md:h-20 flex items-center border-b border-slate-100 dark:border-slate-700/50 transition-all duration-300 ${isExpanded ? 'px-6 justify-between' : 'justify-center px-0'}`}>
-             <div className="flex items-center overflow-hidden whitespace-nowrap">
-                <div className="w-8 h-8 bg-slate-900 dark:bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0 transition-transform duration-300 hover:scale-105 shadow-sm shadow-slate-300 dark:shadow-none">L</div>
+        {/* HEADER */}
+        <div className="shrink-0 h-16 md:h-20 flex items-center justify-between px-4 border-b border-slate-50 dark:border-slate-800">
+             <div className="flex items-center overflow-hidden whitespace-nowrap gap-3">
+                <div className="w-8 h-8 bg-slate-900 dark:bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-sm">L</div>
                 
-                <div className={`transition-all duration-300 origin-left overflow-hidden ${isExpanded ? 'opacity-100 w-auto ml-3' : 'opacity-0 w-0 ml-0'}`}>
-                    <div className="font-bold text-lg tracking-tight text-slate-900 dark:text-slate-100 leading-none">LIVE.ACT</div>
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono tracking-wider mt-0.5">PRO v2.0</div>
+                <div className={`transition-all duration-300 origin-left overflow-hidden ${isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0'}`}>
+                    <div className="font-bold text-sm tracking-tight text-slate-900 dark:text-slate-100 uppercase leading-none">ProAct</div>
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono tracking-widest mt-0.5">LIFE OS</div>
                 </div>
              </div>
 
-             {isExpanded && (
-                 <button 
-                    onClick={() => setIsExpanded(false)} 
-                    className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-100/10 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                 >
-                    <PanelLeftClose size={18} />
-                 </button>
+             {isExpanded ? (
+                 <button onClick={() => setIsExpanded(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><PanelLeftClose size={18} /></button>
+             ) : (
+                 <button onClick={() => setIsExpanded(true)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hidden md:block"><PanelLeftOpen size={18} /></button>
              )}
-          </div>
-
-          {!isExpanded && (
-              <div className="w-full hidden md:flex justify-center py-2 border-b border-slate-50 dark:border-slate-800">
-                  <Tooltip content="Развернуть" side="right">
-                    <button 
-                        onClick={() => setIsExpanded(true)} 
-                        className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-100/10 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                    >
-                        <PanelLeftOpen size={18} />
-                    </button>
-                  </Tooltip>
-              </div>
-          )}
         </div>
 
-        {/* NAV ITEMS (Scrollable Middle) */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0">
-          <nav className="p-3 space-y-2 mt-2">
+        {/* NAV ITEMS */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0 py-4 px-3 space-y-1">
             {navItems.map(item => (
               <Tooltip key={item.id} content={item.label} side="right" disabled={isExpanded} className="w-full">
                   <button 
-                    onClick={() => {
-                        setModule(item.id);
-                        if (isMobile) setIsExpanded(false);
-                    }} 
+                    onClick={() => { setModule(item.id); if (isMobile) setIsExpanded(false); }} 
                     className={`
-                        w-full flex items-center p-3 rounded-xl transition-all duration-300 group relative overflow-hidden
+                        w-full flex items-center p-2.5 rounded-xl transition-all duration-200 group relative overflow-hidden
                         ${currentModule === item.id 
-                            ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-lg shadow-slate-200 dark:shadow-slate-900/50' 
-                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'}
+                            ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' 
+                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'}
                         ${isExpanded ? 'justify-start' : 'justify-center'}
                     `}
                   >
-                    {/* Active Indicator Background */}
                     {currentModule === item.id && (
-                        <motion.div
-                            layoutId="activeNav"
-                            className="absolute inset-0 bg-slate-900 dark:bg-indigo-600 z-0 rounded-xl"
-                            initial={false}
-                            transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                        />
+                        <motion.div layoutId="activeNav" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-500 rounded-r-full" />
                     )}
-
-                    <item.icon size={20} className={`shrink-0 transition-colors relative z-10 ${currentModule === item.id ? 'text-white' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-slate-200'}`} />
-                    
-                    <span 
-                        className={`
-                            font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out relative z-10
-                            ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 ml-0 absolute'}
-                        `}
-                    >
-                        {item.label}
-                    </span>
-                    
-                    {!isExpanded && currentModule === item.id && (
-                        <motion.div 
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className="absolute right-1 top-1 w-2 h-2 bg-amber-400 rounded-full border-2 border-white dark:border-slate-900 shadow-sm z-20" 
-                        />
-                    )}
+                    <item.icon size={20} className="shrink-0 relative z-10" strokeWidth={currentModule === item.id ? 2.5 : 2} />
+                    <span className={`text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ml-3 ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0 absolute'}`}>{item.label}</span>
                   </button>
               </Tooltip>
             ))}
-          </nav>
         </div>
 
-        {/* FOOTER ACTIONS (Fixed Bottom) */}
-        <div className="shrink-0 p-3 space-y-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20">
+        {/* FOOTER ACTIONS */}
+        <div className="shrink-0 p-4 border-t border-slate-100 dark:border-slate-800 space-y-1">
              <Tooltip content="Облако" side="right" disabled={isExpanded} className="w-full">
-                 <button 
-                    onClick={!isDriveConnected ? onConnectDrive : undefined} 
-                    disabled={isDriveConnected && syncStatus === 'synced'} 
-                    className={`
-                        w-full flex items-center p-3 rounded-xl transition-all duration-200 relative overflow-hidden
-                        ${!isDriveConnected ? 'hover:bg-indigo-50 dark:hover:bg-slate-800 cursor-pointer' : 'cursor-default'}
-                        ${isExpanded ? 'justify-start' : 'justify-center'}
-                    `} 
-                 >
+                 <button onClick={!isDriveConnected ? onConnectDrive : undefined} disabled={isDriveConnected && syncStatus === 'synced'} className={`w-full flex items-center p-2 rounded-xl transition-all ${!isDriveConnected ? 'hover:bg-slate-50 dark:hover:bg-slate-800' : ''} ${isExpanded ? 'justify-start' : 'justify-center'}`}>
                     <div className="relative shrink-0">
-                        <Cloud size={20} className={isDriveConnected ? 'text-indigo-500 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'} />
-                        <div className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 rounded-full ring-2 ring-white dark:ring-slate-800">{getSyncIcon()}</div>
+                        <Cloud size={20} className={isDriveConnected ? 'text-indigo-500 dark:text-indigo-400' : 'text-slate-400'} />
+                        <div className="absolute -bottom-1 -right-1 bg-white dark:bg-[#1e293b] rounded-full">{getSyncIcon()}</div>
                     </div>
-                    
-                    <div className={`flex flex-col items-start overflow-hidden transition-all duration-300 ${isExpanded ? 'opacity-100 w-auto ml-3' : 'opacity-0 w-0 h-0 ml-0'}`}>
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">Облако</span>
-                    </div>
+                    {isExpanded && <span className="ml-3 text-xs font-medium text-slate-600 dark:text-slate-400">Sync Status</span>}
                  </button>
              </Tooltip>
 
              <Tooltip content="Настройки" side="right" disabled={isExpanded} className="w-full">
-                 <button 
-                    onClick={() => {
-                        setModule(Module.USER_SETTINGS);
-                        if (isMobile) setIsExpanded(false);
-                    }} 
-                    className={`
-                        w-full flex items-center p-3 rounded-xl transition-all duration-200 relative
-                        ${currentModule === Module.USER_SETTINGS ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}
-                        ${isExpanded ? 'justify-start' : 'justify-center'}
-                    `}
-                 >
-                      {currentModule === Module.USER_SETTINGS && (
-                          <motion.div layoutId="activeNav" className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl" transition={{ type: "spring", stiffness: 300, damping: 30 }} />
-                      )}
-                      <Settings size={20} className="shrink-0 relative z-10" />
-                      <span className={`text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 ml-0'}`}>Настройки</span>
+                 <button onClick={() => setModule(Module.USER_SETTINGS)} className={`w-full flex items-center p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all ${isExpanded ? 'justify-start' : 'justify-center'}`}>
+                      <Settings size={20} className="shrink-0" />
+                      {isExpanded && <span className="ml-3 text-xs font-medium">Settings</span>}
                  </button>
              </Tooltip>
 
              {isOwner && (
-               <Tooltip content="Настройки Владельца" side="right" disabled={isExpanded} className="w-full">
-                   <button 
-                    onClick={() => {
-                        setModule(Module.SETTINGS);
-                        if (isMobile) setIsExpanded(false);
-                    }} 
-                    className={`
-                        w-full flex items-center p-3 rounded-xl transition-all duration-200 relative
-                        ${currentModule === Module.SETTINGS ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}
-                        ${isExpanded ? 'justify-start' : 'justify-center'}
-                    `}
-                   >
-                      {currentModule === Module.SETTINGS && (
-                          <motion.div layoutId="activeNav" className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl" transition={{ type: "spring", stiffness: 300, damping: 30 }} />
-                      )}
-                      <Shield size={20} className="shrink-0 relative z-10" />
-                      <span className={`text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 ml-0'}`}>Владелец</span>
+               <Tooltip content="Владелец" side="right" disabled={isExpanded} className="w-full">
+                   <button onClick={() => setModule(Module.SETTINGS)} className={`w-full flex items-center p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all ${isExpanded ? 'justify-start' : 'justify-center'}`}>
+                      <Shield size={20} className="shrink-0" />
+                      {isExpanded && <span className="ml-3 text-xs font-medium">Admin</span>}
                    </button>
                </Tooltip>
              )}
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
-      {/* ADDED min-h-0 to child motion.div to prevent flex overflow issues */}
-      <main className="flex-1 flex flex-col w-full relative overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] transition-colors duration-500">
+      <main className="flex-1 flex flex-col w-full relative overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]">
          <AnimatePresence mode="wait">
             <motion.div
                 key={currentModule}
-                initial={{ opacity: 0, filter: 'blur(4px)', y: 5 }}
-                animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
-                exit={{ opacity: 0, filter: 'blur(2px)', y: -5 }}
-                transition={{ 
-                    duration: 0.4, 
-                    ease: [0.2, 0, 0.2, 1] // Very soft cubic bezier
-                }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
                 className="flex-1 min-h-0 flex flex-col"
             >
                 {children}
