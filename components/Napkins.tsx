@@ -60,16 +60,21 @@ const markdownComponents = {
 // --- HELPER: HTML <-> MARKDOWN CONVERTERS ---
 const markdownToHtml = (md: string) => {
     if (!md) return '';
+    // Basic Markdown to HTML for the editor initialization
+    // IMPORTANT: Handle images carefully with specific regex for potentially large Base64
     let html = md
-        .replace(/\n/g, '<br>')
-        // Images: ![alt](src) -> <img src="src" alt="alt">
-        .replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />')
+        // Images: ![alt](src) -> <img src="src" alt="alt"> 
+        // We use [\s\S]*? to capture multiline base64 data safely
+        .replace(/!\[(.*?)\]\(([\s\S]*?)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />')
         // Bold: **text** -> <b>text</b>
         .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
         // Italic: _text_ -> <i>text</i>
         .replace(/_(.*?)_/g, '<i>$1</i>')
         // Code: `text` -> <code>text</code>
-        .replace(/`([^`]+)`/g, '<code>$1</code>');
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        // Newlines to BR
+        .replace(/\n/g, '<br>');
+        
     return html;
 };
 
@@ -80,7 +85,9 @@ const htmlToMarkdown = (html: string) => {
     
     const process = (node: Node) => {
         if (node.nodeType === Node.TEXT_NODE) {
-            md += node.textContent;
+            // Apply typography ONLY to text content, not image data or markup
+            // This prevents corruption of Base64 strings and improves performance
+            md += applyTypography(node.textContent || '');
         } else if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as HTMLElement;
             switch(el.tagName) {
@@ -100,8 +107,10 @@ const htmlToMarkdown = (html: string) => {
                     md += '`';
                     break;
                 case 'DIV':
-                    md += '\n';
+                    // Divs usually imply block breaks
+                    if (md.length > 0 && !md.endsWith('\n')) md += '\n';
                     el.childNodes.forEach(process);
+                    md += '\n';
                     break;
                 case 'P':
                     if (md.length > 0 && !md.endsWith('\n')) md += '\n';
@@ -113,10 +122,11 @@ const htmlToMarkdown = (html: string) => {
                     break;
                 case 'IMG':
                     const img = el as HTMLImageElement;
+                    // Do NOT apply typography to src or alt, just raw data
                     md += `\n![${img.alt || 'image'}](${img.src})\n`;
                     break;
                 case 'UL':
-                    md += '\n';
+                    if (md.length > 0 && !md.endsWith('\n')) md += '\n';
                     el.childNodes.forEach(process);
                     md += '\n';
                     break;
@@ -270,7 +280,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
-  // const [editContent, setEditContent] = useState(''); // Removed in favor of DOM reading
   const [editTagsList, setEditTagsList] = useState<string[]>([]);
   const editContentRef = useRef<HTMLDivElement>(null);
 
@@ -371,17 +380,20 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     }
     
     setIsProcessing(true);
+    // Convert HTML to Markdown (Typography is applied inside to text nodes only)
     const markdownContent = htmlToMarkdown(cleanHtml);
 
     let autoTags: string[] = [];
     if (hasTagger && creationTags.length === 0 && markdownContent.length > 20) {
         autoTags = await autoTagNote(markdownContent, config);
     }
-    const formattedContent = applyTypography(markdownContent);
+    
+    // Note: Typography is applied within htmlToMarkdown to separate text nodes
+    
     const newNote: Note = {
       id: Date.now().toString(),
       title: title.trim() ? applyTypography(title.trim()) : undefined,
-      content: formattedContent,
+      content: markdownContent,
       tags: [...creationTags, ...autoTags],
       createdAt: Date.now(),
       status: 'inbox',
@@ -471,11 +483,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           const markdownContent = htmlToMarkdown(rawHtml);
           
           if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
-              const formattedContent = applyTypography(markdownContent);
+              // Typography applied in htmlToMarkdown
               const updated = { 
                   ...selectedNote, 
                   title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
-                  content: formattedContent, 
+                  content: markdownContent, 
                   tags: editTagsList 
               };
               updateNote(updated);
@@ -540,21 +552,20 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onClick={() => handleOpenNote(note)}
         className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
+        {/* Title Block */}
         {note.title && (
-            <div className="font-bold text-slate-800 dark:text-slate-100 mb-1 text-sm md:text-base leading-snug line-clamp-2">
+            <div className="font-bold text-slate-800 dark:text-slate-100 mb-2 text-sm md:text-base leading-snug line-clamp-2">
                 {note.title}
             </div>
         )}
-        <div className="flex justify-between items-start mb-1 relative">
-             <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 p-1 -ml-2 -mt-2 opacity-0 group-hover:opacity-100 transition-opacity" title="Перетащить">
-                <GripVertical size={14} />
+
+        {/* Action Row - Drag Handle & Pin */}
+        <div className="flex justify-between items-center mb-2">
+             <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Перетащить">
+                <GripVertical size={16} />
              </div>
-             <div className="absolute top-0 right-0 flex items-center -mr-2 -mt-2 gap-1">
-                 <div className="flex gap-0.5 md:hidden">
-                    <button onClick={(e) => moveNoteVertical(e, note.id, 'up')} className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400"><ChevronUp size={12}/></button>
-                    <button onClick={(e) => moveNoteVertical(e, note.id, 'down')} className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400"><ChevronDown size={12}/></button>
-                 </div>
-                 
+             
+             <div className="flex items-center gap-1">
                  <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
                      <button 
                         onClick={(e) => togglePin(e, note)}
@@ -569,9 +580,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                  </Tooltip>
              </div>
         </div>
-        <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm ${!note.title ? 'mt-1' : ''}`}>
+
+        {/* Content */}
+        <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm`}>
             <ReactMarkdown components={markdownComponents}>{note.content}</ReactMarkdown>
         </div>
+
         <div className="mt-auto flex flex-col gap-3 pt-3 border-t border-slate-900/5 dark:border-white/5">
             {note.tags && note.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1 w-full">
@@ -616,6 +630,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
       {/* SEARCH & FILTER BAR */}
       <div className="shrink-0 flex flex-col gap-2">
+         {/* ... (Search Bar Logic remains unchanged) ... */}
          <div className="flex gap-2">
             <div className="relative flex-1">
                 {showMoodInput ? (
@@ -808,6 +823,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         </div>
       )}
       
+      {/* ... (Oracle component remains same) ... */}
       {showOracle && (
       <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`bg-gradient-to-br ${oracleVibe.color} w-[90vw] max-w-md rounded-3xl shadow-2xl p-1 overflow-hidden animate-in zoom-in-95 duration-300 relative flex flex-col min-h-[420px] max-h-[85vh]`}>
