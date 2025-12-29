@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
@@ -165,7 +166,8 @@ const htmlToMarkdown = (html: string) => {
                     if (!el.textContent?.trim()) return;
                     md += '_'; el.childNodes.forEach(process); md += '_'; break;
                 case 'U':
-                    el.childNodes.forEach(process); break;
+                    // Preserve Underline as HTML because Markdown doesn't support it natively
+                    md += '<u>'; el.childNodes.forEach(process); md += '</u>'; break;
                 case 'CODE':
                     if (!el.textContent?.trim()) return;
                     md += '`'; el.childNodes.forEach(process); md += '`'; break;
@@ -543,10 +545,20 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   };
 
   const deleteActiveImage = (e?: React.MouseEvent) => {
-      if(e) e.preventDefault();
+      if(e) {
+          e.preventDefault();
+          e.stopPropagation();
+      }
+      
       if (activeImage) {
-          activeImage.remove();
+          if (activeImage.parentNode) {
+              activeImage.parentNode.removeChild(activeImage);
+          } else {
+              activeImage.remove();
+          }
+          
           setActiveImage(null);
+          
           if (isEditing && editContentRef.current) saveEditHistorySnapshot(editContentRef.current.innerHTML);
           else if (contentEditableRef.current) saveHistorySnapshot(contentEditableRef.current.innerHTML);
       }
@@ -857,7 +869,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
              {/* Content */}
              <div className={`text-slate-800 dark:text-slate-200 font-normal leading-relaxed text-sm overflow-hidden break-words line-clamp-[4]`}>
-                <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                <ReactMarkdown rehypePlugins={[rehypeRaw]} components={markdownComponents} urlTransform={allowDataUrls}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
              </div>
         </div>
 
@@ -1190,7 +1202,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                       <div className="m-auto w-full py-2">
                                           {oracleNote.title && <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 text-center mb-2">{oracleNote.title}</h3>}
                                           <div className="text-base md:text-lg text-slate-800 dark:text-slate-200 font-normal leading-relaxed relative py-4 text-center">
-                                              <div className="relative z-10 px-3"><ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls}>{oracleNote.content.replace(/\n/g, '  \n')}</ReactMarkdown></div>
+                                              <div className="relative z-10 px-3"><ReactMarkdown rehypePlugins={[rehypeRaw]} components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls}>{oracleNote.content.replace(/\n/g, '  \n')}</ReactMarkdown></div>
                                           </div>
                                       </div>
                                   </div>
@@ -1360,7 +1372,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     <div className="mb-6">
                         {selectedNote.title && <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{selectedNote.title}</h2>}
                         <div className="text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-4 overflow-x-hidden">
-                            <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                            <ReactMarkdown rehypePlugins={[rehypeRaw]} components={markdownComponents} urlTransform={allowDataUrls}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                         </div>
                         {selectedNote.tags && selectedNote.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1">
