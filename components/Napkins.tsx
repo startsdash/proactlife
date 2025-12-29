@@ -638,8 +638,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onClick={() => handleOpenNote(note)}
         className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
-        {/* TEXT CONTENT WRAPPER - Block context for float */}
-        <div className="block w-full">
+        {/* TEXT CONTENT WRAPPER */}
+        <div className="block w-full mb-2">
              {/* PIN BUTTON - Floated Right */}
              <div className="float-right ml-2 mb-1 relative z-10">
                  <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
@@ -664,14 +664,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
              )}
 
              {/* Content */}
-             <div className={`text-slate-800 dark:text-slate-200 mb-0 font-normal leading-relaxed text-sm overflow-hidden break-words line-clamp-[4]`}>
+             <div className={`text-slate-800 dark:text-slate-200 font-normal leading-relaxed text-sm overflow-hidden break-words line-clamp-[4]`}>
                 <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{note.content}</ReactMarkdown>
              </div>
         </div>
 
-        {/* ACTIONS - ABSOLUTE POSITIONED */}
-        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-             <div className="flex gap-1 justify-end bg-white/90 dark:bg-slate-800/90 p-1 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 backdrop-blur-sm">
+        {/* FOOTER ACTIONS - Restored separator and flow layout */}
+        <div className="mt-auto pt-3 border-t border-slate-900/5 dark:border-white/5 flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
+             <div className="flex gap-1">
                 <Tooltip content="В Спринты">
                     <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg transition-colors"><Kanban size={14} /></button>
                 </Tooltip>
