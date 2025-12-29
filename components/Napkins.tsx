@@ -340,6 +340,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [activeTab, setActiveTab] = useState<'inbox' | 'library'>('inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showModalColorPicker, setShowModalColorPicker] = useState(false); // NEW
   
   // Editor State
   const [isExpanded, setIsExpanded] = useState(false);
@@ -382,7 +383,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [editTitle, setEditTitle] = useState('');
   const [editTagsList, setEditTagsList] = useState<string[]>([]);
   const editContentRef = useRef<HTMLDivElement>(null);
-  const [showModalColorPicker, setShowModalColorPicker] = useState(false);
 
   const allExistingTags = useMemo(() => {
       const uniqueTagsMap = new Map<string, string>();
@@ -505,7 +505,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     if (isEditing && editContentRef.current && selectedNote) {
         editContentRef.current.innerHTML = markdownToHtml(selectedNote.content);
     }
-  }, [isEditing, selectedNote?.id]); // Only re-populate if ID changes (switching notes)
+  }, [isEditing, selectedNote?.id]); // DEPENDENCY CHANGED to avoid reset on color change
 
   const insertImageAtCursor = (base64: string, targetEl: HTMLElement, onSave: (content: string) => void) => {
         targetEl.focus();
@@ -781,7 +781,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       if (selectedNote) {
           const updated = { ...selectedNote, color: colorId };
           
-          // Preserve content if editing
+          // Preserve content if editing to avoid overwriting recent changes
           if (isEditing && editContentRef.current) {
               const rawHtml = editContentRef.current.innerHTML;
               const markdownContent = htmlToMarkdown(rawHtml);
@@ -986,8 +986,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     ref={editorRef}
                     className={`${getNoteColorClass(creationColor)} rounded-2xl border transition-all duration-300 shrink-0 relative ${isExpanded ? 'shadow-lg border-slate-300 dark:border-slate-600' : 'shadow-sm border-slate-200 dark:border-slate-700 hover:shadow-md'}`}
                 >
-                    {/* IMAGE DELETE OVERLAY */}
-                    {hoveredImage && (isExpanded || isEditing) && createPortal(
+                    {/* IMAGE DELETE OVERLAY (CREATION ONLY) */}
+                    {hoveredImage && isExpanded && createPortal(
                         <div 
                             style={{
                                 position: 'fixed', // Fixed to viewport to avoid overflow clipping
@@ -1364,35 +1364,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     onScroll={() => setHoveredImage(null)}
                                     className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
                                 />
-                                
-                                {/* IMAGE DELETE OVERLAY IN MODAL */}
-                                {hoveredImage && isEditing && createPortal(
-                                    <div 
-                                        style={{
-                                            position: 'fixed',
-                                            top: hoveredImage.rect.top + 4,
-                                            left: hoveredImage.rect.right - 36,
-                                            zIndex: 99999
-                                        }}
-                                        className="animate-in fade-in zoom-in-95 duration-200"
-                                        onMouseEnter={() => cancelHoverTimeout()}
-                                        onMouseLeave={() => setHoveredImage(null)}
-                                    >
-                                        <Tooltip content="Удалить картинку">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    removeHoveredImage();
-                                                }}
-                                                className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors border border-white/20 image-delete-btn pointer-events-auto"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </Tooltip>
-                                    </div>,
-                                    document.body
-                                )}
                             </div>
                         </div>
                         <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Теги</label><TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} /></div>
