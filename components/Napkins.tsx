@@ -617,14 +617,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onClick={() => handleOpenNote(note)}
         className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
-        {/* DRAG HANDLE - ABSOLUTE LEFT */}
-        <div className="absolute left-2 top-4 text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 z-10" title="Перетащить">
-            <GripVertical size={16} />
-        </div>
-
-        {/* Action Row - Right aligned Pin only now */}
-        <div className="flex justify-end items-start mb-2 pl-6">
-             <div className="flex items-center gap-1">
+        {/* TEXT CONTENT WRAPPER - Block context for float */}
+        <div className="block w-full">
+             {/* PIN BUTTON - Floated Right */}
+             <div className="float-right ml-2 mb-1 relative z-10">
                  <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
                      <button 
                         onClick={(e) => togglePin(e, note)}
@@ -634,27 +630,27 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             : 'text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5'
                         }`}
                      >
-                        <Pin size={14} fill={note.isPinned ? "currentColor" : "none"} className={note.isPinned ? "transform rotate-45" : ""} />
+                        <Pin size={16} fill={note.isPinned ? "currentColor" : "none"} className={note.isPinned ? "transform rotate-45" : ""} />
                      </button>
                  </Tooltip>
              </div>
+
+             {/* Title Block */}
+             {note.title && (
+                <div className="font-bold text-slate-800 dark:text-slate-100 mb-2 text-sm md:text-base leading-snug break-words">
+                    {note.title}
+                </div>
+             )}
+
+             {/* Content */}
+             <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm overflow-hidden break-words`}>
+                <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{note.content}</ReactMarkdown>
+             </div>
         </div>
 
-        {/* Title Block */}
-        {note.title && (
-            <div className="font-bold text-slate-800 dark:text-slate-100 mb-2 text-sm md:text-base leading-snug line-clamp-2 pl-2">
-                {note.title}
-            </div>
-        )}
-
-        {/* Content */}
-        <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm overflow-hidden pl-2`}>
-            <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{note.content}</ReactMarkdown>
-        </div>
-
-        <div className="mt-auto flex flex-col gap-3 pt-3 border-t border-slate-900/5 dark:border-white/5">
+        <div className="mt-auto flex flex-col gap-3 pt-2 border-t border-slate-900/5 dark:border-white/5">
             {note.tags && note.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 w-full pl-2">
+                <div className="flex flex-wrap gap-1 w-full">
                     {note.tags.map(tag => (
                         <span key={tag} className="text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-black/20 px-2 py-1 rounded-md flex items-center gap-1">
                             <TagIcon size={10} /> {tag.replace(/^#/, '')}
