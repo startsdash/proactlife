@@ -809,10 +809,25 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} placeholder="Теги..." />
                             </div>
 
-                            <div className="flex items-center justify-between px-3 py-2 border-t border-slate-100 dark:border-slate-700/50">
+                            <div className="flex items-center justify-between px-2 py-2 border-t border-slate-100 dark:border-slate-700/50">
                                 <div className="flex items-center gap-1">
+                                    <Tooltip content="Жирный">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
+                                            <Bold size={18} />
+                                        </button>
+                                    </Tooltip>
+                                    <Tooltip content="Курсив">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
+                                            <Italic size={18} />
+                                        </button>
+                                    </Tooltip>
+                                    <Tooltip content="Список">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('insertUnorderedList'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
+                                            <List size={18} />
+                                        </button>
+                                    </Tooltip>
                                     <Tooltip content="Вставить картинку">
-                                        <label className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full cursor-pointer text-slate-500 dark:text-slate-400 transition-colors">
+                                        <label className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
                                             <input 
                                                 ref={fileInputRef}
                                                 type="file" 
@@ -822,26 +837,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                             />
                                             <ImageIcon size={18} />
                                         </label>
-                                    </Tooltip>
-                                    <Tooltip content="Жирный">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
-                                            <Bold size={18} />
-                                        </button>
-                                    </Tooltip>
-                                    <Tooltip content="Курсив">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
-                                            <Italic size={18} />
-                                        </button>
-                                    </Tooltip>
-                                    <Tooltip content="Список">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('insertUnorderedList'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
-                                            <List size={18} />
-                                        </button>
-                                    </Tooltip>
-                                    <Tooltip content="Код">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'PRE'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors">
-                                            <Code size={18} />
-                                        </button>
                                     </Tooltip>
                                 </div>
                                 <button 
