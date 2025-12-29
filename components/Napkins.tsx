@@ -114,9 +114,15 @@ const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
     
+    // Images
     html = html.replace(/!\[(.*?)\]\((data:image\/[^;]+;base64,[^)]+)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />');
     html = html.replace(/!\[(.*?)\]\((?!data:)(.*?)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />');
 
+    // Headers - Improved regex to handle start of string or newline correctly
+    html = html.replace(/(^|\n)# (.*?)(?=\n|$)/g, '$1<h1>$2</h1>');
+    html = html.replace(/(^|\n)## (.*?)(?=\n|$)/g, '$1<h2>$2</h2>');
+
+    // Basic Formatting
     html = html
         .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
         .replace(/_(.*?)_/g, '<i>$1</i>')
@@ -138,11 +144,13 @@ const htmlToMarkdown = (html: string) => {
             const el = node as HTMLElement;
             switch(el.tagName) {
                 case 'B': case 'STRONG':
+                    if (!el.textContent?.trim()) return; // Ignore empty bold tags
                     md += '**';
                     el.childNodes.forEach(process);
                     md += '**';
                     break;
                 case 'I': case 'EM':
+                    if (!el.textContent?.trim()) return; // Ignore empty italic tags
                     md += '_';
                     el.childNodes.forEach(process);
                     md += '_';
@@ -151,6 +159,7 @@ const htmlToMarkdown = (html: string) => {
                     el.childNodes.forEach(process);
                     break;
                 case 'CODE':
+                    if (!el.textContent?.trim()) return;
                     md += '`';
                     el.childNodes.forEach(process);
                     md += '`';
@@ -369,6 +378,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   // Image Deletion State
   const [hoveredImage, setHoveredImage] = useState<{ rect: DOMRect, el: HTMLImageElement } | null>(null);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeColorFilter, setActiveColorFilter] = useState<string | null>(null);
@@ -549,11 +559,29 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onSave(targetEl.innerHTML); 
   };
 
+  // Improved Image Hover Logic with Timeout
   const handleEditorMouseMove = (e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'IMG') {
+          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
           const rect = target.getBoundingClientRect();
           setHoveredImage({ rect, el: target as HTMLImageElement });
+      } else {
+          // If we are NOT over an image, start a timeout to hide the button
+          // This allows moving from image to the button without it disappearing immediately
+          if (!hoveredImage) return;
+          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+          
+          hoverTimeoutRef.current = setTimeout(() => {
+              setHoveredImage(null);
+          }, 300); // 300ms delay before hiding
+      }
+  };
+
+  const cancelHoverTimeout = () => {
+      if (hoverTimeoutRef.current) {
+          clearTimeout(hoverTimeoutRef.current);
+          hoverTimeoutRef.current = null;
       }
   };
 
@@ -561,6 +589,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       if (hoveredImage && hoveredImage.el.parentNode) {
           hoveredImage.el.parentNode.removeChild(hoveredImage.el);
           setHoveredImage(null);
+          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+          
           // Determine context and save
           if (isEditing && editContentRef.current) {
               saveEditHistorySnapshot(editContentRef.current.innerHTML);
@@ -976,6 +1006,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 zIndex: 9999
                             }}
                             className="animate-in fade-in zoom-in-95 duration-200"
+                            onMouseEnter={() => cancelHoverTimeout()}
                             onMouseLeave={() => setHoveredImage(null)}
                         >
                             <Tooltip content="Удалить картинку">
@@ -985,7 +1016,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         e.stopPropagation();
                                         removeHoveredImage();
                                     }}
-                                    className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors border border-white/20 image-delete-btn"
+                                    className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors border border-white/20 image-delete-btn pointer-events-auto"
                                 >
                                     <Trash2 size={14} />
                                 </button>
@@ -1317,6 +1348,35 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     onMouseMove={handleEditorMouseMove}
                                     className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
                                 />
+                                
+                                {/* IMAGE DELETE OVERLAY IN MODAL */}
+                                {hoveredImage && isEditing && createPortal(
+                                    <div 
+                                        style={{
+                                            position: 'fixed',
+                                            top: hoveredImage.rect.top + 8,
+                                            left: hoveredImage.rect.right - 40,
+                                            zIndex: 99999
+                                        }}
+                                        className="animate-in fade-in zoom-in-95 duration-200"
+                                        onMouseEnter={() => cancelHoverTimeout()}
+                                        onMouseLeave={() => setHoveredImage(null)}
+                                    >
+                                        <Tooltip content="Удалить картинку">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    removeHoveredImage();
+                                                }}
+                                                className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors border border-white/20 image-delete-btn pointer-events-auto"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </Tooltip>
+                                    </div>,
+                                    document.body
+                                )}
                             </div>
                         </div>
                         <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Теги</label><TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} /></div>
