@@ -38,6 +38,9 @@ const ORACLE_VIBES = [
     { id: 'luck', icon: Clover, label: 'Случай', color: 'from-slate-700 to-slate-900', text: 'text-slate-200' },
 ];
 
+// --- HELPER: ALLOW DATA URIS ---
+const allowDataUrls = (url: string) => url;
+
 // --- HELPER: IMAGE COMPRESSION ---
 // Compresses images to prevent base64 lag in localStorage and rendering
 const processImage = (file: File | Blob): Promise<string> => {
@@ -53,8 +56,8 @@ const processImage = (file: File | Blob): Promise<string> => {
             img.src = event.target?.result as string;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 600; // Limit width strictly
-                const MAX_HEIGHT = 600;
+                const MAX_WIDTH = 800; // Improved quality
+                const MAX_HEIGHT = 800;
                 let width = img.width;
                 let height = img.height;
 
@@ -75,8 +78,8 @@ const processImage = (file: File | Blob): Promise<string> => {
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                     ctx.drawImage(img, 0, 0, width, height);
-                    // Compress to JPEG with 0.6 quality to keep strings manageable
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                    // Compress to JPEG with 0.7 quality
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
                     resolve(dataUrl);
                 } else {
                     reject(new Error('Canvas context failed'));
@@ -646,7 +649,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
         {/* Content */}
         <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm overflow-hidden pl-2`}>
-            <ReactMarkdown components={markdownComponents}>{note.content}</ReactMarkdown>
+            <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{note.content}</ReactMarkdown>
         </div>
 
         <div className="mt-auto flex flex-col gap-3 pt-3 border-t border-slate-900/5 dark:border-white/5">
@@ -921,7 +924,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                       <div className="m-auto w-full py-2">
                                           {oracleNote.title && <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 text-center mb-2">{oracleNote.title}</h3>}
                                           <div className="text-base md:text-lg text-slate-800 dark:text-slate-200 font-normal leading-relaxed relative py-4 text-center">
-                                              <div className="relative z-10 px-3"><ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}}>{oracleNote.content}</ReactMarkdown></div>
+                                              <div className="relative z-10 px-3"><ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls}>{oracleNote.content}</ReactMarkdown></div>
                                           </div>
                                       </div>
                                   </div>
@@ -1000,7 +1003,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     <div className="mb-6">
                         {selectedNote.title && <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{selectedNote.title}</h2>}
                         <div className="text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-4 overflow-x-hidden">
-                            <ReactMarkdown components={markdownComponents}>{selectedNote.content}</ReactMarkdown>
+                            <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{selectedNote.content}</ReactMarkdown>
                         </div>
                         {selectedNote.tags && selectedNote.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1">
