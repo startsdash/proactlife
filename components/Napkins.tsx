@@ -42,7 +42,6 @@ const ORACLE_VIBES = [
 const allowDataUrls = (url: string) => url;
 
 // --- HELPER: IMAGE COMPRESSION ---
-// Compresses images to prevent base64 lag in localStorage and rendering
 const processImage = (file: File | Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
         if (!file.type.startsWith('image/')) {
@@ -78,7 +77,6 @@ const processImage = (file: File | Blob): Promise<string> => {
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                     ctx.drawImage(img, 0, 0, width, height);
-                    // Compress to JPEG with 0.7 quality
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
                     resolve(dataUrl);
                 } else {
@@ -115,12 +113,9 @@ const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
     
-    // 1. Optimized Image Replacement
-    // Use simpler regex that doesn't choke on large strings, assume compressed images are cleaner
     html = html.replace(/!\[(.*?)\]\((data:image\/[^;]+;base64,[^)]+)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />');
     html = html.replace(/!\[(.*?)\]\((?!data:)(.*?)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />');
 
-    // 2. Formatting
     html = html
         .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
         .replace(/_(.*?)_/g, '<i>$1</i>')
@@ -171,7 +166,6 @@ const htmlToMarkdown = (html: string) => {
                     break;
                 case 'IMG':
                     const img = el as HTMLImageElement;
-                    // Clean base64 string
                     const cleanSrc = img.src.replace(/\s/g, '');
                     md += `\n![${img.alt || 'image'}](${cleanSrc})\n`;
                     break;
@@ -297,6 +291,33 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
     );
 };
 
+// --- MASONRY GRID LAYOUT ---
+const MasonryGrid = ({ items, renderItem }: { items: any[], renderItem: (item: any) => React.ReactNode }) => {
+    const [columns, setColumns] = useState(1);
+
+    useEffect(() => {
+        const updateColumns = () => {
+            setColumns(window.innerWidth >= 768 ? 2 : 1);
+        };
+        updateColumns();
+        window.addEventListener('resize', updateColumns);
+        return () => window.removeEventListener('resize', updateColumns);
+    }, []);
+
+    if (columns === 1) {
+        return <div className="flex flex-col gap-3 pb-20 md:pb-0">{items.map(renderItem)}</div>;
+    }
+
+    const col1 = items.filter((_, i) => i % 2 === 0);
+    const col2 = items.filter((_, i) => i % 2 === 1);
+
+    return (
+        <div className="flex gap-3 items-start pb-20 md:pb-0">
+            <div className="flex-1 flex flex-col gap-3 min-w-0">{col1.map(renderItem)}</div>
+            <div className="flex-1 flex flex-col gap-3 min-w-0">{col2.map(renderItem)}</div>
+        </div>
+    );
+};
 
 const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask }) => {
   const [title, setTitle] = useState('');
@@ -615,7 +636,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, note.id)}
         onClick={() => handleOpenNote(note)}
-        className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
+        className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
         {/* TEXT CONTENT WRAPPER - Block context for float */}
         <div className="block w-full">
@@ -643,7 +664,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
              )}
 
              {/* Content */}
-             <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm overflow-hidden break-words`}>
+             <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed text-sm overflow-hidden break-words`}>
                 <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{note.content}</ReactMarkdown>
              </div>
         </div>
@@ -848,27 +869,25 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-20 md:pb-0">
-                {inboxNotes.length > 0 ? (
-                    inboxNotes.map(note => renderNoteCard(note, false))
-                ) : (
-                    <div className="col-span-1 md:col-span-2 py-6">
-                        <EmptyState 
-                          icon={PenTool} 
-                          title="Чистый лист" 
-                          description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'}
-                        />
-                    </div>
-                )}
-            </div>
+            {inboxNotes.length > 0 ? (
+                <MasonryGrid items={inboxNotes} renderItem={(note) => renderNoteCard(note, false)} />
+            ) : (
+                <div className="py-6">
+                    <EmptyState 
+                      icon={PenTool} 
+                      title="Чистый лист" 
+                      description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'}
+                    />
+                </div>
+            )}
         </>
       )}
       {activeTab === 'library' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-20 md:pb-0">
+        <>
             {archivedNotes.length > 0 ? (
-                archivedNotes.map(note => renderNoteCard(note, true))
+                <MasonryGrid items={archivedNotes} renderItem={(note) => renderNoteCard(note, true)} />
             ) : (
-                <div className="col-span-1 md:col-span-2 py-6">
+                <div className="py-6">
                     <EmptyState 
                       icon={Library} 
                       title="Библиотека пуста" 
@@ -877,7 +896,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     />
                 </div>
             )}
-        </div>
+        </>
       )}
       
       {/* ... (Oracle component remains same) ... */}
