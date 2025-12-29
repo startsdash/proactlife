@@ -147,9 +147,6 @@ const htmlToMarkdown = (html: string) => {
                     md += '_';
                     break;
                 case 'U':
-                    // Markdown doesn't standardly support underline, but some parsers do. 
-                    // We'll skip specific md syntax for it to keep it simple or use HTML if needed.
-                    // For now, treat as text to avoid breaking standard md.
                     el.childNodes.forEach(process);
                     break;
                 case 'CODE':
@@ -353,6 +350,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [activeTab, setActiveTab] = useState<'inbox' | 'library'>('inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [activeImage, setActiveImage] = useState<{ el: HTMLImageElement, rect: DOMRect } | null>(null);
   
   // Editor State
   const [isExpanded, setIsExpanded] = useState(false);
@@ -405,18 +403,42 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         if (editorRef.current && !editorRef.current.contains(event.target as Node)) {
-            // Check if clicking inside color picker dropdown which might be portal or nearby
-            // Simplified: if expanded and clicking outside editor wrapper, try to dump
             if (isExpanded) {
-                // Don't dump if clicking specific interactive elements that might be outside due to overflow
                 if ((event.target as HTMLElement).closest('.color-picker-dropdown')) return;
                 handleDump();
             }
         }
     };
+    
+    // Scroll listener to hide image overlay
+    const handleScroll = () => setActiveImage(null);
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, true);
+    
+    return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        window.removeEventListener('scroll', handleScroll, true);
+    };
   }, [isExpanded, title]);
+
+  // Handle Image Selection/Click for Deletion Overlay
+  const handleEditorClick = (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG') {
+          const rect = target.getBoundingClientRect();
+          setActiveImage({ el: target as HTMLImageElement, rect });
+      } else {
+          setActiveImage(null);
+      }
+  };
+
+  const handleDeleteImage = () => {
+      if (activeImage && activeImage.el) {
+          activeImage.el.remove();
+          setActiveImage(null);
+      }
+  };
 
   const insertImageAtCursor = (base64: string, targetEl: HTMLElement) => {
         targetEl.focus();
@@ -506,7 +528,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const handleClearStyle = (e: React.MouseEvent) => {
       e.preventDefault();
       execCmd('removeFormat');
-      execCmd('formatBlock', 'div'); // Reset block style to div/p
+      execCmd('formatBlock', 'p'); // Reset block style to p
   };
 
   const handleDump = async () => {
@@ -833,7 +855,25 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             </div>
                         </div>
                     ) : (
-                        <div className="flex flex-col animate-in fade-in duration-200">
+                        <div className="flex flex-col animate-in fade-in duration-200 relative">
+                            {/* IMAGE OVERLAY */}
+                            {activeImage && (
+                                <div 
+                                    className="fixed z-[9999] flex gap-2 animate-in zoom-in duration-200"
+                                    style={{ 
+                                        top: Math.max(10, activeImage.rect.top - 40), // Ensure it's not off-screen top
+                                        left: Math.max(10, activeImage.rect.left)
+                                    }}
+                                >
+                                    <button 
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteImage(); }}
+                                        className="bg-red-500 text-white px-3 py-1.5 rounded-full shadow-lg text-xs font-bold flex items-center gap-1 hover:bg-red-600 transition-colors border border-white/20"
+                                    >
+                                        <Trash2 size={12} /> Удалить
+                                    </button>
+                                </div>
+                            )}
+
                             <input 
                                 type="text"
                                 placeholder="Заголовок"
@@ -846,6 +886,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             <div
                                 ref={contentEditableRef}
                                 contentEditable
+                                onClick={handleEditorClick}
+                                onKeyUp={() => setActiveImage(null)} // Hide overlay on typing
                                 className="w-full min-h-[120px] outline-none text-sm text-slate-700 dark:text-slate-200 px-4 py-2 leading-relaxed [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-2 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
                                 style={{ whiteSpace: 'pre-wrap' }}
                                 data-placeholder="О чём ты думаешь?"
@@ -1038,7 +1080,26 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
       {selectedNote && (
         <div className="fixed inset-0 z-50 bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
-            <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border ${getNoteBorderClass(selectedNote.color)} transition-colors duration-300 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+            <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border ${getNoteBorderClass(selectedNote.color)} transition-colors duration-300 max-h-[90vh] overflow-y-auto relative`} onClick={(e) => e.stopPropagation()}>
+                
+                {/* IMAGE OVERLAY FOR MODAL */}
+                {isEditing && activeImage && (
+                    <div 
+                        className="fixed z-[9999] flex gap-2 animate-in zoom-in duration-200"
+                        style={{ 
+                            top: Math.max(10, activeImage.rect.top - 40),
+                            left: Math.max(10, activeImage.rect.left)
+                        }}
+                    >
+                        <button 
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteImage(); }}
+                            className="bg-red-500 text-white px-3 py-1.5 rounded-full shadow-lg text-xs font-bold flex items-center gap-1 hover:bg-red-600 transition-colors border border-white/20"
+                        >
+                            <Trash2 size={12} /> Удалить
+                        </button>
+                    </div>
+                )}
+
                 <div className="flex justify-between items-start mb-4">
                     <h3 className="text-lg font-bold flex items-center gap-3 text-slate-800 dark:text-slate-200">
                         {isEditing ? 'Редактирование' : 'Детали'}
@@ -1078,12 +1139,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <div className="flex items-center gap-1 mb-1 pb-1 border-b border-slate-200 dark:border-slate-600/50 overflow-x-auto">
                                     <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Bold size={14} /></button>
                                     <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Italic size={14} /></button>
-                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('delete'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Trash2 size={14} /></button>
+                                    <button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Eraser size={14} /></button>
                                     <label className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded cursor-pointer text-slate-500 dark:text-slate-400"><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={14} /></label>
                                 </div>
                                 <div 
                                     ref={editContentRef}
                                     contentEditable
+                                    onClick={handleEditorClick}
+                                    onKeyUp={() => setActiveImage(null)}
                                     className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&>h1]:text-xl [&>h1]:font-bold [&>h2]:text-lg [&>h2]:font-bold [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
                                     dangerouslySetInnerHTML={{ __html: markdownToHtml(selectedNote.content) }} // Initialize with HTML
                                 />
