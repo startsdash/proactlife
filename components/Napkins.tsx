@@ -126,8 +126,13 @@ const markdownToHtml = (md: string) => {
     html = html
         .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
         .replace(/_(.*?)_/g, '<i>$1</i>')
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-        .replace(/\n/g, '<br>');
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+    // Cleanup: Avoid converting newlines that are just after block elements
+    html = html.replace(/(<\/?(h1|h2|div|p|ul|ol|li|blockquote)>)\n/g, '$1');
+
+    // Convert remaining newlines to breaks
+    html = html.replace(/\n/g, '<br>');
         
     return html;
 };
@@ -144,70 +149,45 @@ const htmlToMarkdown = (html: string) => {
             const el = node as HTMLElement;
             switch(el.tagName) {
                 case 'B': case 'STRONG':
-                    if (!el.textContent?.trim()) return; // Ignore empty bold tags
-                    md += '**';
-                    el.childNodes.forEach(process);
-                    md += '**';
-                    break;
+                    if (!el.textContent?.trim()) return;
+                    md += '**'; el.childNodes.forEach(process); md += '**'; break;
                 case 'I': case 'EM':
-                    if (!el.textContent?.trim()) return; // Ignore empty italic tags
-                    md += '_';
-                    el.childNodes.forEach(process);
-                    md += '_';
-                    break;
+                    if (!el.textContent?.trim()) return;
+                    md += '_'; el.childNodes.forEach(process); md += '_'; break;
                 case 'U':
-                    el.childNodes.forEach(process);
-                    break;
+                    el.childNodes.forEach(process); break;
                 case 'CODE':
                     if (!el.textContent?.trim()) return;
-                    md += '`';
-                    el.childNodes.forEach(process);
-                    md += '`';
-                    break;
+                    md += '`'; el.childNodes.forEach(process); md += '`'; break;
                 case 'H1':
-                    md += '\n# ';
-                    el.childNodes.forEach(process);
-                    md += '\n';
-                    break;
-                case 'H2':
-                    md += '\n## ';
-                    el.childNodes.forEach(process);
-                    md += '\n';
-                    break;
-                case 'DIV':
                     if (md.length > 0 && !md.endsWith('\n')) md += '\n';
-                    el.childNodes.forEach(process);
-                    md += '\n';
-                    break;
+                    md += '# '; el.childNodes.forEach(process); md += '\n'; break;
+                case 'H2':
+                    if (md.length > 0 && !md.endsWith('\n')) md += '\n';
+                    md += '## '; el.childNodes.forEach(process); md += '\n'; break;
+                case 'DIV':
                 case 'P':
                     if (md.length > 0 && !md.endsWith('\n')) md += '\n';
                     el.childNodes.forEach(process);
-                    md += '\n';
+                    if (!md.endsWith('\n')) md += '\n';
                     break;
                 case 'BR':
-                    md += '\n';
+                    md += '  \n'; // Force hard break in markdown
                     break;
                 case 'IMG':
                     const img = el as HTMLImageElement;
                     const cleanSrc = img.src.replace(/\s/g, '');
-                    md += `\n![${img.alt || 'image'}](${cleanSrc})\n`;
+                    if (md.length > 0 && !md.endsWith('\n')) md += '\n';
+                    md += `![${img.alt || 'image'}](${cleanSrc})\n`;
                     break;
                 case 'UL':
-                    if (md.length > 0 && !md.endsWith('\n')) md += '\n';
-                    el.childNodes.forEach(process);
-                    md += '\n';
-                    break;
                 case 'OL':
                     if (md.length > 0 && !md.endsWith('\n')) md += '\n';
                     el.childNodes.forEach(process);
-                    md += '\n';
+                    if (!md.endsWith('\n')) md += '\n';
                     break;
                 case 'LI':
-                    if (el.parentElement?.tagName === 'OL') {
-                        md += '1. '; 
-                    } else {
-                        md += '- ';
-                    }
+                    md += el.parentElement?.tagName === 'OL' ? '1. ' : '- ';
                     el.childNodes.forEach(process);
                     md += '\n';
                     break;
@@ -872,7 +852,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
              {/* Content */}
              <div className={`text-slate-800 dark:text-slate-200 font-normal leading-relaxed text-sm overflow-hidden break-words line-clamp-[4]`}>
-                <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{note.content}</ReactMarkdown>
+                <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
              </div>
         </div>
 
@@ -1225,7 +1205,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                       <div className="m-auto w-full py-2">
                                           {oracleNote.title && <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 text-center mb-2">{oracleNote.title}</h3>}
                                           <div className="text-base md:text-lg text-slate-800 dark:text-slate-200 font-normal leading-relaxed relative py-4 text-center">
-                                              <div className="relative z-10 px-3"><ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls}>{oracleNote.content}</ReactMarkdown></div>
+                                              <div className="relative z-10 px-3"><ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls}>{oracleNote.content.replace(/\n/g, '  \n')}</ReactMarkdown></div>
                                           </div>
                                       </div>
                                   </div>
@@ -1346,6 +1326,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     contentEditable
                                     onInput={handleEditModalInput}
                                     onMouseMove={handleEditorMouseMove}
+                                    onScroll={() => setHoveredImage(null)}
                                     className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
                                 />
                                 
@@ -1385,7 +1366,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     <div className="mb-6">
                         {selectedNote.title && <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{selectedNote.title}</h2>}
                         <div className="text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-4 overflow-x-hidden">
-                            <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{selectedNote.content}</ReactMarkdown>
+                            <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                         </div>
                         {selectedNote.tags && selectedNote.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1">
