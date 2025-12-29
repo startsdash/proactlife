@@ -114,9 +114,6 @@ const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
     
-    // Protect Images first (so we don't mess up data URIs with other regex)
-    // We can just rely on standard replacement order.
-    
     // Headers
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
@@ -128,7 +125,6 @@ const markdownToHtml = (md: string) => {
     
     // Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
-        // Simple sanitization to allow data URIs but prevent broken markup
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />`;
     });
 
@@ -190,7 +186,6 @@ const htmlToMarkdown = (html: string) => {
                 case 'DIV':
                 case 'P':
                     el.childNodes.forEach(process);
-                    // Block element implicitly ends line, if content didn't add newline, we add one.
                     break;
                 default:
                     el.childNodes.forEach(process);
@@ -208,7 +203,6 @@ const htmlToMarkdown = (html: string) => {
 };
 
 // --- INTERNAL COMPONENT: TAG SELECTOR ---
-// ... (TagSelector remains mostly same, condensed for brevity in full file output if unchanged logic is safe)
 interface TagSelectorProps {
     selectedTags: string[];
     onChange: (tags: string[]) => void;
@@ -388,6 +382,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [editTitle, setEditTitle] = useState('');
   const [editTagsList, setEditTagsList] = useState<string[]>([]);
   const editContentRef = useRef<HTMLDivElement>(null);
+  const [showModalColorPicker, setShowModalColorPicker] = useState(false);
 
   const allExistingTags = useMemo(() => {
       const uniqueTagsMap = new Map<string, string>();
@@ -510,7 +505,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     if (isEditing && editContentRef.current && selectedNote) {
         editContentRef.current.innerHTML = markdownToHtml(selectedNote.content);
     }
-  }, [isEditing, selectedNote]);
+  }, [isEditing, selectedNote?.id]); // Only re-populate if ID changes (switching notes)
 
   const insertImageAtCursor = (base64: string, targetEl: HTMLElement, onSave: (content: string) => void) => {
         targetEl.focus();
@@ -785,6 +780,17 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const setColor = (colorId: string) => {
       if (selectedNote) {
           const updated = { ...selectedNote, color: colorId };
+          
+          // Preserve content if editing
+          if (isEditing && editContentRef.current) {
+              const rawHtml = editContentRef.current.innerHTML;
+              const markdownContent = htmlToMarkdown(rawHtml);
+              updated.content = markdownContent;
+              if (editTitle !== selectedNote.title) {
+                  updated.title = applyTypography(editTitle);
+              }
+          }
+
           updateNote(updated);
           setSelectedNote(updated);
       }
@@ -900,8 +906,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       {/* SEARCH & FILTER BAR */}
       <div className="shrink-0 flex flex-col gap-2">
          {/* ... (Search Bar Logic) ... */}
-         {/* ... (Existing code for Search Bar) ... */}
-         {/* Omitted for brevity, existing structure remains identical */}
          <div className="flex gap-2">
             <div className="relative flex-1">
                 {showMoodInput ? (
@@ -987,8 +991,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         <div 
                             style={{
                                 position: 'fixed', // Fixed to viewport to avoid overflow clipping
-                                top: hoveredImage.rect.top + 8,
-                                left: hoveredImage.rect.right - 40,
+                                top: hoveredImage.rect.top + 4,
+                                left: hoveredImage.rect.right - 36,
                                 zIndex: 9999
                             }}
                             className="animate-in fade-in zoom-in-95 duration-200"
@@ -1326,6 +1330,31 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                             <ImageIcon size={16} />
                                         </label>
                                     </Tooltip>
+
+                                    {/* COLOR PICKER (NEW) */}
+                                    <div className="relative ml-1">
+                                        <Tooltip content="Фон заметки">
+                                            <button 
+                                                onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} 
+                                                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"
+                                            >
+                                                <Palette size={16} />
+                                            </button>
+                                        </Tooltip>
+                                        {showModalColorPicker && (
+                                            <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                {colors.map(c => (
+                                                    <button 
+                                                        key={c.id} 
+                                                        onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} 
+                                                        className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
+                                                        style={{ backgroundColor: c.hex }}
+                                                        title={c.id}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div 
                                     ref={editContentRef}
@@ -1341,8 +1370,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     <div 
                                         style={{
                                             position: 'fixed',
-                                            top: hoveredImage.rect.top + 8,
-                                            left: hoveredImage.rect.right - 40,
+                                            top: hoveredImage.rect.top + 4,
+                                            left: hoveredImage.rect.right - 36,
                                             zIndex: 99999
                                         }}
                                         className="animate-in fade-in zoom-in-95 duration-200"
@@ -1383,11 +1412,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         )}
                     </div>
                 )}
-                <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
-                    {colors.map(c => (
-                        <button key={c.id} onClick={() => setColor(c.id)} className={`w-6 h-6 rounded-full border shadow-sm transition-transform hover:scale-110 ${selectedNote.color === c.id ? 'ring-2 ring-slate-400 ring-offset-2' : ''}`} style={{ backgroundColor: c.hex, borderColor: '#e2e8f0' }} title={c.id} />
-                    ))}
-                </div>
+                
                 {isEditing && (
                     <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-4 border-t border-slate-900/5 dark:border-white/5">
                         <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
