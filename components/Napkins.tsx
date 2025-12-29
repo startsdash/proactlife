@@ -838,6 +838,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       {/* SEARCH & FILTER BAR */}
       <div className="shrink-0 flex flex-col gap-2">
          {/* ... (Search Bar Logic) ... */}
+         {/* ... (Existing code for Search Bar) ... */}
          <div className="flex gap-2">
             <div className="relative flex-1">
                 {showMoodInput ? (
@@ -910,6 +911,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       </div>
 
       {activeTab === 'inbox' && (
+        // ... (Existing Inbox Logic) ...
         <>
             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
                 <div 
@@ -1096,6 +1098,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         </>
       )}
       {activeTab === 'library' && (
+        // ... (Existing Library Logic) ...
         <>
             {archivedNotes.length > 0 ? (
                 <MasonryGrid items={archivedNotes} renderItem={(note) => renderNoteCard(note, true)} />
@@ -1112,7 +1115,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         </>
       )}
       
-      {/* ... (Oracle component remains same) ... */}
+      {/* ... (Oracle component) ... */}
+      {/* ... */}
       {showOracle && (
       <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`bg-gradient-to-br ${oracleVibe.color} w-[90vw] max-w-md rounded-3xl shadow-2xl p-1 overflow-hidden animate-in zoom-in-95 duration-300 relative flex flex-col min-h-[420px] max-h-[85vh]`}>
@@ -1199,18 +1203,54 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 {isEditing ? (
                     <div className="mb-6 space-y-3">
                         <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Заголовок</label>
-                            <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-white/50 dark:bg-black/20 rounded-lg p-2.5 text-base font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none" placeholder="Заголовок..." />
+                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Название</label>
+                            <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-white/50 dark:bg-black/20 rounded-lg p-2.5 text-base font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none" placeholder="Название..." />
                         </div>
                         <div>
                             <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Содержание</label>
                             <div className="relative">
                                 {/* TOOLBAR FOR EDIT MODAL */}
-                                <div className="flex items-center gap-1 mb-1 pb-1 border-b border-slate-200 dark:border-slate-600/50 overflow-x-auto">
-                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Bold size={14} /></button>
-                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Italic size={14} /></button>
-                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('delete'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Trash2 size={14} /></button>
-                                    <label className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded cursor-pointer text-slate-500 dark:text-slate-400"><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={14} /></label>
+                                <div className="flex items-center gap-1 mb-2 pb-2 border-b border-slate-200 dark:border-slate-700/50 overflow-x-auto scrollbar-none">
+                                    {/* HEADINGS */}
+                                    <Tooltip content="Заголовок 1">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={16} /></button>
+                                    </Tooltip>
+                                    <Tooltip content="Заголовок 2">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={16} /></button>
+                                    </Tooltip>
+                                    <Tooltip content="Текст">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'P'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Type size={16} /></button>
+                                    </Tooltip>
+
+                                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                    {/* STYLES */}
+                                    <Tooltip content="Жирный">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Bold size={16} /></button>
+                                    </Tooltip>
+                                    <Tooltip content="Курсив">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button>
+                                    </Tooltip>
+                                    <Tooltip content="Подчеркнутый">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('underline'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Underline size={16} /></button>
+                                    </Tooltip>
+
+                                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                    {/* CLEAN */}
+                                    <Tooltip content="Очистить стиль">
+                                        <button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button>
+                                    </Tooltip>
+                                    
+                                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                    {/* MEDIA */}
+                                    <Tooltip content="Вставить картинку">
+                                        <label className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
+                                            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                            <ImageIcon size={16} />
+                                        </label>
+                                    </Tooltip>
                                 </div>
                                 <div 
                                     ref={editContentRef}
