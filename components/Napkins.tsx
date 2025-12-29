@@ -42,7 +42,6 @@ const ORACLE_VIBES = [
 const allowDataUrls = (url: string) => url;
 
 // --- HELPER: IMAGE COMPRESSION ---
-// Compresses images to prevent base64 lag in localStorage and rendering
 const processImage = (file: File | Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
         if (!file.type.startsWith('image/')) {
@@ -78,7 +77,6 @@ const processImage = (file: File | Blob): Promise<string> => {
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                     ctx.drawImage(img, 0, 0, width, height);
-                    // Compress to JPEG with 0.7 quality
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
                     resolve(dataUrl);
                 } else {
@@ -114,19 +112,13 @@ const markdownComponents = {
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
-    
-    // 1. Optimized Image Replacement
-    // Use simpler regex that doesn't choke on large strings, assume compressed images are cleaner
     html = html.replace(/!\[(.*?)\]\((data:image\/[^;]+;base64,[^)]+)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />');
     html = html.replace(/!\[(.*?)\]\((?!data:)(.*?)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />');
-
-    // 2. Formatting
     html = html
         .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
         .replace(/_(.*?)_/g, '<i>$1</i>')
         .replace(/`([^`]+)`/g, '<code>$1</code>')
         .replace(/\n/g, '<br>');
-        
     return html;
 };
 
@@ -171,7 +163,6 @@ const htmlToMarkdown = (html: string) => {
                     break;
                 case 'IMG':
                     const img = el as HTMLImageElement;
-                    // Clean base64 string
                     const cleanSrc = img.src.replace(/\s/g, '');
                     md += `\n![${img.alt || 'image'}](${cleanSrc})\n`;
                     break;
@@ -253,9 +244,6 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
         }
     };
 
-    const isExactMatchInSuggestions = filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase());
-    const isExactMatchInSelected = selectedTags.some(t => t.toLowerCase() === input.trim().toLowerCase());
-
     return (
         <div className="relative" ref={wrapperRef}>
             <div className="flex flex-wrap items-center gap-1.5 p-2 bg-transparent transition-all min-h-[36px]">
@@ -281,7 +269,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
 
             {isOpen && (input.length > 0 || filteredSuggestions.length > 0) && (
                 <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
-                    {input.length > 0 && !isExactMatchInSuggestions && !isExactMatchInSelected && (
+                    {input.length > 0 && !filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase()) && !selectedTags.some(t => t.toLowerCase() === input.trim().toLowerCase()) && (
                         <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 flex items-center gap-2">
                             <Plus size={14} /> Создать «{input}»
                         </button>
@@ -387,7 +375,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 return;
             }
         }
-        // Fallback
         const img = document.createElement('img');
         img.src = base64;
         img.style.maxWidth = '100%';
@@ -397,7 +384,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         targetEl.appendChild(img);
   };
 
-  // Handle Paste for Images with Compression
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
         const target = e.target as HTMLElement;
@@ -416,7 +402,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         insertImageAtCursor(compressedBase64, target);
                     } catch (err) {
                         console.error("Image paste failed", err);
-                        alert("Не удалось вставить изображение. Возможно, файл поврежден или формат не поддерживается.");
+                        alert("Не удалось вставить изображение.");
                     }
                 }
             }
@@ -439,7 +425,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
               console.error("Image upload failed", err);
               alert("Ошибка загрузки изображения.");
           }
-          // Reset input
           e.target.value = '';
       }
   };
@@ -615,7 +600,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, note.id)}
         onClick={() => handleOpenNote(note)}
-        className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
+        className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group block cursor-default relative break-inside-avoid mb-3 ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
         {/* TEXT CONTENT WRAPPER - Block context for float */}
         <div className="block w-full">
@@ -643,12 +628,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
              )}
 
              {/* Content */}
-             <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm overflow-hidden break-words`}>
+             <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed text-sm overflow-hidden break-words`}>
                 <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{note.content}</ReactMarkdown>
              </div>
         </div>
 
-        <div className="mt-auto flex flex-col gap-3 pt-2 border-t border-slate-900/5 dark:border-white/5">
+        <div className="flex flex-col gap-3 pt-2 border-t border-slate-900/5 dark:border-white/5">
             {note.tags && note.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1 w-full">
                     {note.tags.map(tag => (
@@ -848,7 +833,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-20 md:pb-0">
+            <div className="columns-1 md:columns-2 gap-3 space-y-3 pb-20 md:pb-0">
                 {inboxNotes.length > 0 ? (
                     inboxNotes.map(note => renderNoteCard(note, false))
                 ) : (
@@ -864,7 +849,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         </>
       )}
       {activeTab === 'library' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-20 md:pb-0">
+        <div className="columns-1 md:columns-2 gap-3 space-y-3 pb-20 md:pb-0">
             {archivedNotes.length > 0 ? (
                 archivedNotes.map(note => renderNoteCard(note, true))
             ) : (
@@ -983,7 +968,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <div 
                                     ref={editContentRef}
                                     contentEditable
-                                    className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto"
+                                    className="w-full min-h-[12rem] max-h-[60vh] bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto"
                                     dangerouslySetInnerHTML={{ __html: markdownToHtml(selectedNote.content) }} // Initialize with HTML
                                 />
                             </div>
