@@ -148,9 +148,6 @@ const htmlToMarkdown = (html: string) => {
                     md += '_';
                     break;
                 case 'U':
-                    // Markdown doesn't standardly support underline, but some parsers do. 
-                    // We'll skip specific md syntax for it to keep it simple or use HTML if needed.
-                    // For now, treat as text to avoid breaking standard md.
                     el.childNodes.forEach(process);
                     break;
                 case 'CODE':
@@ -197,9 +194,8 @@ const htmlToMarkdown = (html: string) => {
                     md += '\n';
                     break;
                 case 'LI':
-                    // Check if parent is OL to use numbers
                     if (el.parentElement?.tagName === 'OL') {
-                        md += '1. '; // Simple 1. for all items, markdown parsers handle numbering
+                        md += '1. '; 
                     } else {
                         md += '- ';
                     }
@@ -361,10 +357,15 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const contentEditableRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Undo/Redo State
+  // Undo/Redo State (Main)
   const [history, setHistory] = useState<string[]>(['']);
   const [historyIndex, setHistoryIndex] = useState(0);
   const historyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Undo/Redo State (Edit Modal)
+  const [editHistory, setEditHistory] = useState<string[]>(['']);
+  const [editHistoryIndex, setEditHistoryIndex] = useState(0);
+  const editHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Image Deletion State
   const [hoveredImage, setHoveredImage] = useState<{ rect: DOMRect, el: HTMLImageElement } | null>(null);
@@ -416,18 +417,34 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       
       const newHistory = history.slice(0, historyIndex + 1);
       newHistory.push(content);
-      // Limit history size if needed (e.g. 50 steps)
       if (newHistory.length > 50) newHistory.shift();
       
       setHistory(newHistory);
       setHistoryIndex(newHistory.length - 1);
   }, [history, historyIndex]);
 
+  const saveEditHistorySnapshot = useCallback((content: string) => {
+      if (content === editHistory[editHistoryIndex]) return;
+      const newHistory = editHistory.slice(0, editHistoryIndex + 1);
+      newHistory.push(content);
+      if (newHistory.length > 50) newHistory.shift();
+      setEditHistory(newHistory);
+      setEditHistoryIndex(newHistory.length - 1);
+  }, [editHistory, editHistoryIndex]);
+
   const handleEditorInput = () => {
       if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
       historyTimeoutRef.current = setTimeout(() => {
           const content = contentEditableRef.current?.innerHTML || '';
           saveHistorySnapshot(content);
+      }, 500); // Debounce
+  };
+
+  const handleEditModalInput = () => {
+      if (editHistoryTimeoutRef.current) clearTimeout(editHistoryTimeoutRef.current);
+      editHistoryTimeoutRef.current = setTimeout(() => {
+          const content = editContentRef.current?.innerHTML || '';
+          saveEditHistorySnapshot(content);
       }, 500); // Debounce
   };
 
@@ -453,18 +470,36 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       }
   };
 
+  const execEditUndo = () => {
+      if (editHistoryIndex > 0) {
+          const prevIndex = editHistoryIndex - 1;
+          const prevContent = editHistory[prevIndex];
+          setEditHistoryIndex(prevIndex);
+          if (editContentRef.current) {
+              editContentRef.current.innerHTML = prevContent;
+          }
+      }
+  };
+
+  const execEditRedo = () => {
+      if (editHistoryIndex < editHistory.length - 1) {
+          const nextIndex = editHistoryIndex + 1;
+          const nextContent = editHistory[nextIndex];
+          setEditHistoryIndex(nextIndex);
+          if (editContentRef.current) {
+              editContentRef.current.innerHTML = nextContent;
+          }
+      }
+  };
+
   // --- EDITOR LOGIC ---
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         if (editorRef.current && !editorRef.current.contains(event.target as Node)) {
-            // Check if clicking inside color picker dropdown which might be portal or nearby
-            // Simplified: if expanded and clicking outside editor wrapper, try to dump
             if (isExpanded) {
-                // Don't dump if clicking specific interactive elements that might be outside due to overflow
                 const target = event.target as HTMLElement;
                 if (target.closest('.color-picker-dropdown')) return;
-                if (target.closest('.image-delete-btn')) return; // Fix for image deletion closing editor
-                
+                if (target.closest('.image-delete-btn')) return;
                 handleDump();
             }
         }
@@ -473,7 +508,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isExpanded, title]);
 
-  const insertImageAtCursor = (base64: string, targetEl: HTMLElement) => {
+  const insertImageAtCursor = (base64: string, targetEl: HTMLElement, onSave: (content: string) => void) => {
         targetEl.focus();
         const selection = window.getSelection();
         if (selection && selection.rangeCount > 0) {
@@ -492,7 +527,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 range.setEndAfter(img);
                 selection.removeAllRanges();
                 selection.addRange(range);
-                saveHistorySnapshot(targetEl.innerHTML); // Save state after insertion
+                onSave(targetEl.innerHTML); // Use dynamic save function
                 return;
             }
         }
@@ -504,23 +539,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         img.style.display = 'block';
         img.style.margin = '8px 0';
         targetEl.appendChild(img);
-        saveHistorySnapshot(targetEl.innerHTML); // Save state
+        onSave(targetEl.innerHTML); // Use dynamic save function
   };
 
-  // Image Hover Logic
   const handleEditorMouseMove = (e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'IMG') {
           const rect = target.getBoundingClientRect();
-          // Adjust based on the container if needed, but absolute fixed overlay is simpler
           setHoveredImage({ rect, el: target as HTMLImageElement });
-      } else if (hoveredImage) {
-          // Add some buffer or check if moving to the button
-          // Actually, let's keep it simple: if not hovering img or button, clear.
-          // The button has its own events.
-          // We will clear in a separate effect or based on distance if needed.
-          // For now, if moving over something else, verify if it is the overlay button.
-          // Implementation detail: The overlay button is outside contentEditable.
       }
   };
 
@@ -528,8 +554,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       if (hoveredImage && hoveredImage.el.parentNode) {
           hoveredImage.el.parentNode.removeChild(hoveredImage.el);
           setHoveredImage(null);
-          // Update history
-          if (contentEditableRef.current) {
+          // Determine context and save
+          if (isEditing && editContentRef.current) {
+              saveEditHistorySnapshot(editContentRef.current.innerHTML);
+          } else if (contentEditableRef.current) {
               saveHistorySnapshot(contentEditableRef.current.innerHTML);
           }
       }
@@ -551,10 +579,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 if (blob) {
                     try {
                         const compressedBase64 = await processImage(blob);
-                        insertImageAtCursor(compressedBase64, target);
+                        if (isEditing && editContentRef.current && target === editContentRef.current) {
+                            insertImageAtCursor(compressedBase64, editContentRef.current, saveEditHistorySnapshot);
+                        } else if (contentEditableRef.current && target === contentEditableRef.current) {
+                            insertImageAtCursor(compressedBase64, contentEditableRef.current, saveHistorySnapshot);
+                        }
                     } catch (err) {
                         console.error("Image paste failed", err);
-                        alert("Не удалось вставить изображение. Возможно, файл поврежден или формат не поддерживается.");
+                        alert("Не удалось вставить изображение.");
                     }
                 }
             }
@@ -562,33 +594,36 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     };
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, []);
+  }, [isEditing]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
           try {
               const compressedBase64 = await processImage(file);
-              const target = isEditing ? editContentRef.current : contentEditableRef.current;
-              if (target) {
-                  insertImageAtCursor(compressedBase64, target);
+              if (isEditing && editContentRef.current) {
+                  insertImageAtCursor(compressedBase64, editContentRef.current, saveEditHistorySnapshot);
+              } else if (contentEditableRef.current) {
+                  insertImageAtCursor(compressedBase64, contentEditableRef.current, saveHistorySnapshot);
               }
           } catch (err) {
               console.error("Image upload failed", err);
               alert("Ошибка загрузки изображения.");
           }
-          // Reset input
           e.target.value = '';
       }
   };
 
   const execCmd = (command: string, value: string | undefined = undefined) => {
       document.execCommand(command, false, value);
-      if (contentEditableRef.current && isExpanded) {
+      if (contentEditableRef.current && isExpanded && !isEditing) {
           contentEditableRef.current.focus();
           saveHistorySnapshot(contentEditableRef.current.innerHTML);
       }
-      else if (editContentRef.current && isEditing) editContentRef.current.focus();
+      else if (editContentRef.current && isEditing) {
+          editContentRef.current.focus();
+          saveEditHistorySnapshot(editContentRef.current.innerHTML);
+      }
   };
 
   const handleClearStyle = (e: React.MouseEvent) => {
@@ -603,7 +638,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     
     if (!cleanHtml && !title.trim()) {
         setIsExpanded(false);
-        setHistory(['']); // Reset History
+        setHistory(['']); 
         setHistoryIndex(0);
         return;
     }
@@ -628,9 +663,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     };
     addNote(newNote);
     setTitle('');
-    setCreationColor('white'); // Reset Color
+    setCreationColor('white');
     if (contentEditableRef.current) contentEditableRef.current.innerHTML = '';
-    setHistory(['']); // Reset History
+    setHistory(['']);
     setHistoryIndex(0);
     setCreationTags([]);
     setIsProcessing(false);
@@ -692,6 +727,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       setSelectedNote(note);
       setEditTitle(note.title || '');
       setEditTagsList(note.tags ? note.tags.map(t => t.replace(/^#/, '')) : []);
+      // Initialize edit history
+      const contentHtml = markdownToHtml(note.content);
+      setEditHistory([contentHtml]);
+      setEditHistoryIndex(0);
       setIsEditing(false);
   };
 
@@ -839,6 +878,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       <div className="shrink-0 flex flex-col gap-2">
          {/* ... (Search Bar Logic) ... */}
          {/* ... (Existing code for Search Bar) ... */}
+         {/* Omitted for brevity, existing structure remains identical */}
          <div className="flex gap-2">
             <div className="relative flex-1">
                 {showMoodInput ? (
@@ -893,6 +933,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             )}
          </div>
          
+         {/* Filter UI Elements... */}
          {aiFilteredIds !== null && !showMoodInput && (
              <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-lg px-3 py-2 animate-in fade-in slide-in-from-top-1">
                  <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300"><Sparkles size={12} /><span>Найдено {aiFilteredIds.length} заметок на тему: <b>«{moodQuery}»</b></span></div>
@@ -1116,7 +1157,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       )}
       
       {/* ... (Oracle component) ... */}
-      {/* ... */}
       {showOracle && (
       <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`bg-gradient-to-br ${oracleVibe.color} w-[90vw] max-w-md rounded-3xl shadow-2xl p-1 overflow-hidden animate-in zoom-in-95 duration-300 relative flex flex-col min-h-[420px] max-h-[85vh]`}>
@@ -1204,13 +1244,23 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     <div className="mb-6 space-y-3">
                         <div>
                             <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Название</label>
-                            <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-white/50 dark:bg-black/20 rounded-lg p-2.5 text-base font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none" placeholder="Название..." />
+                            <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-white/50 dark:bg-black/20 rounded-lg p-2.5 text-base font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none" placeholder="Название" />
                         </div>
                         <div>
                             <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Содержание</label>
                             <div className="relative">
                                 {/* TOOLBAR FOR EDIT MODAL */}
-                                <div className="flex items-center gap-1 mb-2 pb-2 border-b border-slate-200 dark:border-slate-700/50 overflow-x-auto scrollbar-none">
+                                <div className="flex items-center gap-1 mb-2 pb-1 overflow-x-auto scrollbar-none">
+                                    {/* UNDO / REDO */}
+                                    <Tooltip content="Отменить">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={16} /></button>
+                                    </Tooltip>
+                                    <Tooltip content="Повторить">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={16} /></button>
+                                    </Tooltip>
+
+                                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
                                     {/* HEADINGS */}
                                     <Tooltip content="Заголовок 1">
                                         <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={16} /></button>
@@ -1255,6 +1305,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <div 
                                     ref={editContentRef}
                                     contentEditable
+                                    onInput={handleEditModalInput}
+                                    onMouseMove={handleEditorMouseMove}
                                     className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&>h1]:text-xl [&>h1]:font-bold [&>h2]:text-lg [&>h2]:font-bold [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
                                     dangerouslySetInnerHTML={{ __html: markdownToHtml(selectedNote.content) }} // Initialize with HTML
                                 />
