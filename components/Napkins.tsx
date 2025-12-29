@@ -503,6 +503,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       else if (editContentRef.current && isEditing) editContentRef.current.focus();
   };
 
+  const handleClearStyle = (e: React.MouseEvent) => {
+      e.preventDefault();
+      execCmd('removeFormat');
+      execCmd('formatBlock', 'div'); // Reset block style to div/p
+  };
+
   const handleDump = async () => {
     const rawHtml = contentEditableRef.current?.innerHTML || '';
     const cleanHtml = rawHtml.replace(/^(<br>)+$/, '').trim();
@@ -879,12 +885,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
-                                    {/* GROUP 3: LISTS & CLEAN */}
-                                    <Tooltip content="Список">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('insertUnorderedList'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><List size={18} /></button>
-                                    </Tooltip>
+                                    {/* GROUP 3: CLEAN & DELETE */}
                                     <Tooltip content="Очистить стиль">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('removeFormat'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button>
+                                        <button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button>
+                                    </Tooltip>
+                                    
+                                    <Tooltip content="Удалить выделенное">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('delete'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Trash2 size={18} /></button>
                                     </Tooltip>
 
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
@@ -1071,7 +1078,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <div className="flex items-center gap-1 mb-1 pb-1 border-b border-slate-200 dark:border-slate-600/50 overflow-x-auto">
                                     <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Bold size={14} /></button>
                                     <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Italic size={14} /></button>
-                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('insertUnorderedList'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><List size={14} /></button>
+                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('delete'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Trash2 size={14} /></button>
                                     <label className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded cursor-pointer text-slate-500 dark:text-slate-400"><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={14} /></label>
                                 </div>
                                 <div 
