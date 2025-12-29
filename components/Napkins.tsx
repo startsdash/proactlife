@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
@@ -816,7 +817,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   );
 
   return (
-    <div className="flex flex-col h-full max-w-4xl mx-auto p-3 md:p-8 space-y-4 md:space-y-6 relative overflow-y-auto">
+    <div 
+        className="flex flex-col h-full max-w-4xl mx-auto p-3 md:p-8 space-y-4 md:space-y-6 relative overflow-y-auto"
+        onScroll={() => setHoveredImage(null)}
+    >
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0 mb-6">
         <div>
           <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Заметки</h1>
@@ -910,7 +914,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     className={`${getNoteColorClass(creationColor)} rounded-2xl border transition-all duration-300 shrink-0 relative ${isExpanded ? 'shadow-lg border-slate-300 dark:border-slate-600' : 'shadow-sm border-slate-200 dark:border-slate-700 hover:shadow-md'}`}
                 >
                     {/* IMAGE DELETE OVERLAY */}
-                    {hoveredImage && isExpanded && (
+                    {hoveredImage && isExpanded && createPortal(
                         <div 
                             style={{
                                 position: 'fixed', // Fixed to viewport to avoid overflow clipping
@@ -933,7 +937,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     <Trash2 size={14} />
                                 </button>
                             </Tooltip>
-                        </div>
+                        </div>,
+                        document.body
                     )}
 
                     {!isExpanded ? (
