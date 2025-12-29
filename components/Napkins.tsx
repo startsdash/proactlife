@@ -956,7 +956,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         <div className="flex flex-col animate-in fade-in duration-200">
                             <input 
                                 type="text"
-                                placeholder="Заголовок"
+                                placeholder="Название"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                                 className="px-4 pt-4 pb-2 bg-transparent text-base font-bold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none"
@@ -974,7 +974,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             />
                             
                             <div className="px-4 py-2">
-                                <TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} placeholder="Теги..." />
+                                <TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} placeholder="Добавить теги..." />
                             </div>
 
                             <div className="flex items-center justify-between px-2 py-2 border-t border-slate-900/5 dark:border-white/5 gap-2">
