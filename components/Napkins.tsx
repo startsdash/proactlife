@@ -1,12 +1,12 @@
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -360,6 +360,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const contentEditableRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Undo/Redo State
+  const [history, setHistory] = useState<string[]>(['']);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const historyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Image Deletion State
+  const [hoveredImage, setHoveredImage] = useState<{ rect: DOMRect, el: HTMLImageElement } | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeColorFilter, setActiveColorFilter] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -401,6 +409,49 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const hasMoodMatcher = useMemo(() => config.aiTools.some(t => t.id === 'mood_matcher'), [config.aiTools]);
   const hasTagger = useMemo(() => config.aiTools.some(t => t.id === 'tagger'), [config.aiTools]);
 
+  // --- HISTORY LOGIC ---
+  const saveHistorySnapshot = useCallback((content: string) => {
+      if (content === history[historyIndex]) return;
+      
+      const newHistory = history.slice(0, historyIndex + 1);
+      newHistory.push(content);
+      // Limit history size if needed (e.g. 50 steps)
+      if (newHistory.length > 50) newHistory.shift();
+      
+      setHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+  }, [history, historyIndex]);
+
+  const handleEditorInput = () => {
+      if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
+      historyTimeoutRef.current = setTimeout(() => {
+          const content = contentEditableRef.current?.innerHTML || '';
+          saveHistorySnapshot(content);
+      }, 500); // Debounce
+  };
+
+  const execUndo = () => {
+      if (historyIndex > 0) {
+          const prevIndex = historyIndex - 1;
+          const prevContent = history[prevIndex];
+          setHistoryIndex(prevIndex);
+          if (contentEditableRef.current) {
+              contentEditableRef.current.innerHTML = prevContent;
+          }
+      }
+  };
+
+  const execRedo = () => {
+      if (historyIndex < history.length - 1) {
+          const nextIndex = historyIndex + 1;
+          const nextContent = history[nextIndex];
+          setHistoryIndex(nextIndex);
+          if (contentEditableRef.current) {
+              contentEditableRef.current.innerHTML = nextContent;
+          }
+      }
+  };
+
   // --- EDITOR LOGIC ---
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -437,6 +488,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 range.setEndAfter(img);
                 selection.removeAllRanges();
                 selection.addRange(range);
+                saveHistorySnapshot(targetEl.innerHTML); // Save state after insertion
                 return;
             }
         }
@@ -448,6 +500,35 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         img.style.display = 'block';
         img.style.margin = '8px 0';
         targetEl.appendChild(img);
+        saveHistorySnapshot(targetEl.innerHTML); // Save state
+  };
+
+  // Image Hover Logic
+  const handleEditorMouseMove = (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG') {
+          const rect = target.getBoundingClientRect();
+          // Adjust based on the container if needed, but absolute fixed overlay is simpler
+          setHoveredImage({ rect, el: target as HTMLImageElement });
+      } else if (hoveredImage) {
+          // Add some buffer or check if moving to the button
+          // Actually, let's keep it simple: if not hovering img or button, clear.
+          // The button has its own events.
+          // We will clear in a separate effect or based on distance if needed.
+          // For now, if moving over something else, verify if it is the overlay button.
+          // Implementation detail: The overlay button is outside contentEditable.
+      }
+  };
+
+  const removeHoveredImage = () => {
+      if (hoveredImage && hoveredImage.el.parentNode) {
+          hoveredImage.el.parentNode.removeChild(hoveredImage.el);
+          setHoveredImage(null);
+          // Update history
+          if (contentEditableRef.current) {
+              saveHistorySnapshot(contentEditableRef.current.innerHTML);
+          }
+      }
   };
 
   // Handle Paste for Images with Compression
@@ -499,7 +580,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const execCmd = (command: string, value: string | undefined = undefined) => {
       document.execCommand(command, false, value);
-      if (contentEditableRef.current && isExpanded) contentEditableRef.current.focus();
+      if (contentEditableRef.current && isExpanded) {
+          contentEditableRef.current.focus();
+          saveHistorySnapshot(contentEditableRef.current.innerHTML);
+      }
       else if (editContentRef.current && isEditing) editContentRef.current.focus();
   };
 
@@ -515,6 +599,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     
     if (!cleanHtml && !title.trim()) {
         setIsExpanded(false);
+        setHistory(['']); // Reset History
+        setHistoryIndex(0);
         return;
     }
     
@@ -540,6 +626,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     setTitle('');
     setCreationColor('white'); // Reset Color
     if (contentEditableRef.current) contentEditableRef.current.innerHTML = '';
+    setHistory(['']); // Reset History
+    setHistoryIndex(0);
     setCreationTags([]);
     setIsProcessing(false);
     setIsExpanded(false);
@@ -742,7 +830,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
       {/* SEARCH & FILTER BAR */}
       <div className="shrink-0 flex flex-col gap-2">
-         {/* ... (Search Bar Logic remains unchanged) ... */}
+         {/* ... (Search Bar Logic) ... */}
          <div className="flex gap-2">
             <div className="relative flex-1">
                 {showMoodInput ? (
@@ -819,8 +907,35 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
                 <div 
                     ref={editorRef}
-                    className={`${getNoteColorClass(creationColor)} rounded-2xl border transition-all duration-300 shrink-0 ${isExpanded ? 'shadow-lg border-slate-300 dark:border-slate-600' : 'shadow-sm border-slate-200 dark:border-slate-700 hover:shadow-md'}`}
+                    className={`${getNoteColorClass(creationColor)} rounded-2xl border transition-all duration-300 shrink-0 relative ${isExpanded ? 'shadow-lg border-slate-300 dark:border-slate-600' : 'shadow-sm border-slate-200 dark:border-slate-700 hover:shadow-md'}`}
                 >
+                    {/* IMAGE DELETE OVERLAY */}
+                    {hoveredImage && isExpanded && (
+                        <div 
+                            style={{
+                                position: 'fixed', // Fixed to viewport to avoid overflow clipping
+                                top: hoveredImage.rect.top + 8,
+                                left: hoveredImage.rect.right - 40,
+                                zIndex: 9999
+                            }}
+                            className="animate-in fade-in zoom-in-95 duration-200"
+                            onMouseLeave={() => setHoveredImage(null)}
+                        >
+                            <Tooltip content="Удалить картинку">
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        removeHoveredImage();
+                                    }}
+                                    className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors border border-white/20"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </Tooltip>
+                        </div>
+                    )}
+
                     {!isExpanded ? (
                         <div 
                             onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }}
@@ -846,6 +961,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             <div
                                 ref={contentEditableRef}
                                 contentEditable
+                                onInput={handleEditorInput}
+                                onMouseMove={handleEditorMouseMove}
                                 className="w-full min-h-[120px] outline-none text-sm text-slate-700 dark:text-slate-200 px-4 py-2 leading-relaxed [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-2 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
                                 style={{ whiteSpace: 'pre-wrap' }}
                                 data-placeholder="О чём ты думаешь?"
@@ -859,6 +976,16 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 {/* FORMATTING TOOLBAR */}
                                 <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
                                     
+                                    {/* GROUP 0: UNDO/REDO */}
+                                    <Tooltip content="Отменить">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button>
+                                    </Tooltip>
+                                    <Tooltip content="Повторить">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={18} /></button>
+                                    </Tooltip>
+
+                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
                                     {/* GROUP 1: HEADINGS */}
                                     <Tooltip content="Заголовок 1">
                                         <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button>
@@ -890,10 +1017,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         <button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button>
                                     </Tooltip>
                                     
-                                    <Tooltip content="Удалить выделенное">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('delete'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Trash2 size={18} /></button>
-                                    </Tooltip>
-
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
                                     {/* GROUP 5: MEDIA */}
