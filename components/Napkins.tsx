@@ -190,8 +190,18 @@ const htmlToMarkdown = (html: string) => {
                     el.childNodes.forEach(process);
                     md += '\n';
                     break;
+                case 'OL':
+                    if (md.length > 0 && !md.endsWith('\n')) md += '\n';
+                    el.childNodes.forEach(process);
+                    md += '\n';
+                    break;
                 case 'LI':
-                    md += '- ';
+                    // Check if parent is OL to use numbers
+                    if (el.parentElement?.tagName === 'OL') {
+                        md += '1. '; // Simple 1. for all items, markdown parsers handle numbering
+                    } else {
+                        md += '- ';
+                    }
                     el.childNodes.forEach(process);
                     md += '\n';
                     break;
@@ -830,7 +840,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             <div
                                 ref={contentEditableRef}
                                 contentEditable
-                                className="w-full min-h-[120px] outline-none text-sm text-slate-700 dark:text-slate-200 px-4 py-2 leading-relaxed"
+                                className="w-full min-h-[120px] outline-none text-sm text-slate-700 dark:text-slate-200 px-4 py-2 leading-relaxed [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-2 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
                                 style={{ whiteSpace: 'pre-wrap' }}
                                 data-placeholder="О чём ты думаешь?"
                             />
@@ -839,9 +849,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} placeholder="Теги..." />
                             </div>
 
-                            <div className="flex items-center justify-between px-2 py-2 border-t border-slate-900/5 dark:border-white/5">
+                            <div className="flex items-center justify-between px-2 py-2 border-t border-slate-900/5 dark:border-white/5 gap-2">
                                 {/* FORMATTING TOOLBAR */}
-                                <div className="flex items-center gap-1 overflow-x-auto scrollbar-none max-w-[calc(100%-80px)]">
+                                <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
                                     
                                     {/* GROUP 1: HEADINGS */}
                                     <Tooltip content="Заголовок 1">
@@ -879,33 +889,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
-                                    {/* GROUP 4: COLOR */}
-                                    <div className="relative">
-                                        <Tooltip content="Фон заметки">
-                                            <button 
-                                                onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} 
-                                                className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"
-                                            >
-                                                <Palette size={18} />
-                                            </button>
-                                        </Tooltip>
-                                        {showColorPicker && (
-                                            <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
-                                                {colors.map(c => (
-                                                    <button 
-                                                        key={c.id} 
-                                                        onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} 
-                                                        className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
-                                                        style={{ backgroundColor: c.hex }}
-                                                        title={c.id}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
                                     {/* GROUP 5: MEDIA */}
                                     <Tooltip content="Вставить картинку">
                                         <label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
@@ -921,13 +904,40 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     </Tooltip>
                                 </div>
 
-                                <button 
-                                    onClick={handleDump} 
-                                    disabled={isProcessing} 
-                                    className="text-xs font-bold uppercase tracking-wider px-4 py-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
-                                >
-                                    Закрыть
-                                </button>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {/* GROUP 4: COLOR - Moved out of scroll container */}
+                                    <div className="relative">
+                                        <Tooltip content="Фон заметки">
+                                            <button 
+                                                onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} 
+                                                className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"
+                                            >
+                                                <Palette size={18} />
+                                            </button>
+                                        </Tooltip>
+                                        {showColorPicker && (
+                                            <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                {colors.map(c => (
+                                                    <button 
+                                                        key={c.id} 
+                                                        onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} 
+                                                        className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
+                                                        style={{ backgroundColor: c.hex }}
+                                                        title={c.id}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <button 
+                                        onClick={handleDump} 
+                                        disabled={isProcessing} 
+                                        className="text-xs font-bold uppercase tracking-wider px-4 py-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
+                                    >
+                                        Закрыть
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1067,7 +1077,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <div 
                                     ref={editContentRef}
                                     contentEditable
-                                    className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto"
+                                    className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&>h1]:text-xl [&>h1]:font-bold [&>h2]:text-lg [&>h2]:font-bold [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
                                     dangerouslySetInnerHTML={{ __html: markdownToHtml(selectedNote.content) }} // Initialize with HTML
                                 />
                             </div>
