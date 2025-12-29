@@ -106,9 +106,7 @@ const markdownComponents = {
             ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
             : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     },
-    img: ({node, ...props}: any) => <img className="rounded-lg max-h-60 object-cover my-2 block" {...props} loading="lazy" />,
-    // Custom renderer for underline using 'u' tag, though ReactMarkdown might strip it by default without rehype-raw
-    u: ({node, ...props}: any) => <u className="decoration-2 decoration-indigo-300 dark:decoration-indigo-600 underline-offset-2" {...props} />
+    img: ({node, ...props}: any) => <img className="rounded-lg max-h-60 object-cover my-2 block" {...props} loading="lazy" />
 };
 
 // --- HELPER: HTML <-> MARKDOWN CONVERTERS ---
@@ -116,32 +114,25 @@ const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
     
-    // Improved Regex for Styles
-    // Bold
-    html = html.replace(/\*\*((?:.|\n)*?)\*\*/g, '<b>$1</b>');
-    // Italic
-    html = html.replace(/_((?:.|\n)*?)_/g, '<i>$1</i>');
-    // Code
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    
     // Headers
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    
+    // Bold/Italic/Code
+    html = html.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+    html = html.replace(/_(.*?)_/g, '<i>$1</i>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
     
     // Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
 
-    // Lists (Basic support for WYSIWYG view)
-    html = html.replace(/^\- (.*$)/gm, '<li>$1</li>');
-    
-    // Note: Standard Markdown doesn't support Underline. We pass <u> tags through.
-    // If the input MD has <u>, it stays <u>, which browser renders.
+    // Cleanup: Remove newline immediately after block tags to avoid double spacing
+    html = html.replace(/(<\/(h1|h2|div|p)>)\n/g, '$1');
 
-    // Convert newlines to <br> but avoid adding them after block elements
+    // Convert remaining newlines to <br>
     html = html.replace(/\n/g, '<br>');
-    html = html.replace(/(<\/(h1|h2|div|p|ul|ol|li)>)<br>/g, '$1');
         
     return html;
 };
@@ -154,7 +145,7 @@ const htmlToMarkdown = (html: string) => {
     const process = (node: Node) => {
         if (node.nodeType === Node.TEXT_NODE) {
             let text = node.textContent || '';
-            // Don't typography replace here, do it on final save or rendering
+            text = applyTypography(text);
             md += text;
         } else if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as HTMLElement;
@@ -174,8 +165,7 @@ const htmlToMarkdown = (html: string) => {
                     if (!el.textContent?.trim()) return;
                     md += '_'; el.childNodes.forEach(process); md += '_'; break;
                 case 'U':
-                    // Explicitly preserve U tags for internal WYSIWYG
-                    md += '<u>'; el.childNodes.forEach(process); md += '</u>'; break;
+                    el.childNodes.forEach(process); break;
                 case 'CODE':
                     if (!el.textContent?.trim()) return;
                     md += '`'; el.childNodes.forEach(process); md += '`'; break;
@@ -501,7 +491,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             if (isExpanded) {
                 const target = event.target as HTMLElement;
                 if (target.closest('.color-picker-dropdown')) return;
-                // Important: Don't close if clicking delete button which might be removed
                 if (target.closest('.image-delete-btn')) return;
                 handleDump();
             }
@@ -554,10 +543,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   };
 
   const deleteActiveImage = (e?: React.MouseEvent) => {
-      if(e) {
-          e.preventDefault();
-          e.stopPropagation(); // Crucial to prevent bubble up to window close logic
-      }
+      if(e) e.preventDefault();
       if (activeImage) {
           activeImage.remove();
           setActiveImage(null);
@@ -1023,7 +1009,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 onBlur={saveSelection}
                                 onMouseUp={saveSelection}
                                 onKeyUp={saveSelection}
-                                className="w-full min-h-[120px] outline-none text-sm text-slate-700 dark:text-slate-200 px-4 py-2 leading-relaxed [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_u]:decoration-2 [&_u]:decoration-indigo-300 dark:[&_u]:decoration-indigo-600 [&_u]:underline-offset-2"
+                                className="w-full min-h-[120px] outline-none text-sm text-slate-700 dark:text-slate-200 px-4 py-2 leading-relaxed [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
                                 style={{ whiteSpace: 'pre-wrap' }}
                                 data-placeholder="О чём ты думаешь?"
                             />
@@ -1091,10 +1077,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                                     {activeImage && !isEditing && (
                                         <Tooltip content="Удалить картинку">
-                                            <button 
-                                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); deleteActiveImage(e); }} 
-                                                className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500 transition-colors image-delete-btn"
-                                            >
+                                            <button onMouseDown={deleteActiveImage} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500 transition-colors">
                                                 <Trash2 size={18} />
                                             </button>
                                         </Tooltip>
@@ -1326,7 +1309,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                                         {activeImage && (
                                             <Tooltip content="Удалить картинку">
-                                                <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); deleteActiveImage(e); }} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 transition-colors image-delete-btn">
+                                                <button onMouseDown={deleteActiveImage} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 transition-colors">
                                                     <Trash2 size={16} />
                                                 </button>
                                             </Tooltip>
@@ -1367,7 +1350,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     onMouseUp={saveSelection}
                                     onKeyUp={saveSelection}
                                     onScroll={() => setActiveImage(null)}
-                                    className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_u]:decoration-2 [&_u]:decoration-indigo-300 dark:[&_u]:decoration-indigo-600 [&_u]:underline-offset-2"
+                                    className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
                                 />
                             </div>
                         </div>
