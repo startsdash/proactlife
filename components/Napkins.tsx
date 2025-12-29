@@ -125,7 +125,7 @@ const markdownToHtml = (md: string) => {
     
     // Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
-        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />`;
+        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
 
     // Cleanup: Remove newline immediately after block tags to avoid double spacing
@@ -340,13 +340,17 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [activeTab, setActiveTab] = useState<'inbox' | 'library'>('inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showModalColorPicker, setShowModalColorPicker] = useState(false); // NEW
+  const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
   
   // Editor State
   const [isExpanded, setIsExpanded] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const contentEditableRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Active Image State
+  const [activeImage, setActiveImage] = useState<HTMLImageElement | null>(null);
+  const lastSelectionRange = useRef<Range | null>(null);
 
   // Undo/Redo State (Main)
   const [history, setHistory] = useState<string[]>(['']);
@@ -357,10 +361,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [editHistory, setEditHistory] = useState<string[]>(['']);
   const [editHistoryIndex, setEditHistoryIndex] = useState(0);
   const editHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Image Deletion State
-  const [hoveredImage, setHoveredImage] = useState<{ rect: DOMRect, el: HTMLImageElement } | null>(null);
-  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeColorFilter, setActiveColorFilter] = useState<string | null>(null);
@@ -504,81 +504,83 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   useEffect(() => {
     if (isEditing && editContentRef.current && selectedNote) {
         editContentRef.current.innerHTML = markdownToHtml(selectedNote.content);
+        setActiveImage(null);
     }
-  }, [isEditing, selectedNote?.id]); // DEPENDENCY CHANGED to avoid reset on color change
+  }, [isEditing, selectedNote?.id]); 
+
+  // --- IMAGE & SELECTION HANDLING ---
+  const saveSelection = () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          const container = isEditing ? editContentRef.current : contentEditableRef.current;
+          if (container && container.contains(range.commonAncestorContainer)) {
+              lastSelectionRange.current = range.cloneRange();
+          }
+      }
+  };
+
+  const handleEditorClick = (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG') {
+          // Deselect previous if different
+          if (activeImage && activeImage !== target) {
+              activeImage.style.outline = 'none';
+          }
+          // Select new
+          const img = target as HTMLImageElement;
+          img.style.outline = '3px solid #6366f1'; 
+          img.style.borderRadius = '4px';
+          setActiveImage(img);
+      } else {
+          // Deselect
+          if (activeImage) {
+              activeImage.style.outline = 'none';
+              setActiveImage(null);
+          }
+      }
+      saveSelection();
+  };
+
+  const deleteActiveImage = (e?: React.MouseEvent) => {
+      if(e) e.preventDefault();
+      if (activeImage) {
+          activeImage.remove();
+          setActiveImage(null);
+          if (isEditing && editContentRef.current) saveEditHistorySnapshot(editContentRef.current.innerHTML);
+          else if (contentEditableRef.current) saveHistorySnapshot(contentEditableRef.current.innerHTML);
+      }
+  };
 
   const insertImageAtCursor = (base64: string, targetEl: HTMLElement, onSave: (content: string) => void) => {
         targetEl.focus();
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            if (targetEl.contains(range.commonAncestorContainer)) {
-                const img = document.createElement('img');
-                img.src = base64;
-                img.style.maxWidth = '100%';
-                img.style.borderRadius = '8px';
-                img.style.display = 'block';
-                img.style.margin = '8px 0';
-                
-                range.deleteContents();
-                range.insertNode(img);
-                range.setStartAfter(img);
-                range.setEndAfter(img);
-                selection.removeAllRanges();
-                selection.addRange(range);
-                onSave(targetEl.innerHTML); 
-                return;
-            }
+        let range = lastSelectionRange.current;
+        
+        // Validation: Is range valid and inside targetEl?
+        if (!range || !targetEl.contains(range.commonAncestorContainer)) {
+             // Fallback: Create range at end
+             range = document.createRange();
+             range.selectNodeContents(targetEl);
+             range.collapse(false);
         }
-        // Fallback
+
         const img = document.createElement('img');
         img.src = base64;
         img.style.maxWidth = '100%';
         img.style.borderRadius = '8px';
         img.style.display = 'block';
         img.style.margin = '8px 0';
-        targetEl.appendChild(img);
+        
+        range.deleteContents();
+        range.insertNode(img);
+        range.setStartAfter(img);
+        range.setEndAfter(img);
+        
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        
         onSave(targetEl.innerHTML); 
-  };
-
-  // Improved Image Hover Logic with Timeout
-  const handleEditorMouseMove = (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'IMG') {
-          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-          const rect = target.getBoundingClientRect();
-          setHoveredImage({ rect, el: target as HTMLImageElement });
-      } else {
-          // If we are NOT over an image, start a timeout to hide the button
-          if (!hoveredImage) return;
-          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-          
-          hoverTimeoutRef.current = setTimeout(() => {
-              setHoveredImage(null);
-          }, 300); // 300ms delay before hiding
-      }
-  };
-
-  const cancelHoverTimeout = () => {
-      if (hoverTimeoutRef.current) {
-          clearTimeout(hoverTimeoutRef.current);
-          hoverTimeoutRef.current = null;
-      }
-  };
-
-  const removeHoveredImage = () => {
-      if (hoveredImage && hoveredImage.el.parentNode) {
-          hoveredImage.el.parentNode.removeChild(hoveredImage.el);
-          setHoveredImage(null);
-          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-          
-          // Determine context and save
-          if (isEditing && editContentRef.current) {
-              saveEditHistorySnapshot(editContentRef.current.innerHTML);
-          } else if (contentEditableRef.current) {
-              saveHistorySnapshot(contentEditableRef.current.innerHTML);
-          }
-      }
   };
 
   // Handle Paste for Images with Compression
@@ -779,18 +781,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const setColor = (colorId: string) => {
       if (selectedNote) {
+          // IMPORTANT: Only update metadata, do NOT touch content here to avoid visual resets
+          // The contentEditable DOM will persist the text changes
           const updated = { ...selectedNote, color: colorId };
-          
-          // Preserve content if editing to avoid overwriting recent changes
-          if (isEditing && editContentRef.current) {
-              const rawHtml = editContentRef.current.innerHTML;
-              const markdownContent = htmlToMarkdown(rawHtml);
-              updated.content = markdownContent;
-              if (editTitle !== selectedNote.title) {
-                  updated.title = applyTypography(editTitle);
-              }
-          }
-
           updateNote(updated);
           setSelectedNote(updated);
       }
@@ -890,7 +883,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   return (
     <div 
         className="flex flex-col h-full max-w-4xl mx-auto p-3 md:p-8 space-y-4 md:space-y-6 relative overflow-y-auto"
-        onScroll={() => setHoveredImage(null)}
+        onScroll={() => setActiveImage(null)}
     >
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0 mb-6">
         <div>
@@ -986,35 +979,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     ref={editorRef}
                     className={`${getNoteColorClass(creationColor)} rounded-2xl border transition-all duration-300 shrink-0 relative ${isExpanded ? 'shadow-lg border-slate-300 dark:border-slate-600' : 'shadow-sm border-slate-200 dark:border-slate-700 hover:shadow-md'}`}
                 >
-                    {/* IMAGE DELETE OVERLAY (CREATION ONLY) */}
-                    {hoveredImage && isExpanded && createPortal(
-                        <div 
-                            style={{
-                                position: 'fixed', // Fixed to viewport to avoid overflow clipping
-                                top: hoveredImage.rect.top + 4,
-                                left: hoveredImage.rect.right - 36,
-                                zIndex: 9999
-                            }}
-                            className="animate-in fade-in zoom-in-95 duration-200"
-                            onMouseEnter={() => cancelHoverTimeout()}
-                            onMouseLeave={() => setHoveredImage(null)}
-                        >
-                            <Tooltip content="Удалить картинку">
-                                <button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        removeHoveredImage();
-                                    }}
-                                    className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors border border-white/20 image-delete-btn pointer-events-auto"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            </Tooltip>
-                        </div>,
-                        document.body
-                    )}
-
                     {!isExpanded ? (
                         <div 
                             onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }}
@@ -1041,7 +1005,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 ref={contentEditableRef}
                                 contentEditable
                                 onInput={handleEditorInput}
-                                onMouseMove={handleEditorMouseMove}
+                                onMouseMove={handleEditorClick}
+                                onBlur={saveSelection}
+                                onMouseUp={saveSelection}
+                                onKeyUp={saveSelection}
                                 className="w-full min-h-[120px] outline-none text-sm text-slate-700 dark:text-slate-200 px-4 py-2 leading-relaxed [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
                                 style={{ whiteSpace: 'pre-wrap' }}
                                 data-placeholder="О чём ты думаешь?"
@@ -1107,6 +1074,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                             <ImageIcon size={18} />
                                         </label>
                                     </Tooltip>
+
+                                    {activeImage && !isEditing && (
+                                        <Tooltip content="Удалить картинку">
+                                            <button onMouseDown={deleteActiveImage} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500 transition-colors">
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </Tooltip>
+                                    )}
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
@@ -1237,7 +1212,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
       {selectedNote && (
         <div className="fixed inset-0 z-50 bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
-            <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border ${getNoteBorderClass(selectedNote.color)} transition-colors duration-300 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()} onScroll={() => setHoveredImage(null)}>
+            <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border ${getNoteBorderClass(selectedNote.color)} transition-colors duration-300 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()} onScroll={() => setActiveImage(null)}>
                 <div className="flex justify-between items-start mb-4">
                     <h3 className="text-lg font-bold flex items-center gap-3 text-slate-800 dark:text-slate-200">
                         {isEditing ? 'Редактирование' : 'Детали'}
@@ -1331,6 +1306,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         </label>
                                     </Tooltip>
 
+                                    {activeImage && (
+                                        <Tooltip content="Удалить картинку">
+                                            <button onMouseDown={deleteActiveImage} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 transition-colors">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </Tooltip>
+                                    )}
+
                                     {/* COLOR PICKER (NEW) */}
                                     <div className="relative ml-1">
                                         <Tooltip content="Фон заметки">
@@ -1360,8 +1343,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     ref={editContentRef}
                                     contentEditable
                                     onInput={handleEditModalInput}
-                                    onMouseMove={handleEditorMouseMove}
-                                    onScroll={() => setHoveredImage(null)}
+                                    onMouseMove={handleEditorClick}
+                                    onBlur={saveSelection}
+                                    onMouseUp={saveSelection}
+                                    onKeyUp={saveSelection}
+                                    onScroll={() => setActiveImage(null)}
                                     className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
                                 />
                             </div>
