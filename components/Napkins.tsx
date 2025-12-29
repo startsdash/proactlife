@@ -508,6 +508,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isExpanded, title]);
 
+  // Initial Content Population for Edit Modal
+  useEffect(() => {
+    if (isEditing && editContentRef.current && selectedNote) {
+        editContentRef.current.innerHTML = markdownToHtml(selectedNote.content);
+    }
+  }, [isEditing, selectedNote]);
+
   const insertImageAtCursor = (base64: string, targetEl: HTMLElement, onSave: (content: string) => void) => {
         targetEl.focus();
         const selection = window.getSelection();
@@ -527,7 +534,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 range.setEndAfter(img);
                 selection.removeAllRanges();
                 selection.addRange(range);
-                onSave(targetEl.innerHTML); // Use dynamic save function
+                onSave(targetEl.innerHTML); 
                 return;
             }
         }
@@ -539,7 +546,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         img.style.display = 'block';
         img.style.margin = '8px 0';
         targetEl.appendChild(img);
-        onSave(targetEl.innerHTML); // Use dynamic save function
+        onSave(targetEl.innerHTML); 
   };
 
   const handleEditorMouseMove = (e: React.MouseEvent) => {
@@ -960,7 +967,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     className={`${getNoteColorClass(creationColor)} rounded-2xl border transition-all duration-300 shrink-0 relative ${isExpanded ? 'shadow-lg border-slate-300 dark:border-slate-600' : 'shadow-sm border-slate-200 dark:border-slate-700 hover:shadow-md'}`}
                 >
                     {/* IMAGE DELETE OVERLAY */}
-                    {hoveredImage && isExpanded && createPortal(
+                    {hoveredImage && (isExpanded || isEditing) && createPortal(
                         <div 
                             style={{
                                 position: 'fixed', // Fixed to viewport to avoid overflow clipping
@@ -1026,8 +1033,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             <div className="flex items-center justify-between px-2 py-2 border-t border-slate-900/5 dark:border-white/5 gap-2">
                                 {/* FORMATTING TOOLBAR */}
                                 <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
-                                    
-                                    {/* GROUP 0: UNDO/REDO */}
+                                    {/* ... (Undo/Redo, Headings, Styles, Clean) ... */}
                                     <Tooltip content="Отменить">
                                         <button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button>
                                     </Tooltip>
@@ -1037,7 +1043,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
-                                    {/* GROUP 1: HEADINGS */}
                                     <Tooltip content="Заголовок 1">
                                         <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button>
                                     </Tooltip>
@@ -1050,7 +1055,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
-                                    {/* GROUP 2: STYLES */}
                                     <Tooltip content="Жирный">
                                         <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button>
                                     </Tooltip>
@@ -1063,7 +1067,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
-                                    {/* GROUP 3: CLEAN & DELETE */}
                                     <Tooltip content="Очистить стиль">
                                         <button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button>
                                     </Tooltip>
@@ -1297,7 +1300,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     {/* MEDIA */}
                                     <Tooltip content="Вставить картинку">
                                         <label className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
-                                            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                            <input 
+                                                type="file" 
+                                                accept="image/*" 
+                                                className="hidden" 
+                                                onChange={handleImageUpload} 
+                                            />
                                             <ImageIcon size={16} />
                                         </label>
                                     </Tooltip>
@@ -1308,7 +1316,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     onInput={handleEditModalInput}
                                     onMouseMove={handleEditorMouseMove}
                                     className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&>h1]:text-xl [&>h1]:font-bold [&>h2]:text-lg [&>h2]:font-bold [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
-                                    dangerouslySetInnerHTML={{ __html: markdownToHtml(selectedNote.content) }} // Initialize with HTML
                                 />
                             </div>
                         </div>
