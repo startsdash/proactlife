@@ -7,7 +7,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Heading1, Heading2, Eraser, Type } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -114,27 +114,24 @@ const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
     
-    // Convert common MD syntax to HTML for ContentEditable
     // Headers
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
     
-    // Bold/Italic/Code (Basic support)
+    // Bold/Italic/Code
     html = html.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-    html = html.replace(/__(.*?)__/g, '<b>$1</b>');
     html = html.replace(/_(.*?)_/g, '<i>$1</i>');
-    html = html.replace(/\*(.*?)\*/g, '<i>$1</i>');
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
     
-    // Lists - Basic replacement to make them visible, but full editor support is limited without a library
-    html = html.replace(/^\- (.*$)/gm, '<li>$1</li>');
-
     // Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
 
-    // Newlines to BR
+    // Cleanup: Remove newline immediately after block tags to avoid double spacing
+    html = html.replace(/(<\/(h1|h2|div|p)>)\n/g, '$1');
+
+    // Convert remaining newlines to <br>
     html = html.replace(/\n/g, '<br>');
         
     return html;
@@ -143,55 +140,66 @@ const markdownToHtml = (md: string) => {
 const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
+    let md = '';
     
-    // Recursive converter to better handle nesting and spacing
-    const walk = (node: Node): string => {
+    const process = (node: Node) => {
         if (node.nodeType === Node.TEXT_NODE) {
-            return node.textContent || '';
-        }
-        if (node.nodeType !== Node.ELEMENT_NODE) return '';
-        
-        const el = node as HTMLElement;
-        let content = '';
-        el.childNodes.forEach(child => content += walk(child));
-        
-        // Trim content for inline styles to avoid "** bold**" issues
-        switch(el.tagName) {
-            case 'B': case 'STRONG': 
-                return content.trim() ? `**${content.trim()}**` : '';
-            case 'I': case 'EM': 
-                return content.trim() ? `_${content.trim()}_` : '';
-            case 'S': case 'STRIKE': 
-                return content.trim() ? `~~${content.trim()}~~` : '';
-            case 'U': 
-                // Strip underline (not standard MD) to avoid HTML leakage on cards
-                return content; 
-            case 'CODE': 
-                return content.trim() ? `\`${content.trim()}\`` : '';
-            case 'H1': 
-                return `\n# ${content.trim()}\n`;
-            case 'H2': 
-                return `\n## ${content.trim()}\n`;
-            case 'DIV': 
-            case 'P': 
-                // Block elements should have separation
-                return `\n${content}\n`;
-            case 'BR': 
-                return '  \n';
-            case 'LI': 
-                return `\n- ${content.trim()}`;
-            case 'IMG': 
-                const img = el as HTMLImageElement;
-                return `\n![${img.alt || 'image'}](${img.src})\n`;
-            default: 
-                return content;
+            let text = node.textContent || '';
+            text = applyTypography(text);
+            md += text;
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            const tagName = el.tagName;
+            const isBlock = ['DIV', 'P', 'H1', 'H2', 'UL', 'OL', 'LI'].includes(tagName);
+
+            // Pre-newline for blocks if needed
+            if (isBlock && md.length > 0 && !md.endsWith('\n')) {
+                md += '\n';
+            }
+
+            switch(tagName) {
+                case 'B': case 'STRONG':
+                    if (!el.textContent?.trim()) return;
+                    md += '**'; el.childNodes.forEach(process); md += '**'; break;
+                case 'I': case 'EM':
+                    if (!el.textContent?.trim()) return;
+                    md += '_'; el.childNodes.forEach(process); md += '_'; break;
+                case 'U':
+                    el.childNodes.forEach(process); break;
+                case 'CODE':
+                    if (!el.textContent?.trim()) return;
+                    md += '`'; el.childNodes.forEach(process); md += '`'; break;
+                case 'H1':
+                    md += '# '; el.childNodes.forEach(process); break;
+                case 'H2':
+                    md += '## '; el.childNodes.forEach(process); break;
+                case 'BR':
+                    md += '  \n'; 
+                    break;
+                case 'IMG':
+                    const img = el as HTMLImageElement;
+                    const cleanSrc = img.src.replace(/\s/g, '');
+                    md += `![${img.alt || 'image'}](${cleanSrc})`;
+                    break;
+                case 'LI':
+                    md += '- '; el.childNodes.forEach(process); break;
+                case 'DIV':
+                case 'P':
+                    el.childNodes.forEach(process);
+                    break;
+                default:
+                    el.childNodes.forEach(process);
+            }
+
+            // Post-newline for blocks
+            if (isBlock) {
+                if (!md.endsWith('\n')) md += '\n';
+            }
         }
     };
     
-    let md = walk(temp);
-    // Normalize excessive newlines
-    md = md.replace(/\n{3,}/g, '\n\n').trim();
-    return md;
+    temp.childNodes.forEach(process);
+    return md.trim();
 };
 
 // --- INTERNAL COMPONENT: TAG SELECTOR ---
@@ -1041,7 +1049,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     <Tooltip content="Курсив">
                                         <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button>
                                     </Tooltip>
-                                    {/* Underline Removed to prevent HTML/MD mismatch */}
+                                    <Tooltip content="Подчеркнутый">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('underline'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Underline size={18} /></button>
+                                    </Tooltip>
 
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
@@ -1271,7 +1281,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         <Tooltip content="Курсив">
                                             <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button>
                                         </Tooltip>
-                                        {/* Underline Removed */}
+                                        <Tooltip content="Подчеркнутый">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('underline'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Underline size={16} /></button>
+                                        </Tooltip>
 
                                         <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
