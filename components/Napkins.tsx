@@ -461,7 +461,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             // Simplified: if expanded and clicking outside editor wrapper, try to dump
             if (isExpanded) {
                 // Don't dump if clicking specific interactive elements that might be outside due to overflow
-                if ((event.target as HTMLElement).closest('.color-picker-dropdown')) return;
+                const target = event.target as HTMLElement;
+                if (target.closest('.color-picker-dropdown')) return;
+                if (target.closest('.image-delete-btn')) return; // Fix for image deletion closing editor
+                
                 handleDump();
             }
         }
@@ -932,7 +935,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         e.stopPropagation();
                                         removeHoveredImage();
                                     }}
-                                    className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors border border-white/20"
+                                    className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors border border-white/20 image-delete-btn"
                                 >
                                     <Trash2 size={14} />
                                 </button>
