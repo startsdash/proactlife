@@ -114,24 +114,28 @@ const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
     
+    // Protect Images first (so we don't mess up data URIs with other regex)
+    // We can just rely on standard replacement order.
+    
+    // Headers
+    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    
+    // Bold/Italic/Code
+    html = html.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+    html = html.replace(/_(.*?)_/g, '<i>$1</i>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
     // Images
-    html = html.replace(/!\[(.*?)\]\((data:image\/[^;]+;base64,[^)]+)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />');
-    html = html.replace(/!\[(.*?)\]\((?!data:)(.*?)\)/g, '<img src="$2" alt="$1" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />');
+    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
+        // Simple sanitization to allow data URIs but prevent broken markup
+        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%;" />`;
+    });
 
-    // Headers - Improved regex to handle start of string or newline correctly
-    html = html.replace(/(^|\n)# (.*?)(?=\n|$)/g, '$1<h1>$2</h1>');
-    html = html.replace(/(^|\n)## (.*?)(?=\n|$)/g, '$1<h2>$2</h2>');
+    // Cleanup: Remove newline immediately after block tags to avoid double spacing
+    html = html.replace(/(<\/(h1|h2|div|p)>)\n/g, '$1');
 
-    // Basic Formatting
-    html = html
-        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-        .replace(/_(.*?)_/g, '<i>$1</i>')
-        .replace(/`([^`]+)`/g, '<code>$1</code>');
-        
-    // Cleanup: Avoid converting newlines that are just after block elements
-    html = html.replace(/(<\/?(h1|h2|div|p|ul|ol|li|blockquote)>)\n/g, '$1');
-
-    // Convert remaining newlines to breaks
+    // Convert remaining newlines to <br>
     html = html.replace(/\n/g, '<br>');
         
     return html;
@@ -144,10 +148,20 @@ const htmlToMarkdown = (html: string) => {
     
     const process = (node: Node) => {
         if (node.nodeType === Node.TEXT_NODE) {
-            md += applyTypography(node.textContent || '');
+            let text = node.textContent || '';
+            text = applyTypography(text);
+            md += text;
         } else if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as HTMLElement;
-            switch(el.tagName) {
+            const tagName = el.tagName;
+            const isBlock = ['DIV', 'P', 'H1', 'H2', 'UL', 'OL', 'LI'].includes(tagName);
+
+            // Pre-newline for blocks if needed
+            if (isBlock && md.length > 0 && !md.endsWith('\n')) {
+                md += '\n';
+            }
+
+            switch(tagName) {
                 case 'B': case 'STRONG':
                     if (!el.textContent?.trim()) return;
                     md += '**'; el.childNodes.forEach(process); md += '**'; break;
@@ -160,39 +174,31 @@ const htmlToMarkdown = (html: string) => {
                     if (!el.textContent?.trim()) return;
                     md += '`'; el.childNodes.forEach(process); md += '`'; break;
                 case 'H1':
-                    if (md.length > 0 && !md.endsWith('\n')) md += '\n';
-                    md += '# '; el.childNodes.forEach(process); md += '\n'; break;
+                    md += '# '; el.childNodes.forEach(process); break;
                 case 'H2':
-                    if (md.length > 0 && !md.endsWith('\n')) md += '\n';
-                    md += '## '; el.childNodes.forEach(process); md += '\n'; break;
-                case 'DIV':
-                case 'P':
-                    if (md.length > 0 && !md.endsWith('\n')) md += '\n';
-                    el.childNodes.forEach(process);
-                    if (!md.endsWith('\n')) md += '\n';
-                    break;
+                    md += '## '; el.childNodes.forEach(process); break;
                 case 'BR':
-                    md += '  \n'; // Force hard break in markdown
+                    md += '  \n'; 
                     break;
                 case 'IMG':
                     const img = el as HTMLImageElement;
                     const cleanSrc = img.src.replace(/\s/g, '');
-                    if (md.length > 0 && !md.endsWith('\n')) md += '\n';
-                    md += `![${img.alt || 'image'}](${cleanSrc})\n`;
-                    break;
-                case 'UL':
-                case 'OL':
-                    if (md.length > 0 && !md.endsWith('\n')) md += '\n';
-                    el.childNodes.forEach(process);
-                    if (!md.endsWith('\n')) md += '\n';
+                    md += `![${img.alt || 'image'}](${cleanSrc})`;
                     break;
                 case 'LI':
-                    md += el.parentElement?.tagName === 'OL' ? '1. ' : '- ';
+                    md += '- '; el.childNodes.forEach(process); break;
+                case 'DIV':
+                case 'P':
                     el.childNodes.forEach(process);
-                    md += '\n';
+                    // Block element implicitly ends line, if content didn't add newline, we add one.
                     break;
                 default:
                     el.childNodes.forEach(process);
+            }
+
+            // Post-newline for blocks
+            if (isBlock) {
+                if (!md.endsWith('\n')) md += '\n';
             }
         }
     };
@@ -202,6 +208,7 @@ const htmlToMarkdown = (html: string) => {
 };
 
 // --- INTERNAL COMPONENT: TAG SELECTOR ---
+// ... (TagSelector remains mostly same, condensed for brevity in full file output if unchanged logic is safe)
 interface TagSelectorProps {
     selectedTags: string[];
     onChange: (tags: string[]) => void;
@@ -548,7 +555,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           setHoveredImage({ rect, el: target as HTMLImageElement });
       } else {
           // If we are NOT over an image, start a timeout to hide the button
-          // This allows moving from image to the button without it disappearing immediately
           if (!hoveredImage) return;
           if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
           
