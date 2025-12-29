@@ -6,7 +6,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -146,10 +146,26 @@ const htmlToMarkdown = (html: string) => {
                     el.childNodes.forEach(process);
                     md += '_';
                     break;
+                case 'U':
+                    // Markdown doesn't standardly support underline, but some parsers do. 
+                    // We'll skip specific md syntax for it to keep it simple or use HTML if needed.
+                    // For now, treat as text to avoid breaking standard md.
+                    el.childNodes.forEach(process);
+                    break;
                 case 'CODE':
                     md += '`';
                     el.childNodes.forEach(process);
                     md += '`';
+                    break;
+                case 'H1':
+                    md += '\n# ';
+                    el.childNodes.forEach(process);
+                    md += '\n';
+                    break;
+                case 'H2':
+                    md += '\n## ';
+                    el.childNodes.forEach(process);
+                    md += '\n';
                     break;
                 case 'DIV':
                     if (md.length > 0 && !md.endsWith('\n')) md += '\n';
@@ -322,9 +338,11 @@ const MasonryGrid = ({ items, renderItem }: { items: any[], renderItem: (item: a
 const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
+  const [creationColor, setCreationColor] = useState('white');
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'inbox' | 'library'>('inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [showColorPicker, setShowColorPicker] = useState(false);
   
   // Editor State
   const [isExpanded, setIsExpanded] = useState(false);
@@ -377,7 +395,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         if (editorRef.current && !editorRef.current.contains(event.target as Node)) {
+            // Check if clicking inside color picker dropdown which might be portal or nearby
+            // Simplified: if expanded and clicking outside editor wrapper, try to dump
             if (isExpanded) {
+                // Don't dump if clicking specific interactive elements that might be outside due to overflow
+                if ((event.target as HTMLElement).closest('.color-picker-dropdown')) return;
                 handleDump();
             }
         }
@@ -495,11 +517,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       tags: [...creationTags, ...autoTags],
       createdAt: Date.now(),
       status: 'inbox',
-      color: 'white',
+      color: creationColor,
       isPinned: false
     };
     addNote(newNote);
     setTitle('');
+    setCreationColor('white'); // Reset Color
     if (contentEditableRef.current) contentEditableRef.current.innerHTML = '';
     setCreationTags([]);
     setIsProcessing(false);
@@ -780,7 +803,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
                 <div 
                     ref={editorRef}
-                    className={`bg-white dark:bg-[#1e293b] rounded-2xl border transition-all duration-300 shrink-0 ${isExpanded ? 'shadow-lg border-slate-300 dark:border-slate-600' : 'shadow-sm border-slate-200 dark:border-slate-700 hover:shadow-md'}`}
+                    className={`${getNoteColorClass(creationColor)} rounded-2xl border transition-all duration-300 shrink-0 ${isExpanded ? 'shadow-lg border-slate-300 dark:border-slate-600' : 'shadow-sm border-slate-200 dark:border-slate-700 hover:shadow-md'}`}
                 >
                     {!isExpanded ? (
                         <div 
@@ -816,25 +839,76 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} placeholder="Теги..." />
                             </div>
 
-                            <div className="flex items-center justify-between px-2 py-2 border-t border-slate-100 dark:border-slate-700/50">
-                                <div className="flex items-center gap-1">
+                            <div className="flex items-center justify-between px-2 py-2 border-t border-slate-900/5 dark:border-white/5">
+                                {/* FORMATTING TOOLBAR */}
+                                <div className="flex items-center gap-1 overflow-x-auto scrollbar-none max-w-[calc(100%-80px)]">
+                                    
+                                    {/* GROUP 1: HEADINGS */}
+                                    <Tooltip content="Заголовок 1">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button>
+                                    </Tooltip>
+                                    <Tooltip content="Заголовок 2">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={18} /></button>
+                                    </Tooltip>
+                                    <Tooltip content="Текст">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'P'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Type size={18} /></button>
+                                    </Tooltip>
+
+                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                    {/* GROUP 2: STYLES */}
                                     <Tooltip content="Жирный">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
-                                            <Bold size={18} />
-                                        </button>
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button>
                                     </Tooltip>
                                     <Tooltip content="Курсив">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
-                                            <Italic size={18} />
-                                        </button>
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button>
                                     </Tooltip>
+                                    <Tooltip content="Подчеркнутый">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('underline'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Underline size={18} /></button>
+                                    </Tooltip>
+
+                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                    {/* GROUP 3: LISTS & CLEAN */}
                                     <Tooltip content="Список">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('insertUnorderedList'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
-                                            <List size={18} />
-                                        </button>
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('insertUnorderedList'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><List size={18} /></button>
                                     </Tooltip>
+                                    <Tooltip content="Очистить стиль">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('removeFormat'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button>
+                                    </Tooltip>
+
+                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                    {/* GROUP 4: COLOR */}
+                                    <div className="relative">
+                                        <Tooltip content="Фон заметки">
+                                            <button 
+                                                onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} 
+                                                className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"
+                                            >
+                                                <Palette size={18} />
+                                            </button>
+                                        </Tooltip>
+                                        {showColorPicker && (
+                                            <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                {colors.map(c => (
+                                                    <button 
+                                                        key={c.id} 
+                                                        onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} 
+                                                        className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
+                                                        style={{ backgroundColor: c.hex }}
+                                                        title={c.id}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                    {/* GROUP 5: MEDIA */}
                                     <Tooltip content="Вставить картинку">
-                                        <label className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
+                                        <label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
                                             <input 
                                                 ref={fileInputRef}
                                                 type="file" 
@@ -846,10 +920,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         </label>
                                     </Tooltip>
                                 </div>
+
                                 <button 
                                     onClick={handleDump} 
                                     disabled={isProcessing} 
-                                    className="text-sm font-medium px-4 py-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
+                                    className="text-xs font-bold uppercase tracking-wider px-4 py-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
                                 >
                                     Закрыть
                                 </button>
