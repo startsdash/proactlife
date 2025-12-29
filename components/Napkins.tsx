@@ -664,36 +664,26 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
              )}
 
              {/* Content */}
-             <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed text-sm overflow-hidden break-words line-clamp-[4]`}>
+             <div className={`text-slate-800 dark:text-slate-200 mb-0 font-normal leading-relaxed text-sm overflow-hidden break-words line-clamp-[4]`}>
                 <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{note.content}</ReactMarkdown>
              </div>
         </div>
 
-        <div className="mt-auto flex flex-col gap-3 pt-2 border-t border-slate-900/5 dark:border-white/5">
-            {note.tags && note.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 w-full">
-                    {note.tags.map(tag => (
-                        <span key={tag} className="text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-black/20 px-2 py-1 rounded-md flex items-center gap-1">
-                            <TagIcon size={10} /> {tag.replace(/^#/, '')}
-                        </span>
-                    ))}
-                </div>
-            )}
-            <div className="flex justify-end items-center w-full opacity-0 group-hover:opacity-100 transition-opacity">
-                 <div className="flex gap-2 justify-end">
-                    <Tooltip content="В Спринты">
-                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 md:px-3 py-1.5 rounded-lg transition-colors"><Kanban size={14} /></button>
+        {/* ACTIONS - ABSOLUTE POSITIONED */}
+        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+             <div className="flex gap-1 justify-end bg-white/90 dark:bg-slate-800/90 p-1 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 backdrop-blur-sm">
+                <Tooltip content="В Спринты">
+                    <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg transition-colors"><Kanban size={14} /></button>
+                </Tooltip>
+                <Tooltip content="В Хаб">
+                    <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Хаб?')) moveNoteToSandbox(note.id); }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg transition-colors"><Box size={14} /></button>
+                </Tooltip>
+                {!isArchived && (
+                    <Tooltip content="В Библиотеку">
+                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Библиотеку?')) archiveNote(note.id); }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg transition-colors"><Library size={14} /></button>
                     </Tooltip>
-                    <Tooltip content="В Хаб">
-                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Хаб?')) moveNoteToSandbox(note.id); }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 md:px-3 py-1.5 rounded-lg transition-colors"><Box size={14} /></button>
-                    </Tooltip>
-                    {!isArchived && (
-                        <Tooltip content="В Библиотеку">
-                            <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Библиотеку?')) archiveNote(note.id); }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 md:px-3 py-1.5 rounded-lg transition-colors"><Library size={14} /></button>
-                        </Tooltip>
-                    )}
-                 </div>
-            </div>
+                )}
+             </div>
         </div>
     </div>
   );
