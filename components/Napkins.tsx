@@ -664,7 +664,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
              )}
 
              {/* Content */}
-             <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed text-sm overflow-hidden break-words`}>
+             <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed text-sm overflow-hidden break-words line-clamp-[4]`}>
                 <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{note.content}</ReactMarkdown>
              </div>
         </div>
