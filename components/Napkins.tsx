@@ -1,6 +1,5 @@
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
@@ -90,7 +89,7 @@ const processImage = (file: File | Blob): Promise<string> => {
     });
 };
 
-// Markdown Styles for Notes
+// Markdown Styles for Notes (Display Mode)
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer" target="_blank" rel="noopener noreferrer" {...props} />,
@@ -106,100 +105,116 @@ const markdownComponents = {
             ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
             : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     },
-    img: ({node, ...props}: any) => <img className="rounded-lg max-h-60 object-cover my-2 block" {...props} loading="lazy" />
+    img: ({node, ...props}: any) => <img className="rounded-lg max-h-60 object-cover my-2 block" {...props} loading="lazy" />,
+    u: ({node, ...props}: any) => <u {...props} /> // Explicitly handle underline if it comes through
 };
 
-// --- HELPER: HTML <-> MARKDOWN CONVERTERS ---
+// --- ROBUST CONVERTERS ---
+
+// Convert Markdown to HTML for WYSIWYG Editor
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
+
+    // 1. Escape HTML special characters (basic) to avoid conflicts, EXCEPT specific tags we want to preserve if they exist
+    // Actually, for a simple notepad, we might want to trust the content.
     
-    // Headers
+    // 2. Headings
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
     
-    // Bold/Italic/Code
+    // 3. Bold (Handle ** and __) - Non-greedy
     html = html.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+    
+    // 4. Italic (Handle * and _)
+    // Note: This regex is simple and might catch inside words, but suffices for napkins
     html = html.replace(/_(.*?)_/g, '<i>$1</i>');
+    // Using * for italic is tricky if we already replaced **, so we rely on _ primarily for italic in this converter
+    // or handle * after ** is gone.
+    // Let's handle simple *text*
+    html = html.replace(/(^|[^\*])\*([^\*]+)\*(?!\*)/g, '$1<i>$2</i>');
+
+    // 5. Underline (Custom syntax or HTML tag preservation)
+    // We assume stored as <u>text</u> or similar. 
+    // If standard markdown doesn't have it, we just pass <u...> through (it's already in the string)
+    
+    // 6. Code
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
     
-    // Images
+    // 7. Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
 
-    // Cleanup: Remove newline immediately after block tags to avoid double spacing
-    html = html.replace(/(<\/(h1|h2|div|p)>)\n/g, '$1');
-
-    // Convert remaining newlines to <br>
+    // 8. Newlines
+    // Replace newlines with <br> BUT NOT if they follow a block element which already breaks lines
     html = html.replace(/\n/g, '<br>');
-        
+    
+    // Cleanup: Remove <br> immediately after block closers to avoid double spacing
+    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
+
     return html;
 };
 
+// Convert HTML (from contentEditable) back to Markdown for storage
 const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
-    let md = '';
-    
-    const process = (node: Node) => {
+
+    const walk = (node: Node): string => {
         if (node.nodeType === Node.TEXT_NODE) {
-            let text = node.textContent || '';
-            text = applyTypography(text);
-            md += text;
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            return node.textContent || '';
+        }
+        
+        if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as HTMLElement;
-            const tagName = el.tagName;
-            const isBlock = ['DIV', 'P', 'H1', 'H2', 'UL', 'OL', 'LI'].includes(tagName);
+            const tag = el.tagName.toLowerCase();
+            let content = '';
+            
+            el.childNodes.forEach(child => {
+                content += walk(child);
+            });
 
-            // Pre-newline for blocks if needed
-            if (isBlock && md.length > 0 && !md.endsWith('\n')) {
-                md += '\n';
-            }
-
-            switch(tagName) {
-                case 'B': case 'STRONG':
-                    if (!el.textContent?.trim()) return;
-                    md += '**'; el.childNodes.forEach(process); md += '**'; break;
-                case 'I': case 'EM':
-                    if (!el.textContent?.trim()) return;
-                    md += '_'; el.childNodes.forEach(process); md += '_'; break;
-                case 'U':
-                    el.childNodes.forEach(process); break;
-                case 'CODE':
-                    if (!el.textContent?.trim()) return;
-                    md += '`'; el.childNodes.forEach(process); md += '`'; break;
-                case 'H1':
-                    md += '# '; el.childNodes.forEach(process); break;
-                case 'H2':
-                    md += '## '; el.childNodes.forEach(process); break;
-                case 'BR':
-                    md += '  \n'; 
-                    break;
-                case 'IMG':
+            switch (tag) {
+                case 'b': 
+                case 'strong': 
+                    return content.trim() ? `**${content}**` : '';
+                case 'i': 
+                case 'em': 
+                    return content.trim() ? `_${content}_` : '';
+                case 'u': 
+                    return content.trim() ? `<u>${content}</u>` : ''; // Persist as HTML tag
+                case 'code': 
+                    return `\`${content}\``;
+                case 'h1': 
+                    return `\n# ${content}\n`;
+                case 'h2': 
+                    return `\n## ${content}\n`;
+                case 'div':
+                case 'p':
+                    // Block elements act as newlines
+                    return `\n${content}\n`; 
+                case 'br':
+                    return '\n';
+                case 'img':
                     const img = el as HTMLImageElement;
-                    const cleanSrc = img.src.replace(/\s/g, '');
-                    md += `![${img.alt || 'image'}](${cleanSrc})`;
-                    break;
-                case 'LI':
-                    md += '- '; el.childNodes.forEach(process); break;
-                case 'DIV':
-                case 'P':
-                    el.childNodes.forEach(process);
-                    break;
+                    const src = img.src;
+                    const alt = img.alt || 'image';
+                    return `\n![${alt}](${src})\n`;
                 default:
-                    el.childNodes.forEach(process);
-            }
-
-            // Post-newline for blocks
-            if (isBlock) {
-                if (!md.endsWith('\n')) md += '\n';
+                    return content;
             }
         }
+        return '';
     };
+
+    let md = walk(temp);
     
-    temp.childNodes.forEach(process);
-    return md.trim();
+    // Cleanup excessive newlines
+    md = md.replace(/\n{3,}/g, '\n\n').trim();
+    
+    // Apply Typography
+    return applyTypography(md);
 };
 
 // --- INTERNAL COMPONENT: TAG SELECTOR ---
@@ -492,17 +507,19 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 const target = event.target as HTMLElement;
                 if (target.closest('.color-picker-dropdown')) return;
                 if (target.closest('.image-delete-btn')) return;
-                handleDump();
+                // Don't auto-dump on click outside, require explicit close or save for safety
+                // handleDump(); 
             }
         }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isExpanded, title]);
+  }, [isExpanded]);
 
   // Initial Content Population for Edit Modal
   useEffect(() => {
     if (isEditing && editContentRef.current && selectedNote) {
+        // Force WYSIWYG by converting Markdown to HTML immediately
         editContentRef.current.innerHTML = markdownToHtml(selectedNote.content);
         setActiveImage(null);
     }
@@ -570,6 +587,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         img.style.borderRadius = '8px';
         img.style.display = 'block';
         img.style.margin = '8px 0';
+        img.style.cursor = 'pointer';
         
         range.deleteContents();
         range.insertNode(img);
@@ -654,9 +672,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const handleDump = async () => {
     const rawHtml = contentEditableRef.current?.innerHTML || '';
-    const cleanHtml = rawHtml.replace(/^(<br>)+$/, '').trim();
     
-    if (!cleanHtml && !title.trim()) {
+    // Check if empty
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = rawHtml;
+    const textContent = tempDiv.textContent?.trim() || '';
+    const hasImages = tempDiv.querySelector('img');
+
+    if (!textContent && !hasImages && !title.trim()) {
         setIsExpanded(false);
         setHistory(['']); 
         setHistoryIndex(0);
@@ -664,7 +687,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     }
     
     setIsProcessing(true);
-    const markdownContent = htmlToMarkdown(cleanHtml);
+    // Convert WYSIWYG HTML to Markdown for storage
+    const markdownContent = htmlToMarkdown(rawHtml);
 
     let autoTags: string[] = [];
     if (hasTagger && creationTags.length === 0 && markdownContent.length > 20) {
@@ -747,7 +771,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       setSelectedNote(note);
       setEditTitle(note.title || '');
       setEditTagsList(note.tags ? note.tags.map(t => t.replace(/^#/, '')) : []);
-      // Initialize edit history
+      // Pre-convert to HTML for editing history
       const contentHtml = markdownToHtml(note.content);
       setEditHistory([contentHtml]);
       setEditHistoryIndex(0);
@@ -757,6 +781,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const handleSaveEdit = () => {
       if (selectedNote) {
           const rawHtml = editContentRef.current?.innerHTML || '';
+          // Convert WYSIWYG HTML back to Markdown
           const markdownContent = htmlToMarkdown(rawHtml);
           
           if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
@@ -782,7 +807,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const setColor = (colorId: string) => {
       if (selectedNote) {
           // IMPORTANT: Only update metadata, do NOT touch content here to avoid visual resets
-          // The contentEditable DOM will persist the text changes
           const updated = { ...selectedNote, color: colorId };
           updateNote(updated);
           setSelectedNote(updated);
@@ -1009,7 +1033,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 onBlur={saveSelection}
                                 onMouseUp={saveSelection}
                                 onKeyUp={saveSelection}
-                                className="w-full min-h-[120px] outline-none text-sm text-slate-700 dark:text-slate-200 px-4 py-2 leading-relaxed [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                                className="w-full min-h-[120px] outline-none text-sm text-slate-700 dark:text-slate-200 px-4 py-2 leading-relaxed [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline"
                                 style={{ whiteSpace: 'pre-wrap' }}
                                 data-placeholder="О чём ты думаешь?"
                             />
@@ -1350,7 +1374,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     onMouseUp={saveSelection}
                                     onKeyUp={saveSelection}
                                     onScroll={() => setActiveImage(null)}
-                                    className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                                    className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline"
                                 />
                             </div>
                         </div>
