@@ -948,8 +948,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         >
                             <span>Заметка...</span>
                             <div className="flex gap-3 text-slate-400">
-                                <ImageIcon size={18} />
                                 <PenTool size={18} />
+                                <ImageIcon size={18} />
                             </div>
                         </div>
                     ) : (
