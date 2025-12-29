@@ -1005,7 +1005,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 ref={contentEditableRef}
                                 contentEditable
                                 onInput={handleEditorInput}
-                                onMouseMove={handleEditorClick}
+                                onClick={handleEditorClick}
                                 onBlur={saveSelection}
                                 onMouseUp={saveSelection}
                                 onKeyUp={saveSelection}
@@ -1249,73 +1249,75 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Содержание</label>
                             <div className="relative">
                                 {/* TOOLBAR FOR EDIT MODAL */}
-                                <div className="flex items-center gap-1 mb-2 pb-1 overflow-x-auto scrollbar-none">
-                                    {/* UNDO / REDO */}
-                                    <Tooltip content="Отменить">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={16} /></button>
-                                    </Tooltip>
-                                    <Tooltip content="Повторить">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={16} /></button>
-                                    </Tooltip>
-
-                                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                    {/* HEADINGS */}
-                                    <Tooltip content="Заголовок 1">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={16} /></button>
-                                    </Tooltip>
-                                    <Tooltip content="Заголовок 2">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={16} /></button>
-                                    </Tooltip>
-                                    <Tooltip content="Текст">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'P'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Type size={16} /></button>
-                                    </Tooltip>
-
-                                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                    {/* STYLES */}
-                                    <Tooltip content="Жирный">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Bold size={16} /></button>
-                                    </Tooltip>
-                                    <Tooltip content="Курсив">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button>
-                                    </Tooltip>
-                                    <Tooltip content="Подчеркнутый">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('underline'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Underline size={16} /></button>
-                                    </Tooltip>
-
-                                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                    {/* CLEAN */}
-                                    <Tooltip content="Очистить стиль">
-                                        <button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button>
-                                    </Tooltip>
-                                    
-                                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                    {/* MEDIA */}
-                                    <Tooltip content="Вставить картинку">
-                                        <label className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
-                                            <input 
-                                                type="file" 
-                                                accept="image/*" 
-                                                className="hidden" 
-                                                onChange={handleImageUpload} 
-                                            />
-                                            <ImageIcon size={16} />
-                                        </label>
-                                    </Tooltip>
-
-                                    {activeImage && (
-                                        <Tooltip content="Удалить картинку">
-                                            <button onMouseDown={deleteActiveImage} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 transition-colors">
-                                                <Trash2 size={16} />
-                                            </button>
+                                <div className="flex items-center justify-between mb-2 gap-2">
+                                    <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
+                                        {/* UNDO / REDO */}
+                                        <Tooltip content="Отменить">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={16} /></button>
                                         </Tooltip>
-                                    )}
+                                        <Tooltip content="Повторить">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={16} /></button>
+                                        </Tooltip>
+
+                                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                        {/* HEADINGS */}
+                                        <Tooltip content="Заголовок 1">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={16} /></button>
+                                        </Tooltip>
+                                        <Tooltip content="Заголовок 2">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={16} /></button>
+                                        </Tooltip>
+                                        <Tooltip content="Текст">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'P'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Type size={16} /></button>
+                                        </Tooltip>
+
+                                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                        {/* STYLES */}
+                                        <Tooltip content="Жирный">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Bold size={16} /></button>
+                                        </Tooltip>
+                                        <Tooltip content="Курсив">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button>
+                                        </Tooltip>
+                                        <Tooltip content="Подчеркнутый">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('underline'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Underline size={16} /></button>
+                                        </Tooltip>
+
+                                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                        {/* CLEAN */}
+                                        <Tooltip content="Очистить стиль">
+                                            <button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button>
+                                        </Tooltip>
+                                        
+                                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                        {/* MEDIA */}
+                                        <Tooltip content="Вставить картинку">
+                                            <label className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    className="hidden" 
+                                                    onChange={handleImageUpload} 
+                                                />
+                                                <ImageIcon size={16} />
+                                            </label>
+                                        </Tooltip>
+
+                                        {activeImage && (
+                                            <Tooltip content="Удалить картинку">
+                                                <button onMouseDown={deleteActiveImage} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 transition-colors">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </Tooltip>
+                                        )}
+                                    </div>
 
                                     {/* COLOR PICKER (NEW) */}
-                                    <div className="relative ml-1">
+                                    <div className="shrink-0 relative">
                                         <Tooltip content="Фон заметки">
                                             <button 
                                                 onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} 
@@ -1343,7 +1345,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     ref={editContentRef}
                                     contentEditable
                                     onInput={handleEditModalInput}
-                                    onMouseMove={handleEditorClick}
+                                    onClick={handleEditorClick}
                                     onBlur={saveSelection}
                                     onMouseUp={saveSelection}
                                     onKeyUp={saveSelection}
