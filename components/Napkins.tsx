@@ -42,6 +42,10 @@ const ORACLE_VIBES = [
 // Compresses images to prevent base64 lag in localStorage and rendering
 const processImage = (file: File | Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
+        if (!file.type.startsWith('image/')) {
+            reject(new Error('File is not an image'));
+            return;
+        }
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = (event) => {
@@ -49,8 +53,8 @@ const processImage = (file: File | Blob): Promise<string> => {
             img.src = event.target?.result as string;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800; // Limit width to prevent massive strings
-                const MAX_HEIGHT = 800;
+                const MAX_WIDTH = 600; // Limit width strictly
+                const MAX_HEIGHT = 600;
                 let width = img.width;
                 let height = img.height;
 
@@ -71,8 +75,8 @@ const processImage = (file: File | Blob): Promise<string> => {
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                     ctx.drawImage(img, 0, 0, width, height);
-                    // Compress to JPEG with 0.7 quality
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    // Compress to JPEG with 0.6 quality to keep strings manageable
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
                     resolve(dataUrl);
                 } else {
                     reject(new Error('Canvas context failed'));
@@ -358,6 +362,38 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isExpanded, title]);
 
+  const insertImageAtCursor = (base64: string, targetEl: HTMLElement) => {
+        targetEl.focus();
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            if (targetEl.contains(range.commonAncestorContainer)) {
+                const img = document.createElement('img');
+                img.src = base64;
+                img.style.maxWidth = '100%';
+                img.style.borderRadius = '8px';
+                img.style.display = 'block';
+                img.style.margin = '8px 0';
+                
+                range.deleteContents();
+                range.insertNode(img);
+                range.setStartAfter(img);
+                range.setEndAfter(img);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                return;
+            }
+        }
+        // Fallback
+        const img = document.createElement('img');
+        img.src = base64;
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '8px';
+        img.style.display = 'block';
+        img.style.margin = '8px 0';
+        targetEl.appendChild(img);
+  };
+
   // Handle Paste for Images with Compression
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
@@ -374,9 +410,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 if (blob) {
                     try {
                         const compressedBase64 = await processImage(blob);
-                        document.execCommand('insertImage', false, compressedBase64);
+                        insertImageAtCursor(compressedBase64, target);
                     } catch (err) {
                         console.error("Image paste failed", err);
+                        alert("Не удалось вставить изображение. Возможно, файл поврежден или формат не поддерживается.");
                     }
                 }
             }
@@ -391,14 +428,16 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       if (file) {
           try {
               const compressedBase64 = await processImage(file);
-              // Focus back before inserting
-              if (contentEditableRef.current) contentEditableRef.current.focus();
-              else if (editContentRef.current) editContentRef.current.focus();
-              
-              document.execCommand('insertImage', false, compressedBase64);
+              const target = isEditing ? editContentRef.current : contentEditableRef.current;
+              if (target) {
+                  insertImageAtCursor(compressedBase64, target);
+              }
           } catch (err) {
               console.error("Image upload failed", err);
+              alert("Ошибка загрузки изображения.");
           }
+          // Reset input
+          e.target.value = '';
       }
   };
 
@@ -575,12 +614,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onClick={() => handleOpenNote(note)}
         className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
-        {/* Action Row - Left aligned Grip, Right aligned Pin */}
-        <div className="flex justify-between items-start mb-2">
-             <div className="text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity -ml-1 p-1" title="Перетащить">
-                <GripVertical size={16} />
-             </div>
-             
+        {/* DRAG HANDLE - ABSOLUTE LEFT */}
+        <div className="absolute left-2 top-4 text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 dark:hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 z-10" title="Перетащить">
+            <GripVertical size={16} />
+        </div>
+
+        {/* Action Row - Right aligned Pin only now */}
+        <div className="flex justify-end items-start mb-2 pl-6">
              <div className="flex items-center gap-1">
                  <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
                      <button 
@@ -599,19 +639,19 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
         {/* Title Block */}
         {note.title && (
-            <div className="font-bold text-slate-800 dark:text-slate-100 mb-2 text-sm md:text-base leading-snug line-clamp-2">
+            <div className="font-bold text-slate-800 dark:text-slate-100 mb-2 text-sm md:text-base leading-snug line-clamp-2 pl-2">
                 {note.title}
             </div>
         )}
 
         {/* Content */}
-        <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm overflow-hidden`}>
+        <div className={`text-slate-800 dark:text-slate-200 mb-3 font-normal leading-relaxed line-clamp-6 text-sm overflow-hidden pl-2`}>
             <ReactMarkdown components={markdownComponents}>{note.content}</ReactMarkdown>
         </div>
 
         <div className="mt-auto flex flex-col gap-3 pt-3 border-t border-slate-900/5 dark:border-white/5">
             {note.tags && note.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 w-full">
+                <div className="flex flex-wrap gap-1 w-full pl-2">
                     {note.tags.map(tag => (
                         <span key={tag} className="text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-black/20 px-2 py-1 rounded-md flex items-center gap-1">
                             <TagIcon size={10} /> {tag.replace(/^#/, '')}
