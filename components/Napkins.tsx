@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -217,6 +218,7 @@ const htmlToMarkdown = (html: string) => {
 };
 
 // --- INTERNAL COMPONENT: TAG SELECTOR ---
+// ... (TagSelector remains unchanged)
 interface TagSelectorProps {
     selectedTags: string[];
     onChange: (tags: string[]) => void;
@@ -492,14 +494,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         if (editorRef.current && !editorRef.current.contains(event.target as Node)) {
-            // Check if element is still in DOM (handles removed elements like Delete button)
-            if (!document.contains(event.target as Node)) return;
-
             if (isExpanded) {
                 const target = event.target as HTMLElement;
                 if (target.closest('.color-picker-dropdown')) return;
                 if (target.closest('.image-delete-btn')) return;
-                setIsExpanded(false);
             }
         }
     };
@@ -546,10 +544,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   };
 
   const deleteActiveImage = (e?: React.MouseEvent) => {
-      if(e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+      if(e) e.preventDefault();
       if (activeImage) {
           activeImage.remove();
           setActiveImage(null);
@@ -1025,12 +1020,18 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
-                                    <Tooltip content="Заголовок">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'h1'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button>
+                                    <Tooltip content="Заголовок 1">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button>
                                     </Tooltip>
-                                    <Tooltip content="Подзаголовок">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'h2'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={18} /></button>
+                                    <Tooltip content="Заголовок 2">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={18} /></button>
                                     </Tooltip>
+                                    <Tooltip content="Текст">
+                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'P'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Type size={18} /></button>
+                                    </Tooltip>
+
+                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
                                     <Tooltip content="Жирный">
                                         <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button>
                                     </Tooltip>
@@ -1040,196 +1041,349 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     <Tooltip content="Подчеркнутый">
                                         <button onMouseDown={(e) => { e.preventDefault(); execCmd('underline'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Underline size={18} /></button>
                                     </Tooltip>
-                                    <Tooltip content="Список">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('insertUnorderedList'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><List size={18} /></button>
-                                    </Tooltip>
-                                    <Tooltip content="Код">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'pre'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Code size={18} /></button>
-                                    </Tooltip>
+
+                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
                                     <Tooltip content="Очистить стиль">
                                         <button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button>
                                     </Tooltip>
                                     
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
-                                    <div className="flex items-center gap-1">
-                                        {colors.map(c => (
-                                            <button 
-                                                key={c.id}
-                                                onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); }}
-                                                className={`w-5 h-5 rounded-full border transition-transform ${creationColor === c.id ? 'scale-125 ring-1 ring-slate-400' : 'hover:scale-110'}`}
-                                                style={{ backgroundColor: c.hex, borderColor: '#cbd5e1' }}
+                                    <Tooltip content="Вставить картинку">
+                                        <label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
+                                            <input 
+                                                ref={fileInputRef}
+                                                type="file" 
+                                                accept="image/*" 
+                                                className="hidden" 
+                                                onChange={handleImageUpload} 
                                             />
-                                        ))}
-                                    </div>
-                                    
-                                    <label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors cursor-pointer">
-                                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} ref={fileInputRef} />
-                                        <ImageIcon size={18} />
-                                    </label>
+                                            <ImageIcon size={18} />
+                                        </label>
+                                    </Tooltip>
+
+                                    {activeImage && !isEditing && (
+                                        <Tooltip content="Удалить картинку">
+                                            <button onMouseDown={deleteActiveImage} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500 transition-colors">
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </Tooltip>
+                                    )}
                                 </div>
 
-                                <button 
-                                    onClick={handleDump} 
-                                    className="ml-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium text-sm hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-md shadow-indigo-200 dark:shadow-none active:scale-95 shrink-0"
-                                    disabled={isProcessing}
-                                >
-                                    {isProcessing ? 'Thinking...' : <><Send size={16} /> Dump</>}
-                                </button>
-                            </div>
-                            
-                            {activeImage && (
-                                <div className="absolute top-2 right-2 flex gap-2 image-delete-btn">
-                                    <button onClick={deleteActiveImage} className="bg-red-500 text-white p-1.5 rounded-full shadow-md hover:bg-red-600 transition-colors">
-                                        <Trash2 size={16} />
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <div className="relative">
+                                        <Tooltip content="Фон заметки">
+                                            <button 
+                                                onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} 
+                                                className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"
+                                            >
+                                                <Palette size={18} />
+                                            </button>
+                                        </Tooltip>
+                                        {showColorPicker && (
+                                            <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                {colors.map(c => (
+                                                    <button 
+                                                        key={c.id} 
+                                                        onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} 
+                                                        className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
+                                                        style={{ backgroundColor: c.hex }}
+                                                        title={c.id}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <button 
+                                        onClick={handleDump} 
+                                        disabled={isProcessing} 
+                                        className="text-xs font-bold uppercase tracking-wider px-4 py-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
+                                    >
+                                        Закрыть
                                     </button>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     )}
                 </div>
             )}
-
-            <div className="mt-6 flex-1 min-h-0">
+            
+            {inboxNotes.length > 0 ? (
                 <MasonryGrid items={inboxNotes} renderItem={(note) => renderNoteCard(note, false)} />
-                {inboxNotes.length === 0 && !searchQuery && !activeColorFilter && !showMoodInput && !tagQuery && (
-                    <div className="py-10 opacity-50">
-                        <EmptyState icon={Sparkles} title="Чистый лист" description="Запиши что-нибудь важное..." color="slate" />
+            ) : (
+                <div className="py-6">
+                    <EmptyState 
+                      icon={PenTool} 
+                      title="Чистый лист" 
+                      description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'}
+                    />
+                </div>
+            )}
+        </>
+      )}
+      {activeTab === 'library' && (
+        <>
+            {archivedNotes.length > 0 ? (
+                <MasonryGrid items={archivedNotes} renderItem={(note) => renderNoteCard(note, true)} />
+            ) : (
+                <div className="py-6">
+                    <EmptyState 
+                      icon={Library} 
+                      title="Библиотека пуста" 
+                      description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'}
+                      color="indigo"
+                    />
+                </div>
+            )}
+        </>
+      )}
+      
+      {/* ... (Oracle Modal remains unchanged) ... */}
+      {showOracle && (
+      <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`bg-gradient-to-br ${oracleVibe.color} w-[90vw] max-w-md rounded-3xl shadow-2xl p-1 overflow-hidden animate-in zoom-in-95 duration-300 relative flex flex-col min-h-[420px] max-h-[85vh]`}>
+              <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-[20px] w-full h-full flex flex-col relative overflow-hidden flex-1">
+                  <button onClick={closeOracle} className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-200 p-2 z-20 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><X size={24} /></button>
+                  <div className="p-6 md:p-8 flex flex-col h-full overflow-hidden">
+                      {oracleState === 'select' && (
+                          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full h-full flex flex-col items-center justify-center">
+                              <h3 className="text-xl font-light text-slate-800 dark:text-slate-200 mb-2">Рандом</h3>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Что ищем?</p>
+                              <div className="grid grid-cols-2 gap-4 w-full">
+                                  {ORACLE_VIBES.map(vibe => (
+                                      <button key={vibe.id} onClick={() => castOracleSpell(vibe)} className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 hover:shadow-lg hover:scale-105 border border-slate-100 dark:border-slate-700 transition-all duration-300 group">
+                                          <vibe.icon size={32} strokeWidth={1.5} className="mb-3 text-slate-600 dark:text-slate-300 group-hover:scale-110 transition-transform duration-300" />
+                                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">{vibe.label}</span>
+                                      </button>
+                                  ))}
+                              </div>
+                          </div>
+                      )}
+                      {oracleState === 'thinking' && (
+                          <div className="flex flex-col items-center justify-center animate-pulse h-full">
+                              <oracleVibe.icon size={64} strokeWidth={1} className="mb-6 animate-pulse text-slate-700 dark:text-slate-300" />
+                              <p className="text-slate-500 dark:text-slate-400 font-medium">Связь с хаосом...</p>
+                          </div>
+                      )}
+                      {oracleState === 'result' && oracleNote && (
+                           <div className="flex flex-col h-full animate-in zoom-in-95 duration-500 min-h-0">
+                               <div className="shrink-0 flex items-center justify-center gap-2 mb-6 text-xs font-bold uppercase tracking-widest text-slate-400"><oracleVibe.icon size={14} /><span>{oracleVibe.label}</span></div>
+                               <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0 pr-2">
+                                  <div className="min-h-full flex flex-col">
+                                      <div className="m-auto w-full py-2">
+                                          {oracleNote.title && <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 text-center mb-2">{oracleNote.title}</h3>}
+                                          <div className="text-base md:text-lg text-slate-800 dark:text-slate-200 font-normal leading-relaxed relative py-4 text-center">
+                                              <div className="relative z-10 px-3">
+                                                <ReactMarkdown 
+                                                    components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} 
+                                                    urlTransform={allowDataUrls}
+                                                    rehypePlugins={[rehypeRaw]}
+                                                >
+                                                    {oracleNote.content.replace(/\n/g, '  \n')}
+                                                </ReactMarkdown>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                               </div>
+                               <div className="mt-6 flex flex-col gap-3 shrink-0 pt-2 border-t border-transparent">
+                                  <button onClick={() => { closeOracle(); handleOpenNote(oracleNote); }} className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg bg-gradient-to-r ${oracleVibe.color} hover:opacity-90 transition-opacity flex items-center justify-center gap-2 active:scale-[0.98]`}>Открыть заметку <ArrowRight size={18} /></button>
+                                  <div className="flex flex-col gap-1 items-center">
+                                      <button onClick={() => castOracleSpell(oracleVibe)} className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2"><Shuffle size={12} /> Попробовать еще раз</button>
+                                      <button onClick={() => setOracleState('select')} className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2"><ArrowLeft size={12} /> Попробовать другой вайб</button>
+                                  </div>
+                               </div>
+                           </div>
+                      )}
+                  </div>
+              </div>
+          </div>
+      </div>
+      )}
+
+      {selectedNote && (
+        <div className="fixed inset-0 z-50 bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
+            <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border ${getNoteBorderClass(selectedNote.color)} transition-colors duration-300 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()} onScroll={() => setActiveImage(null)}>
+                <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-lg font-bold flex items-center gap-3 text-slate-800 dark:text-slate-200">
+                        {isEditing ? 'Редактирование' : 'Детали'}
+                        <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить сверху"}>
+                            <button onClick={(e) => togglePin(e, selectedNote)} className={`p-1.5 rounded-full transition-colors ${selectedNote.isPinned ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-indigo-500'}`}><Pin size={16} fill={selectedNote.isPinned ? "currentColor" : "none"} /></button>
+                        </Tooltip>
+                    </h3>
+                    <div className="flex items-center">
+                        {!isEditing && (
+                            <>
+                                <Tooltip content="Редактировать">
+                                    <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:text-slate-500 dark:hover:text-indigo-400 bg-transparent hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded mr-1">
+                                        <Edit3 size={18} />
+                                    </button>
+                                </Tooltip>
+                                <Tooltip content="Удалить">
+                                    <button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40 transition-colors">
+                                        <Trash2 size={18} />
+                                    </button>
+                                </Tooltip>
+                                <div className="w-px h-5 bg-slate-400/30 dark:bg-white/20 mx-2"></div>
+                            </>
+                        )}
+                        <button onClick={() => setSelectedNote(null)} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40"><X size={20}/></button>
+                    </div>
+                </div>
+                {isEditing ? (
+                    <div className="mb-6 space-y-3">
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Название</label>
+                            <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-white/50 dark:bg-black/20 rounded-lg p-2.5 text-base font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none" placeholder="Название" />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Содержание</label>
+                            <div className="relative">
+                                {/* TOOLBAR FOR EDIT MODAL */}
+                                <div className="flex items-center justify-between mb-2 gap-2">
+                                    <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
+                                        {/* UNDO / REDO */}
+                                        <Tooltip content="Отменить">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={16} /></button>
+                                        </Tooltip>
+                                        <Tooltip content="Повторить">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={16} /></button>
+                                        </Tooltip>
+
+                                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                        {/* HEADINGS */}
+                                        <Tooltip content="Заголовок 1">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={16} /></button>
+                                        </Tooltip>
+                                        <Tooltip content="Заголовок 2">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={16} /></button>
+                                        </Tooltip>
+                                        <Tooltip content="Текст">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'P'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Type size={16} /></button>
+                                        </Tooltip>
+
+                                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                        {/* STYLES */}
+                                        <Tooltip content="Жирный">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Bold size={16} /></button>
+                                        </Tooltip>
+                                        <Tooltip content="Курсив">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button>
+                                        </Tooltip>
+                                        <Tooltip content="Подчеркнутый">
+                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('underline'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Underline size={16} /></button>
+                                        </Tooltip>
+
+                                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                        {/* CLEAN */}
+                                        <Tooltip content="Очистить стиль">
+                                            <button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button>
+                                        </Tooltip>
+                                        
+                                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                        {/* MEDIA */}
+                                        <Tooltip content="Вставить картинку">
+                                            <label className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    className="hidden" 
+                                                    onChange={handleImageUpload} 
+                                                />
+                                                <ImageIcon size={16} />
+                                            </label>
+                                        </Tooltip>
+
+                                        {activeImage && (
+                                            <Tooltip content="Удалить картинку">
+                                                <button onMouseDown={deleteActiveImage} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 transition-colors">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </Tooltip>
+                                        )}
+                                    </div>
+
+                                    {/* COLOR PICKER (NEW) */}
+                                    <div className="shrink-0 relative">
+                                        <Tooltip content="Фон заметки">
+                                            <button 
+                                                onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} 
+                                                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"
+                                            >
+                                                <Palette size={16} />
+                                            </button>
+                                        </Tooltip>
+                                        {showModalColorPicker && (
+                                            <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                {colors.map(c => (
+                                                    <button 
+                                                        key={c.id} 
+                                                        onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} 
+                                                        className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
+                                                        style={{ backgroundColor: c.hex }}
+                                                        title={c.id}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div 
+                                    ref={editContentRef}
+                                    contentEditable
+                                    onInput={handleEditModalInput}
+                                    onClick={handleEditorClick}
+                                    onBlur={saveSelection}
+                                    onMouseUp={saveSelection}
+                                    onKeyUp={saveSelection}
+                                    onScroll={() => setActiveImage(null)}
+                                    className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline"
+                                />
+                            </div>
+                        </div>
+                        <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Теги</label><TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} /></div>
+                    </div>
+                ) : (
+                    <div className="mb-6">
+                        {selectedNote.title && <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{selectedNote.title}</h2>}
+                        <div className="text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-4 overflow-x-hidden">
+                            <ReactMarkdown 
+                                components={markdownComponents} 
+                                urlTransform={allowDataUrls}
+                                rehypePlugins={[rehypeRaw]}
+                            >
+                                {selectedNote.content.replace(/\n/g, '  \n')}
+                            </ReactMarkdown>
+                        </div>
+                        {selectedNote.tags && selectedNote.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                                {selectedNote.tags.map(tag => (
+                                    <span key={tag} className="text-xs text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-black/20 px-2 py-1 rounded-md border border-slate-100/50 dark:border-slate-700/50 flex items-center gap-1"><TagIcon size={10} /> {tag.replace(/^#/, '')}</span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+                
+                {isEditing && (
+                    <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-4 border-t border-slate-900/5 dark:border-white/5">
+                        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 w-full md:w-auto text-center">Отмена</button>
+                            <button onClick={handleSaveEdit} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm flex items-center justify-center gap-2 w-full md:w-auto"><Check size={16} /> Сохранить</button>
+                        </div>
                     </div>
                 )}
             </div>
-        </>
-      )}
-
-      {activeTab === 'library' && (
-          <div className="mt-2 flex-1 min-h-0">
-              <MasonryGrid items={archivedNotes} renderItem={(note) => renderNoteCard(note, true)} />
-              {archivedNotes.length === 0 && (
-                  <div className="py-10">
-                      <EmptyState icon={Library} title="Библиотека пуста" description="Архивируй заметки, чтобы сохранить их здесь" color="slate" />
-                  </div>
-              )}
-          </div>
-      )}
-
-      {/* EDIT MODAL */}
-      {isEditing && selectedNote && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setIsEditing(false)}>
-            <div className="bg-white dark:bg-[#1e293b] w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-                <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center shrink-0">
-                    <input 
-                        type="text" 
-                        value={editTitle} 
-                        onChange={(e) => setEditTitle(e.target.value)} 
-                        className="text-lg font-bold bg-transparent outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400 flex-1 mr-4"
-                        placeholder="Без названия"
-                    />
-                    <div className="flex items-center gap-2">
-                        {colors.map(c => (
-                            <button 
-                                key={c.id} 
-                                onClick={() => setColor(c.id)} 
-                                className={`w-5 h-5 rounded-full border transition-transform ${selectedNote.color === c.id ? 'scale-125 ring-1 ring-slate-400' : ''}`} 
-                                style={{ backgroundColor: c.hex, borderColor: '#cbd5e1' }} 
-                            />
-                        ))}
-                        <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 transition-colors ml-2"><X size={20} /></button>
-                    </div>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar-light relative">
-                    <div
-                        ref={editContentRef}
-                        contentEditable
-                        onInput={handleEditModalInput}
-                        onClick={handleEditorClick}
-                        onBlur={saveSelection}
-                        onMouseUp={saveSelection}
-                        onKeyUp={saveSelection}
-                        className="outline-none text-sm text-slate-700 dark:text-slate-200 leading-relaxed min-h-[200px] [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline"
-                    />
-                    {activeImage && isEditing && (
-                        <button onClick={deleteActiveImage} className="fixed bottom-24 right-8 bg-red-500 text-white p-2 rounded-full shadow-lg z-50 hover:bg-red-600">
-                            <Trash2 size={20} />
-                        </button>
-                    )}
-                </div>
-
-                <div className="p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
-                    <div className="mb-4">
-                        <TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} />
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <div className="flex gap-1">
-                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'h1'); }} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-500"><Heading1 size={18} /></button>
-                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'h2'); }} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-500"><Heading2 size={18} /></button>
-                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-500"><Bold size={18} /></button>
-                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-500"><Italic size={18} /></button>
-                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('insertUnorderedList'); }} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-500"><List size={18} /></button>
-                            <label className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-500 cursor-pointer">
-                                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                                <ImageIcon size={18} />
-                            </label>
-                            <div className="w-px h-6 bg-slate-300 dark:bg-slate-600 mx-2"></div>
-                            <button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-500"><RotateCcw size={18} /></button>
-                            <button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-500"><RotateCw size={18} /></button>
-                        </div>
-                        <button onClick={handleSaveEdit} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl font-medium hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors">Сохранить</button>
-                    </div>
-                </div>
-            </div>
         </div>
       )}
-
-      {/* ORACLE OVERLAY */}
-      {showOracle && (
-          <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-white" onClick={closeOracle}>
-              <div className="w-full max-w-lg text-center" onClick={e => e.stopPropagation()}>
-                  {oracleState === 'select' && (
-                      <div className="animate-in zoom-in duration-300">
-                          <h2 className="text-3xl font-light mb-8">Выбери вайб</h2>
-                          <div className="grid grid-cols-2 gap-4">
-                              {ORACLE_VIBES.map(v => (
-                                  <button 
-                                    key={v.id}
-                                    onClick={() => castOracleSpell(v)}
-                                    className={`p-6 rounded-2xl bg-gradient-to-br ${v.color} hover:scale-105 transition-transform flex flex-col items-center gap-3 shadow-lg`}
-                                  >
-                                      <v.icon size={32} className="text-white" />
-                                      <span className="text-lg font-bold">{v.label}</span>
-                                  </button>
-                              ))}
-                          </div>
-                      </div>
-                  )}
-                  {oracleState === 'thinking' && (
-                      <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
-                          <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 animate-pulse flex items-center justify-center shadow-[0_0_50px_rgba(99,102,241,0.5)]">
-                              <Sparkles size={40} className="text-white animate-spin-slow" />
-                          </div>
-                          <p className="text-xl font-light tracking-widest uppercase opacity-80">Сканирую эфир...</p>
-                      </div>
-                  )}
-                  {oracleState === 'result' && oracleNote && (
-                      <div className="animate-in zoom-in-95 duration-500 bg-white/10 border border-white/20 backdrop-blur-xl p-8 rounded-3xl shadow-2xl relative">
-                          <div className={`absolute -top-6 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-gradient-to-r ${oracleVibe.color} text-white shadow-lg`}>
-                              {oracleVibe.label}
-                          </div>
-                          <div className="text-lg md:text-xl font-medium leading-relaxed mb-6 max-h-[60vh] overflow-y-auto custom-scrollbar-dark">
-                              <ReactMarkdown components={{...markdownComponents, p: ({node, ...props}: any) => <p className="mb-4 last:mb-0 text-white/90" {...props} />}}>{oracleNote.content}</ReactMarkdown>
-                          </div>
-                          <div className="flex justify-center gap-4">
-                              <button onClick={startOracle} className="px-6 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-medium transition-colors">Еще раз</button>
-                              <button onClick={closeOracle} className="px-6 py-3 bg-white text-slate-900 rounded-xl font-medium hover:bg-slate-100 transition-colors">Спасибо</button>
-                          </div>
-                      </div>
-                  )}
-              </div>
-          </div>
-      )}
-
     </div>
   );
 };
-
 export default Napkins;
