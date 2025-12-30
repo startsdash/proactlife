@@ -191,7 +191,7 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
 // Markdown Styles for Notes (Display Mode)
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
-    a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer underline-offset-2 break-all relative z-20" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
+    a: ({node, ...props}: any) => <a className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
@@ -204,7 +204,7 @@ const markdownComponents = {
             ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
             : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     },
-    img: ({node, ...props}: any) => <img className="rounded-lg max-h-60 object-cover my-2 block" {...props} loading="lazy" />,
+    img: ({node, ...props}: any) => <img className="rounded-2xl max-h-60 object-cover my-2 block w-full" {...props} loading="lazy" />,
     u: ({node, ...props}: any) => <u {...props} /> // Explicitly handle underline if it comes through
 };
 
