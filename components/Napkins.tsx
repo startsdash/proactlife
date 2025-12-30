@@ -1448,7 +1448,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     ) : (
                                         <input
                                             type="text"
-                                            placeholder="Без названия"
+                                            placeholder="Название"
                                             className="font-serif text-2xl font-bold text-slate-900 dark:text-white bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full"
                                             value={editTitle}
                                             onChange={(e) => setEditTitle(e.target.value)}
