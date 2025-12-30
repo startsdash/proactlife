@@ -1,6 +1,4 @@
 
-// ... existing imports
-
 declare global {
   interface Window {
     confetti: any;
@@ -32,7 +30,6 @@ export interface Note {
   status: 'inbox' | 'sandbox' | 'archived';
   isPinned?: boolean;
   color?: string;
-  coverImage?: string; // NEW: Cover Image URL or Base64
 }
 
 // NEW: Sketchpad Types
