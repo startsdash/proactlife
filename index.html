@@ -98,6 +98,20 @@
       .rotate-y-180 {
         transform: rotateY(180deg);
       }
+
+      /* Masonry Grid Styles */
+      .my-masonry-grid {
+        display: flex;
+        margin-left: -12px; /* gutter size offset */
+        width: auto;
+      }
+      .my-masonry-grid_column {
+        padding-left: 12px; /* gutter size */
+        background-clip: padding-box;
+      }
+      .my-masonry-grid_column > div {
+        margin-bottom: 12px;
+      }
     </style>
   <script type="importmap">
 {
@@ -111,7 +125,8 @@
     "react-markdown": "https://esm.sh/react-markdown@9?bundle",
     "rehype-raw": "https://esm.sh/rehype-raw@7?bundle",
     "remark-gfm": "https://esm.sh/remark-gfm@4?bundle",
-    "framer-motion": "https://esm.sh/framer-motion@11.15.0?external=react,react-dom"
+    "framer-motion": "https://esm.sh/framer-motion@11.15.0?external=react,react-dom",
+    "react-masonry-css": "https://esm.sh/react-masonry-css@1.0.16?external=react,react-dom"
   }
 }
 </script>

@@ -1,8 +1,8 @@
-
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
+import Masonry from 'react-masonry-css';
 import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
@@ -39,6 +39,12 @@ const ORACLE_VIBES = [
     { id: 'zen', icon: Waves, label: 'Дзен', color: 'from-emerald-500 to-teal-600', text: 'text-emerald-100' },
     { id: 'luck', icon: Clover, label: 'Случай', color: 'from-slate-700 to-slate-900', text: 'text-slate-200' },
 ];
+
+// --- MASONRY BREAKPOINTS ---
+const breakpointColumnsObj = {
+  default: 2,
+  767: 1 // 1 column for mobile (<= 767px)
+};
 
 // --- HELPER: ALLOW DATA URIS ---
 const allowDataUrls = (url: string) => url;
@@ -399,34 +405,6 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
                     ))}
                 </div>
             )}
-        </div>
-    );
-};
-
-// --- MASONRY GRID LAYOUT ---
-const MasonryGrid = ({ items, renderItem }: { items: any[], renderItem: (item: any) => React.ReactNode }) => {
-    const [columns, setColumns] = useState(1);
-
-    useEffect(() => {
-        const updateColumns = () => {
-            setColumns(window.innerWidth >= 768 ? 2 : 1);
-        };
-        updateColumns();
-        window.addEventListener('resize', updateColumns);
-        return () => window.removeEventListener('resize', updateColumns);
-    }, []);
-
-    if (columns === 1) {
-        return <div className="flex flex-col gap-3 pb-20 md:pb-0">{items.map(renderItem)}</div>;
-    }
-
-    const col1 = items.filter((_, i) => i % 2 === 0);
-    const col2 = items.filter((_, i) => i % 2 === 1);
-
-    return (
-        <div className="flex gap-3 items-start pb-20 md:pb-0">
-            <div className="flex-1 flex flex-col gap-3 min-w-0">{col1.map(renderItem)}</div>
-            <div className="flex-1 flex flex-col gap-3 min-w-0">{col2.map(renderItem)}</div>
         </div>
     );
 };
@@ -1204,7 +1182,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             )}
             
             {inboxNotes.length > 0 ? (
-                <MasonryGrid items={inboxNotes} renderItem={(note) => renderNoteCard(note, false)} />
+                <Masonry
+                    breakpointCols={breakpointColumnsObj}
+                    className="my-masonry-grid pb-20 md:pb-0"
+                    columnClassName="my-masonry-grid_column"
+                >
+                    {inboxNotes.map((note) => renderNoteCard(note, false))}
+                </Masonry>
             ) : (
                 <div className="py-6">
                     <EmptyState 
@@ -1219,7 +1203,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       {activeTab === 'library' && (
         <>
             {archivedNotes.length > 0 ? (
-                <MasonryGrid items={archivedNotes} renderItem={(note) => renderNoteCard(note, true)} />
+                <Masonry
+                    breakpointCols={breakpointColumnsObj}
+                    className="my-masonry-grid pb-20 md:pb-0"
+                    columnClassName="my-masonry-grid_column"
+                >
+                    {archivedNotes.map((note) => renderNoteCard(note, true))}
+                </Masonry>
             ) : (
                 <div className="py-6">
                     <EmptyState 
