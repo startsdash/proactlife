@@ -219,12 +219,12 @@ const markdownToHtml = (md: string) => {
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
     
     // 2. Bold (Handle ** and __)
-    html = html.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-    html = html.replace(/__(.*?)__/g, '<b>$1</b>');
+    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
+    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
     
     // 3. Italic (Handle * and _)
-    html = html.replace(/_(.*?)_/g, '<i>$1</i>');
-    html = html.replace(/\*(.*?)\*/g, '<i>$1</i>');
+    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
+    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
 
     // 4. Code
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -269,7 +269,7 @@ const htmlToMarkdown = (html: string) => {
                 return `**${content}**`;
             }
             if (el.style.fontStyle === 'italic') {
-                return `_${content}_`;
+                return `*${content}*`;
             }
 
             switch (tag) {
@@ -278,7 +278,7 @@ const htmlToMarkdown = (html: string) => {
                     return content.trim() ? `**${content}**` : '';
                 case 'i': 
                 case 'em': 
-                    return content.trim() ? `_${content}_` : '';
+                    return content.trim() ? `*${content}*` : '';
                 case 'u': 
                     return content.trim() ? `<u>${content}</u>` : ''; // Persist as HTML tag
                 case 'code': 
