@@ -108,13 +108,7 @@ const processImage = (file: File | Blob): Promise<string> => {
 
 // --- HELPER: EXTRACT URL ---
 const findFirstUrl = (text: string): string | null => {
-    // Basic regex to find http/https URLs. 
-    // We ignore markdown image syntax to avoid double previewing images that are already rendered inline
-    // Markdown Image Regex: !\[.*?\]\(.*?\)
-    
-    // First, temporarily mask markdown images
     const maskedText = text.replace(/!\[.*?\]\(.*?\)/g, '');
-    
     const match = maskedText.match(/(https?:\/\/[^\s\)]+)/);
     return match ? match[0] : null;
 };
@@ -129,7 +123,6 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
         let mounted = true;
         setLoading(true);
         setError(false);
-        // Using Microlink API (free tier)
         fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`)
             .then(res => res.json())
             .then(json => {
@@ -188,7 +181,7 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
     );
 });
 
-// Markdown Styles for Notes (Display Mode)
+// Markdown Styles
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
     a: ({node, ...props}: any) => <a className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
@@ -208,208 +201,100 @@ const markdownComponents = {
     u: ({node, ...props}: any) => <u {...props} /> 
 };
 
-// --- ROBUST CONVERTERS ---
-
-// Convert Markdown to HTML for WYSIWYG Editor
+// Converters
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
-
-    // 1. Headings
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    
-    // 2. Bold (Handle ** and __)
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
     html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
-    
-    // 3. Italic (Handle * and _)
     html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
     html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
-
-    // 4. Code
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    
-    // 5. Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
-
-    // 6. Newlines (Standardize)
-    // Replace newline with <br> unless it follows a block element
     html = html.replace(/\n/g, '<br>');
     html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
-
     return html;
 };
 
-// Convert HTML (from contentEditable) back to Markdown for storage
 const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
-
     const walk = (node: Node): string => {
-        if (node.nodeType === Node.TEXT_NODE) {
-            return node.textContent || '';
-        }
-        
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
         if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as HTMLElement;
             const tag = el.tagName.toLowerCase();
             let content = '';
-            
-            el.childNodes.forEach(child => {
-                content += walk(child);
-            });
-
-            // Handle styling attributes
-            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) {
-                return `<u>${content}</u>`;
-            }
-            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) {
-                return `**${content}**`;
-            }
-            if (el.style.fontStyle === 'italic') {
-                return `*${content}*`;
-            }
-
+            el.childNodes.forEach(child => content += walk(child));
+            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
+            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return `**${content}**`;
+            if (el.style.fontStyle === 'italic') return `*${content}*`;
             switch (tag) {
-                case 'b': 
-                case 'strong': 
-                    return content.trim() ? `**${content}**` : '';
-                case 'i': 
-                case 'em': 
-                    return content.trim() ? `*${content}*` : '';
-                case 'u': 
-                    return content.trim() ? `<u>${content}</u>` : ''; // Persist as HTML tag
-                case 'code': 
-                    return `\`${content}\``;
-                case 'h1': 
-                    return `\n# ${content}\n`;
-                case 'h2': 
-                    return `\n## ${content}\n`;
-                case 'div':
-                case 'p':
-                    // Block elements act as newlines
-                    return `\n${content}\n`; 
-                case 'br':
-                    return '\n';
-                case 'img':
-                    const img = el as HTMLImageElement;
-                    const src = img.src;
-                    const alt = img.alt || 'image';
-                    return `\n![${alt}](${src})\n`;
-                default:
-                    return content;
+                case 'b': case 'strong': return content.trim() ? `**${content}**` : '';
+                case 'i': case 'em': return content.trim() ? `*${content}*` : '';
+                case 'u': return content.trim() ? `<u>${content}</u>` : '';
+                case 'code': return `\`${content}\``;
+                case 'h1': return `\n# ${content}\n`;
+                case 'h2': return `\n## ${content}\n`;
+                case 'div': case 'p': return `\n${content}\n`;
+                case 'br': return '\n';
+                case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
+                default: return content;
             }
         }
         return '';
     };
-
     let md = walk(temp);
-    
-    // Cleanup excessive newlines and spaces
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     md = md.replace(/&nbsp;/g, ' ');
-    
     return applyTypography(md);
 };
 
-// --- INTERNAL COMPONENT: TAG SELECTOR ---
-interface TagSelectorProps {
-    selectedTags: string[];
-    onChange: (tags: string[]) => void;
-    existingTags: string[];
-    placeholder?: string;
-}
-
-const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, existingTags, placeholder = "Добавить теги..." }) => {
+// Tag Selector
+const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[]) => void, existingTags: string[], placeholder?: string }> = ({ selectedTags, onChange, existingTags, placeholder = "Добавить теги..." }) => {
     const [input, setInput] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) setIsOpen(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const filteredSuggestions = existingTags.filter(
-        tag => !selectedTags.some(st => st.toLowerCase() === tag.toLowerCase()) && 
-               tag.toLowerCase().includes(input.toLowerCase())
-    );
+    const filteredSuggestions = existingTags.filter(tag => !selectedTags.some(st => st.toLowerCase() === tag.toLowerCase()) && tag.toLowerCase().includes(input.toLowerCase()));
 
     const addTag = (tag: string) => {
         const cleanTag = tag.trim().replace(/^#/, '');
         if (!cleanTag) return;
-        const lowerInput = cleanTag.toLowerCase();
-        const isAlreadySelected = selectedTags.some(t => t.toLowerCase() === lowerInput);
-        if (isAlreadySelected) {
-            setInput('');
-            setIsOpen(false);
-            return;
-        }
-        const existingMatch = existingTags.find(t => t.toLowerCase() === lowerInput);
-        const finalTag = existingMatch || cleanTag;
-        onChange([...selectedTags, finalTag]);
-        setInput('');
-        setIsOpen(false);
+        if (selectedTags.some(t => t.toLowerCase() === cleanTag.toLowerCase())) { setInput(''); setIsOpen(false); return; }
+        onChange([...selectedTags, existingTags.find(t => t.toLowerCase() === cleanTag.toLowerCase()) || cleanTag]);
+        setInput(''); setIsOpen(false);
     };
-
-    const removeTag = (tagToRemove: string) => {
-        onChange(selectedTags.filter(t => t !== tagToRemove));
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            if (input.trim()) addTag(input);
-        } else if (e.key === 'Backspace' && !input && selectedTags.length > 0) {
-            removeTag(selectedTags[selectedTags.length - 1]);
-        }
-    };
-
-    const isExactMatchInSuggestions = filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase());
-    const isExactMatchInSelected = selectedTags.some(t => t.toLowerCase() === input.trim().toLowerCase());
 
     return (
         <div className="relative" ref={wrapperRef}>
-            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-transparent transition-all min-h-[36px]">
+            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-transparent min-h-[36px]">
                 {selectedTags.map(tag => (
-                    <span key={tag} className="flex items-center gap-1 text-[10px] font-medium text-slate-600 dark:text-slate-300 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-md animate-in zoom-in-95 duration-100">
-                        <TagIcon size={10} />
-                        {tag}
-                        <button onClick={() => removeTag(tag)} className="hover:text-red-500 dark:hover:text-red-400 ml-1">
-                            <X size={12} />
-                        </button>
+                    <span key={tag} className="flex items-center gap-1 text-[10px] font-medium text-slate-600 dark:text-slate-300 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-md">
+                        <TagIcon size={10} /> {tag} <button onClick={() => onChange(selectedTags.filter(t => t !== tag))} className="hover:text-red-500 ml-1"><X size={12} /></button>
                     </span>
                 ))}
-                <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => { setInput(e.target.value); setIsOpen(true); }}
-                    onFocus={() => setIsOpen(true)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={selectedTags.length === 0 ? placeholder : ''}
-                    className="flex-1 min-w-[80px] bg-transparent text-xs outline-none text-slate-600 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                />
+                <input type="text" value={input} onChange={(e) => { setInput(e.target.value); setIsOpen(true); }} onFocus={() => setIsOpen(true)} onKeyDown={(e) => e.key === 'Enter' && addTag(input)} placeholder={selectedTags.length === 0 ? placeholder : ''} className="flex-1 min-w-[80px] bg-transparent text-xs outline-none text-slate-600 dark:text-slate-300 placeholder:text-slate-400" />
             </div>
-
             {isOpen && (input.length > 0 || filteredSuggestions.length > 0) && (
                 <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto">
-                    {input.length > 0 && !isExactMatchInSuggestions && !isExactMatchInSelected && (
-                        <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 flex items-center gap-2">
-                            <Plus size={14} /> Создать «{input}»
-                        </button>
+                    {input.length > 0 && !filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase()) && (
+                        <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2"><Plus size={14} /> Создать «{input}»</button>
                     )}
                     {filteredSuggestions.map(tag => (
-                        <button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2">
-                            <TagIcon size={14} className="text-slate-400" /> {tag}
-                        </button>
+                        <button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2"><TagIcon size={14} className="text-slate-400" /> {tag}</button>
                     ))}
                 </div>
             )}
@@ -417,62 +302,25 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
     );
 };
 
-// --- NEW INTERNAL COMPONENT: COVER PICKER ---
-interface CoverPickerProps {
-    onSelect: (url: string) => void;
-    onClose: () => void;
-}
-
-const CoverPicker: React.FC<CoverPickerProps> = ({ onSelect, onClose }) => {
+// Cover Picker
+const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => void }> = ({ onSelect, onClose }) => {
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            try {
-                const base64 = await processImage(file);
-                onSelect(base64);
-                onClose();
-            } catch (err) {
-                console.error("Cover upload failed", err);
-            }
+            try { onSelect(await processImage(file)); onClose(); } catch (err) { console.error(err); }
         }
     };
-
-    const handleRandom = () => {
-        const randomUrl = `https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80&r=${Math.random()}`;
-        onSelect(randomUrl);
-        onClose();
-    };
-
     return (
-        <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 w-64 animate-in zoom-in-95 duration-200" onMouseDown={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Обложка</span>
-                <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
-            </div>
-            
+        <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 w-64" onMouseDown={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-slate-400 uppercase">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
             <div className="grid grid-cols-2 gap-2 mb-3">
                 {UNSPLASH_PRESETS.map((url, i) => (
-                    <button 
-                        key={i} 
-                        onClick={() => { onSelect(url); onClose(); }}
-                        className="aspect-video rounded-lg overflow-hidden border border-slate-100 dark:border-slate-700 hover:ring-2 hover:ring-indigo-500 transition-all relative group"
-                    >
-                        <img src={url} className="w-full h-full object-cover" alt="Preset" />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                    </button>
+                    <button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded-lg overflow-hidden border border-slate-100 hover:ring-2 hover:ring-indigo-500 relative group"><img src={url} className="w-full h-full object-cover" /></button>
                 ))}
             </div>
-
             <div className="flex gap-2">
-                <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-xs font-medium cursor-pointer text-slate-600 dark:text-slate-300 transition-colors">
-                    <Upload size={12} />
-                    <span>Своя</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-                </label>
-                <button onClick={handleRandom} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors">
-                    <Shuffle size={12} />
-                    <span>Random</span>
-                </button>
+                <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium cursor-pointer"><Upload size={12} /> Своя <input type="file" accept="image/*" className="hidden" onChange={handleUpload} /></label>
+                <button onClick={() => { onSelect(`https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80&r=${Math.random()}`); onClose(); }} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium"><Shuffle size={12} /> Random</button>
             </div>
         </div>
     );
@@ -489,54 +337,38 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
-  
-  // Cover Picker State
   const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
   const [showEditCoverPicker, setShowEditCoverPicker] = useState(false);
-  
-  // Editor State
   const [isExpanded, setIsExpanded] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const contentEditableRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Active Image State
   const [activeImage, setActiveImage] = useState<HTMLImageElement | null>(null);
   const lastSelectionRange = useRef<Range | null>(null);
-
-  // Undo/Redo State
   const [history, setHistory] = useState<string[]>(['']);
   const [historyIndex, setHistoryIndex] = useState(0);
   const historyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const [editHistory, setEditHistory] = useState<string[]>(['']);
   const [editHistoryIndex, setEditHistoryIndex] = useState(0);
   const editHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const [searchQuery, setSearchQuery] = useState('');
   const [activeColorFilter, setActiveColorFilter] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  
   const [showTagInput, setShowTagInput] = useState(false);
   const [tagQuery, setTagQuery] = useState('');
-
   const [showMoodInput, setShowMoodInput] = useState(false);
   const [moodQuery, setMoodQuery] = useState('');
   const [aiFilteredIds, setAiFilteredIds] = useState<string[] | null>(null);
   const [isMoodAnalyzing, setIsMoodAnalyzing] = useState(false);
-  
   const [showOracle, setShowOracle] = useState(false);
   const [oracleState, setOracleState] = useState<'select' | 'thinking' | 'result'>('select');
   const [oracleVibe, setOracleVibe] = useState(ORACLE_VIBES[0]);
   const [oracleNote, setOracleNote] = useState<Note | null>(null);
-
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editTagsList, setEditTagsList] = useState<string[]>([]);
   const [editCover, setEditCover] = useState<string | null>(null);
   const editContentRef = useRef<HTMLDivElement>(null);
-
-  // Scroll Tracking for Smart Header
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
@@ -546,14 +378,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       const previous = scrollY.getPrevious() || 0;
       const diff = latest - previous;
       const isScrollingDown = diff > 0;
-      
       setHasScrolled(latest > 20);
-
-      if (latest > 100 && isScrollingDown) {
-          setIsHeaderHidden(true);
-      } else {
-          setIsHeaderHidden(false);
-      }
+      if (latest > 100 && isScrollingDown) setIsHeaderHidden(true);
+      else setIsHeaderHidden(false);
   });
 
   const allExistingTags = useMemo(() => {
@@ -562,10 +389,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           if (note.tags && Array.isArray(note.tags)) {
               note.tags.forEach(tag => {
                   const clean = tag.replace(/^#/, '');
-                  const lower = clean.toLowerCase();
-                  if (!uniqueTagsMap.has(lower)) {
-                      uniqueTagsMap.set(lower, clean);
-                  }
+                  uniqueTagsMap.set(clean.toLowerCase(), clean);
               });
           }
       });
@@ -596,56 +420,49 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const handleEditorInput = () => {
       if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
       historyTimeoutRef.current = setTimeout(() => {
-          const content = contentEditableRef.current?.innerHTML || '';
-          saveHistorySnapshot(content);
+          saveHistorySnapshot(contentEditableRef.current?.innerHTML || '');
       }, 500); 
   };
 
   const handleEditModalInput = () => {
       if (editHistoryTimeoutRef.current) clearTimeout(editHistoryTimeoutRef.current);
       editHistoryTimeoutRef.current = setTimeout(() => {
-          const content = editContentRef.current?.innerHTML || '';
-          saveEditHistorySnapshot(content);
+          saveEditHistorySnapshot(editContentRef.current?.innerHTML || '');
       }, 500); 
   };
 
   const execUndo = () => {
       if (historyIndex > 0) {
           const prevIndex = historyIndex - 1;
-          const prevContent = history[prevIndex];
           setHistoryIndex(prevIndex);
-          if (contentEditableRef.current) contentEditableRef.current.innerHTML = prevContent;
+          if (contentEditableRef.current) contentEditableRef.current.innerHTML = history[prevIndex];
       }
   };
 
   const execRedo = () => {
       if (historyIndex < history.length - 1) {
           const nextIndex = historyIndex + 1;
-          const nextContent = history[nextIndex];
           setHistoryIndex(nextIndex);
-          if (contentEditableRef.current) contentEditableRef.current.innerHTML = nextContent;
+          if (contentEditableRef.current) contentEditableRef.current.innerHTML = history[nextIndex];
       }
   };
 
   const execEditUndo = () => {
       if (editHistoryIndex > 0) {
           const prevIndex = editHistoryIndex - 1;
-          const prevContent = editHistory[prevIndex];
           setEditHistoryIndex(prevIndex);
-          if (editContentRef.current) editContentRef.current.innerHTML = prevContent;
+          if (editContentRef.current) editContentRef.current.innerHTML = editHistory[prevIndex];
       }
   };
 
   const execEditRedo = () => {
       if (editHistoryIndex < editHistory.length - 1) {
           const nextIndex = editHistoryIndex + 1;
-          const nextContent = editHistory[nextIndex];
           setEditHistoryIndex(nextIndex);
-          if (editContentRef.current) editContentRef.current.innerHTML = nextContent;
+          if (editContentRef.current) editContentRef.current.innerHTML = editHistory[nextIndex];
       }
   };
 
-  // --- EDITOR LOGIC ---
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         if (editorRef.current && !editorRef.current.contains(event.target as Node)) {
@@ -661,24 +478,19 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isExpanded]);
 
-  // Initial Content Population for Edit Modal
   useEffect(() => {
     if (isEditing && editContentRef.current && selectedNote) {
-        // Force WYSIWYG by converting Markdown to HTML immediately
         editContentRef.current.innerHTML = markdownToHtml(selectedNote.content);
         setActiveImage(null);
     }
   }, [isEditing, selectedNote?.id]); 
 
-  // ... (Image & Selection Handling - reuse existing)
   const saveSelection = () => {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
           const range = sel.getRangeAt(0);
           const container = isEditing ? editContentRef.current : contentEditableRef.current;
-          if (container && container.contains(range.commonAncestorContainer)) {
-              lastSelectionRange.current = range.cloneRange();
-          }
+          if (container && container.contains(range.commonAncestorContainer)) lastSelectionRange.current = range.cloneRange();
       }
   };
 
@@ -691,19 +503,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           img.style.borderRadius = '4px';
           setActiveImage(img);
       } else {
-          if (activeImage) {
-              activeImage.style.outline = 'none';
-              setActiveImage(null);
-          }
+          if (activeImage) { activeImage.style.outline = 'none'; setActiveImage(null); }
       }
       saveSelection();
   };
 
   const deleteActiveImage = (e?: React.MouseEvent) => {
-      if(e) {
-          e.preventDefault();
-          e.stopPropagation();
-      }
+      if(e) { e.preventDefault(); e.stopPropagation(); }
       if (activeImage) {
           activeImage.remove();
           setActiveImage(null);
@@ -750,15 +556,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 if (blob) {
                     try {
                         const compressedBase64 = await processImage(blob);
-                        if (isEditing && editContentRef.current && target === editContentRef.current) {
-                            insertImageAtCursor(compressedBase64, editContentRef.current, saveEditHistorySnapshot);
-                        } else if (contentEditableRef.current && target === contentEditableRef.current) {
-                            insertImageAtCursor(compressedBase64, contentEditableRef.current, saveHistorySnapshot);
-                        }
-                    } catch (err) {
-                        console.error("Image paste failed", err);
-                        alert("Не удалось вставить изображение.");
-                    }
+                        if (isEditing && editContentRef.current && target === editContentRef.current) insertImageAtCursor(compressedBase64, editContentRef.current, saveEditHistorySnapshot);
+                        else if (contentEditableRef.current && target === contentEditableRef.current) insertImageAtCursor(compressedBase64, contentEditableRef.current, saveHistorySnapshot);
+                    } catch (err) { console.error("Image paste failed", err); }
                 }
             }
         }
@@ -772,15 +572,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       if (file) {
           try {
               const compressedBase64 = await processImage(file);
-              if (isEditing && editContentRef.current) {
-                  insertImageAtCursor(compressedBase64, editContentRef.current, saveEditHistorySnapshot);
-              } else if (contentEditableRef.current) {
-                  insertImageAtCursor(compressedBase64, contentEditableRef.current, saveHistorySnapshot);
-              }
-          } catch (err) {
-              console.error("Image upload failed", err);
-              alert("Ошибка загрузки изображения.");
-          }
+              if (isEditing && editContentRef.current) insertImageAtCursor(compressedBase64, editContentRef.current, saveEditHistorySnapshot);
+              else if (contentEditableRef.current) insertImageAtCursor(compressedBase64, contentEditableRef.current, saveHistorySnapshot);
+          } catch (err) { console.error("Image upload failed", err); }
           e.target.value = '';
       }
   };
@@ -805,21 +599,15 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const handleDump = async () => {
     const rawHtml = contentEditableRef.current?.innerHTML || '';
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = rawHtml;
-    const textContent = tempDiv.textContent?.trim() || '';
-    const hasImages = tempDiv.querySelector('img');
+    const textContent = contentEditableRef.current?.innerText.trim() || '';
+    const hasImages = contentEditableRef.current?.querySelector('img');
 
     if (!textContent && !hasImages && !title.trim()) {
-        setIsExpanded(false);
-        setHistory(['']); 
-        setHistoryIndex(0);
-        return;
+        setIsExpanded(false); setHistory(['']); setHistoryIndex(0); return;
     }
     
     setIsProcessing(true);
     const markdownContent = htmlToMarkdown(rawHtml);
-
     let autoTags: string[] = [];
     if (hasTagger && creationTags.length === 0 && markdownContent.length > 20) {
         autoTags = await autoTagNote(markdownContent, config);
@@ -833,22 +621,16 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       createdAt: Date.now(),
       status: 'inbox',
       color: creationColor,
-      coverUrl: creationCover || undefined, // ADDED: Cover
+      coverUrl: creationCover || undefined,
       isPinned: false
     };
     addNote(newNote);
-    setTitle('');
-    setCreationColor('white');
-    setCreationCover(null); // RESET
+    setTitle(''); setCreationColor('white'); setCreationCover(null);
     if (contentEditableRef.current) contentEditableRef.current.innerHTML = '';
-    setHistory(['']);
-    setHistoryIndex(0);
-    setCreationTags([]);
-    setIsProcessing(false);
-    setIsExpanded(false);
+    setHistory(['']); setHistoryIndex(0); setCreationTags([]);
+    setIsProcessing(false); setIsExpanded(false);
   };
 
-  // ... (Mood, Oracle, DragDrop, etc. - reuse existing)
   const handleMoodSearch = async () => {
       if (!moodQuery.trim()) return;
       setIsMoodAnalyzing(true);
@@ -859,35 +641,23 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       setShowMoodInput(false);
   };
 
-  const clearMoodFilter = () => {
-      setAiFilteredIds(null);
-      setMoodQuery('');
-  };
+  const clearMoodFilter = () => { setAiFilteredIds(null); setMoodQuery(''); };
 
   const startOracle = () => {
-      if (notes.length === 0) {
-          alert("Сначала добавь пару мыслей в Заметки");
-          return;
-      }
-      setShowOracle(true);
-      setOracleState('select');
+      if (notes.length === 0) { alert("Сначала добавь пару мыслей в Заметки"); return; }
+      setShowOracle(true); setOracleState('select');
   };
 
   const castOracleSpell = (vibe: typeof ORACLE_VIBES[0]) => {
-      setOracleVibe(vibe);
-      setOracleState('thinking');
+      setOracleVibe(vibe); setOracleState('thinking');
       setTimeout(() => {
           const allNotes = notes;
           const random = allNotes[Math.floor(Math.random() * allNotes.length)];
-          setOracleNote(random);
-          setOracleState('result');
+          setOracleNote(random); setOracleState('result');
       }, 1500);
   };
 
-  const closeOracle = () => {
-      setShowOracle(false);
-      setTimeout(() => setOracleState('select'), 300);
-  };
+  const closeOracle = () => { setShowOracle(false); setTimeout(() => setOracleState('select'), 300); };
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
       e.dataTransfer.setData('noteId', id);
@@ -904,7 +674,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       setSelectedNote(note);
       setEditTitle(note.title || '');
       setEditTagsList(note.tags ? note.tags.map(t => t.replace(/^#/, '')) : []);
-      setEditCover(note.coverUrl || null); // Load cover
+      setEditCover(note.coverUrl || null);
       const contentHtml = markdownToHtml(note.content);
       setEditHistory([contentHtml]);
       setEditHistoryIndex(0);
@@ -915,18 +685,15 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       if (selectedNote) {
           const rawHtml = editContentRef.current?.innerHTML || '';
           const markdownContent = htmlToMarkdown(rawHtml);
-          
           if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
               const updated = { 
                   ...selectedNote, 
                   title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
                   content: markdownContent, 
                   tags: editTagsList,
-                  coverUrl: editCover || undefined // Save cover
+                  coverUrl: editCover || undefined 
               };
-              updateNote(updated);
-              setSelectedNote(updated);
-              setIsEditing(false);
+              updateNote(updated); setSelectedNote(updated); setIsEditing(false);
           }
       }
   };
@@ -940,8 +707,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const setColor = (colorId: string) => {
       if (selectedNote) {
           const updated = { ...selectedNote, color: colorId };
-          updateNote(updated);
-          setSelectedNote(updated);
+          updateNote(updated); setSelectedNote(updated);
       }
   };
 
@@ -962,19 +728,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     });
   };
 
-  const rawInboxNotes = notes.filter(n => n.status === 'inbox').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0)));
-  const rawArchivedNotes = notes.filter(n => n.status === 'archived').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0)));
-  const inboxNotes = filterNotes(rawInboxNotes);
-  const archivedNotes = filterNotes(rawArchivedNotes);
+  const inboxNotes = filterNotes(notes.filter(n => n.status === 'inbox').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
+  const archivedNotes = filterNotes(notes.filter(n => n.status === 'archived').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
 
-  const getNoteColorClass = (colorId?: string) => {
-      const c = colors.find(c => c.id === colorId);
-      return c ? c.class : 'bg-white dark:bg-[#1e293b]';
-  };
+  const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
   const renderNoteCard = (note: Note, isArchived: boolean) => {
       const linkUrl = findFirstUrl(note.content);
-      
       return (
       <div 
         key={note.id} 
@@ -986,80 +746,33 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         className={`${getNoteColorClass(note.color)} rounded-3xl transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] group flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden mb-6`}
     >
         {note.coverUrl && (
-            <div className="h-40 w-full shrink-0">
-                <img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" />
-            </div>
+            <div className="h-40 w-full shrink-0"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
         )}
         <div className="p-8 pb-24 w-full flex-1">
             <div className="block w-full mb-2">
-                 {note.title && (
-                    <h3 className="font-serif text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight tracking-tight break-words">
-                        {note.title}
-                    </h3>
-                 )}
-
+                 {note.title && <h3 className="font-serif text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight tracking-tight break-words">{note.title}</h3>}
                  <div className={`text-slate-700 dark:text-slate-300 font-sans text-sm leading-relaxed overflow-hidden break-words line-clamp-[6]`}>
-                    <ReactMarkdown 
-                        components={markdownComponents} 
-                        urlTransform={allowDataUrls}
-                        remarkPlugins={[remarkGfm]}
-                        rehypePlugins={[rehypeRaw]}
-                    >
-                        {note.content.replace(/\n/g, '  \n')}
-                    </ReactMarkdown>
+                    <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                  </div>
-                 
-                 {/* Rich Link Preview */}
                  {linkUrl && <LinkPreview url={linkUrl} />}
-                 
                  {note.tags && note.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-4">
-                        {note.tags.map(tag => (
-                            <span key={tag} className="text-[10px] text-slate-500 dark:text-slate-400 font-medium opacity-70">
-                                {tag}
-                            </span>
-                        ))}
+                        {note.tags.map(tag => <span key={tag} className="text-[10px] text-slate-500 dark:text-slate-400 font-medium opacity-70">{tag}</span>)}
                     </div>
                  )}
             </div>
         </div>
-
-        {/* Floating Glass Toolbar */}
         <div className="absolute bottom-4 left-4 right-4 h-12 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md rounded-2xl flex items-center justify-between px-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 shadow-sm border border-white/20 dark:border-white/10 z-20">
              <div className="flex gap-1">
-                <Tooltip content="В Спринты">
-                    <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors"><Kanban size={16} /></button>
-                </Tooltip>
-                <Tooltip content="В Хаб">
-                    <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Хаб?')) moveNoteToSandbox(note.id); }} className="p-2 text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors"><Box size={16} /></button>
-                </Tooltip>
-                {!isArchived && (
-                    <Tooltip content="В Библиотеку">
-                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Библиотеку?')) archiveNote(note.id); }} className="p-2 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors"><Library size={16} /></button>
-                    </Tooltip>
-                )}
+                <Tooltip content="В Спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors"><Kanban size={16} /></button></Tooltip>
+                <Tooltip content="В Хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Хаб?')) moveNoteToSandbox(note.id); }} className="p-2 text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors"><Box size={16} /></button></Tooltip>
+                {!isArchived && <Tooltip content="В Библиотеку"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Библиотеку?')) archiveNote(note.id); }} className="p-2 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors"><Library size={16} /></button></Tooltip>}
              </div>
-             
              <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
-                 <button 
-                    onClick={(e) => togglePin(e, note)}
-                    className={`p-2 rounded-xl transition-all ${
-                        note.isPinned 
-                        ? 'text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' 
-                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10'
-                    }`}
-                 >
-                    <Pin size={16} className={note.isPinned ? "fill-current transform rotate-45" : ""} />
-                 </button>
+                 <button onClick={(e) => togglePin(e, note)} className={`p-2 rounded-xl transition-all ${note.isPinned ? 'text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10'}`}><Pin size={16} className={note.isPinned ? "fill-current transform rotate-45" : ""} /></button>
              </Tooltip>
         </div>
-        
-        {/* Persistent Pin Indicator (if pinned) */}
-        {note.isPinned && (
-            <div className="absolute top-6 right-6 text-indigo-500 dark:text-indigo-400 opacity-80 pointer-events-none">
-                <Pin size={16} fill="currentColor" className="transform rotate-45" />
-            </div>
-        )}
+        {note.isPinned && <div className="absolute top-6 right-6 text-indigo-500 dark:text-indigo-400 opacity-80 pointer-events-none"><Pin size={16} fill="currentColor" className="transform rotate-45" /></div>}
     </div>
   )};
 
@@ -1070,7 +783,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onScroll={() => setActiveImage(null)}
     >
       <div className="max-w-5xl mx-auto w-full">
-        {/* STATIC TITLE & TABS (Scrolls away) */}
+        {/* STATIC TITLE & TABS */}
         <div className="px-3 md:px-8 pt-3 md:pt-8 mb-6">
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
@@ -1084,23 +797,20 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </header>
         </div>
 
-        {/* SMART STICKY HEADER (Search & Actions) */}
+        {/* STICKY HEADER (Cloud Effect) */}
         <motion.div 
-            className={`sticky top-0 z-40 px-3 md:px-8 py-3 -mx-3 md:-mx-8 md:mx-0 transition-all duration-300 ${
-                hasScrolled 
-                ? 'bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' 
-                : 'bg-transparent'
-            }`}
+            className={`sticky top-0 z-40 px-3 md:px-8 pb-8 -mx-3 md:-mx-8 md:mx-0 transition-all duration-300 mb-[-2rem]`}
             style={{
-                boxShadow: hasScrolled ? '0 4px 30px rgba(0, 0, 0, 0.03)' : 'none'
+                backdropFilter: hasScrolled ? 'blur(16px)' : 'none',
+                boxShadow: hasScrolled ? '0 20px 50px -10px rgba(0, 0, 0, 0.02)' : 'none',
             }}
             animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
-            {/* Fade-out Gradient Effect */}
-            <div className={`absolute top-full left-0 w-full h-6 bg-gradient-to-b from-white/70 to-transparent dark:from-slate-900/70 dark:to-transparent pointer-events-none transition-opacity duration-300 ${hasScrolled ? 'opacity-100' : 'opacity-0'}`} />
+            {/* Dynamic Background Gradient */}
+            <div className={`absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/80 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/80 dark:to-transparent pointer-events-none transition-opacity duration-300 ${hasScrolled ? 'opacity-100' : 'opacity-0'}`} />
 
-            <div className="max-w-5xl mx-auto flex flex-col gap-2">
+            <div className="max-w-5xl mx-auto flex flex-col gap-2 relative z-10">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         {showMoodInput ? (
@@ -1124,26 +834,15 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             <>
                                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                                 <input type="text" placeholder="Поиск по ключевым словам..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400" />
-                                {searchQuery && (
-                                    <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>
-                                )}
+                                {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
                             </>
                         )}
                     </div>
-                    
                     {!showMoodInput && !showTagInput && (
                         <>
-                            <Tooltip content="Поиск по тегам" side="bottom">
-                                <button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button>
-                            </Tooltip>
-                            <Tooltip content="Фильтр по цвету" side="bottom">
-                                <button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button>
-                            </Tooltip>
-                            {hasMoodMatcher && (
-                                <Tooltip content="Подбор по теме (ИИ)" side="bottom">
-                                    <button onClick={() => setShowMoodInput(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-purple-500 hover:bg-purple-50'}`}><Sparkles size={20} /></button>
-                                </Tooltip>
-                            )}
+                            <Tooltip content="Поиск по тегам" side="bottom"><button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button></Tooltip>
+                            <Tooltip content="Фильтр по цвету" side="bottom"><button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button></Tooltip>
+                            {hasMoodMatcher && <Tooltip content="Подбор по теме (ИИ)" side="bottom"><button onClick={() => setShowMoodInput(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-purple-500 hover:bg-purple-50'}`}><Sparkles size={20} /></button></Tooltip>}
                             <Tooltip content="Рандом" side="bottom">
                                 <button onClick={startOracle} className="group relative p-3 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none">
                                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
@@ -1154,242 +853,85 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         </>
                     )}
                 </div>
-                
                 {aiFilteredIds !== null && !showMoodInput && (
                     <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl px-4 py-3 animate-in fade-in slide-in-from-top-1">
                         <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300"><Sparkles size={14} /><span>Найдено {aiFilteredIds.length} заметок на тему: <b>«{moodQuery}»</b></span></div>
                         <button onClick={clearMoodFilter} className="text-[10px] font-bold uppercase tracking-wider text-purple-400 hover:text-purple-700 dark:hover:text-purple-200 flex items-center gap-1"><X size={12} /> Сброс</button>
                     </div>
                 )}
-                
                 {(showFilters || activeColorFilter) && (
                     <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200">
                         <button onClick={() => setActiveColorFilter(null)} className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${activeColorFilter === null ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}>Все</button>
-                        {colors.map(c => (
-                            <button key={c.id} onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)} className={`w-6 h-6 rounded-full border shadow-sm transition-transform ${activeColorFilter === c.id ? 'ring-2 ring-indigo-400 ring-offset-2 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: c.hex, borderColor: '#cbd5e1' }} title={c.id} />
-                        ))}
+                        {colors.map(c => <button key={c.id} onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)} className={`w-6 h-6 rounded-full border shadow-sm transition-transform ${activeColorFilter === c.id ? 'ring-2 ring-indigo-400 ring-offset-2 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: c.hex, borderColor: '#cbd5e1' }} title={c.id} />)}
                     </div>
                 )}
             </div>
         </motion.div>
 
-        {/* CONTENT AREA (Padding applied here) */}
-        <div className="px-3 md:px-8 pb-8 flex-1 min-h-0">
+        {/* CONTENT AREA */}
+        <div className="px-3 md:px-8 pt-6 pb-8 flex-1 min-h-0">
             {activeTab === 'inbox' && (
                 <>
-                    {/* ... (Editor Area - No changes) ... */}
                     {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
-                        <div 
-                            ref={editorRef}
-                            className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative overflow-hidden mb-8 ${isExpanded ? 'shadow-xl' : 'shadow-sm hover:shadow-md'}`}
-                        >
+                        <div ref={editorRef} className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative overflow-hidden mb-8 ${isExpanded ? 'shadow-xl' : 'shadow-sm hover:shadow-md'}`}>
                             {!isExpanded ? (
-                                <div 
-                                    onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }}
-                                    className="p-5 text-slate-400 dark:text-slate-500 cursor-text text-base font-medium flex items-center justify-between"
-                                >
-                                    <span>Заметка...</span>
-                                    <div className="flex gap-4 text-slate-300 hover:text-slate-400 transition-colors">
-                                        <PenTool size={20} />
-                                        <ImageIcon size={20} />
-                                    </div>
-                                </div>
+                                <div onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }} className="p-5 text-slate-400 dark:text-slate-500 cursor-text text-base font-medium flex items-center justify-between"><span>Заметка...</span><div className="flex gap-4 text-slate-300 hover:text-slate-400 transition-colors"><PenTool size={20} /><ImageIcon size={20} /></div></div>
                             ) : (
                                 <div className="flex flex-col animate-in fade-in duration-200 relative">
-                                    {/* ... Editor Expanded Content ... */}
-                                    {creationCover && (
-                                        <div className="relative w-full h-32 md:h-48 group">
-                                            <img src={creationCover} alt="Cover" className="w-full h-full object-cover" />
-                                            <button 
-                                                onClick={() => setCreationCover(null)}
-                                                className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"
-                                            >
-                                                <X size={16} />
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    <input 
-                                        type="text"
-                                        placeholder="Название"
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                        className="px-6 pt-6 pb-2 bg-transparent text-xl font-serif font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none"
-                                    />
-                                    
-                                    <div
-                                        ref={contentEditableRef}
-                                        contentEditable
-                                        onInput={handleEditorInput}
-                                        onClick={handleEditorClick}
-                                        onBlur={saveSelection}
-                                        onMouseUp={saveSelection}
-                                        onKeyUp={saveSelection}
-                                        className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline"
-                                        style={{ whiteSpace: 'pre-wrap' }}
-                                        data-placeholder="О чём ты думаешь?"
-                                    />
-                                    
-                                    <div className="px-6 py-2">
-                                        <TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} placeholder="Добавить теги..." />
-                                    </div>
-
+                                    {creationCover && <div className="relative w-full h-32 md:h-48 group"><img src={creationCover} alt="Cover" className="w-full h-full object-cover" /><button onClick={() => setCreationCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button></div>}
+                                    <input type="text" placeholder="Название" value={title} onChange={(e) => setTitle(e.target.value)} className="px-6 pt-6 pb-2 bg-transparent text-xl font-serif font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none" />
+                                    <div ref={contentEditableRef} contentEditable onInput={handleEditorInput} onClick={handleEditorClick} onBlur={saveSelection} onMouseUp={saveSelection} onKeyUp={saveSelection} className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-sans" style={{ whiteSpace: 'pre-wrap' }} data-placeholder="О чём ты думаешь?" />
+                                    <div className="px-6 py-2"><TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} /></div>
                                     <div className="flex items-center justify-between px-4 py-3 gap-2 bg-transparent">
                                         <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
-                                            <Tooltip content="Отменить">
-                                                <button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button>
-                                            </Tooltip>
-                                            <Tooltip content="Повторить">
-                                                <button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={18} /></button>
-                                            </Tooltip>
-
+                                            <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button></Tooltip>
+                                            <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={18} /></button></Tooltip>
                                             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                            <Tooltip content="Заголовок 1">
-                                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button>
-                                            </Tooltip>
-                                            <Tooltip content="Заголовок 2">
-                                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={18} /></button>
-                                            </Tooltip>
-                                            
+                                            <Tooltip content="Заголовок 1"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button></Tooltip>
+                                            <Tooltip content="Заголовок 2"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={18} /></button></Tooltip>
                                             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                            <Tooltip content="Жирный">
-                                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button>
-                                            </Tooltip>
-                                            <Tooltip content="Курсив">
-                                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button>
-                                            </Tooltip>
-
+                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button></Tooltip>
+                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button></Tooltip>
                                             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                            <Tooltip content="Очистить форматирование">
-                                                <button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button>
-                                            </Tooltip>
-
+                                            <Tooltip content="Очистить форматирование"><button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button></Tooltip>
                                             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                            <Tooltip content="Вставить картинку">
-                                                <label className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
-                                                    <input 
-                                                        ref={fileInputRef}
-                                                        type="file" 
-                                                        accept="image/*" 
-                                                        className="hidden" 
-                                                        onChange={handleImageUpload} 
-                                                    />
-                                                    <ImageIcon size={18} />
-                                                </label>
-                                            </Tooltip>
-
-                                            {activeImage && !isEditing && (
-                                                <Tooltip content="Удалить картинку">
-                                                    <button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors">
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </Tooltip>
-                                            )}
+                                            <Tooltip content="Вставить картинку"><label className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={18} /></label></Tooltip>
+                                            {activeImage && !isEditing && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors"><Trash2 size={18} /></button></Tooltip>}
                                         </div>
-
                                         <div className="flex items-center gap-2 shrink-0">
-                                            <div className="relative">
-                                                <Tooltip content="Обложка">
-                                                    <button 
-                                                        onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} 
-                                                        className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}
-                                                    >
-                                                        <Layout size={18} />
-                                                    </button>
-                                                </Tooltip>
-                                                {showCreationCoverPicker && (
-                                                    <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} />
-                                                )}
-                                            </div>
-
-                                            <div className="relative">
-                                                <Tooltip content="Фон заметки">
-                                                    <button 
-                                                        onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} 
-                                                        className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"
-                                                    >
-                                                        <Palette size={18} />
-                                                    </button>
-                                                </Tooltip>
-                                                {showColorPicker && (
-                                                    <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
-                                                        {colors.map(c => (
-                                                            <button 
-                                                                key={c.id} 
-                                                                onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} 
-                                                                className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
-                                                                style={{ backgroundColor: c.hex }}
-                                                                title={c.id}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <button 
-                                                onClick={handleDump} 
-                                                disabled={isProcessing} 
-                                                className="text-xs font-bold uppercase tracking-wider px-5 py-2.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
-                                            >
-                                                Закрыть
-                                            </button>
+                                            <div className="relative"><Tooltip content="Обложка"><button onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button></Tooltip>{showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} />}</div>
+                                            <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>{showColorPicker && <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
+                                            <button onClick={handleDump} disabled={isProcessing} className="text-xs font-bold uppercase tracking-wider px-5 py-2.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50">Закрыть</button>
                                         </div>
                                     </div>
                                 </div>
                             )}
                         </div>
                     )}
-                    
-                    {/* ... (Masonry Grid - No changes) ... */}
                     {inboxNotes.length > 0 ? (
-                        <Masonry
-                            breakpointCols={breakpointColumnsObj}
-                            className="my-masonry-grid pb-20 md:pb-0"
-                            columnClassName="my-masonry-grid_column"
-                        >
+                        <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
                             {inboxNotes.map((note) => renderNoteCard(note, false))}
                         </Masonry>
                     ) : (
-                        <div className="py-6">
-                            <EmptyState 
-                            icon={PenTool} 
-                            title="Чистый лист" 
-                            description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'}
-                            />
-                        </div>
+                        <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
                     )}
                 </>
             )}
             {activeTab === 'library' && (
                 <>
                     {archivedNotes.length > 0 ? (
-                        <Masonry
-                            breakpointCols={breakpointColumnsObj}
-                            className="my-masonry-grid pb-20 md:pb-0"
-                            columnClassName="my-masonry-grid_column"
-                        >
+                        <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
                             {archivedNotes.map((note) => renderNoteCard(note, true))}
                         </Masonry>
                     ) : (
-                        <div className="py-6">
-                            <EmptyState 
-                            icon={Library} 
-                            title="Библиотека пуста" 
-                            description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'}
-                            color="indigo"
-                            />
-                        </div>
+                        <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
                     )}
                 </>
             )}
         </div>
       </div>
       
-      {/* ... (Oracle Modal remains unchanged) ... */}
+      {/* Oracle Modal */}
       {showOracle && (
       <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`bg-gradient-to-br ${oracleVibe.color} w-[90vw] max-w-md rounded-3xl shadow-2xl p-1 overflow-hidden animate-in zoom-in-95 duration-300 relative flex flex-col min-h-[420px] max-h-[85vh]`}>
@@ -1425,14 +967,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                           {oracleNote.title && <h3 className="font-serif text-xl font-bold text-slate-900 dark:text-slate-100 text-center mb-3">{oracleNote.title}</h3>}
                                           <div className="text-base text-slate-800 dark:text-slate-200 font-normal leading-relaxed relative py-4 text-center">
                                               <div className="relative z-10 px-3 font-sans">
-                                                <ReactMarkdown 
-                                                    components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} 
-                                                    urlTransform={allowDataUrls}
-                                                    remarkPlugins={[remarkGfm]}
-                                                    rehypePlugins={[rehypeRaw]}
-                                                >
-                                                    {oracleNote.content.replace(/\n/g, '  \n')}
-                                                </ReactMarkdown>
+                                                <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{oracleNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                                               </div>
                                           </div>
                                       </div>
@@ -1440,10 +975,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                </div>
                                <div className="mt-6 flex flex-col gap-3 shrink-0 pt-2 border-t border-transparent">
                                   <button onClick={() => { closeOracle(); handleOpenNote(oracleNote); }} className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg bg-gradient-to-r ${oracleVibe.color} hover:opacity-90 transition-opacity flex items-center justify-center gap-2 active:scale-[0.98]`}>Открыть заметку <ArrowRight size={18} /></button>
-                                  <div className="flex flex-col gap-1 items-center">
-                                      <button onClick={() => castOracleSpell(oracleVibe)} className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2"><Shuffle size={12} /> Попробовать еще раз</button>
-                                      <button onClick={() => setOracleState('select')} className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2"><ArrowLeft size={12} /> Попробовать другой вайб</button>
-                                  </div>
+                                  <div className="flex flex-col gap-1 items-center"><button onClick={() => castOracleSpell(oracleVibe)} className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2"><Shuffle size={12} /> Попробовать еще раз</button><button onClick={() => setOracleState('select')} className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 py-2"><ArrowLeft size={12} /> Попробовать другой вайб</button></div>
                                </div>
                            </div>
                       )}
@@ -1456,224 +988,54 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       {selectedNote && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
             <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-3xl shadow-2xl transition-colors duration-300 max-h-[90vh] overflow-y-auto overflow-x-hidden flex flex-col`} onClick={(e) => e.stopPropagation()} onScroll={() => setActiveImage(null)}>
-                
-                {/* MODAL COVER IMAGE */}
-                {/* Use editCover for immediate feedback during editing, else saved cover */}
-                {(isEditing ? editCover : selectedNote.coverUrl) && (
-                    <div className="h-48 w-full shrink-0 relative group">
-                        <img 
-                            src={isEditing ? editCover! : selectedNote.coverUrl!} 
-                            alt="Cover" 
-                            className="w-full h-full object-cover" 
-                        />
-                        {isEditing && (
-                            <button 
-                                onClick={() => setEditCover(null)}
-                                className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                                <X size={16} />
-                            </button>
-                        )}
-                    </div>
-                )}
-
+                {(isEditing ? editCover : selectedNote.coverUrl) && <div className="h-48 w-full shrink-0 relative group"><img src={isEditing ? editCover! : selectedNote.coverUrl!} alt="Cover" className="w-full h-full object-cover" />{isEditing && <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button>}</div>}
                 <div className="p-8 flex-1">
-                    {/* Header Logic: Title Left, Actions Right */}
                     <div className="flex justify-between items-start mb-4 gap-4">
                         <div className="flex-1 pt-1 min-w-0">
                             {isEditing ? (
                                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Редактирование</h3>
                             ) : (
                                 <div className="flex flex-col gap-2">
-                                    {selectedNote.title ? (
-                                        <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white leading-tight break-words">
-                                            {selectedNote.title}
-                                        </h2>
-                                    ) : (
-                                        <input
-                                            type="text"
-                                            placeholder="Название"
-                                            className="font-serif text-2xl font-bold text-slate-900 dark:text-white bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full"
-                                            value={editTitle}
-                                            onChange={(e) => setEditTitle(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    e.currentTarget.blur();
-                                                }
-                                            }}
-                                            onBlur={() => {
-                                                if (editTitle.trim() !== (selectedNote.title || '')) {
-                                                    const updated = { 
-                                                        ...selectedNote, 
-                                                        title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined 
-                                                    };
-                                                    updateNote(updated);
-                                                    setSelectedNote(updated);
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                    {selectedNote.isPinned && (
-                                        <div className="flex">
-                                            <Tooltip content="Открепить">
-                                                <button onClick={(e) => togglePin(e, selectedNote)} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-wider hover:bg-indigo-100 transition-colors">
-                                                    <Pin size={12} fill="currentColor" /> Закреплено
-                                                </button>
-                                            </Tooltip>
-                                        </div>
-                                    )}
+                                    {selectedNote.title ? <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white leading-tight break-words">{selectedNote.title}</h2> : <input type="text" placeholder="Название" className="font-serif text-2xl font-bold text-slate-900 dark:text-white bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} onBlur={() => { if (editTitle.trim() !== (selectedNote.title || '')) { const updated = { ...selectedNote, title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined }; updateNote(updated); setSelectedNote(updated); }}} />}
+                                    {selectedNote.isPinned && <div className="flex"><Tooltip content="Открепить"><button onClick={(e) => togglePin(e, selectedNote)} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-wider hover:bg-indigo-100 transition-colors"><Pin size={12} fill="currentColor" /> Закреплено</button></Tooltip></div>}
                                 </div>
                             )}
                         </div>
                         <div className="flex items-center gap-1 shrink-0 -mt-1 -mr-2 bg-white/50 dark:bg-white/5 p-1 rounded-xl backdrop-blur-sm border border-slate-100 dark:border-white/5">
                             {!isEditing && (
-                                <>
-                                    <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить"}>
-                                        <button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-lg transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}>
-                                            <Pin size={18} className={selectedNote.isPinned ? "fill-current" : ""} />
-                                        </button>
-                                    </Tooltip>
-                                    <Tooltip content="Редактировать">
-                                        <button onClick={() => setIsEditing(true)} className="p-2 text-slate-400 hover:text-indigo-600 dark:text-slate-500 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors">
-                                            <Edit3 size={18} />
-                                        </button>
-                                    </Tooltip>
-                                    <Tooltip content="Удалить">
-                                        <button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors">
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </Tooltip>
-                                    <div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-1"></div>
-                                </>
+                                <><Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить"}><button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-lg transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Pin size={18} className={selectedNote.isPinned ? "fill-current" : ""} /></button></Tooltip><Tooltip content="Редактировать"><button onClick={() => setIsEditing(true)} className="p-2 text-slate-400 hover:text-indigo-600 dark:text-slate-500 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors"><Edit3 size={18} /></button></Tooltip><Tooltip content="Удалить"><button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors"><Trash2 size={18} /></button></Tooltip><div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-1"></div></>
                             )}
                             <button onClick={() => setSelectedNote(null)} className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/10 rounded-lg"><X size={20}/></button>
                         </div>
                     </div>
-
                     {isEditing ? (
                         <div className="mb-6 space-y-4">
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Название</label>
-                                <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 rounded-xl p-3 text-xl font-serif font-bold text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none placeholder:text-slate-300" placeholder="Название" />
-                            </div>
+                            <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Название</label><input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 rounded-xl p-3 text-xl font-serif font-bold text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none placeholder:text-slate-300" placeholder="Название" /></div>
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Содержание</label>
                                 <div className="relative">
-                                    {/* TOOLBAR FOR EDIT MODAL */}
                                     <div className="flex items-center justify-between mb-2 gap-2">
                                         <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
-                                            {/* UNDO / REDO */}
-                                            <Tooltip content="Отменить">
-                                                <button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={16} /></button>
-                                            </Tooltip>
-                                            <Tooltip content="Повторить">
-                                                <button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={16} /></button>
-                                            </Tooltip>
-
+                                            <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
+                                            <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
                                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                            {/* HEADINGS */}
-                                            <Tooltip content="Заголовок 1">
-                                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={16} /></button>
-                                            </Tooltip>
-                                            <Tooltip content="Заголовок 2">
-                                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={16} /></button>
-                                            </Tooltip>
-                                            
+                                            <Tooltip content="Заголовок 1"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={16} /></button></Tooltip>
+                                            <Tooltip content="Заголовок 2"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={16} /></button></Tooltip>
                                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                            {/* STYLES */}
-                                            <Tooltip content="Жирный">
-                                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Bold size={16} /></button>
-                                            </Tooltip>
-                                            <Tooltip content="Курсив">
-                                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button>
-                                            </Tooltip>
-
+                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Bold size={16} /></button></Tooltip>
+                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button></Tooltip>
                                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                            <Tooltip content="Очистить форматирование">
-                                                <button onMouseDown={handleClearStyle} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button>
-                                            </Tooltip>
-
+                                            <Tooltip content="Очистить форматирование"><button onMouseDown={handleClearStyle} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
                                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                            {/* MEDIA */}
-                                            <Tooltip content="Вставить картинку">
-                                                <label className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
-                                                    <input 
-                                                        type="file" 
-                                                        accept="image/*" 
-                                                        className="hidden" 
-                                                        onChange={handleImageUpload} 
-                                                    />
-                                                    <ImageIcon size={16} />
-                                                </label>
-                                            </Tooltip>
-
-                                            {activeImage && (
-                                                <Tooltip content="Удалить картинку">
-                                                    <button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500 transition-colors">
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </Tooltip>
-                                            )}
+                                            <Tooltip content="Вставить картинку"><label className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
+                                            {activeImage && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500 transition-colors"><Trash2 size={16} /></button></Tooltip>}
                                         </div>
-
-                                        {/* COLOR & COVER PICKER (NEW) */}
                                         <div className="shrink-0 relative flex gap-1">
-                                            {/* Cover Picker Trigger */}
-                                            <div className="relative">
-                                                <Tooltip content="Обложка">
-                                                    <button 
-                                                        onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} 
-                                                        className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors ${editCover ? 'text-indigo-500' : ''}`}
-                                                    >
-                                                        <Layout size={16} />
-                                                    </button>
-                                                </Tooltip>
-                                                {showEditCoverPicker && (
-                                                    <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} />
-                                                )}
-                                            </div>
-
-                                            {/* Color Picker Trigger */}
-                                            <div className="relative">
-                                                <Tooltip content="Фон заметки">
-                                                    <button 
-                                                        onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} 
-                                                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"
-                                                    >
-                                                        <Palette size={16} />
-                                                    </button>
-                                                </Tooltip>
-                                                {showModalColorPicker && (
-                                                    <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
-                                                        {colors.map(c => (
-                                                            <button 
-                                                                key={c.id} 
-                                                                onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} 
-                                                                className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
-                                                                style={{ backgroundColor: c.hex }}
-                                                                title={c.id}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <div className="relative"><Tooltip content="Обложка"><button onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors ${editCover ? 'text-indigo-500' : ''}`}><Layout size={16} /></button></Tooltip>{showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} />}</div>
+                                            <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Palette size={16} /></button></Tooltip>{showModalColorPicker && <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
                                         </div>
                                     </div>
-                                    <div 
-                                        ref={editContentRef}
-                                        contentEditable
-                                        onInput={handleEditModalInput}
-                                        onClick={handleEditorClick}
-                                        onBlur={saveSelection}
-                                        onMouseUp={saveSelection}
-                                        onKeyUp={saveSelection}
-                                        onScroll={() => setActiveImage(null)}
-                                        className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline"
-                                    />
+                                    <div ref={editContentRef} contentEditable onInput={handleEditModalInput} onClick={handleEditorClick} onBlur={saveSelection} onMouseUp={saveSelection} onKeyUp={saveSelection} onScroll={() => setActiveImage(null)} className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans" />
                                 </div>
                             </div>
                             <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Теги</label><TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} /></div>
@@ -1681,30 +1043,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     ) : (
                         <div className="mb-6">
                             <div className={`text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-6 overflow-x-hidden font-sans ${!selectedNote.title ? 'mt-1' : ''}`}>
-                                <ReactMarkdown 
-                                    components={markdownComponents} 
-                                    urlTransform={allowDataUrls}
-                                    remarkPlugins={[remarkGfm]}
-                                    rehypePlugins={[rehypeRaw]}
-                                >
-                                    {selectedNote.content.replace(/\n/g, '  \n')}
-                                </ReactMarkdown>
+                                <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                             </div>
                             {selectedNote.tags && selectedNote.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                    {selectedNote.tags.map(tag => (
-                                        <span key={tag} className="text-xs text-slate-500 dark:text-slate-400 bg-black/5 dark:bg-white/10 px-2 py-1 rounded-md flex items-center gap-1 font-medium"><TagIcon size={10} /> {tag.replace(/^#/, '')}</span>
-                                    ))}
-                                </div>
+                                <div className="flex flex-wrap gap-1.5">{selectedNote.tags.map(tag => <span key={tag} className="text-xs text-slate-500 dark:text-slate-400 bg-black/5 dark:bg-white/10 px-2 py-1 rounded-md flex items-center gap-1 font-medium"><TagIcon size={10} /> {tag.replace(/^#/, '')}</span>)}</div>
                             )}
-                            {/* Detail Modal Link Preview */}
-                            {(() => {
-                                const url = findFirstUrl(selectedNote.content);
-                                return url ? <div className="mt-6"><LinkPreview url={url} /></div> : null;
-                            })()}
+                            {(() => { const url = findFirstUrl(selectedNote.content); return url ? <div className="mt-6"><LinkPreview url={url} /></div> : null; })()}
                         </div>
                     )}
-                    
                     {isEditing && (
                         <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-6 border-t border-slate-900/5 dark:border-white/5">
                             <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
