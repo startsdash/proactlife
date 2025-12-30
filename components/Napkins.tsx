@@ -225,6 +225,15 @@ const markdownToHtml = (md: string) => {
 const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
+
+    const wrap = (text: string, marker: string) => {
+        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
+        if (match && match[2]) {
+            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
+        }
+        return text.trim() ? `${marker}${text}${marker}` : '';
+    };
+
     const walk = (node: Node): string => {
         if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
         if (node.nodeType === Node.ELEMENT_NODE) {
@@ -232,12 +241,14 @@ const htmlToMarkdown = (html: string) => {
             const tag = el.tagName.toLowerCase();
             let content = '';
             el.childNodes.forEach(child => content += walk(child));
+            
             if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
-            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return `**${content}**`;
-            if (el.style.fontStyle === 'italic') return `*${content}*`;
+            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
+            if (el.style.fontStyle === 'italic') return wrap(content, '*');
+            
             switch (tag) {
-                case 'b': case 'strong': return content.trim() ? `**${content}**` : '';
-                case 'i': case 'em': return content.trim() ? `*${content}*` : '';
+                case 'b': case 'strong': return wrap(content, '**');
+                case 'i': case 'em': return wrap(content, '*');
                 case 'u': return content.trim() ? `<u>${content}</u>` : '';
                 case 'code': return `\`${content}\``;
                 case 'h1': return `\n# ${content}\n`;
@@ -902,7 +913,18 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
                                     {creationCover && <div className="relative w-full h-32 md:h-48 group"><img src={creationCover} alt="Cover" className="w-full h-full object-cover" /><button onClick={() => setCreationCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button></div>}
                                     <input type="text" placeholder="Название" value={title} onChange={(e) => setTitle(e.target.value)} className="px-6 pt-6 pb-2 bg-transparent text-xl font-serif font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none" />
-                                    <div ref={contentEditableRef} contentEditable onInput={handleEditorInput} onClick={handleEditorClick} onBlur={saveSelection} onMouseUp={saveSelection} onKeyUp={saveSelection} className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-sans" style={{ whiteSpace: 'pre-wrap' }} data-placeholder="О чём ты думаешь?" />
+                                    <div 
+                                        ref={contentEditableRef} 
+                                        contentEditable 
+                                        onInput={handleEditorInput} 
+                                        onClick={handleEditorClick} 
+                                        onBlur={saveSelection} 
+                                        onMouseUp={saveSelection} 
+                                        onKeyUp={saveSelection} 
+                                        className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                        style={{ whiteSpace: 'pre-wrap' }} 
+                                        data-placeholder="О чём ты думаешь?" 
+                                    />
                                     <div className="px-6 py-2"><TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} /></div>
                                     <div className="flex items-center justify-between px-4 py-3 gap-2 bg-transparent">
                                         <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
@@ -1056,7 +1078,17 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                             <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Palette size={16} /></button></Tooltip>{showModalColorPicker && <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
                                         </div>
                                     </div>
-                                    <div ref={editContentRef} contentEditable onInput={handleEditModalInput} onClick={handleEditorClick} onBlur={saveSelection} onMouseUp={saveSelection} onKeyUp={saveSelection} onScroll={() => setActiveImage(null)} className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans" />
+                                    <div 
+                                        ref={editContentRef} 
+                                        contentEditable 
+                                        onInput={handleEditModalInput} 
+                                        onClick={handleEditorClick} 
+                                        onBlur={saveSelection} 
+                                        onMouseUp={saveSelection} 
+                                        onKeyUp={saveSelection} 
+                                        onScroll={() => setActiveImage(null)} 
+                                        className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                    />
                                 </div>
                             </div>
                             <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Теги</label><TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} /></div>
