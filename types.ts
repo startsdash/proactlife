@@ -30,6 +30,7 @@ export interface Note {
   status: 'inbox' | 'sandbox' | 'archived';
   isPinned?: boolean;
   color?: string;
+  coverUrl?: string; // NEW: Cover image URL
 }
 
 // NEW: Sketchpad Types
