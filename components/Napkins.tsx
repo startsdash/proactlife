@@ -218,7 +218,6 @@ const htmlToMarkdown = (html: string) => {
 };
 
 // --- INTERNAL COMPONENT: TAG SELECTOR ---
-// ... (TagSelector remains unchanged)
 interface TagSelectorProps {
     selectedTags: string[];
     onChange: (tags: string[]) => void;
@@ -349,7 +348,6 @@ const MasonryGrid = ({ items, renderItem }: { items: any[], renderItem: (item: a
 };
 
 const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask }) => {
-  // ... (Component state remains largely unchanged)
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -419,7 +417,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const hasMoodMatcher = useMemo(() => config.aiTools.some(t => t.id === 'mood_matcher'), [config.aiTools]);
   const hasTagger = useMemo(() => config.aiTools.some(t => t.id === 'tagger'), [config.aiTools]);
 
-  // ... (Undo/Redo & Editor Input Logic - reuse existing)
   const saveHistorySnapshot = useCallback((content: string) => {
       if (content === history[historyIndex]) return;
       const newHistory = history.slice(0, historyIndex + 1);
@@ -498,6 +495,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 const target = event.target as HTMLElement;
                 if (target.closest('.color-picker-dropdown')) return;
                 if (target.closest('.image-delete-btn')) return;
+                setIsExpanded(false);
             }
         }
     };
@@ -544,7 +542,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   };
 
   const deleteActiveImage = (e?: React.MouseEvent) => {
-      if(e) e.preventDefault();
+      if(e) {
+          e.preventDefault();
+          e.stopPropagation();
+      }
       if (activeImage) {
           activeImage.remove();
           setActiveImage(null);
@@ -1065,7 +1066,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                                     {activeImage && !isEditing && (
                                         <Tooltip content="Удалить картинку">
-                                            <button onMouseDown={deleteActiveImage} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500 transition-colors">
+                                            <button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500 transition-colors">
                                                 <Trash2 size={18} />
                                             </button>
                                         </Tooltip>
@@ -1303,7 +1304,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                                         {activeImage && (
                                             <Tooltip content="Удалить картинку">
-                                                <button onMouseDown={deleteActiveImage} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 transition-colors">
+                                                <button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 transition-colors">
                                                     <Trash2 size={16} />
                                                 </button>
                                             </Tooltip>
