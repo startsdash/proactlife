@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
@@ -116,41 +117,29 @@ const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
 
-    // 1. Escape HTML special characters (basic) to avoid conflicts, EXCEPT specific tags we want to preserve if they exist
-    // Actually, for a simple notepad, we might want to trust the content.
-    
-    // 2. Headings
+    // 1. Headings
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
     
-    // 3. Bold (Handle ** and __) - Non-greedy
+    // 2. Bold (Handle ** and __)
     html = html.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+    html = html.replace(/__(.*?)__/g, '<b>$1</b>');
     
-    // 4. Italic (Handle * and _)
-    // Note: This regex is simple and might catch inside words, but suffices for napkins
+    // 3. Italic (Handle * and _)
     html = html.replace(/_(.*?)_/g, '<i>$1</i>');
-    // Using * for italic is tricky if we already replaced **, so we rely on _ primarily for italic in this converter
-    // or handle * after ** is gone.
-    // Let's handle simple *text*
-    html = html.replace(/(^|[^\*])\*([^\*]+)\*(?!\*)/g, '$1<i>$2</i>');
+    html = html.replace(/\*(.*?)\*/g, '<i>$1</i>');
 
-    // 5. Underline (Custom syntax or HTML tag preservation)
-    // We assume stored as <u>text</u> or similar. 
-    // If standard markdown doesn't have it, we just pass <u...> through (it's already in the string)
-    
-    // 6. Code
+    // 4. Code
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
     
-    // 7. Images
+    // 5. Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
 
-    // 8. Newlines
-    // Replace newlines with <br> BUT NOT if they follow a block element which already breaks lines
+    // 6. Newlines (Standardize)
+    // Replace newline with <br> unless it follows a block element
     html = html.replace(/\n/g, '<br>');
-    
-    // Cleanup: Remove <br> immediately after block closers to avoid double spacing
     html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
 
     return html;
@@ -174,6 +163,17 @@ const htmlToMarkdown = (html: string) => {
             el.childNodes.forEach(child => {
                 content += walk(child);
             });
+
+            // Handle styling attributes
+            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) {
+                return `<u>${content}</u>`;
+            }
+            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) {
+                return `**${content}**`;
+            }
+            if (el.style.fontStyle === 'italic') {
+                return `_${content}_`;
+            }
 
             switch (tag) {
                 case 'b': 
@@ -210,14 +210,15 @@ const htmlToMarkdown = (html: string) => {
 
     let md = walk(temp);
     
-    // Cleanup excessive newlines
+    // Cleanup excessive newlines and spaces
     md = md.replace(/\n{3,}/g, '\n\n').trim();
+    md = md.replace(/&nbsp;/g, ' ');
     
-    // Apply Typography
     return applyTypography(md);
 };
 
 // --- INTERNAL COMPONENT: TAG SELECTOR ---
+// ... (TagSelector remains unchanged)
 interface TagSelectorProps {
     selectedTags: string[];
     onChange: (tags: string[]) => void;
@@ -348,6 +349,7 @@ const MasonryGrid = ({ items, renderItem }: { items: any[], renderItem: (item: a
 };
 
 const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask }) => {
+  // ... (Component state remains largely unchanged)
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -367,12 +369,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [activeImage, setActiveImage] = useState<HTMLImageElement | null>(null);
   const lastSelectionRange = useRef<Range | null>(null);
 
-  // Undo/Redo State (Main)
+  // Undo/Redo State
   const [history, setHistory] = useState<string[]>(['']);
   const [historyIndex, setHistoryIndex] = useState(0);
   const historyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Undo/Redo State (Edit Modal)
   const [editHistory, setEditHistory] = useState<string[]>(['']);
   const [editHistoryIndex, setEditHistoryIndex] = useState(0);
   const editHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -418,14 +419,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const hasMoodMatcher = useMemo(() => config.aiTools.some(t => t.id === 'mood_matcher'), [config.aiTools]);
   const hasTagger = useMemo(() => config.aiTools.some(t => t.id === 'tagger'), [config.aiTools]);
 
-  // --- HISTORY LOGIC ---
+  // ... (Undo/Redo & Editor Input Logic - reuse existing)
   const saveHistorySnapshot = useCallback((content: string) => {
       if (content === history[historyIndex]) return;
-      
       const newHistory = history.slice(0, historyIndex + 1);
       newHistory.push(content);
       if (newHistory.length > 50) newHistory.shift();
-      
       setHistory(newHistory);
       setHistoryIndex(newHistory.length - 1);
   }, [history, historyIndex]);
@@ -444,7 +443,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       historyTimeoutRef.current = setTimeout(() => {
           const content = contentEditableRef.current?.innerHTML || '';
           saveHistorySnapshot(content);
-      }, 500); // Debounce
+      }, 500); 
   };
 
   const handleEditModalInput = () => {
@@ -452,7 +451,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       editHistoryTimeoutRef.current = setTimeout(() => {
           const content = editContentRef.current?.innerHTML || '';
           saveEditHistorySnapshot(content);
-      }, 500); // Debounce
+      }, 500); 
   };
 
   const execUndo = () => {
@@ -460,9 +459,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           const prevIndex = historyIndex - 1;
           const prevContent = history[prevIndex];
           setHistoryIndex(prevIndex);
-          if (contentEditableRef.current) {
-              contentEditableRef.current.innerHTML = prevContent;
-          }
+          if (contentEditableRef.current) contentEditableRef.current.innerHTML = prevContent;
       }
   };
 
@@ -471,9 +468,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           const nextIndex = historyIndex + 1;
           const nextContent = history[nextIndex];
           setHistoryIndex(nextIndex);
-          if (contentEditableRef.current) {
-              contentEditableRef.current.innerHTML = nextContent;
-          }
+          if (contentEditableRef.current) contentEditableRef.current.innerHTML = nextContent;
       }
   };
 
@@ -482,9 +477,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           const prevIndex = editHistoryIndex - 1;
           const prevContent = editHistory[prevIndex];
           setEditHistoryIndex(prevIndex);
-          if (editContentRef.current) {
-              editContentRef.current.innerHTML = prevContent;
-          }
+          if (editContentRef.current) editContentRef.current.innerHTML = prevContent;
       }
   };
 
@@ -493,9 +486,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           const nextIndex = editHistoryIndex + 1;
           const nextContent = editHistory[nextIndex];
           setEditHistoryIndex(nextIndex);
-          if (editContentRef.current) {
-              editContentRef.current.innerHTML = nextContent;
-          }
+          if (editContentRef.current) editContentRef.current.innerHTML = nextContent;
       }
   };
 
@@ -507,8 +498,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 const target = event.target as HTMLElement;
                 if (target.closest('.color-picker-dropdown')) return;
                 if (target.closest('.image-delete-btn')) return;
-                // Don't auto-dump on click outside, require explicit close or save for safety
-                // handleDump(); 
             }
         }
     };
@@ -525,7 +514,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     }
   }, [isEditing, selectedNote?.id]); 
 
-  // --- IMAGE & SELECTION HANDLING ---
+  // ... (Image & Selection Handling - reuse existing)
   const saveSelection = () => {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
@@ -540,17 +529,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const handleEditorClick = (e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'IMG') {
-          // Deselect previous if different
-          if (activeImage && activeImage !== target) {
-              activeImage.style.outline = 'none';
-          }
-          // Select new
+          if (activeImage && activeImage !== target) activeImage.style.outline = 'none';
           const img = target as HTMLImageElement;
           img.style.outline = '3px solid #6366f1'; 
           img.style.borderRadius = '4px';
           setActiveImage(img);
       } else {
-          // Deselect
           if (activeImage) {
               activeImage.style.outline = 'none';
               setActiveImage(null);
@@ -572,15 +556,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const insertImageAtCursor = (base64: string, targetEl: HTMLElement, onSave: (content: string) => void) => {
         targetEl.focus();
         let range = lastSelectionRange.current;
-        
-        // Validation: Is range valid and inside targetEl?
         if (!range || !targetEl.contains(range.commonAncestorContainer)) {
-             // Fallback: Create range at end
              range = document.createRange();
              range.selectNodeContents(targetEl);
              range.collapse(false);
         }
-
         const img = document.createElement('img');
         img.src = base64;
         img.style.maxWidth = '100%';
@@ -588,28 +568,22 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         img.style.display = 'block';
         img.style.margin = '8px 0';
         img.style.cursor = 'pointer';
-        
         range.deleteContents();
         range.insertNode(img);
         range.setStartAfter(img);
         range.setEndAfter(img);
-        
         const sel = window.getSelection();
         sel?.removeAllRanges();
         sel?.addRange(range);
-        
         onSave(targetEl.innerHTML); 
   };
 
-  // Handle Paste for Images with Compression
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
         const target = e.target as HTMLElement;
         if (!target.isContentEditable) return;
-
         const items = e.clipboardData?.items;
         if (!items) return;
-
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image') !== -1) {
                 e.preventDefault();
@@ -667,13 +641,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const handleClearStyle = (e: React.MouseEvent) => {
       e.preventDefault();
       execCmd('removeFormat');
-      execCmd('formatBlock', 'div'); // Reset block style to div/p
+      execCmd('formatBlock', 'div'); 
   };
 
   const handleDump = async () => {
     const rawHtml = contentEditableRef.current?.innerHTML || '';
-    
-    // Check if empty
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = rawHtml;
     const textContent = tempDiv.textContent?.trim() || '';
@@ -687,7 +659,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     }
     
     setIsProcessing(true);
-    // Convert WYSIWYG HTML to Markdown for storage
     const markdownContent = htmlToMarkdown(rawHtml);
 
     let autoTags: string[] = [];
@@ -716,6 +687,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     setIsExpanded(false);
   };
 
+  // ... (Mood, Oracle, DragDrop, etc. - reuse existing)
   const handleMoodSearch = async () => {
       if (!moodQuery.trim()) return;
       setIsMoodAnalyzing(true);
@@ -771,7 +743,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       setSelectedNote(note);
       setEditTitle(note.title || '');
       setEditTagsList(note.tags ? note.tags.map(t => t.replace(/^#/, '')) : []);
-      // Pre-convert to HTML for editing history
       const contentHtml = markdownToHtml(note.content);
       setEditHistory([contentHtml]);
       setEditHistoryIndex(0);
@@ -781,7 +752,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const handleSaveEdit = () => {
       if (selectedNote) {
           const rawHtml = editContentRef.current?.innerHTML || '';
-          // Convert WYSIWYG HTML back to Markdown
           const markdownContent = htmlToMarkdown(rawHtml);
           
           if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
@@ -806,7 +776,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const setColor = (colorId: string) => {
       if (selectedNote) {
-          // IMPORTANT: Only update metadata, do NOT touch content here to avoid visual resets
           const updated = { ...selectedNote, color: colorId };
           updateNote(updated);
           setSelectedNote(updated);
@@ -854,9 +823,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onClick={() => handleOpenNote(note)}
         className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
-        {/* TEXT CONTENT WRAPPER */}
         <div className="block w-full mb-2">
-             {/* PIN BUTTON - Floated Right */}
              <div className="float-right ml-2 mb-1 relative z-10">
                  <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
                      <button 
@@ -872,20 +839,23 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                  </Tooltip>
              </div>
 
-             {/* Title Block */}
              {note.title && (
                 <div className="font-bold text-slate-800 dark:text-slate-100 mb-2 text-sm md:text-base leading-snug break-words">
                     {note.title}
                 </div>
              )}
 
-             {/* Content */}
              <div className={`text-slate-800 dark:text-slate-200 font-normal leading-relaxed text-sm overflow-hidden break-words line-clamp-[4]`}>
-                <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                <ReactMarkdown 
+                    components={markdownComponents} 
+                    urlTransform={allowDataUrls}
+                    rehypePlugins={[rehypeRaw]}
+                >
+                    {note.content.replace(/\n/g, '  \n')}
+                </ReactMarkdown>
              </div>
         </div>
 
-        {/* FOOTER ACTIONS - Restored separator and flow layout */}
         <div className="mt-auto pt-3 border-t border-slate-900/5 dark:border-white/5 flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
              <div className="flex gap-1">
                 <Tooltip content="В Спринты">
@@ -909,6 +879,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         className="flex flex-col h-full max-w-4xl mx-auto p-3 md:p-8 space-y-4 md:space-y-6 relative overflow-y-auto"
         onScroll={() => setActiveImage(null)}
     >
+      {/* ... (Header and Search logic same as before) ... */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0 mb-6">
         <div>
           <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Заметки</h1>
@@ -922,7 +893,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
       {/* SEARCH & FILTER BAR */}
       <div className="shrink-0 flex flex-col gap-2">
-         {/* ... (Search Bar Logic) ... */}
          <div className="flex gap-2">
             <div className="relative flex-1">
                 {showMoodInput ? (
@@ -977,7 +947,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             )}
          </div>
          
-         {/* Filter UI Elements... */}
          {aiFilteredIds !== null && !showMoodInput && (
              <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-lg px-3 py-2 animate-in fade-in slide-in-from-top-1">
                  <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300"><Sparkles size={12} /><span>Найдено {aiFilteredIds.length} заметок на тему: <b>«{moodQuery}»</b></span></div>
@@ -996,7 +965,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       </div>
 
       {activeTab === 'inbox' && (
-        // ... (Existing Inbox Logic) ...
         <>
             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
                 <div 
@@ -1024,7 +992,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 className="px-4 pt-4 pb-2 bg-transparent text-base font-bold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none"
                             />
                             
-                            {/* Rich Editor Area */}
                             <div
                                 ref={contentEditableRef}
                                 contentEditable
@@ -1043,9 +1010,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             </div>
 
                             <div className="flex items-center justify-between px-2 py-2 border-t border-slate-900/5 dark:border-white/5 gap-2">
-                                {/* FORMATTING TOOLBAR */}
                                 <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
-                                    {/* ... (Undo/Redo, Headings, Styles, Clean) ... */}
                                     <Tooltip content="Отменить">
                                         <button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button>
                                     </Tooltip>
@@ -1085,7 +1050,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
-                                    {/* GROUP 5: MEDIA */}
                                     <Tooltip content="Вставить картинку">
                                         <label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
                                             <input 
@@ -1109,7 +1073,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
-                                    {/* GROUP 4: COLOR - Moved out of scroll container */}
                                     <div className="relative">
                                         <Tooltip content="Фон заметки">
                                             <button 
@@ -1162,7 +1125,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         </>
       )}
       {activeTab === 'library' && (
-        // ... (Existing Library Logic) ...
         <>
             {archivedNotes.length > 0 ? (
                 <MasonryGrid items={archivedNotes} renderItem={(note) => renderNoteCard(note, true)} />
@@ -1179,7 +1141,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         </>
       )}
       
-      {/* ... (Oracle component) ... */}
+      {/* ... (Oracle Modal remains unchanged) ... */}
       {showOracle && (
       <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`bg-gradient-to-br ${oracleVibe.color} w-[90vw] max-w-md rounded-3xl shadow-2xl p-1 overflow-hidden animate-in zoom-in-95 duration-300 relative flex flex-col min-h-[420px] max-h-[85vh]`}>
@@ -1214,7 +1176,15 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                       <div className="m-auto w-full py-2">
                                           {oracleNote.title && <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 text-center mb-2">{oracleNote.title}</h3>}
                                           <div className="text-base md:text-lg text-slate-800 dark:text-slate-200 font-normal leading-relaxed relative py-4 text-center">
-                                              <div className="relative z-10 px-3"><ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls}>{oracleNote.content.replace(/\n/g, '  \n')}</ReactMarkdown></div>
+                                              <div className="relative z-10 px-3">
+                                                <ReactMarkdown 
+                                                    components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} 
+                                                    urlTransform={allowDataUrls}
+                                                    rehypePlugins={[rehypeRaw]}
+                                                >
+                                                    {oracleNote.content.replace(/\n/g, '  \n')}
+                                                </ReactMarkdown>
+                                              </div>
                                           </div>
                                       </div>
                                   </div>
@@ -1384,7 +1354,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     <div className="mb-6">
                         {selectedNote.title && <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{selectedNote.title}</h2>}
                         <div className="text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-4 overflow-x-hidden">
-                            <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                            <ReactMarkdown 
+                                components={markdownComponents} 
+                                urlTransform={allowDataUrls}
+                                rehypePlugins={[rehypeRaw]}
+                            >
+                                {selectedNote.content.replace(/\n/g, '  \n')}
+                            </ReactMarkdown>
                         </div>
                         {selectedNote.tags && selectedNote.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1">
