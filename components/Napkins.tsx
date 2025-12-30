@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -9,7 +8,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, LayoutTemplate, Upload } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -32,13 +31,6 @@ const colors = [
     { id: 'blue', class: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-100 dark:border-blue-800/50', hex: '#eff6ff' },
     { id: 'indigo', class: 'bg-indigo-50 dark:bg-indigo-900/20', border: 'border-indigo-100 dark:border-indigo-800/50', hex: '#eef2ff' },
     { id: 'purple', class: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-100 dark:border-purple-800/50', hex: '#faf5ff' },
-];
-
-const UNSPLASH_PRESETS = [
-    { id: 'minimal', url: 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?w=400&q=80', thumb: 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?w=100&q=60' },
-    { id: 'sky', url: 'https://images.unsplash.com/photo-1513002749550-c59d786b8e6c?w=400&q=80', thumb: 'https://images.unsplash.com/photo-1513002749550-c59d786b8e6c?w=100&q=60' },
-    { id: 'geo', url: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=400&q=80', thumb: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=100&q=60' },
-    { id: 'nature', url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80', thumb: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=100&q=60' },
 ];
 
 const ORACLE_VIBES = [
@@ -417,59 +409,6 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
     );
 };
 
-// --- COMPONENT: COVER PICKER ---
-interface CoverPickerProps {
-    onSelectColor: (colorId: string) => void;
-    onSelectImage: (url: string) => void;
-    onUpload: () => void;
-    onClose: () => void;
-}
-
-const CoverPicker: React.FC<CoverPickerProps> = ({ onSelectColor, onSelectImage, onUpload, onClose }) => {
-    return (
-        <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-64 z-50 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-2 px-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Оформление</span>
-                <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
-            </div>
-            
-            {/* Colors */}
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
-                {colors.map(c => (
-                    <button 
-                        key={c.id} 
-                        onClick={() => onSelectColor(c.id)}
-                        className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-600 hover:scale-110 transition-transform shrink-0"
-                        style={{ backgroundColor: c.hex }}
-                        title={c.id}
-                    />
-                ))}
-            </div>
-
-            {/* Presets */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
-                {UNSPLASH_PRESETS.map(preset => (
-                    <button 
-                        key={preset.id}
-                        onClick={() => onSelectImage(preset.url)}
-                        className="relative w-full aspect-video rounded-lg overflow-hidden group hover:ring-2 hover:ring-indigo-500 transition-all"
-                    >
-                        <img src={preset.thumb} alt={preset.id} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                    </button>
-                ))}
-            </div>
-
-            {/* Upload Action */}
-            <button 
-                onClick={onUpload}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors border border-slate-100 dark:border-slate-600"
-            >
-                <Upload size={14} /> Загрузить свою
-            </button>
-        </div>
-    );
-};
-
 const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
@@ -477,10 +416,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'inbox' | 'library'>('inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  
-  // Refactored State for Cover Pickers
-  const [showCoverPicker, setShowCoverPicker] = useState(false);
-  const [showModalCoverPicker, setShowModalCoverPicker] = useState(false); 
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
   
   // Editor State
   const [isExpanded, setIsExpanded] = useState(false);
@@ -618,8 +555,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         if (editorRef.current && !editorRef.current.contains(event.target as Node)) {
             if (isExpanded) {
                 const target = event.target as HTMLElement;
-                // Prevent closing if clicking inside the popover (which might be portaled, but logic is simplified here)
-                if (target.closest('.cover-picker-dropdown')) return;
+                if (target.closest('.color-picker-dropdown')) return;
                 if (target.closest('.image-delete-btn')) return;
                 setIsExpanded(false);
             }
@@ -683,14 +619,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const insertImageAtCursor = (base64: string, targetEl: HTMLElement, onSave: (content: string) => void) => {
         targetEl.focus();
         let range = lastSelectionRange.current;
-        
-        // If range is null or not in target, force it to the beginning
         if (!range || !targetEl.contains(range.commonAncestorContainer)) {
              range = document.createRange();
              range.selectNodeContents(targetEl);
-             range.collapse(true); // Collapse to start
+             range.collapse(false);
         }
-        
         const img = document.createElement('img');
         img.src = base64;
         img.style.maxWidth = '100%';
@@ -698,43 +631,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         img.style.display = 'block';
         img.style.margin = '8px 0';
         img.style.cursor = 'pointer';
-        
         range.deleteContents();
         range.insertNode(img);
         range.setStartAfter(img);
         range.setEndAfter(img);
-        
         const sel = window.getSelection();
         sel?.removeAllRanges();
         sel?.addRange(range);
-        
         onSave(targetEl.innerHTML); 
-  };
-
-  // Helper for Cover Picker Image Insertion
-  const handleInsertCoverImage = (url: string, isEditMode: boolean) => {
-      const targetEl = isEditMode ? editContentRef.current : contentEditableRef.current;
-      const saveFn = isEditMode ? saveEditHistorySnapshot : saveHistorySnapshot;
-      
-      if (targetEl) {
-          // Prepend image
-          const img = document.createElement('img');
-          img.src = url;
-          img.style.maxWidth = '100%';
-          img.style.borderRadius = '8px';
-          img.style.display = 'block';
-          img.style.marginBottom = '8px';
-          img.style.cursor = 'pointer';
-          
-          if (targetEl.firstChild) {
-              targetEl.insertBefore(img, targetEl.firstChild);
-          } else {
-              targetEl.appendChild(img);
-          }
-          saveFn(targetEl.innerHTML);
-      }
-      setShowCoverPicker(false);
-      setShowModalCoverPicker(false);
   };
 
   useEffect(() => {
@@ -772,10 +676,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       if (file) {
           try {
               const compressedBase64 = await processImage(file);
-              // Check which context we are in (Edit Modal or Main Editor)
-              // Note: We use isEditing state, but file input is shared. 
-              // Better to use insertion helper based on context.
-              // Logic for File Input Trigger:
               if (isEditing && editContentRef.current) {
                   insertImageAtCursor(compressedBase64, editContentRef.current, saveEditHistorySnapshot);
               } else if (contentEditableRef.current) {
@@ -786,8 +686,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
               alert("Ошибка загрузки изображения.");
           }
           e.target.value = '';
-          setShowCoverPicker(false);
-          setShowModalCoverPicker(false);
       }
   };
 
@@ -1046,24 +944,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     </div>
   )};
 
-  // --- HIDDEN FILE INPUT (Used by both modes via ref) ---
-  // We place this at the top level of the component return
-  const hiddenFileInput = (
-      <input 
-          ref={fileInputRef}
-          type="file" 
-          accept="image/*" 
-          className="hidden" 
-          onChange={handleImageUpload} 
-      />
-  );
-
   return (
     <div 
         className="flex flex-col h-full max-w-4xl mx-auto p-3 md:p-8 space-y-4 md:space-y-6 relative overflow-y-auto"
-        onScroll={() => { setActiveImage(null); }}
+        onScroll={() => setActiveImage(null)}
     >
-      {hiddenFileInput}
       {/* ... (Header and Search logic same as before) ... */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0 mb-6">
         <div>
@@ -1235,6 +1120,19 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
+                                    <Tooltip content="Вставить картинку">
+                                        <label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
+                                            <input 
+                                                ref={fileInputRef}
+                                                type="file" 
+                                                accept="image/*" 
+                                                className="hidden" 
+                                                onChange={handleImageUpload} 
+                                            />
+                                            <ImageIcon size={18} />
+                                        </label>
+                                    </Tooltip>
+
                                     {activeImage && !isEditing && (
                                         <Tooltip content="Удалить картинку">
                                             <button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500 transition-colors">
@@ -1246,22 +1144,25 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                                 <div className="flex items-center gap-2 shrink-0">
                                     <div className="relative">
-                                        <Tooltip content="Обложка">
+                                        <Tooltip content="Фон заметки">
                                             <button 
-                                                onMouseDown={(e) => { e.preventDefault(); setShowCoverPicker(!showCoverPicker); }} 
+                                                onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} 
                                                 className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"
                                             >
-                                                <LayoutTemplate size={18} />
+                                                <Palette size={18} />
                                             </button>
                                         </Tooltip>
-                                        {showCoverPicker && (
-                                            <div className="cover-picker-dropdown">
-                                                <CoverPicker 
-                                                    onSelectColor={(id) => setCreationColor(id)}
-                                                    onSelectImage={(url) => handleInsertCoverImage(url, false)}
-                                                    onUpload={() => fileInputRef.current?.click()}
-                                                    onClose={() => setShowCoverPicker(false)}
-                                                />
+                                        {showColorPicker && (
+                                            <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                {colors.map(c => (
+                                                    <button 
+                                                        key={c.id} 
+                                                        onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} 
+                                                        className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
+                                                        style={{ backgroundColor: c.hex }}
+                                                        title={c.id}
+                                                    />
+                                                ))}
                                             </div>
                                         )}
                                     </div>
@@ -1370,7 +1271,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                           </div>
                                       </div>
                                   </div>
-                                </div>
+                               </div>
                                <div className="mt-6 flex flex-col gap-3 shrink-0 pt-2 border-t border-transparent">
                                   <button onClick={() => { closeOracle(); handleOpenNote(oracleNote); }} className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg bg-gradient-to-r ${oracleVibe.color} hover:opacity-90 transition-opacity flex items-center justify-center gap-2 active:scale-[0.98]`}>Открыть заметку <ArrowRight size={18} /></button>
                                   <div className="flex flex-col gap-1 items-center">
@@ -1470,6 +1371,19 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         
                                         <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
+                                        {/* MEDIA */}
+                                        <Tooltip content="Вставить картинку">
+                                            <label className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    className="hidden" 
+                                                    onChange={handleImageUpload} 
+                                                />
+                                                <ImageIcon size={16} />
+                                            </label>
+                                        </Tooltip>
+
                                         {activeImage && (
                                             <Tooltip content="Удалить картинку">
                                                 <button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 transition-colors">
@@ -1479,24 +1393,27 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         )}
                                     </div>
 
-                                    {/* COLOR/COVER PICKER (NEW) */}
+                                    {/* COLOR PICKER (NEW) */}
                                     <div className="shrink-0 relative">
-                                        <Tooltip content="Оформление">
+                                        <Tooltip content="Фон заметки">
                                             <button 
-                                                onMouseDown={(e) => { e.preventDefault(); setShowModalCoverPicker(!showModalCoverPicker); }} 
+                                                onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} 
                                                 className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"
                                             >
-                                                <LayoutTemplate size={16} />
+                                                <Palette size={16} />
                                             </button>
                                         </Tooltip>
-                                        {showModalCoverPicker && (
-                                            <div className="cover-picker-dropdown">
-                                                <CoverPicker 
-                                                    onSelectColor={(id) => setColor(id)}
-                                                    onSelectImage={(url) => handleInsertCoverImage(url, true)}
-                                                    onUpload={() => fileInputRef.current?.click()}
-                                                    onClose={() => setShowModalCoverPicker(false)}
-                                                />
+                                        {showModalColorPicker && (
+                                            <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                {colors.map(c => (
+                                                    <button 
+                                                        key={c.id} 
+                                                        onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} 
+                                                        className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
+                                                        style={{ backgroundColor: c.hex }}
+                                                        title={c.id}
+                                                    />
+                                                ))}
                                             </div>
                                         )}
                                     </div>
