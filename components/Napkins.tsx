@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
 import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
@@ -93,7 +94,7 @@ const processImage = (file: File | Blob): Promise<string> => {
 // Markdown Styles for Notes (Display Mode)
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
-    a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer" target="_blank" rel="noopener noreferrer" {...props} />,
+    a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer underline-offset-2 break-all relative z-20" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
@@ -850,6 +851,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <ReactMarkdown 
                     components={markdownComponents} 
                     urlTransform={allowDataUrls}
+                    remarkPlugins={[remarkGfm]}
                     rehypePlugins={[rehypeRaw]}
                 >
                     {note.content.replace(/\n/g, '  \n')}
@@ -1181,6 +1183,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                                 <ReactMarkdown 
                                                     components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} 
                                                     urlTransform={allowDataUrls}
+                                                    remarkPlugins={[remarkGfm]}
                                                     rehypePlugins={[rehypeRaw]}
                                                 >
                                                     {oracleNote.content.replace(/\n/g, '  \n')}
@@ -1358,6 +1361,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             <ReactMarkdown 
                                 components={markdownComponents} 
                                 urlTransform={allowDataUrls}
+                                remarkPlugins={[remarkGfm]}
                                 rehypePlugins={[rehypeRaw]}
                             >
                                 {selectedNote.content.replace(/\n/g, '  \n')}
