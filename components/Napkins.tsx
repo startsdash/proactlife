@@ -372,13 +372,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
-  const [hasScrolled, setHasScrolled] = useState(false);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
       const previous = scrollY.getPrevious() || 0;
       const diff = latest - previous;
       const isScrollingDown = diff > 0;
-      setHasScrolled(latest > 20);
       if (latest > 100 && isScrollingDown) setIsHeaderHidden(true);
       else setIsHeaderHidden(false);
   });
@@ -779,12 +777,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   return (
     <div 
         ref={scrollContainerRef}
-        className="flex flex-col h-full relative overflow-y-auto"
+        className="flex flex-col h-full relative overflow-y-auto overflow-x-hidden"
         onScroll={() => setActiveImage(null)}
     >
-      <div className="max-w-5xl mx-auto w-full">
-        {/* STATIC TITLE & TABS */}
-        <div className="px-3 md:px-8 pt-3 md:pt-8 mb-6">
+      <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pt-3 md:pt-8 mb-6">
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
                 <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Заметки</h1>
@@ -797,20 +793,25 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </header>
         </div>
 
-        {/* STICKY HEADER (Cloud Effect) */}
+        {/* STICKY HEADER (Full Width with Fog) */}
         <motion.div 
-            className={`sticky top-0 z-40 px-3 md:px-8 pb-8 -mx-3 md:-mx-8 md:mx-0 transition-all duration-300 mb-[-2rem] pointer-events-none`}
-            style={{
-                backdropFilter: hasScrolled ? 'blur(16px)' : 'none',
-                boxShadow: hasScrolled ? '0 20px 50px -10px rgba(0, 0, 0, 0.02)' : 'none',
-            }}
+            className="sticky top-0 z-40 w-full mb-[-20px]"
             animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
-            {/* Dynamic Background Gradient */}
-            <div className={`absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/80 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/80 dark:to-transparent transition-opacity duration-300 ${hasScrolled ? 'opacity-100' : 'opacity-0'}`} />
+            {/* Extended Blur/Gradient Backdrop */}
+            <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
+                <div 
+                    className="absolute inset-0 backdrop-blur-xl"
+                    style={{
+                        maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)',
+                        WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)'
+                    }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
+            </div>
 
-            <div className="max-w-5xl mx-auto flex flex-col gap-2 relative z-10 pointer-events-auto">
+            <div className="relative z-10 max-w-5xl mx-auto w-full px-3 md:px-8 pb-2">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         {showMoodInput ? (
@@ -869,7 +870,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         </motion.div>
 
         {/* CONTENT AREA */}
-        <div className="px-3 md:px-8 pt-6 pb-8 flex-1 min-h-0">
+        <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pt-6 pb-8 flex-1 min-h-0">
             {activeTab === 'inbox' && (
                 <>
                     {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
@@ -929,7 +930,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 </>
             )}
         </div>
-      </div>
       
       {/* Oracle Modal */}
       {showOracle && (
