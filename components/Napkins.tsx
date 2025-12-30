@@ -410,15 +410,15 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             {/* MINIMAL CONTROLS */}
             <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
-                    <Tooltip content="В Спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
-                    <Tooltip content="В Хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
+                    <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
+                    <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
                     
                     {/* Primary Action for Inbox */}
                     {!isArchived && (
                         <>
                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                             <Tooltip content="Переместить в библиотеку">
-                                <button onClick={handleArchive} className="p-2 text-emerald-600 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-full transition-all duration-300 hover:scale-110 shadow-sm"><Archive size={16} strokeWidth={2} /></button>
+                                <button onClick={handleArchive} className="p-2 text-emerald-600 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-full transition-all duration-300 hover:scale-110 shadow-sm"><Library size={16} strokeWidth={2} /></button>
                             </Tooltip>
                         </>
                     )}
