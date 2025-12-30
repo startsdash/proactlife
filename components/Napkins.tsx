@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
+import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
 import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
@@ -535,6 +536,26 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [editCover, setEditCover] = useState<string | null>(null);
   const editContentRef = useRef<HTMLDivElement>(null);
 
+  // Scroll Tracking for Smart Header
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const { scrollY } = useScroll({ container: scrollContainerRef });
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const [hasScrolled, setHasScrolled] = useState(false);
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+      const previous = scrollY.getPrevious() || 0;
+      const diff = latest - previous;
+      const isScrollingDown = diff > 0;
+      
+      setHasScrolled(latest > 20);
+
+      if (latest > 100 && isScrollingDown) {
+          setIsHeaderHidden(true);
+      } else {
+          setIsHeaderHidden(false);
+      }
+  });
+
   const allExistingTags = useMemo(() => {
       const uniqueTagsMap = new Map<string, string>();
       notes.forEach(note => {
@@ -1044,306 +1065,323 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   return (
     <div 
-        className="flex flex-col h-full max-w-5xl mx-auto p-3 md:p-8 space-y-6 md:space-y-8 relative overflow-y-auto"
+        ref={scrollContainerRef}
+        className="flex flex-col h-full relative overflow-y-auto"
         onScroll={() => setActiveImage(null)}
     >
-      {/* ... (Header and Search logic same as before) ... */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0 mb-2">
-        <div>
-          <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Заметки</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">На скорости мысли</p>
+      <div className="max-w-5xl mx-auto w-full">
+        {/* STATIC TITLE & TABS (Scrolls away) */}
+        <div className="px-3 md:px-8 pt-3 md:pt-8 mb-6">
+            <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Заметки</h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">На скорости мысли</p>
+                </div>
+                <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm">
+                    <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
+                    <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
+                </div>
+            </header>
         </div>
-        <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm">
-            <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
-            <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
-        </div>
-      </header>
 
-      {/* SEARCH & FILTER BAR */}
-      <div className="shrink-0 flex flex-col gap-2">
-         {/* ... (Search bar content) ... */}
-         <div className="flex gap-2">
-            <div className="relative flex-1">
-                {showMoodInput ? (
-                    <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                         <div className="relative flex-1">
-                             <Sparkles size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500" />
-                             <input type="text" placeholder="На какую тему подобрать заметки?" value={moodQuery} onChange={(e) => setMoodQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleMoodSearch()} className="w-full pl-10 pr-4 py-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 focus:border-purple-300 transition-all text-purple-900 dark:text-purple-300 placeholder:text-purple-300" autoFocus />
-                         </div>
-                         <button onClick={handleMoodSearch} disabled={isMoodAnalyzing || !moodQuery.trim()} className="px-5 py-2 bg-purple-600 text-white rounded-2xl text-xs font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 shadow-sm">{isMoodAnalyzing ? 'Думаю...' : 'Найти'}</button>
-                         <button onClick={() => setShowMoodInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
-                    </div>
-                ) : showTagInput ? (
-                    <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                         <div className="relative flex-1">
-                             <TagIcon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" />
-                             <input type="text" placeholder="Поиск по #тегам..." value={tagQuery} onChange={(e) => setTagQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 focus:border-indigo-300 transition-all text-indigo-900 dark:text-indigo-300 placeholder:text-indigo-300" autoFocus />
-                         </div>
-                         <button onClick={() => setShowTagInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
-                    </div>
-                ) : (
-                    <>
-                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input type="text" placeholder="Поиск по ключевым словам..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400" />
-                        {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>
+        {/* SMART STICKY HEADER (Search & Actions) */}
+        <motion.div 
+            className={`sticky top-0 z-40 px-3 md:px-8 py-3 -mx-3 md:-mx-8 md:mx-0 transition-colors duration-300 ${
+                hasScrolled 
+                ? 'bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 shadow-sm' 
+                : 'bg-transparent'
+            }`}
+            animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+        >
+            <div className="max-w-5xl mx-auto flex flex-col gap-2">
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        {showMoodInput ? (
+                            <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                                <div className="relative flex-1">
+                                    <Sparkles size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500" />
+                                    <input type="text" placeholder="На какую тему подобрать заметки?" value={moodQuery} onChange={(e) => setMoodQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleMoodSearch()} className="w-full pl-10 pr-4 py-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 focus:border-purple-300 transition-all text-purple-900 dark:text-purple-300 placeholder:text-purple-300" autoFocus />
+                                </div>
+                                <button onClick={handleMoodSearch} disabled={isMoodAnalyzing || !moodQuery.trim()} className="px-5 py-2 bg-purple-600 text-white rounded-2xl text-xs font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 shadow-sm">{isMoodAnalyzing ? 'Думаю...' : 'Найти'}</button>
+                                <button onClick={() => setShowMoodInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                            </div>
+                        ) : showTagInput ? (
+                            <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                                <div className="relative flex-1">
+                                    <TagIcon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" />
+                                    <input type="text" placeholder="Поиск по #тегам..." value={tagQuery} onChange={(e) => setTagQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 focus:border-indigo-300 transition-all text-indigo-900 dark:text-indigo-300 placeholder:text-indigo-300" autoFocus />
+                                </div>
+                                <button onClick={() => setShowTagInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                            </div>
+                        ) : (
+                            <>
+                                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input type="text" placeholder="Поиск по ключевым словам..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400" />
+                                {searchQuery && (
+                                    <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>
+                                )}
+                            </>
                         )}
-                    </>
+                    </div>
+                    
+                    {!showMoodInput && !showTagInput && (
+                        <>
+                            <Tooltip content="Поиск по тегам" side="bottom">
+                                <button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button>
+                            </Tooltip>
+                            <Tooltip content="Фильтр по цвету" side="bottom">
+                                <button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button>
+                            </Tooltip>
+                            {hasMoodMatcher && (
+                                <Tooltip content="Подбор по теме (ИИ)" side="bottom">
+                                    <button onClick={() => setShowMoodInput(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-purple-500 hover:bg-purple-50'}`}><Sparkles size={20} /></button>
+                                </Tooltip>
+                            )}
+                            <Tooltip content="Рандом" side="bottom">
+                                <button onClick={startOracle} className="group relative p-3 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
+                                    <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+                                    <Dices size={20} className="relative z-10 text-white transition-transform duration-500 group-hover:rotate-180" />
+                                </button>
+                            </Tooltip>
+                        </>
+                    )}
+                </div>
+                
+                {aiFilteredIds !== null && !showMoodInput && (
+                    <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl px-4 py-3 animate-in fade-in slide-in-from-top-1">
+                        <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300"><Sparkles size={14} /><span>Найдено {aiFilteredIds.length} заметок на тему: <b>«{moodQuery}»</b></span></div>
+                        <button onClick={clearMoodFilter} className="text-[10px] font-bold uppercase tracking-wider text-purple-400 hover:text-purple-700 dark:hover:text-purple-200 flex items-center gap-1"><X size={12} /> Сброс</button>
+                    </div>
+                )}
+                
+                {(showFilters || activeColorFilter) && (
+                    <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200">
+                        <button onClick={() => setActiveColorFilter(null)} className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${activeColorFilter === null ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}>Все</button>
+                        {colors.map(c => (
+                            <button key={c.id} onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)} className={`w-6 h-6 rounded-full border shadow-sm transition-transform ${activeColorFilter === c.id ? 'ring-2 ring-indigo-400 ring-offset-2 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: c.hex, borderColor: '#cbd5e1' }} title={c.id} />
+                        ))}
+                    </div>
                 )}
             </div>
-            
-            {!showMoodInput && !showTagInput && (
-                <>
-                    <Tooltip content="Поиск по тегам" side="bottom">
-                        <button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button>
-                    </Tooltip>
-                    <Tooltip content="Фильтр по цвету" side="bottom">
-                        <button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button>
-                    </Tooltip>
-                    {hasMoodMatcher && (
-                        <Tooltip content="Подбор по теме (ИИ)" side="bottom">
-                            <button onClick={() => setShowMoodInput(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-purple-500 hover:bg-purple-50'}`}><Sparkles size={20} /></button>
-                        </Tooltip>
-                    )}
-                    <Tooltip content="Рандом" side="bottom">
-                        <button onClick={startOracle} className="group relative p-3 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none">
-                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
-                            <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                            <Dices size={20} className="relative z-10 text-white transition-transform duration-500 group-hover:rotate-180" />
-                        </button>
-                    </Tooltip>
-                </>
-            )}
-         </div>
-         
-         {aiFilteredIds !== null && !showMoodInput && (
-             <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl px-4 py-3 animate-in fade-in slide-in-from-top-1">
-                 <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300"><Sparkles size={14} /><span>Найдено {aiFilteredIds.length} заметок на тему: <b>«{moodQuery}»</b></span></div>
-                 <button onClick={clearMoodFilter} className="text-[10px] font-bold uppercase tracking-wider text-purple-400 hover:text-purple-700 dark:hover:text-purple-200 flex items-center gap-1"><X size={12} /> Сброс</button>
-             </div>
-         )}
-         
-         {(showFilters || activeColorFilter) && (
-             <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200">
-                 <button onClick={() => setActiveColorFilter(null)} className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${activeColorFilter === null ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}>Все</button>
-                 {colors.map(c => (
-                     <button key={c.id} onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)} className={`w-6 h-6 rounded-full border shadow-sm transition-transform ${activeColorFilter === c.id ? 'ring-2 ring-indigo-400 ring-offset-2 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: c.hex, borderColor: '#cbd5e1' }} title={c.id} />
-                 ))}
-             </div>
-         )}
-      </div>
+        </motion.div>
 
-      {activeTab === 'inbox' && (
-        <>
-            {/* ... (Editor Area - No changes) ... */}
-            {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
-                <div 
-                    ref={editorRef}
-                    className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative overflow-hidden ${isExpanded ? 'shadow-xl' : 'shadow-sm hover:shadow-md'}`}
-                >
-                    {!isExpanded ? (
+        {/* CONTENT AREA (Padding applied here) */}
+        <div className="px-3 md:px-8 pb-8 flex-1 min-h-0">
+            {activeTab === 'inbox' && (
+                <>
+                    {/* ... (Editor Area - No changes) ... */}
+                    {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
                         <div 
-                            onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }}
-                            className="p-5 text-slate-400 dark:text-slate-500 cursor-text text-base font-medium flex items-center justify-between"
+                            ref={editorRef}
+                            className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative overflow-hidden mb-8 ${isExpanded ? 'shadow-xl' : 'shadow-sm hover:shadow-md'}`}
                         >
-                            <span>Заметка...</span>
-                            <div className="flex gap-4 text-slate-300 hover:text-slate-400 transition-colors">
-                                <PenTool size={20} />
-                                <ImageIcon size={20} />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col animate-in fade-in duration-200 relative">
-                            {/* ... Editor Expanded Content ... */}
-                            {creationCover && (
-                                <div className="relative w-full h-32 md:h-48 group">
-                                    <img src={creationCover} alt="Cover" className="w-full h-full object-cover" />
-                                    <button 
-                                        onClick={() => setCreationCover(null)}
-                                        className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"
-                                    >
-                                        <X size={16} />
-                                    </button>
+                            {!isExpanded ? (
+                                <div 
+                                    onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }}
+                                    className="p-5 text-slate-400 dark:text-slate-500 cursor-text text-base font-medium flex items-center justify-between"
+                                >
+                                    <span>Заметка...</span>
+                                    <div className="flex gap-4 text-slate-300 hover:text-slate-400 transition-colors">
+                                        <PenTool size={20} />
+                                        <ImageIcon size={20} />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col animate-in fade-in duration-200 relative">
+                                    {/* ... Editor Expanded Content ... */}
+                                    {creationCover && (
+                                        <div className="relative w-full h-32 md:h-48 group">
+                                            <img src={creationCover} alt="Cover" className="w-full h-full object-cover" />
+                                            <button 
+                                                onClick={() => setCreationCover(null)}
+                                                className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <input 
+                                        type="text"
+                                        placeholder="Название"
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        className="px-6 pt-6 pb-2 bg-transparent text-xl font-serif font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none"
+                                    />
+                                    
+                                    <div
+                                        ref={contentEditableRef}
+                                        contentEditable
+                                        onInput={handleEditorInput}
+                                        onClick={handleEditorClick}
+                                        onBlur={saveSelection}
+                                        onMouseUp={saveSelection}
+                                        onKeyUp={saveSelection}
+                                        className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline"
+                                        style={{ whiteSpace: 'pre-wrap' }}
+                                        data-placeholder="О чём ты думаешь?"
+                                    />
+                                    
+                                    <div className="px-6 py-2">
+                                        <TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} placeholder="Добавить теги..." />
+                                    </div>
+
+                                    <div className="flex items-center justify-between px-4 py-3 gap-2 bg-transparent">
+                                        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
+                                            <Tooltip content="Отменить">
+                                                <button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button>
+                                            </Tooltip>
+                                            <Tooltip content="Повторить">
+                                                <button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={18} /></button>
+                                            </Tooltip>
+
+                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                            <Tooltip content="Заголовок 1">
+                                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button>
+                                            </Tooltip>
+                                            <Tooltip content="Заголовок 2">
+                                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={18} /></button>
+                                            </Tooltip>
+                                            
+                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                            <Tooltip content="Жирный">
+                                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button>
+                                            </Tooltip>
+                                            <Tooltip content="Курсив">
+                                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button>
+                                            </Tooltip>
+
+                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                            <Tooltip content="Очистить форматирование">
+                                                <button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button>
+                                            </Tooltip>
+
+                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                            <Tooltip content="Вставить картинку">
+                                                <label className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
+                                                    <input 
+                                                        ref={fileInputRef}
+                                                        type="file" 
+                                                        accept="image/*" 
+                                                        className="hidden" 
+                                                        onChange={handleImageUpload} 
+                                                    />
+                                                    <ImageIcon size={18} />
+                                                </label>
+                                            </Tooltip>
+
+                                            {activeImage && !isEditing && (
+                                                <Tooltip content="Удалить картинку">
+                                                    <button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors">
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </Tooltip>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <div className="relative">
+                                                <Tooltip content="Обложка">
+                                                    <button 
+                                                        onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} 
+                                                        className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}
+                                                    >
+                                                        <Layout size={18} />
+                                                    </button>
+                                                </Tooltip>
+                                                {showCreationCoverPicker && (
+                                                    <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} />
+                                                )}
+                                            </div>
+
+                                            <div className="relative">
+                                                <Tooltip content="Фон заметки">
+                                                    <button 
+                                                        onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} 
+                                                        className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"
+                                                    >
+                                                        <Palette size={18} />
+                                                    </button>
+                                                </Tooltip>
+                                                {showColorPicker && (
+                                                    <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                        {colors.map(c => (
+                                                            <button 
+                                                                key={c.id} 
+                                                                onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} 
+                                                                className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
+                                                                style={{ backgroundColor: c.hex }}
+                                                                title={c.id}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <button 
+                                                onClick={handleDump} 
+                                                disabled={isProcessing} 
+                                                className="text-xs font-bold uppercase tracking-wider px-5 py-2.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
+                                            >
+                                                Закрыть
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
-
-                            <input 
-                                type="text"
-                                placeholder="Название"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className="px-6 pt-6 pb-2 bg-transparent text-xl font-serif font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none"
-                            />
-                            
-                            <div
-                                ref={contentEditableRef}
-                                contentEditable
-                                onInput={handleEditorInput}
-                                onClick={handleEditorClick}
-                                onBlur={saveSelection}
-                                onMouseUp={saveSelection}
-                                onKeyUp={saveSelection}
-                                className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline"
-                                style={{ whiteSpace: 'pre-wrap' }}
-                                data-placeholder="О чём ты думаешь?"
-                            />
-                            
-                            <div className="px-6 py-2">
-                                <TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} placeholder="Добавить теги..." />
-                            </div>
-
-                            <div className="flex items-center justify-between px-4 py-3 gap-2 bg-transparent">
-                                <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
-                                    <Tooltip content="Отменить">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button>
-                                    </Tooltip>
-                                    <Tooltip content="Повторить">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={18} /></button>
-                                    </Tooltip>
-
-                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                    <Tooltip content="Заголовок 1">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button>
-                                    </Tooltip>
-                                    <Tooltip content="Заголовок 2">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={18} /></button>
-                                    </Tooltip>
-                                    
-                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                    <Tooltip content="Жирный">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button>
-                                    </Tooltip>
-                                    <Tooltip content="Курсив">
-                                        <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button>
-                                    </Tooltip>
-
-                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                    <Tooltip content="Очистить форматирование">
-                                        <button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button>
-                                    </Tooltip>
-
-                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                    <Tooltip content="Вставить картинку">
-                                        <label className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
-                                            <input 
-                                                ref={fileInputRef}
-                                                type="file" 
-                                                accept="image/*" 
-                                                className="hidden" 
-                                                onChange={handleImageUpload} 
-                                            />
-                                            <ImageIcon size={18} />
-                                        </label>
-                                    </Tooltip>
-
-                                    {activeImage && !isEditing && (
-                                        <Tooltip content="Удалить картинку">
-                                            <button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors">
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </Tooltip>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <div className="relative">
-                                        <Tooltip content="Обложка">
-                                            <button 
-                                                onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} 
-                                                className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}
-                                            >
-                                                <Layout size={18} />
-                                            </button>
-                                        </Tooltip>
-                                        {showCreationCoverPicker && (
-                                            <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} />
-                                        )}
-                                    </div>
-
-                                    <div className="relative">
-                                        <Tooltip content="Фон заметки">
-                                            <button 
-                                                onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} 
-                                                className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"
-                                            >
-                                                <Palette size={18} />
-                                            </button>
-                                        </Tooltip>
-                                        {showColorPicker && (
-                                            <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
-                                                {colors.map(c => (
-                                                    <button 
-                                                        key={c.id} 
-                                                        onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} 
-                                                        className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
-                                                        style={{ backgroundColor: c.hex }}
-                                                        title={c.id}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <button 
-                                        onClick={handleDump} 
-                                        disabled={isProcessing} 
-                                        className="text-xs font-bold uppercase tracking-wider px-5 py-2.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
-                                    >
-                                        Закрыть
-                                    </button>
-                                </div>
-                            </div>
                         </div>
                     )}
-                </div>
+                    
+                    {/* ... (Masonry Grid - No changes) ... */}
+                    {inboxNotes.length > 0 ? (
+                        <Masonry
+                            breakpointCols={breakpointColumnsObj}
+                            className="my-masonry-grid pb-20 md:pb-0"
+                            columnClassName="my-masonry-grid_column"
+                        >
+                            {inboxNotes.map((note) => renderNoteCard(note, false))}
+                        </Masonry>
+                    ) : (
+                        <div className="py-6">
+                            <EmptyState 
+                            icon={PenTool} 
+                            title="Чистый лист" 
+                            description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'}
+                            />
+                        </div>
+                    )}
+                </>
             )}
-            
-            {/* ... (Masonry Grid - No changes) ... */}
-            {inboxNotes.length > 0 ? (
-                <Masonry
-                    breakpointCols={breakpointColumnsObj}
-                    className="my-masonry-grid pb-20 md:pb-0"
-                    columnClassName="my-masonry-grid_column"
-                >
-                    {inboxNotes.map((note) => renderNoteCard(note, false))}
-                </Masonry>
-            ) : (
-                <div className="py-6">
-                    <EmptyState 
-                      icon={PenTool} 
-                      title="Чистый лист" 
-                      description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'}
-                    />
-                </div>
+            {activeTab === 'library' && (
+                <>
+                    {archivedNotes.length > 0 ? (
+                        <Masonry
+                            breakpointCols={breakpointColumnsObj}
+                            className="my-masonry-grid pb-20 md:pb-0"
+                            columnClassName="my-masonry-grid_column"
+                        >
+                            {archivedNotes.map((note) => renderNoteCard(note, true))}
+                        </Masonry>
+                    ) : (
+                        <div className="py-6">
+                            <EmptyState 
+                            icon={Library} 
+                            title="Библиотека пуста" 
+                            description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'}
+                            color="indigo"
+                            />
+                        </div>
+                    )}
+                </>
             )}
-        </>
-      )}
-      {activeTab === 'library' && (
-        <>
-            {archivedNotes.length > 0 ? (
-                <Masonry
-                    breakpointCols={breakpointColumnsObj}
-                    className="my-masonry-grid pb-20 md:pb-0"
-                    columnClassName="my-masonry-grid_column"
-                >
-                    {archivedNotes.map((note) => renderNoteCard(note, true))}
-                </Masonry>
-            ) : (
-                <div className="py-6">
-                    <EmptyState 
-                      icon={Library} 
-                      title="Библиотека пуста" 
-                      description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'}
-                      color="indigo"
-                    />
-                </div>
-            )}
-        </>
-      )}
+        </div>
+      </div>
       
       {/* ... (Oracle Modal remains unchanged) ... */}
       {showOracle && (
