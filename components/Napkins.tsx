@@ -43,6 +43,28 @@ const ORACLE_VIBES = [
 // --- HELPER: ALLOW DATA URIS ---
 const allowDataUrls = (url: string) => url;
 
+// --- HELPER: IMAGE EXTRACTION ---
+const extractFirstImage = (content: string) => {
+    // Regex matches Markdown image syntax: ![alt](url)
+    // We only take the first one
+    const imgRegex = /!\[(.*?)\]\((.*?)\)/;
+    const match = content.match(imgRegex);
+    if (match) {
+        return {
+            coverUrl: match[2],
+            coverAlt: match[1],
+            // Returns content with the first image removed (for detail view to avoid duplicates)
+            contentWithoutCover: content.replace(match[0], '').trim()
+        };
+    }
+    return { coverUrl: null, coverAlt: null, contentWithoutCover: content };
+};
+
+const stripAllImages = (content: string) => {
+    // Removes all markdown images for the card preview text
+    return content.replace(/!\[.*?\]\(.*?\)/g, '');
+};
+
 // --- HELPER: IMAGE COMPRESSION ---
 const processImage = (file: File | Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -900,6 +922,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const renderNoteCard = (note: Note, isArchived: boolean) => {
       const linkUrl = findFirstUrl(note.content);
+      const { coverUrl, contentWithoutCover } = extractFirstImage(note.content);
+      // For preview card text, we strip ALL images to keep it clean (cover is at top)
+      const previewText = stripAllImages(note.content);
       
       return (
       <div 
@@ -911,6 +936,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onClick={() => handleOpenNote(note)}
         className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
+        {coverUrl && (
+            <div className="mb-3 -mx-4 -mt-4 rounded-t-xl overflow-hidden h-32 relative border-b border-slate-100 dark:border-slate-700/50">
+                <img src={coverUrl} alt="Cover" className="w-full h-full object-cover" loading="lazy" />
+            </div>
+        )}
+
         <div className="block w-full mb-2">
              <div className="float-right ml-2 mb-1 relative z-10">
                  <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
@@ -940,7 +971,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     remarkPlugins={[remarkGfm]}
                     rehypePlugins={[rehypeRaw]}
                 >
-                    {note.content.replace(/\n/g, '  \n')}
+                    {previewText.replace(/\n/g, '  \n')}
                 </ReactMarkdown>
              </div>
              
@@ -1267,18 +1298,25 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                   <div className="min-h-full flex flex-col">
                                       <div className="m-auto w-full py-2">
                                           {oracleNote.title && <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 text-center mb-2">{oracleNote.title}</h3>}
-                                          <div className="text-base md:text-lg text-slate-800 dark:text-slate-200 font-normal leading-relaxed relative py-4 text-center">
-                                              <div className="relative z-10 px-3">
-                                                <ReactMarkdown 
-                                                    components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} 
-                                                    urlTransform={allowDataUrls}
-                                                    remarkPlugins={[remarkGfm]}
-                                                    rehypePlugins={[rehypeRaw]}
-                                                >
-                                                    {oracleNote.content.replace(/\n/g, '  \n')}
-                                                </ReactMarkdown>
-                                              </div>
-                                          </div>
+                                          {/* Use extractFirstImage logic here for Oracle too for consistency */}
+                                          {(() => {
+                                              const { coverUrl, contentWithoutCover } = extractFirstImage(oracleNote.content);
+                                              return (
+                                                  <div className="text-base md:text-lg text-slate-800 dark:text-slate-200 font-normal leading-relaxed relative py-4 text-center">
+                                                      {coverUrl && <img src={coverUrl} alt="Oracle" className="rounded-lg max-h-48 mx-auto mb-4 object-contain shadow-sm" />}
+                                                      <div className="relative z-10 px-3">
+                                                        <ReactMarkdown 
+                                                            components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} 
+                                                            urlTransform={allowDataUrls}
+                                                            remarkPlugins={[remarkGfm]}
+                                                            rehypePlugins={[rehypeRaw]}
+                                                        >
+                                                            {contentWithoutCover.replace(/\n/g, '  \n')}
+                                                        </ReactMarkdown>
+                                                      </div>
+                                                  </div>
+                                              )
+                                          })()}
                                       </div>
                                   </div>
                                </div>
@@ -1445,17 +1483,33 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     </div>
                 ) : (
                     <div className="mb-6">
-                        {selectedNote.title && <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{selectedNote.title}</h2>}
-                        <div className="text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-4 overflow-x-hidden">
-                            <ReactMarkdown 
-                                components={markdownComponents} 
-                                urlTransform={allowDataUrls}
-                                remarkPlugins={[remarkGfm]}
-                                rehypePlugins={[rehypeRaw]}
-                            >
-                                {selectedNote.content.replace(/\n/g, '  \n')}
-                            </ReactMarkdown>
-                        </div>
+                        {/* Display Cover Image in Detail View First */}
+                        {(() => {
+                            const { coverUrl, contentWithoutCover } = extractFirstImage(selectedNote.content);
+                            return (
+                                <>
+                                    {coverUrl && (
+                                        <div className="mb-4 rounded-lg overflow-hidden max-h-64 w-full shadow-sm border border-slate-100 dark:border-slate-700">
+                                            <img src={coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                                        </div>
+                                    )}
+                                    
+                                    {selectedNote.title && <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{selectedNote.title}</h2>}
+                                    
+                                    <div className="text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-4 overflow-x-hidden">
+                                        <ReactMarkdown 
+                                            components={markdownComponents} 
+                                            urlTransform={allowDataUrls}
+                                            remarkPlugins={[remarkGfm]}
+                                            rehypePlugins={[rehypeRaw]}
+                                        >
+                                            {contentWithoutCover.replace(/\n/g, '  \n')}
+                                        </ReactMarkdown>
+                                    </div>
+                                </>
+                            );
+                        })()}
+
                         {selectedNote.tags && selectedNote.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1">
                                 {selectedNote.tags.map(tag => (
