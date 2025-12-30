@@ -8,7 +8,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -90,6 +90,89 @@ const processImage = (file: File | Blob): Promise<string> => {
         reader.onerror = (err) => reject(err);
     });
 };
+
+// --- HELPER: EXTRACT URL ---
+const findFirstUrl = (text: string): string | null => {
+    // Basic regex to find http/https URLs. 
+    // We ignore markdown image syntax to avoid double previewing images that are already rendered inline
+    // Markdown Image Regex: !\[.*?\]\(.*?\)
+    // This is a simple heuristic.
+    
+    // First, temporarily mask markdown images
+    const maskedText = text.replace(/!\[.*?\]\(.*?\)/g, '');
+    
+    const match = maskedText.match(/(https?:\/\/[^\s\)]+)/);
+    return match ? match[0] : null;
+};
+
+// --- COMPONENT: LINK PREVIEW ---
+const LinkPreview = React.memo(({ url }: { url: string }) => {
+    const [data, setData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        let mounted = true;
+        setLoading(true);
+        setError(false);
+        // Using Microlink API (free tier)
+        fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`)
+            .then(res => res.json())
+            .then(json => {
+                if (mounted) {
+                    if (json.status === 'success') {
+                        setData(json.data);
+                    } else {
+                        setError(true);
+                    }
+                    setLoading(false);
+                }
+            })
+            .catch(() => {
+                if (mounted) {
+                    setError(true);
+                    setLoading(false);
+                }
+            });
+        return () => { mounted = false; };
+    }, [url]);
+
+    if (error || loading) return null;
+    if (!data || !data.title) return null;
+
+    return (
+        <a 
+            href={url} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            onClick={(e) => e.stopPropagation()} 
+            className="block mt-3 border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all rounded-xl overflow-hidden group/link relative no-underline break-inside-avoid"
+        >
+            {data.image?.url && (
+                <div className="h-32 w-full overflow-hidden relative border-b border-slate-100 dark:border-slate-700/50">
+                    <img 
+                        src={data.image.url} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover/link:scale-105" 
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                </div>
+            )}
+            <div className="p-3">
+                <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 line-clamp-1 mb-1 leading-snug">{data.title}</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-2 leading-relaxed font-normal">{data.description}</p>
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 uppercase tracking-wider font-bold">
+                    {data.logo?.url ? (
+                        <img src={data.logo.url} className="w-3 h-3 rounded-full" alt="" />
+                    ) : (
+                        <Globe size={10} />
+                    )}
+                    <span className="truncate">{data.publisher || new URL(url).hostname}</span>
+                </div>
+            </div>
+        </a>
+    );
+});
 
 // Markdown Styles for Notes (Display Mode)
 const markdownComponents = {
@@ -815,7 +898,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       return c ? c.border : 'border-slate-100 dark:border-slate-700';
   };
 
-  const renderNoteCard = (note: Note, isArchived: boolean) => (
+  const renderNoteCard = (note: Note, isArchived: boolean) => {
+      const linkUrl = findFirstUrl(note.content);
+      
+      return (
       <div 
         key={note.id} 
         draggable
@@ -857,6 +943,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     {note.content.replace(/\n/g, '  \n')}
                 </ReactMarkdown>
              </div>
+             
+             {/* Rich Link Preview */}
+             {linkUrl && <LinkPreview url={linkUrl} />}
         </div>
 
         <div className="mt-auto pt-3 border-t border-slate-900/5 dark:border-white/5 flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -875,7 +964,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
              </div>
         </div>
     </div>
-  );
+  )};
 
   return (
     <div 
@@ -1374,6 +1463,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 ))}
                             </div>
                         )}
+                        {/* Detail Modal Link Preview */}
+                        {(() => {
+                            const url = findFirstUrl(selectedNote.content);
+                            return url ? <div className="mt-4"><LinkPreview url={url} /></div> : null;
+                        })()}
                     </div>
                 )}
                 
