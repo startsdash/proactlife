@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -1440,10 +1441,33 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Редактирование</h3>
                             ) : (
                                 <div className="flex flex-col gap-2">
-                                    {selectedNote.title && (
+                                    {selectedNote.title ? (
                                         <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white leading-tight break-words">
                                             {selectedNote.title}
                                         </h2>
+                                    ) : (
+                                        <input
+                                            type="text"
+                                            placeholder="Без названия"
+                                            className="font-serif text-2xl font-bold text-slate-900 dark:text-white bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full"
+                                            value={editTitle}
+                                            onChange={(e) => setEditTitle(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.currentTarget.blur();
+                                                }
+                                            }}
+                                            onBlur={() => {
+                                                if (editTitle.trim() !== (selectedNote.title || '')) {
+                                                    const updated = { 
+                                                        ...selectedNote, 
+                                                        title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined 
+                                                    };
+                                                    updateNote(updated);
+                                                    setSelectedNote(updated);
+                                                }
+                                            }}
+                                        />
                                     )}
                                     {selectedNote.isPinned && (
                                         <div className="flex">
