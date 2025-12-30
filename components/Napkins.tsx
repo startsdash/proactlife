@@ -969,10 +969,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" />
             </div>
         )}
-        <div className="p-6 pb-20 w-full flex-1">
+        <div className="p-8 pb-24 w-full flex-1">
             <div className="block w-full mb-2">
                  {note.title && (
-                    <h3 className="font-serif text-xl font-semibold text-slate-900 dark:text-slate-100 mb-3 leading-tight tracking-tight break-words">
+                    <h3 className="font-serif text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight tracking-tight break-words">
                         {note.title}
                     </h3>
                  )}
