@@ -799,7 +799,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
         {/* STICKY HEADER (Cloud Effect) */}
         <motion.div 
-            className={`sticky top-0 z-40 px-3 md:px-8 pb-8 -mx-3 md:-mx-8 md:mx-0 transition-all duration-300 mb-[-2rem]`}
+            className={`sticky top-0 z-40 px-3 md:px-8 pb-8 -mx-3 md:-mx-8 md:mx-0 transition-all duration-300 mb-[-2rem] pointer-events-none`}
             style={{
                 backdropFilter: hasScrolled ? 'blur(16px)' : 'none',
                 boxShadow: hasScrolled ? '0 20px 50px -10px rgba(0, 0, 0, 0.02)' : 'none',
@@ -808,9 +808,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
             {/* Dynamic Background Gradient */}
-            <div className={`absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/80 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/80 dark:to-transparent pointer-events-none transition-opacity duration-300 ${hasScrolled ? 'opacity-100' : 'opacity-0'}`} />
+            <div className={`absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/80 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/80 dark:to-transparent transition-opacity duration-300 ${hasScrolled ? 'opacity-100' : 'opacity-0'}`} />
 
-            <div className="max-w-5xl mx-auto flex flex-col gap-2 relative z-10">
+            <div className="max-w-5xl mx-auto flex flex-col gap-2 relative z-10 pointer-events-auto">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         {showMoodInput ? (
