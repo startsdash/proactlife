@@ -1086,14 +1086,20 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
         {/* SMART STICKY HEADER (Search & Actions) */}
         <motion.div 
-            className={`sticky top-0 z-40 px-3 md:px-8 py-3 -mx-3 md:-mx-8 md:mx-0 transition-colors duration-300 ${
+            className={`sticky top-0 z-40 px-3 md:px-8 py-3 -mx-3 md:-mx-8 md:mx-0 transition-all duration-300 ${
                 hasScrolled 
-                ? 'bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 shadow-sm' 
+                ? 'bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' 
                 : 'bg-transparent'
             }`}
+            style={{
+                boxShadow: hasScrolled ? '0 4px 30px rgba(0, 0, 0, 0.03)' : 'none'
+            }}
             animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
+            {/* Fade-out Gradient Effect */}
+            <div className={`absolute top-full left-0 w-full h-6 bg-gradient-to-b from-white/70 to-transparent dark:from-slate-900/70 dark:to-transparent pointer-events-none transition-opacity duration-300 ${hasScrolled ? 'opacity-100' : 'opacity-0'}`} />
+
             <div className="max-w-5xl mx-auto flex flex-col gap-2">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
