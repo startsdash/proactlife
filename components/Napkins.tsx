@@ -1060,6 +1060,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
       {/* SEARCH & FILTER BAR */}
       <div className="shrink-0 flex flex-col gap-2">
+         {/* ... (Search bar content) ... */}
          <div className="flex gap-2">
             <div className="relative flex-1">
                 {showMoodInput ? (
@@ -1133,6 +1134,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
       {activeTab === 'inbox' && (
         <>
+            {/* ... (Editor Area - No changes) ... */}
             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
                 <div 
                     ref={editorRef}
@@ -1151,8 +1153,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         </div>
                     ) : (
                         <div className="flex flex-col animate-in fade-in duration-200 relative">
-                            
-                            {/* COVER IMAGE PREVIEW IN EDITOR */}
+                            {/* ... Editor Expanded Content ... */}
                             {creationCover && (
                                 <div className="relative w-full h-32 md:h-48 group">
                                     <img src={creationCover} alt="Cover" className="w-full h-full object-cover" />
@@ -1248,7 +1249,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
-                                    {/* COVER BUTTON (NEW) */}
                                     <div className="relative">
                                         <Tooltip content="Обложка">
                                             <button 
@@ -1301,6 +1301,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 </div>
             )}
             
+            {/* ... (Masonry Grid - No changes) ... */}
             {inboxNotes.length > 0 ? (
                 <Masonry
                     breakpointCols={breakpointColumnsObj}
@@ -1432,34 +1433,55 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 )}
 
                 <div className="p-8 flex-1">
-                    <div className="flex justify-between items-start mb-6">
-                        <h3 className="text-lg font-bold flex items-center gap-3 text-slate-800 dark:text-slate-200">
-                            {isEditing ? 'Редактирование' : ''}
-                            {!isEditing && selectedNote.isPinned && (
-                                <Tooltip content="Открепить">
-                                    <button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-full transition-colors bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-400`}><Pin size={16} fill="currentColor" /></button>
-                                </Tooltip>
+                    {/* Header Logic: Title Left, Actions Right */}
+                    <div className="flex justify-between items-start mb-4 gap-4">
+                        <div className="flex-1 pt-1 min-w-0">
+                            {isEditing ? (
+                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Редактирование</h3>
+                            ) : (
+                                <div className="flex flex-col gap-2">
+                                    {selectedNote.title && (
+                                        <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white leading-tight break-words">
+                                            {selectedNote.title}
+                                        </h2>
+                                    )}
+                                    {selectedNote.isPinned && (
+                                        <div className="flex">
+                                            <Tooltip content="Открепить">
+                                                <button onClick={(e) => togglePin(e, selectedNote)} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-wider hover:bg-indigo-100 transition-colors">
+                                                    <Pin size={12} fill="currentColor" /> Закреплено
+                                                </button>
+                                            </Tooltip>
+                                        </div>
+                                    )}
+                                </div>
                             )}
-                        </h3>
-                        <div className="flex items-center">
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0 -mt-1 -mr-2 bg-white/50 dark:bg-white/5 p-1 rounded-xl backdrop-blur-sm border border-slate-100 dark:border-white/5">
                             {!isEditing && (
                                 <>
+                                    <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить"}>
+                                        <button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-lg transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}>
+                                            <Pin size={18} className={selectedNote.isPinned ? "fill-current" : ""} />
+                                        </button>
+                                    </Tooltip>
                                     <Tooltip content="Редактировать">
-                                        <button onClick={() => setIsEditing(true)} className="p-2 text-slate-400 hover:text-indigo-600 dark:text-slate-500 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/10 rounded-xl mr-1">
-                                            <Edit3 size={20} />
+                                        <button onClick={() => setIsEditing(true)} className="p-2 text-slate-400 hover:text-indigo-600 dark:text-slate-500 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors">
+                                            <Edit3 size={18} />
                                         </button>
                                     </Tooltip>
                                     <Tooltip content="Удалить">
-                                        <button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-xl transition-colors">
-                                            <Trash2 size={20} />
+                                        <button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors">
+                                            <Trash2 size={18} />
                                         </button>
                                     </Tooltip>
-                                    <div className="w-px h-6 bg-slate-200 dark:bg-white/10 mx-2"></div>
+                                    <div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-1"></div>
                                 </>
                             )}
-                            <button onClick={() => setSelectedNote(null)} className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/10 rounded-xl"><X size={24}/></button>
+                            <button onClick={() => setSelectedNote(null)} className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/10 rounded-lg"><X size={20}/></button>
                         </div>
                     </div>
+
                     {isEditing ? (
                         <div className="mb-6 space-y-4">
                             <div>
@@ -1590,8 +1612,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         </div>
                     ) : (
                         <div className="mb-6">
-                            {selectedNote.title && <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{selectedNote.title}</h2>}
-                            <div className="text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-6 overflow-x-hidden font-sans">
+                            <div className={`text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-6 overflow-x-hidden font-sans ${!selectedNote.title ? 'mt-1' : ''}`}>
                                 <ReactMarkdown 
                                     components={markdownComponents} 
                                     urlTransform={allowDataUrls}
@@ -1631,4 +1652,5 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     </div>
   );
 };
+
 export default Napkins;
