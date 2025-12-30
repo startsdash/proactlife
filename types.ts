@@ -25,6 +25,7 @@ export interface Note {
   id: string;
   title?: string; // NEW: Title field
   content: string;
+  cover?: string; // NEW: Cover image URL or 'color:hex'
   tags: string[];
   createdAt: number;
   status: 'inbox' | 'sandbox' | 'archived';

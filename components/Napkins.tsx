@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -8,7 +9,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Upload } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -409,10 +410,89 @@ const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onChange, exist
     );
 };
 
+// --- COVER PICKER COMPONENT ---
+interface CoverPickerProps {
+    onSelect: (value: string) => void;
+    onClose: () => void;
+}
+
+const CoverPicker: React.FC<CoverPickerProps> = ({ onSelect, onClose }) => {
+    const pastelColors = [
+        '#fca5a5', // Red 300
+        '#fdba74', // Orange 300
+        '#fcd34d', // Amber 300
+        '#86efac', // Green 300
+        '#93c5fd', // Blue 300
+        '#c4b5fd', // Violet 300
+    ];
+
+    const unsplashPresets = [
+        { id: 'minimal', url: 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=400&q=80', label: 'Minimal' },
+        { id: 'nature', url: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=400&q=80', label: 'Nature' },
+        { id: 'abstract', url: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=400&q=80', label: 'Abstract' },
+        { id: 'arch', url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80', label: 'Arch' },
+    ];
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            try {
+                const base64 = await processImage(file);
+                onSelect(base64);
+            } catch (err) {
+                console.error("Failed to upload cover", err);
+            }
+        }
+    };
+
+    return (
+        <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl p-4 w-64 z-50 animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Обложка</span>
+                <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={14}/></button>
+            </div>
+            
+            {/* Colors */}
+            <div className="flex justify-between gap-2 mb-4">
+                {pastelColors.map(color => (
+                    <button 
+                        key={color} 
+                        onClick={() => onSelect(`color:${color}`)}
+                        className="w-6 h-6 rounded-full border border-slate-100 dark:border-slate-600 hover:scale-110 transition-transform shadow-sm"
+                        style={{ backgroundColor: color }}
+                    />
+                ))}
+            </div>
+
+            {/* Unsplash Grid */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+                {unsplashPresets.map(preset => (
+                    <button 
+                        key={preset.id}
+                        onClick={() => onSelect(preset.url)}
+                        className="aspect-video rounded-lg overflow-hidden relative group"
+                    >
+                        <img src={preset.url} alt={preset.label} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+                    </button>
+                ))}
+            </div>
+
+            {/* Upload Action */}
+            <label className="flex items-center justify-center gap-2 w-full py-2 bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <Upload size={14} />
+                <span>Загрузить свою</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+            </label>
+        </div>
+    );
+};
+
 const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
+  const [creationCover, setCreationCover] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'inbox' | 'library'>('inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -424,6 +504,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const editorRef = useRef<HTMLDivElement>(null);
   const contentEditableRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cover Picker State
+  const [showCoverPicker, setShowCoverPicker] = useState(false);
+  const [showEditCoverPicker, setShowEditCoverPicker] = useState(false);
 
   // Active Image State
   const [activeImage, setActiveImage] = useState<HTMLImageElement | null>(null);
@@ -458,6 +542,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editTagsList, setEditTagsList] = useState<string[]>([]);
+  const [editCover, setEditCover] = useState<string | null>(null);
   const editContentRef = useRef<HTMLDivElement>(null);
 
   const allExistingTags = useMemo(() => {
@@ -714,7 +799,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     const textContent = tempDiv.textContent?.trim() || '';
     const hasImages = tempDiv.querySelector('img');
 
-    if (!textContent && !hasImages && !title.trim()) {
+    if (!textContent && !hasImages && !title.trim() && !creationCover) {
         setIsExpanded(false);
         setHistory(['']); 
         setHistoryIndex(0);
@@ -733,6 +818,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       id: Date.now().toString(),
       title: title.trim() ? applyTypography(title.trim()) : undefined,
       content: markdownContent,
+      cover: creationCover || undefined,
       tags: [...creationTags, ...autoTags],
       createdAt: Date.now(),
       status: 'inbox',
@@ -742,6 +828,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     addNote(newNote);
     setTitle('');
     setCreationColor('white');
+    setCreationCover(null);
     if (contentEditableRef.current) contentEditableRef.current.innerHTML = '';
     setHistory(['']);
     setHistoryIndex(0);
@@ -806,6 +893,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       setSelectedNote(note);
       setEditTitle(note.title || '');
       setEditTagsList(note.tags ? note.tags.map(t => t.replace(/^#/, '')) : []);
+      setEditCover(note.cover || null);
       const contentHtml = markdownToHtml(note.content);
       setEditHistory([contentHtml]);
       setEditHistoryIndex(0);
@@ -817,11 +905,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           const rawHtml = editContentRef.current?.innerHTML || '';
           const markdownContent = htmlToMarkdown(rawHtml);
           
-          if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
+          if (markdownContent.trim() !== '' || editTitle.trim() !== '' || editCover) {
               const updated = { 
                   ...selectedNote, 
                   title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
                   content: markdownContent, 
+                  cover: editCover || undefined,
                   tags: editTagsList 
               };
               updateNote(updated);
@@ -887,9 +976,18 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, note.id)}
         onClick={() => handleOpenNote(note)}
-        className={`${getNoteColorClass(note.color)} p-4 rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
+        className={`${getNoteColorClass(note.color)} rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative break-inside-avoid overflow-hidden ${isArchived && !note.isPinned ? 'opacity-90' : ''}`}
     >
-        <div className="block w-full mb-2">
+        {note.cover && (
+            <div className="h-32 w-full shrink-0">
+                {note.cover.startsWith('color:') ? (
+                    <div className="w-full h-full" style={{ backgroundColor: note.cover.split(':')[1] }} />
+                ) : (
+                    <img src={note.cover} className="w-full h-full object-cover" alt="Cover" />
+                )}
+            </div>
+        )}
+        <div className="block w-full mb-2 p-4 pb-0">
              <div className="float-right ml-2 mb-1 relative z-10">
                  <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
                      <button 
@@ -926,7 +1024,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
              {linkUrl && <LinkPreview url={linkUrl} />}
         </div>
 
-        <div className="mt-auto pt-3 border-t border-slate-900/5 dark:border-white/5 flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="mt-auto pt-3 px-4 pb-4 border-t border-slate-900/5 dark:border-white/5 flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
              <div className="flex gap-1">
                 <Tooltip content="В Спринты">
                     <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg transition-colors"><Kanban size={14} /></button>
@@ -963,6 +1061,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
       {/* SEARCH & FILTER BAR */}
       <div className="shrink-0 flex flex-col gap-2">
+         {/* ... Search Logic Reuse ... */}
          <div className="flex gap-2">
             <div className="relative flex-1">
                 {showMoodInput ? (
@@ -1039,7 +1138,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
                 <div 
                     ref={editorRef}
-                    className={`${getNoteColorClass(creationColor)} rounded-2xl border transition-all duration-300 shrink-0 relative ${isExpanded ? 'shadow-lg border-slate-300 dark:border-slate-600' : 'shadow-sm border-slate-200 dark:border-slate-700 hover:shadow-md'}`}
+                    className={`${getNoteColorClass(creationColor)} rounded-2xl border transition-all duration-300 shrink-0 relative overflow-visible ${isExpanded ? 'shadow-lg border-slate-300 dark:border-slate-600' : 'shadow-sm border-slate-200 dark:border-slate-700 hover:shadow-md'}`}
                 >
                     {!isExpanded ? (
                         <div 
@@ -1053,7 +1152,19 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             </div>
                         </div>
                     ) : (
-                        <div className="flex flex-col animate-in fade-in duration-200">
+                        <div className="flex flex-col animate-in fade-in duration-200 relative">
+                            
+                            {creationCover && (
+                                <div className="h-24 w-full relative group rounded-t-2xl overflow-hidden">
+                                    {creationCover.startsWith('color:') ? (
+                                        <div className="w-full h-full" style={{ backgroundColor: creationCover.split(':')[1] }} />
+                                    ) : (
+                                        <img src={creationCover} className="w-full h-full object-cover" alt="Cover" />
+                                    )}
+                                    <button onClick={() => setCreationCover(null)} className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"><X size={14} /></button>
+                                </div>
+                            )}
+
                             <input 
                                 type="text"
                                 placeholder="Название"
@@ -1079,7 +1190,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} placeholder="Добавить теги..." />
                             </div>
 
-                            <div className="flex items-center justify-between px-2 py-2 border-t border-slate-900/5 dark:border-white/5 gap-2">
+                            <div className="flex items-center justify-between px-2 py-2 border-t border-slate-900/5 dark:border-white/5 gap-2 relative">
                                 <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
                                     <Tooltip content="Отменить">
                                         <button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button>
@@ -1120,18 +1231,23 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     
                                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
-                                    <Tooltip content="Вставить картинку">
-                                        <label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
-                                            <input 
-                                                ref={fileInputRef}
-                                                type="file" 
-                                                accept="image/*" 
-                                                className="hidden" 
-                                                onChange={handleImageUpload} 
+                                    {/* UPDATED IMAGE BUTTON FOR COVER PICKER */}
+                                    <div className="relative">
+                                        <Tooltip content="Обложка">
+                                            <button 
+                                                onMouseDown={(e) => { e.preventDefault(); setShowCoverPicker(!showCoverPicker); }}
+                                                className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center"
+                                            >
+                                                <ImageIcon size={18} />
+                                            </button>
+                                        </Tooltip>
+                                        {showCoverPicker && (
+                                            <CoverPicker 
+                                                onSelect={(val) => { setCreationCover(val); setShowCoverPicker(false); }} 
+                                                onClose={() => setShowCoverPicker(false)} 
                                             />
-                                            <ImageIcon size={18} />
-                                        </label>
-                                    </Tooltip>
+                                        )}
+                                    </div>
 
                                     {activeImage && !isEditing && (
                                         <Tooltip content="Удалить картинку">
@@ -1289,186 +1405,221 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
       {selectedNote && (
         <div className="fixed inset-0 z-50 bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
-            <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 border ${getNoteBorderClass(selectedNote.color)} transition-colors duration-300 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()} onScroll={() => setActiveImage(null)}>
-                <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-lg font-bold flex items-center gap-3 text-slate-800 dark:text-slate-200">
-                        {isEditing ? 'Редактирование' : 'Детали'}
-                        <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить сверху"}>
-                            <button onClick={(e) => togglePin(e, selectedNote)} className={`p-1.5 rounded-full transition-colors ${selectedNote.isPinned ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-indigo-500'}`}><Pin size={16} fill={selectedNote.isPinned ? "currentColor" : "none"} /></button>
-                        </Tooltip>
-                    </h3>
-                    <div className="flex items-center">
-                        {!isEditing && (
-                            <>
-                                <Tooltip content="Редактировать">
-                                    <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:text-slate-500 dark:hover:text-indigo-400 bg-transparent hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded mr-1">
-                                        <Edit3 size={18} />
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content="Удалить">
-                                    <button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40 transition-colors">
-                                        <Trash2 size={18} />
-                                    </button>
-                                </Tooltip>
-                                <div className="w-px h-5 bg-slate-400/30 dark:bg-white/20 mx-2"></div>
-                            </>
-                        )}
-                        <button onClick={() => setSelectedNote(null)} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40"><X size={20}/></button>
-                    </div>
-                </div>
-                {isEditing ? (
-                    <div className="mb-6 space-y-3">
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Название</label>
-                            <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-white/50 dark:bg-black/20 rounded-lg p-2.5 text-base font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none" placeholder="Название" />
+            <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-2xl shadow-2xl border ${getNoteBorderClass(selectedNote.color)} transition-colors duration-300 max-h-[90vh] flex flex-col overflow-hidden`} onClick={(e) => e.stopPropagation()}>
+                
+                {/* Scrollable Content Container */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar-light" onScroll={() => setActiveImage(null)}>
+                    
+                    {/* EDIT MODE COVER PREVIEW */}
+                    {isEditing && editCover && (
+                        <div className="h-32 w-full relative group shrink-0">
+                            {editCover.startsWith('color:') ? (
+                                <div className="w-full h-full" style={{ backgroundColor: editCover.split(':')[1] }} />
+                            ) : (
+                                <img src={editCover} className="w-full h-full object-cover" alt="Cover" />
+                            )}
+                            <button onClick={() => setEditCover(null)} className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"><X size={14} /></button>
                         </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Содержание</label>
-                            <div className="relative">
-                                {/* TOOLBAR FOR EDIT MODAL */}
-                                <div className="flex items-center justify-between mb-2 gap-2">
-                                    <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
-                                        {/* UNDO / REDO */}
-                                        <Tooltip content="Отменить">
-                                            <button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={16} /></button>
-                                        </Tooltip>
-                                        <Tooltip content="Повторить">
-                                            <button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={16} /></button>
-                                        </Tooltip>
+                    )}
 
-                                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                    {/* VIEW MODE COVER */}
+                    {!isEditing && selectedNote.cover && (
+                        <div className="h-40 w-full shrink-0">
+                            {selectedNote.cover.startsWith('color:') ? (
+                                <div className="w-full h-full" style={{ backgroundColor: selectedNote.cover.split(':')[1] }} />
+                            ) : (
+                                <img src={selectedNote.cover} className="w-full h-full object-cover" alt="Cover" />
+                            )}
+                        </div>
+                    )}
 
-                                        {/* HEADINGS */}
-                                        <Tooltip content="Заголовок 1">
-                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={16} /></button>
-                                        </Tooltip>
-                                        <Tooltip content="Заголовок 2">
-                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={16} /></button>
-                                        </Tooltip>
-                                        <Tooltip content="Текст">
-                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'P'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Type size={16} /></button>
-                                        </Tooltip>
-
-                                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                        {/* STYLES */}
-                                        <Tooltip content="Жирный">
-                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Bold size={16} /></button>
-                                        </Tooltip>
-                                        <Tooltip content="Курсив">
-                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button>
-                                        </Tooltip>
-                                        <Tooltip content="Подчеркнутый">
-                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('underline'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Underline size={16} /></button>
-                                        </Tooltip>
-
-                                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                        {/* CLEAN */}
-                                        <Tooltip content="Очистить стиль">
-                                            <button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button>
-                                        </Tooltip>
-                                        
-                                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-
-                                        {/* MEDIA */}
-                                        <Tooltip content="Вставить картинку">
-                                            <label className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center">
-                                                <input 
-                                                    type="file" 
-                                                    accept="image/*" 
-                                                    className="hidden" 
-                                                    onChange={handleImageUpload} 
-                                                />
-                                                <ImageIcon size={16} />
-                                            </label>
-                                        </Tooltip>
-
-                                        {activeImage && (
-                                            <Tooltip content="Удалить картинку">
-                                                <button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 transition-colors">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </Tooltip>
-                                        )}
-                                    </div>
-
-                                    {/* COLOR PICKER (NEW) */}
-                                    <div className="shrink-0 relative">
-                                        <Tooltip content="Фон заметки">
-                                            <button 
-                                                onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} 
-                                                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"
-                                            >
-                                                <Palette size={16} />
+                    <div className="p-6 md:p-8">
+                        <div className="flex justify-between items-start mb-4">
+                            <h3 className="text-lg font-bold flex items-center gap-3 text-slate-800 dark:text-slate-200">
+                                {isEditing ? 'Редактирование' : 'Детали'}
+                                <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить сверху"}>
+                                    <button onClick={(e) => togglePin(e, selectedNote)} className={`p-1.5 rounded-full transition-colors ${selectedNote.isPinned ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-indigo-500'}`}><Pin size={16} fill={selectedNote.isPinned ? "currentColor" : "none"} /></button>
+                                </Tooltip>
+                            </h3>
+                            <div className="flex items-center">
+                                {!isEditing && (
+                                    <>
+                                        <Tooltip content="Редактировать">
+                                            <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:text-slate-500 dark:hover:text-indigo-400 bg-transparent hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded mr-1">
+                                                <Edit3 size={18} />
                                             </button>
                                         </Tooltip>
-                                        {showModalColorPicker && (
-                                            <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
-                                                {colors.map(c => (
-                                                    <button 
-                                                        key={c.id} 
-                                                        onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} 
-                                                        className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
-                                                        style={{ backgroundColor: c.hex }}
-                                                        title={c.id}
-                                                    />
-                                                ))}
+                                        <Tooltip content="Удалить">
+                                            <button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40 transition-colors">
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </Tooltip>
+                                        <div className="w-px h-5 bg-slate-400/30 dark:bg-white/20 mx-2"></div>
+                                    </>
+                                )}
+                                <button onClick={() => setSelectedNote(null)} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-white/50 dark:bg-black/20 rounded hover:bg-white dark:hover:bg-black/40"><X size={20}/></button>
+                            </div>
+                        </div>
+                        {isEditing ? (
+                            <div className="mb-6 space-y-3">
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Название</label>
+                                    <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-white/50 dark:bg-black/20 rounded-lg p-2.5 text-base font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none" placeholder="Название" />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Содержание</label>
+                                    <div className="relative">
+                                        {/* TOOLBAR FOR EDIT MODAL */}
+                                        <div className="flex items-center justify-between mb-2 gap-2">
+                                            <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
+                                                {/* UNDO / REDO */}
+                                                <Tooltip content="Отменить">
+                                                    <button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={16} /></button>
+                                                </Tooltip>
+                                                <Tooltip content="Повторить">
+                                                    <button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={16} /></button>
+                                                </Tooltip>
+
+                                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                                {/* HEADINGS */}
+                                                <Tooltip content="Заголовок 1">
+                                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={16} /></button>
+                                                </Tooltip>
+                                                <Tooltip content="Заголовок 2">
+                                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={16} /></button>
+                                                </Tooltip>
+                                                <Tooltip content="Текст">
+                                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'P'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Type size={16} /></button>
+                                                </Tooltip>
+
+                                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                                {/* STYLES */}
+                                                <Tooltip content="Жирный">
+                                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Bold size={16} /></button>
+                                                </Tooltip>
+                                                <Tooltip content="Курсив">
+                                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button>
+                                                </Tooltip>
+                                                <Tooltip content="Подчеркнутый">
+                                                    <button onMouseDown={(e) => { e.preventDefault(); execCmd('underline'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Underline size={16} /></button>
+                                                </Tooltip>
+
+                                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                                {/* CLEAN */}
+                                                <Tooltip content="Очистить стиль">
+                                                    <button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button>
+                                                </Tooltip>
+                                                
+                                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+                                                {/* MEDIA */}
+                                                <div className="relative">
+                                                    <Tooltip content="Обложка">
+                                                        <button 
+                                                            onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }}
+                                                            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"
+                                                        >
+                                                            <ImageIcon size={16} />
+                                                        </button>
+                                                    </Tooltip>
+                                                    {showEditCoverPicker && (
+                                                        <CoverPicker 
+                                                            onSelect={(val) => { setEditCover(val); setShowEditCoverPicker(false); }} 
+                                                            onClose={() => setShowEditCoverPicker(false)} 
+                                                        />
+                                                    )}
+                                                </div>
+
+                                                {activeImage && (
+                                                    <Tooltip content="Удалить картинку">
+                                                        <button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 transition-colors">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </Tooltip>
+                                                )}
                                             </div>
-                                        )}
+
+                                            {/* COLOR PICKER (NEW) */}
+                                            <div className="shrink-0 relative">
+                                                <Tooltip content="Фон заметки">
+                                                    <button 
+                                                        onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} 
+                                                        className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"
+                                                    >
+                                                        <Palette size={16} />
+                                                    </button>
+                                                </Tooltip>
+                                                {showModalColorPicker && (
+                                                    <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                        {colors.map(c => (
+                                                            <button 
+                                                                key={c.id} 
+                                                                onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} 
+                                                                className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}
+                                                                style={{ backgroundColor: c.hex }}
+                                                                title={c.id}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div 
+                                            ref={editContentRef}
+                                            contentEditable
+                                            onInput={handleEditModalInput}
+                                            onClick={handleEditorClick}
+                                            onBlur={saveSelection}
+                                            onMouseUp={saveSelection}
+                                            onKeyUp={saveSelection}
+                                            onScroll={() => setActiveImage(null)}
+                                            className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline"
+                                        />
                                     </div>
                                 </div>
-                                <div 
-                                    ref={editContentRef}
-                                    contentEditable
-                                    onInput={handleEditModalInput}
-                                    onClick={handleEditorClick}
-                                    onBlur={saveSelection}
-                                    onMouseUp={saveSelection}
-                                    onKeyUp={saveSelection}
-                                    onScroll={() => setActiveImage(null)}
-                                    className="w-full h-48 bg-white/50 dark:bg-black/20 rounded-lg p-3 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline"
-                                />
+                                <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Теги</label><TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} /></div>
                             </div>
-                        </div>
-                        <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Теги</label><TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} /></div>
-                    </div>
-                ) : (
-                    <div className="mb-6">
-                        {selectedNote.title && <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{selectedNote.title}</h2>}
-                        <div className="text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-4 overflow-x-hidden">
-                            <ReactMarkdown 
-                                components={markdownComponents} 
-                                urlTransform={allowDataUrls}
-                                remarkPlugins={[remarkGfm]}
-                                rehypePlugins={[rehypeRaw]}
-                            >
-                                {selectedNote.content.replace(/\n/g, '  \n')}
-                            </ReactMarkdown>
-                        </div>
-                        {selectedNote.tags && selectedNote.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                                {selectedNote.tags.map(tag => (
-                                    <span key={tag} className="text-xs text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-black/20 px-2 py-1 rounded-md border border-slate-100/50 dark:border-slate-700/50 flex items-center gap-1"><TagIcon size={10} /> {tag.replace(/^#/, '')}</span>
-                                ))}
+                        ) : (
+                            <div className="mb-6">
+                                {selectedNote.title && <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{selectedNote.title}</h2>}
+                                <div className="text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-4 overflow-x-hidden">
+                                    <ReactMarkdown 
+                                        components={markdownComponents} 
+                                        urlTransform={allowDataUrls}
+                                        remarkPlugins={[remarkGfm]}
+                                        rehypePlugins={[rehypeRaw]}
+                                    >
+                                        {selectedNote.content.replace(/\n/g, '  \n')}
+                                    </ReactMarkdown>
+                                </div>
+                                {selectedNote.tags && selectedNote.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                        {selectedNote.tags.map(tag => (
+                                            <span key={tag} className="text-xs text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-black/20 px-2 py-1 rounded-md border border-slate-100/50 dark:border-slate-700/50 flex items-center gap-1"><TagIcon size={10} /> {tag.replace(/^#/, '')}</span>
+                                        ))}
+                                    </div>
+                                )}
+                                {/* Detail Modal Link Preview */}
+                                {(() => {
+                                    const url = findFirstUrl(selectedNote.content);
+                                    return url ? <div className="mt-4"><LinkPreview url={url} /></div> : null;
+                                })()}
                             </div>
                         )}
-                        {/* Detail Modal Link Preview */}
-                        {(() => {
-                            const url = findFirstUrl(selectedNote.content);
-                            return url ? <div className="mt-4"><LinkPreview url={url} /></div> : null;
-                        })()}
+                        
+                        {isEditing && (
+                            <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-4 border-t border-slate-900/5 dark:border-white/5">
+                                <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                                    <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 w-full md:w-auto text-center">Отмена</button>
+                                    <button onClick={handleSaveEdit} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm flex items-center justify-center gap-2 w-full md:w-auto"><Check size={16} /> Сохранить</button>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                )}
-                
-                {isEditing && (
-                    <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-4 border-t border-slate-900/5 dark:border-white/5">
-                        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-                            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 w-full md:w-auto text-center">Отмена</button>
-                            <button onClick={handleSaveEdit} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm flex items-center justify-center gap-2 w-full md:w-auto"><Check size={16} /> Сохранить</button>
-                        </div>
-                    </div>
-                )}
+                </div>
             </div>
         </div>
       )}
