@@ -267,6 +267,8 @@ const htmlToMarkdown = (html: string) => {
     return applyTypography(md);
 };
 
+const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
+
 // Tag Selector
 const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[]) => void, existingTags: string[], placeholder?: string }> = ({ selectedTags, onChange, existingTags, placeholder = "Добавить теги..." }) => {
     const [input, setInput] = useState('');
@@ -335,6 +337,99 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                 <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium cursor-pointer"><Upload size={12} /> Своя <input type="file" accept="image/*" className="hidden" onChange={handleUpload} /></label>
                 <button onClick={() => { onSelect(`https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80&r=${Math.random()}`); onClose(); }} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium"><Shuffle size={12} /> Random</button>
             </div>
+        </div>
+    );
+};
+
+interface NoteCardProps {
+    note: Note;
+    isArchived: boolean;
+    handlers: {
+        handleDragStart: (e: React.DragEvent, id: string) => void;
+        handleDragOver: (e: React.DragEvent) => void;
+        handleDrop: (e: React.DragEvent, id: string) => void;
+        handleOpenNote: (note: Note) => void;
+        togglePin: (e: React.MouseEvent, note: Note) => void;
+        onAddTask: (task: Task) => void;
+        moveNoteToSandbox: (id: string) => void;
+        archiveNote: (id: string) => void;
+    }
+}
+
+const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
+    const [isExiting, setIsExiting] = useState(false);
+    const linkUrl = findFirstUrl(note.content);
+
+    const handleArchive = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (window.confirm('В Библиотеку?')) {
+            setIsExiting(true);
+            setTimeout(() => {
+                handlers.archiveNote(note.id);
+            }, 400); // Wait for animation
+        }
+    };
+
+    return (
+        <div 
+            draggable
+            onDragStart={(e) => handlers.handleDragStart(e, note.id)}
+            onDragOver={handlers.handleDragOver}
+            onDrop={(e) => handlers.handleDrop(e, note.id)}
+            onClick={() => handlers.handleOpenNote(note)}
+            className={`${getNoteColorClass(note.color)} rounded-3xl transition-all duration-500 hover:-translate-y-[4px] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] group/card flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden mb-6 ${isExiting ? 'opacity-0 translate-x-full scale-90' : ''}`}
+        >
+            {/* NOISE TEXTURE */}
+            <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
+
+            {note.coverUrl && (
+                <div className="h-40 w-full shrink-0 relative z-10"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
+            )}
+            <div className="p-8 pb-20 w-full flex-1 relative z-10">
+                {/* Inbox Cue */}
+                {!isArchived && !note.isPinned && (
+                    <div className="absolute top-4 right-4">
+                        <div className="w-2 h-2 rounded-full bg-indigo-400/50" title="Готово для работы" />
+                    </div>
+                )}
+
+                <div className="block w-full mb-2">
+                    {note.title && <h3 className={`font-serif text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
+                    <div className={`text-slate-700 dark:text-slate-300 font-sans text-sm leading-relaxed overflow-hidden break-words line-clamp-[6]`}>
+                        <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                    </div>
+                    {linkUrl && <LinkPreview url={linkUrl} />}
+                    {note.tags && note.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-4">
+                            {note.tags.map(tag => <span key={tag} className="text-[10px] text-slate-500 dark:text-slate-400 font-medium opacity-70">{tag}</span>)}
+                        </div>
+                    )}
+                </div>
+            </div>
+            
+            {/* MINIMAL CONTROLS */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
+                <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
+                    <Tooltip content="В Спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
+                    <Tooltip content="В Хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
+                    
+                    {/* Primary Action for Inbox */}
+                    {!isArchived && (
+                        <>
+                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                            <Tooltip content="Переместить в библиотеку">
+                                <button onClick={handleArchive} className="p-2 text-emerald-600 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-full transition-all duration-300 hover:scale-110 shadow-sm"><Archive size={16} strokeWidth={2} /></button>
+                            </Tooltip>
+                        </>
+                    )}
+                </div>
+                
+                <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
+                    <button onClick={(e) => handlers.togglePin(e, note)} className={`p-2 rounded-full transition-all ${note.isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 opacity-60 hover:opacity-100'}`}><Pin size={16} strokeWidth={1.5} className={note.isPinned ? "fill-current transform rotate-45" : ""} /></button>
+                </Tooltip>
+            </div>
+            
+            {note.isPinned && <div className="absolute top-6 right-6 text-indigo-500 dark:text-indigo-400 opacity-80 pointer-events-none z-20"><Pin size={16} fill="currentColor" className="transform rotate-45" /></div>}
         </div>
     );
 };
@@ -742,66 +837,16 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const inboxNotes = filterNotes(notes.filter(n => n.status === 'inbox').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
   const archivedNotes = filterNotes(notes.filter(n => n.status === 'archived').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
 
-  const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
-
-  const renderNoteCard = (note: Note, isArchived: boolean) => {
-      const linkUrl = findFirstUrl(note.content);
-      return (
-      <div 
-        key={note.id} 
-        draggable
-        onDragStart={(e) => handleDragStart(e, note.id)}
-        onDragOver={handleDragOver}
-        onDrop={(e) => handleDrop(e, note.id)}
-        onClick={() => handleOpenNote(note)}
-        className={`${getNoteColorClass(note.color)} rounded-3xl transition-all duration-500 hover:-translate-y-[4px] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] group/card flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden mb-6`}
-    >
-        {/* NOISE TEXTURE */}
-        <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
-
-        {note.coverUrl && (
-            <div className="h-40 w-full shrink-0 relative z-10"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
-        )}
-        <div className="p-8 pb-20 w-full flex-1 relative z-10">
-            {/* Inbox Cue */}
-            {!isArchived && !note.isPinned && (
-                <div className="absolute top-4 right-4">
-                    <div className="w-2 h-2 rounded-full bg-indigo-400/50" title="Готово для работы" />
-                </div>
-            )}
-
-            <div className="block w-full mb-2">
-                 {note.title && <h3 className={`font-serif text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
-                 <div className={`text-slate-700 dark:text-slate-300 font-sans text-sm leading-relaxed overflow-hidden break-words line-clamp-[6]`}>
-                    <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
-                 </div>
-                 {linkUrl && <LinkPreview url={linkUrl} />}
-                 {note.tags && note.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-4">
-                        {note.tags.map(tag => <span key={tag} className="text-[10px] text-slate-500 dark:text-slate-400 font-medium opacity-70">{tag}</span>)}
-                    </div>
-                 )}
-            </div>
-        </div>
-        
-        {/* MINIMAL CONTROLS */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
-             <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
-                <Tooltip content="В Спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
-                <Tooltip content="В Хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Хаб?')) moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
-                
-                {/* Primary Action for Inbox */}
-                {!isArchived && <Tooltip content="В Библиотеку"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Библиотеку?')) archiveNote(note.id); }} className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-all opacity-100"><Archive size={16} strokeWidth={1.5} className="text-emerald-500/80" /></button></Tooltip>}
-             </div>
-             
-             <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
-                 <button onClick={(e) => togglePin(e, note)} className={`p-2 rounded-full transition-all ${note.isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 opacity-60 hover:opacity-100'}`}><Pin size={16} strokeWidth={1.5} className={note.isPinned ? "fill-current transform rotate-45" : ""} /></button>
-             </Tooltip>
-        </div>
-        
-        {note.isPinned && <div className="absolute top-6 right-6 text-indigo-500 dark:text-indigo-400 opacity-80 pointer-events-none z-20"><Pin size={16} fill="currentColor" className="transform rotate-45" /></div>}
-    </div>
-  )};
+  const cardHandlers = useMemo(() => ({
+      handleDragStart,
+      handleDragOver,
+      handleDrop,
+      handleOpenNote,
+      togglePin,
+      onAddTask,
+      moveNoteToSandbox,
+      archiveNote
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote]);
 
   return (
     <div 
@@ -954,7 +999,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     )}
                     {inboxNotes.length > 0 ? (
                         <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                            {inboxNotes.map((note) => renderNoteCard(note, false))}
+                            {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} />)}
                         </Masonry>
                     ) : (
                         <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
@@ -965,7 +1010,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <>
                     {archivedNotes.length > 0 ? (
                         <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                            {archivedNotes.map((note) => renderNoteCard(note, true))}
+                            {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} handlers={cardHandlers} />)}
                         </Masonry>
                     ) : (
                         <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
