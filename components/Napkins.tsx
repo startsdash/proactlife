@@ -160,7 +160,7 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
             target="_blank" 
             rel="noopener noreferrer" 
             onClick={(e) => e.stopPropagation()} 
-            className="block mt-3 border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all rounded-xl overflow-hidden group/link relative no-underline break-inside-avoid"
+            className="block mt-4 border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all rounded-xl overflow-hidden group/link relative no-underline break-inside-avoid"
         >
             {data.image?.url && (
                 <div className="h-32 w-full overflow-hidden relative border-b border-slate-100 dark:border-slate-700/50">
@@ -969,14 +969,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, note.id)}
         onClick={() => handleOpenNote(note)}
-        className={`${getNoteColorClass(note.color)} rounded-xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden`}
+        className={`${getNoteColorClass(note.color)} rounded-2xl border ${getNoteBorderClass(note.color)} shadow-sm hover:shadow-md transition-shadow group flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden`}
     >
         {note.coverUrl && (
             <div className="h-32 w-full shrink-0">
                 <img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" />
             </div>
         )}
-        <div className="p-4 w-full">
+        <div className="p-5 md:p-6 w-full">
             <div className="block w-full mb-2">
                  <div className="float-right ml-2 mb-1 relative z-10">
                      <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
