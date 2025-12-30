@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
+import { motion } from 'framer-motion'; // Added motion
 import { Note, AppConfig, Task } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
@@ -951,18 +952,29 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       return c ? c.class : 'bg-white dark:bg-[#1e293b]';
   };
 
-  const renderNoteCard = (note: Note, isArchived: boolean) => {
+  const renderNoteCard = (note: Note, isArchived: boolean, index: number) => {
       const linkUrl = findFirstUrl(note.content);
       
       return (
-      <div 
+      <motion.div 
         key={note.id} 
+        layout
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ 
+            duration: 0.4, 
+            delay: index * 0.05,
+            type: "spring",
+            damping: 25,
+            stiffness: 300
+        }}
+        whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
         draggable
-        onDragStart={(e) => handleDragStart(e, note.id)}
+        onDragStart={(e: React.DragEvent) => handleDragStart(e, note.id)}
         onDragOver={handleDragOver}
-        onDrop={(e) => handleDrop(e, note.id)}
+        onDrop={(e: React.DragEvent) => handleDrop(e, note.id)}
         onClick={() => handleOpenNote(note)}
-        className={`${getNoteColorClass(note.color)} rounded-3xl transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] group flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden mb-6`}
+        className={`${getNoteColorClass(note.color)} rounded-3xl group flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden mb-6 shadow-sm`}
     >
         {note.coverUrl && (
             <div className="h-40 w-full shrink-0">
@@ -1004,7 +1016,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         </div>
 
         {/* Floating Glass Toolbar */}
-        <div className="absolute bottom-4 left-4 right-4 h-12 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md rounded-2xl flex items-center justify-between px-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 shadow-sm border border-white/20 dark:border-white/10 z-20">
+        <div className="absolute bottom-4 left-4 right-4 h-12 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md rounded-2xl flex items-center justify-between px-3 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300 shadow-sm border border-white/20 dark:border-white/10 z-20">
              <div className="flex gap-1">
                 <Tooltip content="В Спринты">
                     <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В Спринты?')) { onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors"><Kanban size={16} /></button>
@@ -1039,7 +1051,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <Pin size={16} fill="currentColor" className="transform rotate-45" />
             </div>
         )}
-    </div>
+    </motion.div>
   )};
 
   return (
@@ -1302,7 +1314,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     className="my-masonry-grid pb-20 md:pb-0"
                     columnClassName="my-masonry-grid_column"
                 >
-                    {inboxNotes.map((note) => renderNoteCard(note, false))}
+                    {inboxNotes.map((note, index) => renderNoteCard(note, false, index))}
                 </Masonry>
             ) : (
                 <div className="py-6">
@@ -1323,7 +1335,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     className="my-masonry-grid pb-20 md:pb-0"
                     columnClassName="my-masonry-grid_column"
                 >
-                    {archivedNotes.map((note) => renderNoteCard(note, true))}
+                    {archivedNotes.map((note, index) => renderNoteCard(note, true, index))}
                 </Masonry>
             ) : (
                 <div className="py-6">
