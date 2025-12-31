@@ -902,22 +902,22 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             {s.isCompleted && <Check size={10} className="text-white" strokeWidth={3} />}
                         </div>
                         
-                        <span className={`text-xs flex-1 break-words leading-relaxed transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-slate-700 dark:text-slate-200"}`}>{s.text}</span>
+                        <span className={`text-sm flex-1 break-words leading-relaxed transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-slate-700 dark:text-slate-200"}`}>{s.text}</span>
                         
                         <button onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(s.id, task.id); }} className="text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"><X size={12}/></button>
                     </div>
                 ))}
-                <div className="flex gap-1 mt-2" onClick={e => e.stopPropagation()}>
+                <div className="flex gap-2 mt-2 px-1" onClick={e => e.stopPropagation()}>
                     <input
                         type="text"
-                        className="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-[10px] outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
+                        className="flex-1 min-w-0 bg-transparent border-b border-slate-200 dark:border-slate-700 py-1 text-sm outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:border-indigo-400 transition-colors"
                         placeholder="Добавить..."
                         value={cardSubtaskInputs[task.id] || ''}
                         onChange={(e) => setCardSubtaskInputs(prev => ({...prev, [task.id]: e.target.value}))}
                         onKeyDown={(e) => e.key === 'Enter' && handleAddSubtaskFromCard(task.id)}
                     />
-                    <button onClick={() => handleAddSubtaskFromCard(task.id)} className="px-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40">
-                        <Plus size={12} />
+                    <button onClick={() => handleAddSubtaskFromCard(task.id)} disabled={!cardSubtaskInputs[task.id]?.trim()} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors">
+                        <Plus size={16} />
                     </button>
                 </div>
             </div>
