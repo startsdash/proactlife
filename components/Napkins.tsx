@@ -324,28 +324,40 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
     const [loading, setLoading] = useState(false);
     
     // Robust Env Getter for the API Key inside the component or file scope
+    // UPDATED: Using explicit static checks to ensure bundlers (Vite/Webpack) perform replacement correctly.
+    // Dynamic access like process.env[key] often fails in client-side builds.
     const getUnsplashKey = () => {
-        // Try various prefixes just in case, prioritizing the direct one as per screenshot
-        const keys = [
-            'UNSPLASH_ACCESS_KEY', 
-            'VITE_UNSPLASH_ACCESS_KEY', 
-            'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY', 
-            'REACT_APP_UNSPLASH_ACCESS_KEY'
-        ];
-        
-        for (const k of keys) {
+        try {
+            // 1. Vite / Import Meta (Explicit Check)
             // @ts-ignore
-            if (typeof process !== 'undefined' && process.env?.[k]) return process.env[k];
+            if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_UNSPLASH_ACCESS_KEY) {
+                // @ts-ignore
+                return import.meta.env.VITE_UNSPLASH_ACCESS_KEY;
+            }
             // @ts-ignore
-            if (typeof import.meta !== 'undefined' && import.meta.env?.[k]) return import.meta.env[k];
-        }
+            if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.UNSPLASH_ACCESS_KEY) {
+                // @ts-ignore
+                return import.meta.env.UNSPLASH_ACCESS_KEY;
+            }
+        } catch (e) {}
+
+        try {
+            // 2. Process Env (Standard/Next/CRA - Explicit Check)
+            if (typeof process !== 'undefined' && process.env) {
+                if (process.env.UNSPLASH_ACCESS_KEY) return process.env.UNSPLASH_ACCESS_KEY;
+                if (process.env.VITE_UNSPLASH_ACCESS_KEY) return process.env.VITE_UNSPLASH_ACCESS_KEY;
+                if (process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY) return process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY;
+                if (process.env.REACT_APP_UNSPLASH_ACCESS_KEY) return process.env.REACT_APP_UNSPLASH_ACCESS_KEY;
+            }
+        } catch (e) {}
+
         return '';
     };
 
     const searchUnsplash = async (q?: string) => {
         const key = getUnsplashKey();
         if (!key) {
-            if (q) alert("Ключ Unsplash не найден. Используйте встроенные пресеты или добавьте UNSPLASH_ACCESS_KEY.");
+            if (q) alert("Ключ Unsplash не найден. Проверьте переменную UNSPLASH_ACCESS_KEY в Vercel (для Vite может потребоваться префикс VITE_).");
             return;
         }
         
