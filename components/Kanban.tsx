@@ -39,22 +39,19 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
 };
 
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-slate-800 dark:text-slate-300 leading-relaxed" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-sans" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-slate-800 dark:text-slate-300" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-slate-800 dark:text-slate-300" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-slate-600 dark:text-slate-300" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-slate-600 dark:text-slate-300" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed" {...props} />,
-    h1: ({node, children, ...props}: any) => <h1 className="text-base font-bold mt-3 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
-    h2: ({node, children, ...props}: any) => <h2 className="text-sm font-bold mt-2 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
-    h3: ({node, children, ...props}: any) => <h3 className="text-xs font-bold mt-2 mb-1 text-slate-900 dark:text-slate-100 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
-    h4: ({node, children, ...props}: any) => <h4 className="text-xs font-bold mt-2 mb-1 text-slate-800 dark:text-slate-200" {...props}>{cleanHeader(children)}</h4>,
-    blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-indigo-200 dark:border-indigo-800 pl-4 py-1 my-2 text-sm text-slate-600 dark:text-slate-400 italic bg-indigo-50/30 dark:bg-indigo-900/20 rounded-r-lg" {...props} />,
-    strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900 dark:text-slate-100" {...props} />,
-    em: ({node, ...props}: any) => <em className="italic text-slate-800 dark:text-slate-200" {...props} />,
+    h1: ({node, children, ...props}: any) => <h1 className="text-base font-serif font-bold mt-3 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
+    h2: ({node, children, ...props}: any) => <h2 className="text-sm font-serif font-bold mt-2 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
+    h3: ({node, children, ...props}: any) => <h3 className="text-xs font-bold mt-2 mb-1 text-slate-500 dark:text-slate-400 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-indigo-200 dark:border-indigo-800 pl-3 py-1 my-2 text-xs text-slate-500 dark:text-slate-400 italic" {...props} />,
     code: ({node, inline, className, children, ...props}: any) => {
          return inline 
-            ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400 border border-slate-200 dark:border-slate-700" {...props}>{children}</code>
-            : <code className="block bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+            ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-slate-600 dark:text-slate-400" {...props}>{children}</code>
+            : <code className="block bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     }
 };
 
@@ -146,20 +143,10 @@ const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }
         <div className="relative">
             <button 
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg transition-colors border border-slate-100 dark:border-slate-700 hover:border-indigo-100 dark:hover:border-indigo-800"
+                className="p-1.5 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 transition-colors opacity-0 group-hover:opacity-100"
+                title="Сфера"
             >
-                {task.spheres && task.spheres.length > 0 ? (
-                    <div className="flex -space-x-1">
-                        {task.spheres.map(s => {
-                            const sp = SPHERES.find(x => x.id === s);
-                            return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
-                        })}
-                    </div>
-                ) : (
-                    <Target size={12} />
-                )}
-                <span>Сфера</span>
-                <ChevronDown size={10} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <Target size={14} strokeWidth={1.5} />
             </button>
             
             {isOpen && (
@@ -199,10 +186,10 @@ const CollapsibleSection: React.FC<{
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className={`${isCard ? 'bg-slate-50/80 dark:bg-slate-800/50 mb-2 shadow-sm' : 'bg-slate-50 dark:bg-slate-800 mb-3'} rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden`}>
+    <div className={`${isCard ? 'bg-slate-50/50 dark:bg-slate-800/30 mb-2' : 'bg-slate-50 dark:bg-slate-800 mb-3'} rounded-xl border border-slate-100 dark:border-slate-700/50 overflow-hidden`}>
       <div 
         onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} 
-        className={`w-full flex items-center justify-between ${isCard ? 'p-2' : 'p-4'} cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group/header`}
+        className={`w-full flex items-center justify-between ${isCard ? 'p-2' : 'p-4'} cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-700/30 transition-colors group/header`}
       >
         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
            {icon}
@@ -210,14 +197,14 @@ const CollapsibleSection: React.FC<{
         </div>
         <div className="flex items-center gap-3">
             {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
-            <div className="text-slate-400">
-                {isOpen ? <Minus size={14} /> : <Plus size={14} />}
+            <div className="text-slate-300 dark:text-slate-600">
+                {isOpen ? <Minus size={12} /> : <Plus size={12} />}
             </div>
         </div>
       </div>
       {isOpen && (
         <div className={`${isCard ? 'px-2 pb-2' : 'px-4 pb-4'} pt-0 animate-in slide-in-from-top-1 duration-200`}>
-           <div className="pt-2 border-t border-slate-200/50 dark:border-slate-700/50 text-sm">
+           <div className="pt-2 border-t border-slate-200/30 dark:border-slate-700/30 text-sm">
              {children}
            </div>
         </div>
@@ -248,7 +235,7 @@ const InteractiveChallenge: React.FC<{
             const trimmedBuffer = textBuffer.trim(); 
             if (trimmedBuffer) {
                 renderedParts.push(
-                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 dark:text-slate-200 mb-1 last:mb-0">
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 mb-1 last:mb-0">
                         <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
                     </div>
                 );
@@ -276,7 +263,7 @@ const InteractiveChallenge: React.FC<{
                         <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-400'}`}>
                             {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                         </div>
-                        <span className={`text-sm ${isChecked ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                        <span className={`text-sm ${isChecked ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
                             <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{applyTypography(label)}</ReactMarkdown>
                         </span>
                     </button>
@@ -315,7 +302,7 @@ const StaticChallengeRenderer: React.FC<{
              const trimmedBuffer = textBuffer.trim();
              if (trimmedBuffer) {
                 renderedParts.push(
-                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 dark:text-slate-200 mb-1 last:mb-0">
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 mb-1 last:mb-0">
                         <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
                     </div>
                 );
@@ -438,13 +425,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   }, [activeModal, tasks]);
 
   const columns = [
-    { id: 'todo', title: 'Выполнить', color: 'border-slate-200 dark:border-slate-700' },
-    { id: 'doing', title: 'В процессе', color: 'border-indigo-400' },
-    { id: 'done', title: 'Сделано', color: 'border-emerald-400' }
+    { id: 'todo', title: 'Нужно сделать' },
+    { id: 'doing', title: 'В работе' },
+    { id: 'done', title: 'Завершено' }
   ];
 
   const getTabClass = (id: string, active: boolean) => {
-    const base = "flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors text-center";
+    const base = "flex-1 py-3 text-xs font-serif font-bold uppercase tracking-wider border-b-2 transition-colors text-center";
     if (!active) return `${base} border-transparent text-slate-400 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50`;
     
     if (id === 'todo') return `${base} border-slate-400 text-slate-700 dark:text-slate-200 bg-white dark:bg-[#1e293b]`;
@@ -530,18 +517,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const targetTask = activeTasks.find(t => t.id === targetTaskId);
       if (!draggedTask || !targetTask) return;
       
-      // Auto-switch to manual sort to prevent snapping back
       if (sortOrder !== 'manual') setSortOrder('manual');
 
-      // If dropping onto a task in a DIFFERENT column
       if (draggedTask.column !== targetTask.column) {
            if (!canMoveTask(draggedTask, targetTask.column)) return;
            updateTask({ ...draggedTask, column: targetTask.column });
-           // Optionally reorder as well, but primary action is moving column
            return; 
       }
       
-      // If dropping onto a task in the SAME column -> Reorder
       if (draggedTask.column === targetTask.column) {
           reorderTask(draggedTaskId, targetTaskId);
       }
@@ -555,21 +538,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
   const openTherapy = async (e: React.MouseEvent, task: Task) => {
     e.stopPropagation();
-    
-    // STOP logic
     if (generatingTherapyFor === task.id) {
         setGeneratingTherapyFor(null);
         return;
     }
-
-    // START logic
     if (window.confirm("Запустить ИИ-консультанта?")) {
         setGeneratingTherapyFor(task.id);
         setAiResponse(null);
         try {
             const response = await getKanbanTherapy(task.content, 'stuck', config);
-            
-            // Check if cancelled during generation
             setGeneratingTherapyFor(current => {
                 if (current === task.id) {
                     setAiResponse(response);
@@ -600,7 +577,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     setGeneratingChallengeFor(taskId);
     try {
         const challenge = await generateTaskChallenge(content, config);
-        // Check if still generating this specific task (not cancelled)
         setGeneratingChallengeFor(current => {
             if (current === taskId) {
                 setDraftChallenge(challenge);
@@ -694,7 +670,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       updateTask({ ...task, column: newCol });
   };
 
-  // Subtask Management
   const handleAddSubtask = () => {
       const task = getTaskForModal();
       if (!task || !newSubtaskText.trim()) return;
@@ -736,23 +711,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const task = tasks.find(t => t.id === targetTaskId);
       if (!task || !task.subtasks) return;
       
-      // If Done column, do not toggle
       if (task.column === 'done') return;
 
       const updatedSubtasks = task.subtasks.map(s => 
           s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s
       );
       
-      updateTask({ ...task, subtasks: updatedSubtasks });
-  };
-
-  const handleToggleSubtaskPin = (subtaskId: string) => {
-      const task = getTaskForModal();
-      if (!task || !task.subtasks) return;
-      
-      const updatedSubtasks = task.subtasks.map(s => 
-          s.id === subtaskId ? { ...s, isPinned: !s.isPinned } : s
-      );
       updateTask({ ...task, subtasks: updatedSubtasks });
   };
 
@@ -766,12 +730,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       updateTask({ ...task, subtasks: task.subtasks.filter(s => s.id !== subtaskId) });
   };
 
-  // Subtask DnD Handlers
   const handleSubtaskDragStart = (e: React.DragEvent, subtaskId: string, taskId: string) => {
       e.dataTransfer.setData('subtaskId', subtaskId);
       e.dataTransfer.setData('sourceTaskId', taskId);
       e.dataTransfer.effectAllowed = 'move';
-      // Prevent bubble up to column DnD
       e.stopPropagation();
   };
 
@@ -782,7 +744,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const sourceTaskId = e.dataTransfer.getData('sourceTaskId');
 
       if (!draggedSubtaskId || !sourceTaskId) return;
-      if (sourceTaskId !== task.id) return; // Only reorder within same task
+      if (sourceTaskId !== task.id) return; 
 
       if (!task.subtasks) return;
 
@@ -798,26 +760,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       updateTask({ ...task, subtasks });
   };
 
-  const moveSubtaskManual = (e: React.MouseEvent, subtaskId: string, direction: 'up' | 'down', task: Task) => {
-      e.stopPropagation();
-      if (!task || !task.subtasks) return;
-      
-      const subtasks = [...task.subtasks];
-      const index = subtasks.findIndex(s => s.id === subtaskId);
-      if (index === -1) return;
-
-      if (direction === 'up' && index > 0) {
-          [subtasks[index], subtasks[index - 1]] = [subtasks[index - 1], subtasks[index]];
-      } else if (direction === 'down' && index < subtasks.length - 1) {
-          [subtasks[index], subtasks[index + 1]] = [subtasks[index + 1], subtasks[index]];
-      } else {
-          return;
-      }
-      
-      updateTask({ ...task, subtasks });
-  };
-
-  // Delete Helpers
   const deleteActiveChallenge = (e?: React.MouseEvent) => {
       if (e) e.stopPropagation();
       const task = getTaskForModal();
@@ -848,6 +790,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   const getTaskForModal = () => tasks.find(t => t.id === activeModal?.taskId);
+
+  // --- HELPER: Get Sphere Border Color ---
+  const getSphereBorderClass = (spheres?: string[]): string => {
+      if (!spheres || spheres.length === 0) return 'border-transparent';
+      const first = spheres[0];
+      if (first === 'productivity') return 'border-indigo-400';
+      if (first === 'growth') return 'border-emerald-400';
+      if (first === 'relationships') return 'border-rose-400';
+      return 'border-slate-300';
+  };
 
   const renderCardChecklist = (task: Task) => (
     <div className="mt-2 mb-2">
@@ -884,7 +836,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         </button>
                     </div>
                 ))}
-                {/* Input for new subtask */}
                 <div className="flex gap-1 mt-2" onClick={e => e.stopPropagation()}>
                     <input
                         type="text"
@@ -913,33 +864,35 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     if (col.id === 'done') emptyText = "Готово? Перетащи задачу сюда";
 
     return (
-    <div className={`bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl flex flex-col border-t-4 ${col.color} p-2 md:p-3 h-full md:h-auto md:min-h-0`}>
-        {/* On mobile, we hide the redundant column header as tabs are used */}
-        <h3 className="hidden md:flex font-semibold text-slate-600 dark:text-slate-400 mb-3 justify-between items-center text-sm px-1 shrink-0">{col.title} <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full">{tasksInCol.length}</span></h3>
+    <div className="flex flex-col h-full md:h-auto md:min-h-0 bg-transparent">
+        {/* Floating Header */}
+        <h3 className="hidden md:flex font-serif font-medium text-xl text-slate-900 dark:text-slate-100 mb-6 justify-center items-center text-center">
+            {col.title} 
+            <span className="ml-2 text-sm text-slate-400 font-sans font-normal opacity-50">{tasksInCol.length}</span>
+        </h3>
         
         {col.id === 'todo' && (
-             <div className="mb-3 px-1">
+             <div className="mb-4 px-1">
                 {!isCreatorOpen ? (
                     <button 
                         onClick={() => setIsCreatorOpen(true)}
-                        className="w-full flex items-center justify-between bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-all shadow-sm"
+                        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-all uppercase tracking-wider"
                     >
-                        <span>Новая задача...</span>
-                        <Plus size={16} />
+                        <Plus size={14} /> Добавить задачу
                     </button>
                 ) : (
-                    <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-md animate-in slide-in-from-top-2">
+                    <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm animate-in slide-in-from-top-2">
                         <input
                             type="text"
                             placeholder="Название"
-                            className="w-full text-sm font-bold text-slate-800 dark:text-slate-200 bg-transparent outline-none mb-2 placeholder:font-normal placeholder:text-slate-400"
+                            className="w-full text-sm font-serif font-bold text-slate-800 dark:text-slate-200 bg-transparent outline-none mb-2 placeholder:font-normal placeholder:text-slate-400"
                             value={newTaskTitle}
                             onChange={(e) => setNewTaskTitle(e.target.value)}
                             autoFocus
                         />
                         <textarea
-                            placeholder="Задача..."
-                            className="w-full h-20 text-sm text-slate-700 dark:text-slate-300 bg-transparent outline-none resize-none placeholder:text-slate-400 leading-relaxed"
+                            placeholder="Контекст..."
+                            className="w-full h-16 text-sm text-slate-700 dark:text-slate-300 bg-transparent outline-none resize-none placeholder:text-slate-400 leading-relaxed font-sans"
                             value={newTaskContent}
                             onChange={(e) => setNewTaskContent(e.target.value)}
                         />
@@ -948,7 +901,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 onClick={cancelCreateTask}
                                 className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 rounded transition-colors"
                             >
-                                Отменить
+                                Отмена
                             </button>
                             <button 
                                 onClick={handleCreateTask}
@@ -963,12 +916,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             </div>
         )}
 
-        <div className="flex-1 overflow-y-auto md:overflow-visible min-h-0 space-y-3 pb-2 px-1 custom-scrollbar-light md:flex-none" onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
+        <div className="flex-1 overflow-y-auto md:overflow-visible min-h-0 space-y-4 pb-2 px-1 custom-scrollbar-light md:flex-none" onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
             {tasksInCol.length === 0 ? (
-                <div className="py-10">
+                <div className="py-12 opacity-50">
                    <EmptyState 
                         icon={KanbanIcon} 
-                        title="Пусто" 
+                        title="" 
                         description={emptyText} 
                         color="slate"
                     /> 
@@ -976,10 +929,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             ) : (
                 tasksInCol.map(task => {
                     const isDoneColumn = col.id === 'done';
-                    // Specific border color classes to color ONLY the left border
-                    let borderClass = 'border-l-slate-300 dark:border-l-slate-600';
-                    if (col.id === 'done') borderClass = 'border-l-emerald-400';
-                    else if (col.id === 'doing') borderClass = 'border-l-indigo-400';
+                    const sphereBorderColor = getSphereBorderClass(task.spheres);
                     
                     const subtasksTotal = task.subtasks?.length || 0;
                     const subtasksDone = task.subtasks?.filter(s => s.isCompleted).length || 0;
@@ -988,24 +938,32 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     const hasActiveChallenge = task.activeChallenge && !task.isChallengeCompleted;
 
                     return (
-                    <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} onDrop={(e) => handleTaskDrop(e, task.id)} onDragOver={handleDragOver} onClick={() => setActiveModal({taskId: task.id, type: 'details'})} className={`bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all cursor-default relative group border-l-4 ${borderClass} overflow-hidden`}>
+                    <div 
+                        key={task.id} 
+                        draggable 
+                        onDragStart={(e) => handleDragStart(e, task.id)} 
+                        onDrop={(e) => handleTaskDrop(e, task.id)} 
+                        onDragOver={handleDragOver} 
+                        onClick={() => setActiveModal({taskId: task.id, type: 'details'})} 
+                        className={`bg-white dark:bg-[#1e293b] p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all cursor-default relative group border-l-2 ${sphereBorderColor} active:scale-[1.02] active:shadow-lg duration-200 overflow-hidden`}
+                    >
                         
-                        {/* HEADER: Title + Sphere Selector */}
+                        {/* HEADER: Title + Control */}
                         <div className="flex justify-between items-start gap-2 mb-2">
-                             <div className="flex-1 pt-1 min-w-0">
+                             <div className="flex-1 pt-0.5 min-w-0">
                                 {task.title ? (
-                                    <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-snug break-words">{applyTypography(task.title)}</h4>
+                                    <h4 className="font-serif text-lg font-medium text-slate-900 dark:text-white leading-tight break-words tracking-tight">{applyTypography(task.title)}</h4>
                                 ) : null}
                              </div>
                              
-                             <div className="shrink-0 z-20 -mr-1 -mt-1">
+                             <div className="shrink-0 z-20 -mr-2 -mt-2 flex items-center">
                                 <CardSphereSelector task={task} updateTask={updateTask} />
                              </div>
                         </div>
 
                         {/* CONTENT */}
                         <div className="mb-3">
-                            <div className={`text-slate-700 dark:text-slate-300 font-normal text-xs leading-relaxed line-clamp-4 ${!task.title ? 'text-sm' : ''}`}>
+                            <div className={`text-slate-600 dark:text-slate-400 font-sans text-sm leading-relaxed line-clamp-3 ${!task.title ? 'text-base' : ''}`}>
                                  <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
                             </div>
                         </div>
@@ -1013,7 +971,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         {/* TODO SPECIFIC MODULES */}
                         {col.id === 'todo' && (
                             <>
-                                {/* CHECKLIST (Collapsed by default, always visible) */}
                                 {renderCardChecklist(task)}
                             </>
                         )}
@@ -1021,17 +978,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         {/* DOING SPECIFIC MODULES */}
                         {col.id === 'doing' && (
                             <>
-                                {/* STATUS BAR */}
                                 {subtasksTotal > 0 && (
                                     <div className="flex items-center gap-3 mt-2 mb-2 h-6 w-full">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 dark:text-slate-500 shrink-0">
                                             <ListTodo size={12} />
                                             <span>{subtasksDone}/{subtasksTotal}</span>
                                         </div>
                                         <div className="flex-1 flex flex-col justify-center h-full">
-                                            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                                            <div className="h-1 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
                                                 <div 
-                                                    className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
+                                                    className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-400' : 'bg-indigo-400'}`} 
                                                     style={{ width: `${progressPercent}%` }}
                                                 />
                                             </div>
@@ -1039,10 +995,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     </div>
                                 )}
 
-                                {/* CHECKLIST (Collapsed by default, always visible) */}
                                 {renderCardChecklist(task)}
 
-                                {/* ACTIVE CHALLENGE (Collapsed) */}
                                 {task.activeChallenge && !draftChallenge && (
                                     <div className="mt-2 mb-2">
                                         <CollapsibleSection 
@@ -1051,8 +1005,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             isCard
                                         >
                                             <div className={`p-2 rounded-lg border transition-all relative group ${task.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
-                                                 
-                                                 {/* COMPLETE CHALLENGE CHECK (Hover) */}
                                                  <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                                                      <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
                                                          <button 
@@ -1065,7 +1017,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                  </div>
 
                                                  {task.isChallengeCompleted ? (
-                                                    <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
+                                                    <div className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
                                                        <StaticChallengeRenderer content={task.activeChallenge || ''} mode="history" />
                                                     </div>
                                                  ) : (
@@ -1084,25 +1036,22 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         {/* DONE COLUMN SPECIFIC RENDER ORDER */}
                         {col.id === 'done' && (
                             <>
-                                {/* STATUS BAR */}
                                 {subtasksTotal > 0 && (
                                     <div className="flex items-center gap-3 mt-2 mb-2 h-6 w-full">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 dark:text-slate-500 shrink-0">
                                             <ListTodo size={12} />
                                             <span>{subtasksDone}/{subtasksTotal}</span>
                                         </div>
                                         <div className="flex-1 flex flex-col justify-center h-full">
-                                            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                                            <div className="h-1 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
                                                 <div 
-                                                    className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
+                                                    className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-400' : 'bg-indigo-400'}`} 
                                                     style={{ width: `${progressPercent}%` }}
                                                 />
                                             </div>
                                         </div>
                                     </div>
                                 )}
-                                
-                                {/* CHECKLIST (Only if items exist) */}
                                 {task.subtasks && task.subtasks.length > 0 && (
                                      <div className="mt-2 mb-2">
                                          <CollapsibleSection 
@@ -1119,7 +1068,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                          <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'}`}>
                                                              {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
                                                          </div>
-                                                         <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                         <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-600 dark:text-slate-400'}`}>
                                                              {subtask.text}
                                                          </span>
                                                      </div>
@@ -1131,17 +1080,17 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             </>
                         )}
 
-                        <div className="mt-auto border-t border-slate-50 dark:border-slate-700 pt-3 flex flex-col gap-3">
+                        <div className="mt-auto pt-3 flex flex-col gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <div className="flex justify-end items-center w-full gap-2">
                                {col.id === 'todo' && (
                                     <>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-1">
                                             <Tooltip content="В работу">
                                                 <button 
                                                     onClick={(e) => moveToDoing(e, task)} 
-                                                    className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 transition-colors"
+                                                    className="p-1.5 text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
                                                 >
-                                                    <Play size={18} className="fill-current" />
+                                                    <Play size={16} className="fill-current" />
                                                 </button>
                                             </Tooltip>
                                         </div>
@@ -1150,17 +1099,17 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
                                {col.id === 'doing' && (
                                    <>
-                                   <div className="flex gap-2">
+                                   <div className="flex gap-1">
                                        <Tooltip content={hasJournalEntry ? "В Дневнике" : "В Дневник"}>
                                            <button 
                                                 onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }}
-                                                className={`p-2 rounded-lg border transition-colors ${
+                                                className={`p-1.5 rounded-lg transition-colors ${
                                                     hasJournalEntry 
-                                                    ? 'border-cyan-200 dark:border-cyan-800 text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100 dark:hover:bg-cyan-900/40' 
-                                                    : 'border-transparent text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 hover:border-cyan-100'
+                                                    ? 'text-cyan-500 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100' 
+                                                    : 'text-slate-300 hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/20'
                                                 }`}
                                            >
-                                                <Book size={18} />
+                                                <Book size={16} />
                                            </button>
                                        </Tooltip>
 
@@ -1182,19 +1131,18 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                             generateChallenge(e, task.id, task.content);
                                                         }
                                                     }} 
-                                                    className={`p-2 rounded-lg border border-transparent transition-colors
+                                                    className={`p-1.5 rounded-lg transition-colors
                                                         ${hasActiveChallenge 
-                                                            ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed' 
-                                                            : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-100 dark:hover:border-indigo-800'
+                                                            ? 'text-slate-200 dark:text-slate-700 cursor-not-allowed' 
+                                                            : 'text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
                                                         }`}
                                                >
                                                     {generatingChallengeFor === task.id ? (
-                                                        <div className="relative w-[18px] h-[18px] flex items-center justify-center">
+                                                        <div className="relative w-4 h-4 flex items-center justify-center">
                                                             <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                                            <div className="w-2 h-2 bg-current rounded-[1px]"></div>
                                                         </div>
                                                     ) : (
-                                                        <Zap size={18} />
+                                                        <Zap size={16} />
                                                     )}
                                                 </button>
                                            </Tooltip>
@@ -1207,15 +1155,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                            >
                                                <button 
                                                     onClick={(e) => openTherapy(e, task)} 
-                                                    className="p-2 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg border border-transparent hover:border-violet-100 dark:hover:border-violet-800 transition-colors"
+                                                    className="p-1.5 text-slate-300 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors"
                                                >
                                                    {generatingTherapyFor === task.id ? (
-                                                        <div className="relative w-[18px] h-[18px] flex items-center justify-center">
+                                                        <div className="relative w-4 h-4 flex items-center justify-center">
                                                             <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                                            <div className="w-2 h-2 bg-current rounded-[1px] relative z-10"></div>
                                                         </div>
                                                    ) : (
-                                                       <Bot size={18} /> 
+                                                       <Bot size={16} /> 
                                                    )}
                                                </button>
                                            </Tooltip>
@@ -1224,9 +1171,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                    <Tooltip content="Завершить">
                                         <button 
                                             onClick={(e) => handleQuickComplete(e, task)} 
-                                            className="p-2 rounded-lg border border-transparent hover:border-emerald-500 dark:hover:border-emerald-400 text-slate-300 dark:text-slate-500 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                                            className="p-1.5 rounded-lg text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
                                         >
-                                            <Check size={18} strokeWidth={3} />
+                                            <Check size={16} strokeWidth={3} />
                                         </button>
                                     </Tooltip>
                                    </>
@@ -1234,16 +1181,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                
                                {col.id === 'done' && (
                                     <>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-1">
                                             <Tooltip content="В Зал славы">
                                                 <button 
                                                     onClick={(e) => { 
                                                         e.stopPropagation(); 
                                                         if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
                                                     }} 
-                                                    className="p-2 text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg border border-transparent hover:border-amber-100 dark:hover:border-amber-800 transition-colors"
+                                                    className="p-1.5 text-slate-300 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
                                                 >
-                                                    <Trophy size={18} /> 
+                                                    <Trophy size={16} /> 
                                                 </button>
                                             </Tooltip>
                                             <Tooltip content="Вернуть в работу">
@@ -1252,9 +1199,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                         e.stopPropagation(); 
                                                         updateTask({ ...task, column: 'doing' }); 
                                                     }} 
-                                                    className="p-2 rounded-lg border border-transparent hover:border-indigo-500 dark:hover:border-indigo-400 text-slate-300 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+                                                    className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
                                                 >
-                                                    <RotateCcw size={18} strokeWidth={2} />
+                                                    <RotateCcw size={16} strokeWidth={2} />
                                                 </button>
                                             </Tooltip>
                                         </div>
@@ -1274,8 +1221,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden">
       <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc] md:dark:bg-[#0f172a] md:pb-6 transition-colors duration-300">
         <div>
-            <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Спринты</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Фокус на главном</p>
+            <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
         </div>
         
         {/* Search */}
@@ -1289,7 +1236,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     placeholder="Поиск..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full md:w-64 focus:w-full md:focus:w-80 transition-all pl-8 pr-7 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 placeholder:text-slate-400 outline-none ring-1 ring-transparent focus:ring-indigo-500/20"
+                    className="w-full md:w-64 focus:w-full md:focus:w-80 transition-all pl-8 pr-7 py-1.5 bg-white dark:bg-slate-800 border border-transparent rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 placeholder:text-slate-400 outline-none ring-1 ring-transparent focus:ring-indigo-500/20 shadow-sm"
                 />
                 {searchQuery && (
                     <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={12} /></button>
@@ -1297,7 +1244,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
              </div>
              
              <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
-                 <button onClick={toggleSortOrder} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0">
+                 <button onClick={toggleSortOrder} className="p-2 bg-white dark:bg-slate-800 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0 shadow-sm">
                      {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
                  </button>
              </Tooltip>
@@ -1320,11 +1267,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
          </div>
 
          <div className="flex-1 overflow-x-hidden md:overflow-visible p-4 md:p-0">
-             <div className="flex flex-col md:flex-row gap-4 h-full md:h-auto min-h-0 md:items-start">
+             <div className="flex flex-col md:flex-row gap-8 h-full md:h-auto min-h-0 md:items-start">
                 {columns.map(col => {
                    const isHiddenOnMobile = activeMobileTab !== col.id;
                    return (
-                       <div key={col.id} className={`flex-1 min-w-[280px] flex-col min-h-0 h-full md:h-auto ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}>
+                       <div key={col.id} className={`flex-1 min-w-[300px] flex-col min-h-0 h-full md:h-auto ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}>
                            {renderColumn(col)}
                        </div>
                    );
@@ -1339,7 +1286,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 
                 {/* MODAL HEADER */}
                 <div className="flex justify-between items-start mb-4 shrink-0">
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex-1 mr-4 flex items-center">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex-1 mr-4 flex items-center font-serif">
                         {activeModal.type === 'stuck' && <><Bot size={24} className="mr-2 text-violet-500"/> Личный консультант</>}
                         {activeModal.type === 'challenge' && <><Zap size={24} className="mr-2 text-indigo-500"/> Новый вызов</>}
                         {activeModal.type === 'details' && (() => {
@@ -1417,7 +1364,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             <input 
                                                 value={editTaskTitle} 
                                                 onChange={(e) => setEditTaskTitle(e.target.value)} 
-                                                className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-sm font-bold text-slate-800 dark:text-slate-200 box-border focus:border-slate-300 dark:focus:border-slate-600 transition-colors"
+                                                className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-sm font-bold text-slate-800 dark:text-slate-200 box-border focus:border-slate-300 dark:focus:border-slate-600 transition-colors font-serif"
                                                 placeholder="Название задачи..."
                                             />
                                         </div>
@@ -1426,7 +1373,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             <textarea 
                                                 value={editTaskContent} 
                                                 onChange={(e) => setEditTaskContent(e.target.value)} 
-                                                className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-sm text-slate-800 dark:text-slate-200 resize-none box-border focus:border-slate-300 dark:focus:border-slate-600 transition-colors"
+                                                className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-sm text-slate-800 dark:text-slate-200 resize-none box-border focus:border-slate-300 dark:focus:border-slate-600 transition-colors font-sans"
                                                 placeholder="Описание (Markdown)..."
                                             />
                                         </div>
@@ -1437,7 +1384,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     </div>
                                 ) : (
                                     <div className="group relative pr-1">
-                                        <div className="text-slate-800 dark:text-slate-200 text-sm font-normal leading-relaxed">
+                                        <div className="text-slate-700 dark:text-slate-300 text-sm font-normal leading-relaxed font-sans">
                                             <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
                                         </div>
                                     </div>
@@ -1452,7 +1399,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 {/* CONTEXT (DESCRIPTION) - Collapsed by default */}
                                 {task.description && (
                                     <CollapsibleSection title="Контекст" icon={<FileText size={14}/>}>
-                                        <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                        <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-sans">
                                             <ReactMarkdown components={markdownComponents}>{applyTypography(task.description)}</ReactMarkdown>
                                         </div>
                                     </CollapsibleSection>
