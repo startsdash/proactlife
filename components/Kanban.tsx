@@ -1059,7 +1059,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     <div className="mt-2 mb-2">
                                         <CollapsibleSection 
                                             title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
-                                            icon={<Zap size={12} className={task.isChallengeCompleted ? "text-emerald-500" : "text-indigo-500"} fill="currentColor" />} 
+                                            icon={
+                                                task.isChallengeCompleted ? (
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                                                ) : (
+                                                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+                                                )
+                                            }
                                             isCard
                                         >
                                             <div className={`p-2 rounded-lg border transition-all relative group ${task.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
@@ -1458,14 +1464,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 {/* ACTIVE/FINAL CHALLENGE */}
                                 {task.activeChallenge && (
                                     <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-700 shadow-inner relative overflow-hidden group">
-                                        {/* Pulsating Badge */}
-                                        <div className="absolute top-0 right-0 p-3 opacity-50 group-hover:opacity-100 transition-opacity">
-                                            <div className={`w-2 h-2 rounded-full ${task.isChallengeCompleted ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]'}`} />
-                                        </div>
                                         
                                         <div className="flex justify-between items-start mb-3">
                                             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                                {task.isChallengeCompleted ? <CheckCircle2 size={12} className="text-emerald-500"/> : <Zap size={12} className="text-indigo-500"/>}
+                                                {task.isChallengeCompleted ? (
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                                                ) : (
+                                                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+                                                )}
                                                 {task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"}
                                             </h4>
                                             
