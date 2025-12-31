@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { Note, Task, Flashcard, AppConfig } from '../types';
 import { analyzeSandboxItem, SandboxAnalysis } from '../services/geminiService';
 import { applyTypography } from '../constants';
-import { Archive, Box, Grid, Loader2, Quote, Sparkles, Zap, Lightbulb, BrainCircuit, ArrowRight, RotateCw, Dumbbell } from 'lucide-react';
+import { Box, Grid, Loader2, Sparkles, Zap, Lightbulb, BrainCircuit, ArrowRight, RotateCw, Dumbbell } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -407,16 +407,6 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
     alert("Навык добавлен!");
   };
   
-  const handleArchive = () => {
-      if (selectedNoteId) {
-          if (window.confirm("Убрать заметку из Хаба в Архив?")) {
-            onProcessNote(selectedNoteId);
-            setAnalysis(null);
-            setSelectedNoteId(null);
-          }
-      }
-  };
-
   const currentMentor = config.mentors.find(m => m.id === mentorId);
 
   return (
@@ -430,11 +420,6 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                     <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Хаб</h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm font-sans">Лаборатория смыслов</p>
                 </div>
-                {selectedNoteId && (
-                    <button onClick={handleArchive} className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors backdrop-blur-sm">
-                        <Archive size={14} /> В архив
-                    </button>
-                )}
             </div>
         </div>
 
@@ -555,14 +540,17 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                                     >
                                         {/* ANALYSIS TEXT */}
                                         <div className="bg-white/80 dark:bg-white/5 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 shadow-sm backdrop-blur-sm relative overflow-hidden">
-                                            <Quote size={40} className="absolute top-4 left-4 text-slate-100 dark:text-slate-800 -z-10" />
                                             <div className="font-serif text-lg md:text-xl leading-relaxed text-slate-800 dark:text-slate-100">
-                                                <ReactMarkdown components={markdownComponents}>{analysis.analysis}</ReactMarkdown>
+                                                <ReactMarkdown components={markdownComponents}>
+                                                    {analysis.analysis.trim().replace(/^[-"']+\s*/, '')}
+                                                </ReactMarkdown>
                                             </div>
                                             <div className="mt-6 flex justify-end">
-                                                <button onClick={() => setAnalysis(null)} className="text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider flex items-center gap-1">
-                                                    <RotateCw size={12} /> Сбросить
-                                                </button>
+                                                <Tooltip content="Сбросить анализ">
+                                                    <button onClick={() => setAnalysis(null)} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors">
+                                                        <RotateCw size={18} />
+                                                    </button>
+                                                </Tooltip>
                                             </div>
                                         </div>
 
