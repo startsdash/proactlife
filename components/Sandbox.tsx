@@ -43,6 +43,8 @@ const markdownComponents = {
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
     h1: ({node, children, ...props}: any) => <h1 className="text-2xl font-serif font-bold mt-6 mb-3 text-slate-900 dark:text-slate-100" {...props}>{cleanHeader(children)}</h1>,
     h2: ({node, children, ...props}: any) => <h2 className="text-xl font-serif font-bold mt-5 mb-2 text-slate-900 dark:text-slate-100" {...props}>{cleanHeader(children)}</h2>,
+    h3: ({node, children, ...props}: any) => <h3 className="text-lg font-serif font-bold mt-4 mb-2 text-slate-900 dark:text-slate-100" {...props}>{cleanHeader(children)}</h3>,
+    h4: ({node, children, ...props}: any) => <h4 className="text-base font-serif font-bold mt-4 mb-2 text-slate-800 dark:text-slate-200" {...props}>{cleanHeader(children)}</h4>,
     blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-indigo-200 pl-4 py-1 my-4 text-slate-500 italic font-serif" {...props} />,
     code: ({node, inline, className, children, ...props}: any) => {
          return inline 
@@ -414,7 +416,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                                                 isActive={isActive} 
                                                 isThinking={isActive && isAnalyzing} 
                                             />
-                                            <div className={`text-[10px] font-bold uppercase tracking-widest transition-all duration-300 font-sans ${isActive ? 'text-slate-900 dark:text-white translate-y-0 opacity-100' : 'text-slate-400 translate-y-2 opacity-0 group-hover:opacity-50 group-hover:translate-y-0'}`}>
+                                            <div className={`text-[10px] font-bold uppercase tracking-widest transition-all duration-300 font-serif ${isActive ? 'text-slate-900 dark:text-white translate-y-0 opacity-100' : 'text-slate-400 translate-y-2 opacity-0 group-hover:opacity-50 group-hover:translate-y-0'}`}>
                                                 {m.name}
                                             </div>
                                         </button>
@@ -438,7 +440,7 @@ const Sandbox: React.FC<Props> = ({ notes, config, onProcessNote, onAddTask, onA
                                             <span>Анализировать мысль</span>
                                         </button>
                                         <p className="mt-4 text-[10px] text-slate-400 uppercase tracking-widest">
-                                            Активный ментор: <span className="font-bold text-slate-600 dark:text-slate-300">{currentMentor?.name}</span>
+                                            Активный ментор: <span className="font-bold text-slate-600 dark:text-slate-300 font-serif">{currentMentor?.name}</span>
                                         </p>
                                     </div>
                                 )}
