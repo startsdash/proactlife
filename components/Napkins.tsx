@@ -319,23 +319,107 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
 
 // Cover Picker
 const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => void }> = ({ onSelect, onClose }) => {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS);
+    const [loading, setLoading] = useState(false);
+    
+    // Robust Env Getter for the API Key inside the component or file scope
+    const getUnsplashKey = () => {
+        // Try various prefixes just in case, prioritizing the direct one as per screenshot
+        const keys = [
+            'UNSPLASH_ACCESS_KEY', 
+            'VITE_UNSPLASH_ACCESS_KEY', 
+            'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY', 
+            'REACT_APP_UNSPLASH_ACCESS_KEY'
+        ];
+        
+        for (const k of keys) {
+            // @ts-ignore
+            if (typeof process !== 'undefined' && process.env?.[k]) return process.env[k];
+            // @ts-ignore
+            if (typeof import.meta !== 'undefined' && import.meta.env?.[k]) return import.meta.env[k];
+        }
+        return '';
+    };
+
+    const searchUnsplash = async (q?: string) => {
+        const key = getUnsplashKey();
+        if (!key) {
+            if (q) alert("Ключ Unsplash не найден. Используйте встроенные пресеты или добавьте UNSPLASH_ACCESS_KEY.");
+            return;
+        }
+        
+        setLoading(true);
+        try {
+            const endpoint = q 
+                ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&client_id=${key}`
+                : `https://api.unsplash.com/photos/random?count=20&client_id=${key}`;
+            
+            const res = await fetch(endpoint);
+            if (!res.ok) throw new Error("API Error");
+            const data = await res.json();
+            
+            const urls = q 
+                ? data.results.map((img: any) => img.urls.regular) 
+                : data.map((img: any) => img.urls.regular);
+            
+            setResults(urls);
+        } catch (e) {
+            console.error("Unsplash Fetch Error", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') searchUnsplash(query);
+    };
+
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             try { onSelect(await processImage(file)); onClose(); } catch (err) { console.error(err); }
         }
     };
+
     return (
-        <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 w-64" onMouseDown={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-slate-400 uppercase">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-                {UNSPLASH_PRESETS.map((url, i) => (
-                    <button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded-lg overflow-hidden border border-slate-100 hover:ring-2 hover:ring-indigo-500 relative group"><img src={url} className="w-full h-full object-cover" /></button>
-                ))}
+        <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 w-80 flex flex-col gap-3" onMouseDown={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
+            
+            <div className="relative">
+                <input 
+                    type="text" 
+                    placeholder="Поиск Unsplash..." 
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="w-full pl-8 pr-2 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
+                />
+                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             </div>
-            <div className="flex gap-2">
-                <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium cursor-pointer"><Upload size={12} /> Своя <input type="file" accept="image/*" className="hidden" onChange={handleUpload} /></label>
-                <button onClick={() => { onSelect(`https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80&r=${Math.random()}`); onClose(); }} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium"><Shuffle size={12} /> Random</button>
+
+            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
+                {loading ? (
+                    <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
+                        <RefreshCw size={16} className="animate-spin" />
+                    </div>
+                ) : (
+                    results.map((url, i) => (
+                        <button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded-lg overflow-hidden border border-slate-100 dark:border-slate-700 hover:ring-2 hover:ring-indigo-500 relative group bg-slate-100">
+                            <img src={url} className="w-full h-full object-cover" loading="lazy" />
+                        </button>
+                    ))
+                )}
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
+                    <Upload size={12} /> Своя 
+                    <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                </label>
+                <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium transition-colors text-slate-600 dark:text-slate-300">
+                    <Shuffle size={12} /> Случайные
+                </button>
             </div>
         </div>
     );
