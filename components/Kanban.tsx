@@ -1062,18 +1062,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             className="w-full text-left group/challenge"
                                         >
                                             <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-lg p-3 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-900 transition-all relative overflow-hidden">
-                                                <div className="flex justify-between items-center mb-2">
+                                                <div className="flex justify-between items-center">
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
                                                         <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Активный челлендж</span>
                                                     </div>
-                                                    <Zap size={12} className="text-indigo-400 opacity-50" />
-                                                </div>
-
-                                                <div className="font-serif text-xs italic text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-3 pointer-events-none">
-                                                    <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>
-                                                        {task.activeChallenge}
-                                                    </ReactMarkdown>
                                                 </div>
                                                 
                                                 {/* Hover Overlay */}
