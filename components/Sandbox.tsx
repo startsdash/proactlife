@@ -1,11 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Note, Task, Flashcard, AppConfig } from '../types';
 import { analyzeSandboxItem, SandboxAnalysis } from '../services/geminiService';
-import { ICON_MAP, applyTypography } from '../constants';
-import EmptyState from './EmptyState';
-import { CheckSquare, Library, Loader2, Quote, BrainCircuit, ArrowLeft, Tag, Archive, Trash2, Dumbbell, Box, Cpu, Grid, Layers, Terminal, Activity, Zap, Aperture, Disc, Hexagon, Triangle, Square, Circle, RotateCw, Play, Sparkles, Send, ArrowRight } from 'lucide-react';
+import { applyTypography } from '../constants';
+import { Archive, Box, Grid, Loader2, Quote, Sparkles, Zap, Lightbulb, BrainCircuit, ArrowRight, RotateCw, Dumbbell } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -53,98 +52,181 @@ const markdownComponents = {
     }
 };
 
-// --- ABSTRACT 3D SHAPES (NEO-MINIMALISM) ---
+// --- MENTOR OBJECTS (TACTILE MINIMALISM) ---
 const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, color: string, isActive: boolean, isThinking: boolean }) => {
-    // Soft, pearlescent colors
-    const getStrokeColor = (twClass: string) => {
-        if (isActive) return '#1e293b'; // Active is dark/strong
-        if (twClass.includes('indigo')) return '#818cf8';
-        if (twClass.includes('emerald')) return '#34d399';
-        if (twClass.includes('amber')) return '#fbbf24';
-        if (twClass.includes('red')) return '#f87171';
-        return '#94a3b8'; 
+    const uid = useId();
+    
+    // Convert Tailwind class to Hex for SVG
+    const getBaseColor = (twClass: string) => {
+        if (twClass.includes('indigo')) return '#6366f1';
+        if (twClass.includes('emerald')) return '#10b981';
+        if (twClass.includes('amber')) return '#f59e0b';
+        if (twClass.includes('rose') || twClass.includes('red')) return '#f43f5e';
+        if (twClass.includes('blue')) return '#3b82f6';
+        if (twClass.includes('purple')) return '#a855f7';
+        if (twClass.includes('cyan')) return '#06b6d4';
+        return '#64748b'; // Slate
     };
 
-    const strokeColor = getStrokeColor(color);
+    const c = getBaseColor(color);
     
-    const shapeVariants = {
-        idle: {
-            rotate: 360,
-            scale: [1, 1.05, 1],
-            transition: {
-                rotate: { duration: 40, repeat: Infinity, ease: "linear" },
-                scale: { duration: 6, repeat: Infinity, ease: "easeInOut" }
-            }
-        },
-        thinking: {
-            rotate: [0, 90, 180, 270, 360],
-            scale: [1, 0.9, 1.1, 0.95, 1],
-            transition: {
-                rotate: { duration: 3, repeat: Infinity, ease: "linear" },
-                scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
-            }
+    // Animation Config
+    const cycleDuration = 4.5;
+    const ease = "easeInOut";
+
+    // 1. MONOLITH (Stability & Logic)
+    // Vertical rounded block. Tilts slightly.
+    const Monolith = () => (
+        <motion.g
+            animate={{ rotate: [0, 2, 0, -2, 0] }}
+            transition={{ duration: cycleDuration, ease, repeat: Infinity }}
+            style={{ transformOrigin: "50% 80%" }}
+        >
+            <defs>
+                <linearGradient id={`grad-mono-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="100%" stopColor={c} />
+                </linearGradient>
+            </defs>
+            <rect x="32" y="20" width="36" height="60" rx="8" fill={`url(#grad-mono-${uid})`} stroke={c} strokeWidth="0.5" strokeOpacity="0.3" />
+            {/* Highlight line */}
+            <motion.rect 
+                x="32" y="20" width="36" height="60" rx="8" 
+                fill="url(#grad-mono-shine)" opacity="0.3"
+                animate={{ opacity: [0.1, 0.4, 0.1] }}
+                transition={{ duration: cycleDuration, ease, repeat: Infinity }}
+            />
+        </motion.g>
+    );
+
+    // 2. CAPSULE (Life & Psychology)
+    // Horizontal pill. Breaths.
+    const Capsule = () => (
+        <motion.g
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: cycleDuration, ease, repeat: Infinity }}
+            style={{ transformOrigin: "50% 50%" }}
+        >
+            <defs>
+                <linearGradient id={`grad-cap-${uid}`} x1="0%" y1="50%" x2="100%" y2="50%">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="100%" stopColor={c} />
+                </linearGradient>
+            </defs>
+            <rect x="20" y="35" width="60" height="30" rx="15" fill={`url(#grad-cap-${uid})`} stroke={c} strokeWidth="0.5" strokeOpacity="0.3" />
+            <ellipse cx="35" cy="42" rx="8" ry="3" fill="white" opacity="0.6" />
+        </motion.g>
+    );
+
+    // 3. ORBITAL (Balance & Focus)
+    // Thick ring with floating core.
+    const Orbital = () => (
+        <g>
+            <defs>
+                <linearGradient id={`grad-orb-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#f8fafc" />
+                    <stop offset="100%" stopColor={c} stopOpacity="0.5" />
+                </linearGradient>
+            </defs>
+            {/* Ring */}
+            <circle cx="50" cy="50" r="28" stroke={`url(#grad-orb-${uid})`} strokeWidth="10" fill="none" />
+            {/* Core */}
+            <motion.circle 
+                cx="50" cy="50" r="10" fill={c}
+                animate={{ y: [-4, 4, -4] }}
+                transition={{ duration: cycleDuration, ease, repeat: Infinity }}
+            />
+        </g>
+    );
+
+    // 4. STACK (Structure & Knowledge)
+    // 3 plates expanding.
+    const Stack = () => (
+        <g>
+            <motion.rect 
+                x="25" y="25" width="50" height="10" rx="2" fill={c} opacity="0.4"
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: cycleDuration, ease, repeat: Infinity, delay: 0.2 }}
+            />
+            <motion.rect 
+                x="25" y="45" width="50" height="10" rx="2" fill={c} opacity="0.7"
+                animate={{ y: [0, 0, 0] }} // Center stays
+                transition={{ duration: cycleDuration, ease, repeat: Infinity }}
+            />
+            <motion.rect 
+                x="25" y="65" width="50" height="10" rx="2" fill={c} opacity="1"
+                animate={{ y: [0, 4, 0] }}
+                transition={{ duration: cycleDuration, ease, repeat: Infinity, delay: 0.2 }}
+            />
+        </g>
+    );
+
+    // 5. LENS (Vision & Creativity)
+    // Convex disk with breathing glow.
+    const Lens = () => (
+        <g>
+            <defs>
+                <radialGradient id={`grad-lens-${uid}`} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9"/>
+                    <stop offset="100%" stopColor={c} stopOpacity="0.8"/>
+                </radialGradient>
+            </defs>
+            <motion.circle 
+                cx="50" cy="50" r="32" fill={`url(#grad-lens-${uid})`} 
+                stroke={c} strokeWidth="1" strokeOpacity="0.5"
+                animate={{ r: [32, 34, 32] }}
+                transition={{ duration: cycleDuration, ease, repeat: Infinity }}
+            />
+            {/* Glint */}
+            <circle cx="38" cy="38" r="6" fill="white" opacity="0.4" />
+        </g>
+    );
+
+    const renderShape = () => {
+        switch(type) {
+            case 'monolith': return <Monolith />;
+            case 'capsule': return <Capsule />;
+            case 'orbital': return <Orbital />;
+            case 'stack': return <Stack />;
+            case 'lens': return <Lens />;
+            default: return <Lens />;
         }
     };
 
     return (
-        <div className={`relative w-20 h-20 flex items-center justify-center transition-all duration-500 ${isActive ? 'opacity-100 scale-110' : 'opacity-50 grayscale hover:grayscale-0 hover:opacity-80'}`}>
+        <div className={`relative w-20 h-20 flex items-center justify-center transition-all duration-500 ${isActive ? 'scale-110' : 'opacity-85 grayscale-[0.3] hover:grayscale-0 hover:scale-105'}`}>
             <motion.div
-                variants={shapeVariants}
-                animate={isThinking ? "thinking" : "idle"}
+                animate={isThinking ? { rotate: 360 } : { rotate: 0 }}
+                transition={isThinking ? { duration: 2, ease: "linear", repeat: Infinity } : { duration: 0.5 }}
                 className="w-full h-full"
             >
-                <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-lg">
+                <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-md">
                     <defs>
-                        <linearGradient id={`grad-${type}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="white" stopOpacity="0.8" />
-                            <stop offset="100%" stopColor="#f1f5f9" stopOpacity="0.2" />
-                        </linearGradient>
-                        <filter id="blur-glow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur in="SourceGraphic" stdDeviation="2" />
+                        <filter id={`shadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                            <feOffset dx="0" dy="4" result="offsetblur" />
+                            <feComponentTransfer>
+                                <feFuncA type="linear" slope="0.3" />
+                            </feComponentTransfer>
+                            <feMerge>
+                                <feMergeNode />
+                                <feMergeNode in="SourceGraphic" />
+                            </feMerge>
                         </filter>
                     </defs>
                     
-                    {/* CUBE */}
-                    {type === 'cube' && (
-                        <g transform="translate(50, 50)">
-                            <path d="M0,-25 L22,-12 L22,12 L0,25 L-22,12 L-22,-12 Z" fill={`url(#grad-${type})`} stroke={strokeColor} strokeWidth="0.5" />
-                            <path d="M0,-25 L0,0 M0,0 L22,12 M0,0 L-22,12" stroke={strokeColor} strokeWidth="0.5" />
-                            {isActive && <circle cx="0" cy="0" r="2" fill={strokeColor} />}
-                        </g>
-                    )}
+                    {/* Ambient Shadow Base */}
+                    <ellipse cx="50" cy="92" rx="20" ry="4" fill="black" opacity="0.15" filter="blur(4px)" />
 
-                    {/* SPHERE (Wireframe approximation) */}
-                    {type === 'sphere' && (
-                        <g transform="translate(50, 50)">
-                            <circle cx="0" cy="0" r="25" fill={`url(#grad-${type})`} stroke={strokeColor} strokeWidth="0.5" />
-                            <ellipse cx="0" cy="0" rx="25" ry="8" fill="none" stroke={strokeColor} strokeWidth="0.5" transform="rotate(45)" />
-                            <ellipse cx="0" cy="0" rx="25" ry="8" fill="none" stroke={strokeColor} strokeWidth="0.5" transform="rotate(-45)" />
-                        </g>
-                    )}
-
-                    {/* PYRAMID */}
-                    {type === 'pyramid' && (
-                        <g transform="translate(50, 55)">
-                            <path d="M0,-35 L20,15 L-20,15 Z" fill={`url(#grad-${type})`} stroke={strokeColor} strokeWidth="0.5" />
-                            <path d="M0,-35 L0,15" stroke={strokeColor} strokeWidth="0.5" opacity="0.5" />
-                        </g>
-                    )}
-
-                    {/* TORUS / DONUT */}
-                    {type === 'torus' && (
-                        <g transform="translate(50, 50)">
-                            <ellipse cx="0" cy="0" rx="28" ry="12" fill="none" stroke={strokeColor} strokeWidth="0.5" />
-                            <ellipse cx="0" cy="0" rx="12" ry="5" fill="none" stroke={strokeColor} strokeWidth="0.5" />
-                            <path d="M-28,0 Q-15,-15 0,-15 Q15,-15 28,0" fill="none" stroke={strokeColor} strokeWidth="0.5" opacity="0.3" />
-                        </g>
-                    )}
-
-                    {/* DEFAULT (ICOSAHEDRON-ISH) */}
-                    {type === 'default' && (
-                        <g transform="translate(50, 50)">
-                            <path d="M0,-30 L26,-15 L26,15 L0,30 L-26,15 L-26,-15 Z" fill="none" stroke={strokeColor} strokeWidth="0.5" />
-                            <circle cx="0" cy="0" r="10" fill={`url(#grad-${type})`} stroke={strokeColor} strokeWidth="0.5" />
-                        </g>
+                    {/* Shape Content */}
+                    {renderShape()}
+                    
+                    {/* Activity Indicator Dot */}
+                    {isActive && (
+                        <motion.circle 
+                            cx="50" cy="92" r="2" fill={c}
+                            initial={{ scale: 0 }} animate={{ scale: 1 }}
+                        />
                     )}
                 </svg>
             </motion.div>
@@ -153,11 +235,20 @@ const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, co
 };
 
 const getMentorShapeType = (id: string): string => {
-    if (id.includes('peterson') || id.includes('structure')) return 'cube';
-    if (id.includes('bible') || id.includes('spirit')) return 'sphere';
-    if (id.includes('greene') || id.includes('power')) return 'pyramid';
-    if (id.includes('taleb') || id.includes('chaos')) return 'torus';
-    return 'default';
+    // Structure & Logic
+    if (id.includes('peterson') || id.includes('structure')) return 'monolith';
+    if (id.includes('greene') || id.includes('power')) return 'stack';
+    
+    // Vision & Wisdom
+    if (id.includes('bible') || id.includes('spirit') || id.includes('epictetus') || id.includes('aurelius') || id.includes('seneca') || id.includes('pageau')) return 'lens';
+    
+    // Chaos & Perspective
+    if (id.includes('taleb') || id.includes('chaos') || id.includes('Carlin')) return 'orbital';
+    
+    // Psychology & Life
+    if (id.includes('psycholog') || id.includes('beta') || id.includes('capsule')) return 'capsule';
+    
+    return 'lens'; // Default fallback
 };
 
 // --- ARTIFACT CARDS ---
@@ -259,7 +350,7 @@ const TaskPreview = ({ content, onAccept }: { content: string, onAccept: () => v
                     onClick={onAccept}
                     className="w-full py-3 rounded-xl bg-slate-900 dark:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider hover:bg-slate-800 dark:hover:bg-emerald-500 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-slate-200 dark:shadow-none"
                 >
-                    В Спринты <Play size={14} fill="currentColor" />
+                    В Спринты <ArrowRight size={14} fill="currentColor" />
                 </button>
             </div>
         </div>
