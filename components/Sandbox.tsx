@@ -176,6 +176,11 @@ const FlashcardPreview = ({ front, back, onAccept }: { front: string, back: stri
             </div>
             
             <div className="flex-1 p-8 flex flex-col items-center justify-center text-center relative perspective-1000 min-h-[240px]">
+                {/* BLUEPRINT GRID BACKGROUND */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.03]" 
+                     style={{ backgroundImage: 'linear-gradient(#6366f1 1px, transparent 1px), linear-gradient(90deg, #6366f1 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+                </div>
+
                 <AnimatePresence mode="wait">
                     {!isFlipped ? (
                         <motion.div 
