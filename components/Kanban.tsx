@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
@@ -1054,43 +1055,35 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             <>
                                 {renderCardChecklist(task)}
 
-                                {task.activeChallenge && !draftChallenge && (
+                                {task.activeChallenge && !task.isChallengeCompleted && !draftChallenge && (
                                     <div className="mt-2 mb-2">
-                                        <CollapsibleSection 
-                                            title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
-                                            icon={
-                                                task.isChallengeCompleted ? (
-                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                                                ) : (
-                                                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-                                                )
-                                            }
-                                            isCard
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setActiveModal({taskId: task.id, type: 'details'}); }}
+                                            className="w-full text-left group/challenge"
                                         >
-                                            <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-lg p-3 border border-slate-100 dark:border-slate-700 shadow-inner relative overflow-hidden group">
-                                                 <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                     <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
-                                                         <button 
-                                                            onClick={(e) => toggleChallengeCompleteFromCard(e, task)}
-                                                            className={`w-5 h-5 rounded-full border flex items-center justify-center bg-white dark:bg-slate-800 transition-colors ${task.isChallengeCompleted ? 'border-emerald-500 text-emerald-500' : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 hover:text-emerald-500 text-transparent'}`}
-                                                         >
-                                                             <Check size={12} />
-                                                         </button>
-                                                     </Tooltip>
-                                                 </div>
-
-                                                 {task.isChallengeCompleted ? (
-                                                    <div className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-                                                       <StaticChallengeRenderer content={task.activeChallenge || ''} mode="history" />
+                                            <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-lg p-3 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-900 transition-all relative overflow-hidden">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Активный челлендж</span>
                                                     </div>
-                                                 ) : (
-                                                    <InteractiveChallenge 
-                                                        content={task.activeChallenge || ''} 
-                                                        onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
-                                                    />
-                                                 )}
+                                                    <Zap size={12} className="text-indigo-400 opacity-50" />
+                                                </div>
+
+                                                <div className="font-serif text-xs italic text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-3 pointer-events-none">
+                                                    <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>
+                                                        {task.activeChallenge}
+                                                    </ReactMarkdown>
+                                                </div>
+                                                
+                                                {/* Hover Overlay */}
+                                                <div className="absolute inset-0 bg-white/50 dark:bg-black/50 opacity-0 group-hover/challenge:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
+                                                    <span className="bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg border border-indigo-100 dark:border-indigo-900 transform scale-90 group-hover/challenge:scale-100 transition-transform">
+                                                        Открыть
+                                                    </span>
+                                                </div>
                                             </div>
-                                        </CollapsibleSection>
+                                        </button>
                                     </div>
                                 )}
                             </>
