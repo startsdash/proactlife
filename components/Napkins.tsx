@@ -351,8 +351,10 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
         
         setLoading(true);
         try {
+            // Random page for variety on re-search
+            const page = Math.floor(Math.random() * 10) + 1;
             const endpoint = q 
-                ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&client_id=${key}`
+                ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&page=${page}&client_id=${key}`
                 : `https://api.unsplash.com/photos/random?count=20&client_id=${key}`;
             
             const res = await fetch(endpoint);
@@ -393,9 +395,16 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    className="w-full pl-8 pr-2 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
+                    className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
                 />
-                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <button 
+                    onClick={() => searchUnsplash(query)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
+                    title="Найти"
+                >
+                    <ArrowRight size={12} />
+                </button>
             </div>
 
             <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
