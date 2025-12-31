@@ -1,4 +1,3 @@
-
 import { AppState, UserProfile } from "../types";
 
 declare global {
@@ -8,61 +7,66 @@ declare global {
   }
 }
 
+let CLIENT_ID = '';
+let API_KEY = '';
+let CLIENT_SECRET = '';
+
 // --- ENVIRONMENT VARIABLE LOADING ---
-// Robust helper to check multiple sources and prefixes using explicit static checks
-const getEnv = (keySuffix: string): string => {
-  // We need to check exact keys because bundlers (Vite/Webpack) do static replacement.
-  // Dynamic access like process.env[`VITE_${key}`] often fails in client-side builds.
+// Robust helper to check multiple sources and prefixes
+const getEnv = (key: string) => {
+  const prefixes = ['VITE_', 'REACT_APP_', 'NEXT_PUBLIC_', ''];
   
-  if (keySuffix === 'GOOGLE_CLIENT_ID') {
-      // @ts-ignore
-      if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_CLIENT_ID) return import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      // @ts-ignore
-      if (typeof import.meta !== 'undefined' && import.meta.env?.GOOGLE_CLIENT_ID) return import.meta.env.GOOGLE_CLIENT_ID;
-      
-      if (typeof process !== 'undefined' && process.env) {
-          if (process.env.GOOGLE_CLIENT_ID) return process.env.GOOGLE_CLIENT_ID;
-          if (process.env.VITE_GOOGLE_CLIENT_ID) return process.env.VITE_GOOGLE_CLIENT_ID;
-          if (process.env.REACT_APP_GOOGLE_CLIENT_ID) return process.env.REACT_APP_GOOGLE_CLIENT_ID;
-          if (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) return process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  // 1. Try import.meta.env (Vite)
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      for (const prefix of prefixes) {
+        // @ts-ignore
+        const val = import.meta.env[`${prefix}${key}`];
+        if (val) return val;
       }
-  }
+      // Check exact match without prefix logic if passed key is full name
+      // @ts-ignore
+      if (import.meta.env[key]) return import.meta.env[key];
+    }
+  } catch (e) {}
 
-  if (keySuffix === 'GOOGLE_API_KEY' || keySuffix === 'API_KEY') {
-      // @ts-ignore
-      if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_API_KEY) return import.meta.env.VITE_GOOGLE_API_KEY;
-      // @ts-ignore
-      if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_KEY) return import.meta.env.VITE_API_KEY;
-      // @ts-ignore
-      if (typeof import.meta !== 'undefined' && import.meta.env?.GOOGLE_API_KEY) return import.meta.env.GOOGLE_API_KEY;
-      
-      if (typeof process !== 'undefined' && process.env) {
-          if (process.env.GOOGLE_API_KEY) return process.env.GOOGLE_API_KEY;
-          if (process.env.API_KEY) return process.env.API_KEY;
-          if (process.env.VITE_GOOGLE_API_KEY) return process.env.VITE_GOOGLE_API_KEY;
-          if (process.env.VITE_API_KEY) return process.env.VITE_API_KEY;
-          if (process.env.REACT_APP_GOOGLE_API_KEY) return process.env.REACT_APP_GOOGLE_API_KEY;
-          if (process.env.NEXT_PUBLIC_GOOGLE_API_KEY) return process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+  // 2. Try process.env (Node/Webpack/Polyfill)
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      for (const prefix of prefixes) {
+        // @ts-ignore
+        const val = process.env[`${prefix}${key}`];
+        if (val) return val;
       }
-  }
+      // @ts-ignore
+      if (process.env[key]) return process.env[key];
+    }
+  } catch (e) {}
 
-  if (keySuffix === 'GOOGLE_CLIENT_SECRET') {
-      // @ts-ignore
-      if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_CLIENT_SECRET) return import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
-      
-      if (typeof process !== 'undefined' && process.env) {
-          if (process.env.GOOGLE_CLIENT_SECRET) return process.env.GOOGLE_CLIENT_SECRET;
-          if (process.env.VITE_GOOGLE_CLIENT_SECRET) return process.env.VITE_GOOGLE_CLIENT_SECRET;
-          if (process.env.REACT_APP_GOOGLE_CLIENT_SECRET) return process.env.REACT_APP_GOOGLE_CLIENT_SECRET;
+  // 3. Try window.process.env (Browser Polyfill)
+  try {
+    // @ts-ignore
+    if (typeof window !== 'undefined' && window.process && window.process.env) {
+       for (const prefix of prefixes) {
+        // @ts-ignore
+        const val = window.process.env[`${prefix}${key}`];
+        if (val) return val;
       }
-  }
+    }
+  } catch(e) {}
 
   return '';
 };
 
-const CLIENT_ID = getEnv('GOOGLE_CLIENT_ID');
-const API_KEY = getEnv('GOOGLE_API_KEY'); // Will check API_KEY too if Google specific one missing
-const CLIENT_SECRET = getEnv('GOOGLE_CLIENT_SECRET');
+CLIENT_ID = getEnv('GOOGLE_CLIENT_ID');
+API_KEY = getEnv('GOOGLE_API_KEY');
+CLIENT_SECRET = getEnv('GOOGLE_CLIENT_SECRET');
+
+// Fallback: If no specific Google API Key found, try generic 'API_KEY' (common in AI environments)
+if (!API_KEY) {
+    API_KEY = getEnv('API_KEY');
+}
 
 if (!CLIENT_ID || !API_KEY) {
   // Use console.log or warn instead of error to avoid failing checks/tests that flag console.errors
