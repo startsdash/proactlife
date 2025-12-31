@@ -55,206 +55,95 @@ const markdownComponents = {
 
 // --- ABSTRACT 3D SHAPES (NEO-MINIMALISM) ---
 const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, color: string, isActive: boolean, isThinking: boolean }) => {
-    // Determine gradient colors based on mapping or input color
-    // We use hardcoded high-end pastel gradients for specific shapes
+    // Soft, pearlescent colors
+    const getStrokeColor = (twClass: string) => {
+        if (isActive) return '#1e293b'; // Active is dark/strong
+        if (twClass.includes('indigo')) return '#818cf8';
+        if (twClass.includes('emerald')) return '#34d399';
+        if (twClass.includes('amber')) return '#fbbf24';
+        if (twClass.includes('red')) return '#f87171';
+        return '#94a3b8'; 
+    };
+
+    const strokeColor = getStrokeColor(color);
     
-    // Animation Variants
-    const pulseVariant = {
-        animate: { 
-            scale: [1, 1.05, 1],
-            filter: ["drop-shadow(0px 0px 5px rgba(255,255,255,0.2))", "drop-shadow(0px 0px 15px rgba(255,255,255,0.6))", "drop-shadow(0px 0px 5px rgba(255,255,255,0.2))"],
-            transition: { duration: 4, repeat: Infinity, ease: "easeInOut" }
-        }
-    };
-
-    const morphVariant = {
-        animate: {
-            scale: [1, 1.02, 0.98, 1],
-            rotate: [0, 5, -5, 0],
-            borderRadius: ["40%", "50%", "45%", "40%"],
-            transition: { duration: 6, repeat: Infinity, ease: "easeInOut" }
-        }
-    };
-
-    const rotateVariant = {
-        animate: {
+    const shapeVariants = {
+        idle: {
             rotate: 360,
-            transition: { duration: 20, repeat: Infinity, ease: "linear" }
-        }
-    };
-
-    const breatheVariant = {
-        animate: {
-            scale: [1, 1.1, 1],
-            opacity: [0.8, 1, 0.8],
-            transition: { duration: 5, repeat: Infinity, ease: "easeInOut" }
-        }
-    };
-
-    const floatVariant = {
-        animate: {
-            y: [0, -5, 0],
-            scaleY: [1, 1.05, 1],
-            transition: { duration: 4, repeat: Infinity, ease: "easeInOut" }
-        }
-    };
-
-    const thinkingVariant = {
-        animate: {
+            scale: [1, 1.05, 1],
+            transition: {
+                rotate: { duration: 40, repeat: Infinity, ease: "linear" },
+                scale: { duration: 6, repeat: Infinity, ease: "easeInOut" }
+            }
+        },
+        thinking: {
+            rotate: [0, 90, 180, 270, 360],
             scale: [1, 0.9, 1.1, 0.95, 1],
-            rotate: [0, 180, 360],
-            filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"],
-            transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+            transition: {
+                rotate: { duration: 3, repeat: Infinity, ease: "linear" },
+                scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+            }
         }
     };
-
-    // Helper to get definition ID
-    const gradId = `grad-${type}-${Math.random().toString(36).substr(2, 5)}`;
 
     return (
-        <div className={`relative w-24 h-24 flex items-center justify-center transition-all duration-500 ${isActive ? 'opacity-100 scale-110' : 'opacity-60 grayscale-[0.3] hover:grayscale-0 hover:opacity-90'}`}>
+        <div className={`relative w-20 h-20 flex items-center justify-center transition-all duration-500 ${isActive ? 'opacity-100 scale-110' : 'opacity-50 grayscale hover:grayscale-0 hover:opacity-80'}`}>
             <motion.div
-                variants={isThinking ? thinkingVariant : (
-                    type === 'crystal' ? pulseVariant :
-                    type === 'sphere' ? morphVariant :
-                    type === 'torus' ? rotateVariant :
-                    type === 'grid' ? breatheVariant :
-                    type === 'flame' ? floatVariant : pulseVariant
-                )}
-                animate="animate"
+                variants={shapeVariants}
+                animate={isThinking ? "thinking" : "idle"}
                 className="w-full h-full"
             >
-                <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-2xl">
+                <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-lg">
                     <defs>
-                        {/* CRYSTAL GRADIENT (Ice Blue) */}
-                        <linearGradient id={`${gradId}-crystal`} x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#cffafe" stopOpacity="0.8" />
-                            <stop offset="50%" stopColor="#a5f3fc" stopOpacity="0.4" />
-                            <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.1" />
+                        <linearGradient id={`grad-${type}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="white" stopOpacity="0.8" />
+                            <stop offset="100%" stopColor="#f1f5f9" stopOpacity="0.2" />
                         </linearGradient>
-
-                        {/* SPHERE GRADIENT (Peach Fuzz) */}
-                        <linearGradient id={`${gradId}-sphere`} x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#ffedd5" stopOpacity="0.9" />
-                            <stop offset="100%" stopColor="#fda4af" stopOpacity="0.3" />
-                        </linearGradient>
-
-                        {/* TORUS GRADIENT (Pearl) */}
-                        <linearGradient id={`${gradId}-torus`} x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#f8fafc" stopOpacity="0.8" />
-                            <stop offset="50%" stopColor="#e2e8f0" stopOpacity="0.5" />
-                            <stop offset="100%" stopColor="#94a3b8" stopOpacity="0.2" />
-                        </linearGradient>
-
-                        {/* GRID GRADIENT (Cloud Gray/Metallic) */}
-                        <linearGradient id={`${gradId}-grid`} x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#f1f5f9" stopOpacity="0.9" />
-                            <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.4" />
-                        </linearGradient>
-
-                        {/* FLAME GRADIENT (Neon Mint) */}
-                        <linearGradient id={`${gradId}-flame`} x1="0%" y1="100%" x2="0%" y2="0%">
-                            <stop offset="0%" stopColor="#ccfbf1" stopOpacity="0.2" />
-                            <stop offset="50%" stopColor="#5eead4" stopOpacity="0.5" />
-                            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.9" />
-                        </linearGradient>
-
-                        <filter id="soft-glow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur stdDeviation="3" result="blur" />
-                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        <filter id="blur-glow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur in="SourceGraphic" stdDeviation="2" />
                         </filter>
                     </defs>
-
-                    {/* OBJECT 1: THE CRYSTAL (Octahedron) */}
-                    {type === 'crystal' && (
+                    
+                    {/* CUBE */}
+                    {type === 'cube' && (
                         <g transform="translate(50, 50)">
-                            {/* Inner Facets */}
-                            <path d="M0,-35 L25,0 L0,35 L-25,0 Z" fill={`url(#${gradId}-crystal)`} stroke="#a5f3fc" strokeWidth="0.5" opacity="0.8" />
-                            {/* Outer Outline */}
-                            <path d="M0,-35 L25,0 L0,35 L-25,0 Z" fill="none" stroke="white" strokeWidth="1" opacity="0.5" />
-                            {/* Cross lines for 3D effect */}
-                            <path d="M0,-35 L0,35 M-25,0 L25,0" stroke="white" strokeWidth="0.5" opacity="0.3" />
-                            {isActive && <circle cx="0" cy="0" r="3" fill="white" filter="url(#soft-glow)" />}
+                            <path d="M0,-25 L22,-12 L22,12 L0,25 L-22,12 L-22,-12 Z" fill={`url(#grad-${type})`} stroke={strokeColor} strokeWidth="0.5" />
+                            <path d="M0,-25 L0,0 M0,0 L22,12 M0,0 L-22,12" stroke={strokeColor} strokeWidth="0.5" />
+                            {isActive && <circle cx="0" cy="0" r="2" fill={strokeColor} />}
                         </g>
                     )}
 
-                    {/* OBJECT 2: THE SPHERE (Liquid Blob) */}
+                    {/* SPHERE (Wireframe approximation) */}
                     {type === 'sphere' && (
                         <g transform="translate(50, 50)">
-                            {/* Main Body */}
-                            <circle cx="0" cy="0" r="28" fill={`url(#${gradId}-sphere)`} stroke="#fda4af" strokeWidth="0.5" />
-                            {/* Highlights for liquid effect */}
-                            <ellipse cx="-10" cy="-10" rx="8" ry="4" fill="white" opacity="0.4" transform="rotate(-45)" />
-                            <ellipse cx="10" cy="15" rx="4" ry="2" fill="white" opacity="0.2" transform="rotate(-45)" />
+                            <circle cx="0" cy="0" r="25" fill={`url(#grad-${type})`} stroke={strokeColor} strokeWidth="0.5" />
+                            <ellipse cx="0" cy="0" rx="25" ry="8" fill="none" stroke={strokeColor} strokeWidth="0.5" transform="rotate(45)" />
+                            <ellipse cx="0" cy="0" rx="25" ry="8" fill="none" stroke={strokeColor} strokeWidth="0.5" transform="rotate(-45)" />
                         </g>
                     )}
 
-                    {/* OBJECT 3: THE TORUS (Ring) */}
+                    {/* PYRAMID */}
+                    {type === 'pyramid' && (
+                        <g transform="translate(50, 55)">
+                            <path d="M0,-35 L20,15 L-20,15 Z" fill={`url(#grad-${type})`} stroke={strokeColor} strokeWidth="0.5" />
+                            <path d="M0,-35 L0,15" stroke={strokeColor} strokeWidth="0.5" opacity="0.5" />
+                        </g>
+                    )}
+
+                    {/* TORUS / DONUT */}
                     {type === 'torus' && (
                         <g transform="translate(50, 50)">
-                            {/* Back Ring */}
-                            <path d="M-30,0 A30,12 0 1,1 30,0 A30,12 0 1,1 -30,0" fill="none" stroke={`url(#${gradId}-torus)`} strokeWidth="8" opacity="0.3" />
-                            {/* Front Ring Highlight */}
-                            <path d="M-30,0 A30,12 0 0,0 30,0" fill="none" stroke="white" strokeWidth="2" opacity="0.6" strokeLinecap="round" />
-                            <path d="M-30,0 A30,12 0 0,1 30,0" fill="none" stroke="white" strokeWidth="0.5" opacity="0.2" />
-                            {/* Shimmer Particle */}
-                            {isActive && (
-                                <motion.circle 
-                                    animate={{ pathLength: 1, rotate: 360 }}
-                                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                                    r="2" fill="white" filter="url(#soft-glow)"
-                                >
-                                    <animateMotion dur="4s" repeatCount="indefinite" path="M-30,0 A30,12 0 1,1 30,0 A30,12 0 1,1 -30,0" />
-                                </motion.circle>
-                            )}
+                            <ellipse cx="0" cy="0" rx="28" ry="12" fill="none" stroke={strokeColor} strokeWidth="0.5" />
+                            <ellipse cx="0" cy="0" rx="12" ry="5" fill="none" stroke={strokeColor} strokeWidth="0.5" />
+                            <path d="M-28,0 Q-15,-15 0,-15 Q15,-15 28,0" fill="none" stroke={strokeColor} strokeWidth="0.5" opacity="0.3" />
                         </g>
                     )}
 
-                    {/* OBJECT 4: THE GRID (Cube Cluster) */}
-                    {type === 'grid' && (
+                    {/* DEFAULT (ICOSAHEDRON-ISH) */}
+                    {type === 'default' && (
                         <g transform="translate(50, 50)">
-                            {/* Central Cube */}
-                            <rect x="-10" y="-10" width="20" height="20" fill={`url(#${gradId}-grid)`} stroke="white" strokeWidth="0.5" />
-                            {/* Satellite Cubes */}
-                            <motion.rect 
-                                animate={{ x: [-22, -26, -22], y: [-22, -26, -22] }} transition={{ duration: 4, repeat: Infinity }}
-                                x="-22" y="-22" width="12" height="12" fill={`url(#${gradId}-grid)`} opacity="0.6" 
-                            />
-                            <motion.rect 
-                                animate={{ x: [10, 14, 10], y: [-22, -26, -22] }} transition={{ duration: 4, repeat: Infinity, delay: 1 }}
-                                x="10" y="-22" width="12" height="12" fill={`url(#${gradId}-grid)`} opacity="0.6" 
-                            />
-                            <motion.rect 
-                                animate={{ x: [-22, -26, -22], y: [10, 14, 10] }} transition={{ duration: 4, repeat: Infinity, delay: 2 }}
-                                x="-22" y="10" width="12" height="12" fill={`url(#${gradId}-grid)`} opacity="0.6" 
-                            />
-                            <motion.rect 
-                                animate={{ x: [10, 14, 10], y: [10, 14, 10] }} transition={{ duration: 4, repeat: Infinity, delay: 3 }}
-                                x="10" y="10" width="12" height="12" fill={`url(#${gradId}-grid)`} opacity="0.6" 
-                            />
-                        </g>
-                    )}
-
-                    {/* OBJECT 5: THE FLAME (Ellipse + Particles) */}
-                    {type === 'flame' && (
-                        <g transform="translate(50, 60)">
-                            {/* Main Flame Body */}
-                            <ellipse cx="0" cy="0" rx="18" ry="25" fill={`url(#${gradId}-flame)`} filter="url(#soft-glow)" opacity="0.8" />
-                            {/* Inner Core */}
-                            <ellipse cx="0" cy="10" rx="8" ry="12" fill="white" opacity="0.6" />
-                            {/* Rising Particles */}
-                            <motion.circle cx="0" cy="-20" r="2" fill="white" opacity="0.8"
-                                animate={{ y: [-10, -40], opacity: [0.8, 0] }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-                            />
-                            <motion.circle cx="10" cy="-10" r="1.5" fill="white" opacity="0.6"
-                                animate={{ y: [0, -30], opacity: [0.6, 0] }}
-                                transition={{ duration: 2.5, repeat: Infinity, ease: "easeOut", delay: 0.5 }}
-                            />
-                            <motion.circle cx="-8" cy="-15" r="1" fill="white" opacity="0.7"
-                                animate={{ y: [0, -35], opacity: [0.7, 0] }}
-                                transition={{ duration: 2.2, repeat: Infinity, ease: "easeOut", delay: 1 }}
-                            />
+                            <path d="M0,-30 L26,-15 L26,15 L0,30 L-26,15 L-26,-15 Z" fill="none" stroke={strokeColor} strokeWidth="0.5" />
+                            <circle cx="0" cy="0" r="10" fill={`url(#grad-${type})`} stroke={strokeColor} strokeWidth="0.5" />
                         </g>
                     )}
                 </svg>
@@ -264,11 +153,11 @@ const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, co
 };
 
 const getMentorShapeType = (id: string): string => {
-    if (id.includes('peterson') || id.includes('structure')) return 'crystal'; // The Crystal
-    if (id.includes('bible') || id.includes('spirit')) return 'flame'; // The Flame
-    if (id.includes('greene') || id.includes('power')) return 'grid'; // The Grid
-    if (id.includes('taleb') || id.includes('chaos')) return 'sphere'; // The Sphere
-    return 'torus'; // Default (The Torus)
+    if (id.includes('peterson') || id.includes('structure')) return 'cube';
+    if (id.includes('bible') || id.includes('spirit')) return 'sphere';
+    if (id.includes('greene') || id.includes('power')) return 'pyramid';
+    if (id.includes('taleb') || id.includes('chaos')) return 'torus';
+    return 'default';
 };
 
 // --- ARTIFACT CARDS ---
