@@ -75,33 +75,38 @@ const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, co
     const ease = "easeInOut";
 
     // 1. MONOLITH (Stability & Logic)
-    // Vertical rounded block. Tilts slightly.
     const Monolith = () => (
         <motion.g
             animate={{ rotate: [0, 2, 0, -2, 0] }}
             transition={{ duration: cycleDuration, ease, repeat: Infinity }}
-            style={{ transformOrigin: "50% 80%" }}
+            style={{ transformOrigin: "50% 85%" }}
         >
             <defs>
-                <linearGradient id={`grad-mono-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#ffffff" />
-                    <stop offset="100%" stopColor={c} />
+                <linearGradient id={`grad-mono-${uid}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor={c} stopOpacity="0.9" />
+                    <stop offset="50%" stopColor={c} stopOpacity="1" />
+                    <stop offset="100%" stopColor={c} stopOpacity="0.9" />
                 </linearGradient>
-                <filter id={`glow-mono-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="2" result="blur" />
-                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
+                <linearGradient id={`sweep-mono-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="white" stopOpacity="0" />
+                    <stop offset="50%" stopColor="white" stopOpacity="0.4" />
+                    <stop offset="100%" stopColor="white" stopOpacity="0" />
+                </linearGradient>
             </defs>
-            {/* Soft Shadow behind */}
-            <ellipse cx="50" cy="85" rx="15" ry="3" fill="black" opacity="0.2" filter="blur(2px)" />
+            {/* Shadow */}
+            <ellipse cx="50" cy="90" rx="18" ry="4" fill="black" opacity="0.15" filter="blur(4px)" />
             
-            <rect x="32" y="15" width="36" height="65" rx="8" fill={`url(#grad-mono-${uid})`} stroke={c} strokeWidth="0.5" strokeOpacity="0.3" />
+            {/* Body */}
+            <rect x="36" y="20" width="28" height="70" rx="6" fill={`url(#grad-mono-${uid})`} />
             
-            {/* Highlight line sweep */}
+            {/* Highlight Edge */}
+            <rect x="36" y="20" width="4" height="70" rx="2" fill="white" opacity="0.15" />
+
+            {/* Vertical Light Sweep */}
             <motion.rect 
-                x="32" y="15" width="36" height="65" rx="8" 
-                fill={`url(#grad-mono-${uid})`} opacity="0.3"
-                animate={{ opacity: [0.1, 0.4, 0.1] }}
+                x="36" y="20" width="28" height="70" rx="6" 
+                fill={`url(#sweep-mono-${uid})`}
+                animate={{ opacity: [0, 0.5, 0], y: [-10, 10, -10] }}
                 transition={{ duration: cycleDuration, ease, repeat: Infinity }}
                 style={{ mixBlendMode: 'overlay' }}
             />
@@ -109,111 +114,134 @@ const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, co
     );
 
     // 2. CAPSULE (Life & Psychology)
-    // Horizontal pill. Breaths.
     const Capsule = () => (
         <motion.g
-            animate={{ scale: [1, 1.05, 1] }}
+            animate={{ scale: [1, 1.03, 1] }}
             transition={{ duration: cycleDuration, ease, repeat: Infinity }}
             style={{ transformOrigin: "50% 50%" }}
         >
             <defs>
-                <linearGradient id={`grad-cap-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#f8fafc" />
-                    <stop offset="100%" stopColor={c} />
+                <linearGradient id={`grad-cap-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor={c} stopOpacity="0.8" />
+                    <stop offset="100%" stopColor={c} stopOpacity="1" />
                 </linearGradient>
             </defs>
-            {/* Soft Shadow */}
-            <ellipse cx="50" cy="70" rx="25" ry="4" fill="black" opacity="0.2" filter="blur(3px)" />
+            {/* Shadow */}
+            <ellipse cx="50" cy="75" rx="30" ry="5" fill="black" opacity="0.15" filter="blur(4px)" />
 
-            <rect x="15" y="35" width="70" height="30" rx="15" fill={`url(#grad-cap-${uid})`} stroke={c} strokeWidth="0.5" strokeOpacity="0.2" />
+            {/* Body */}
+            <rect x="15" y="38" width="70" height="24" rx="12" fill={`url(#grad-cap-${uid})`} />
             
-            {/* Inner glow pulse */}
-            <motion.ellipse 
-                cx="50" cy="42" rx="15" ry="5" fill="white" opacity="0.4"
-                animate={{ opacity: [0.2, 0.6, 0.2] }}
+            {/* Top Shine */}
+            <path d="M 20 40 Q 50 38 80 40" stroke="white" strokeWidth="2" strokeOpacity="0.3" fill="none" />
+
+            {/* Inner Bulge Pulse */}
+            <motion.circle 
+                cx="50" cy="50" r="8" fill="white" 
+                animate={{ opacity: [0, 0.3, 0], r: [8, 12, 8] }}
                 transition={{ duration: cycleDuration, ease, repeat: Infinity }}
+                style={{ mixBlendMode: 'overlay' }}
             />
         </motion.g>
     );
 
     // 3. ORBITAL (Balance & Focus)
-    // Thick ring with floating core.
     const Orbital = () => (
         <g>
             <defs>
                 <linearGradient id={`grad-orb-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#e2e8f0" />
+                    <stop offset="0%" stopColor={c} stopOpacity="1" />
                     <stop offset="100%" stopColor={c} stopOpacity="0.8" />
                 </linearGradient>
             </defs>
             {/* Shadow */}
-            <ellipse cx="50" cy="85" rx="12" ry="3" fill="black" opacity="0.2" filter="blur(2px)" />
+            <ellipse cx="50" cy="85" rx="20" ry="4" fill="black" opacity="0.15" filter="blur(4px)" />
 
             {/* Ring */}
-            <circle cx="50" cy="50" r="28" stroke={`url(#grad-orb-${uid})`} strokeWidth="8" fill="none" opacity="0.9" />
-            
+            <path 
+                d="M 50 25 A 25 25 0 1 0 50 75 A 25 25 0 1 0 50 25 M 50 33 A 17 17 0 1 1 50 67 A 17 17 0 1 1 50 33" 
+                fill={`url(#grad-orb-${uid})`} 
+                fillRule="evenodd"
+            />
+            {/* Ring Highlight */}
+            <path d="M 35 35 Q 50 20 65 35" stroke="white" strokeWidth="2" strokeOpacity="0.3" fill="none" />
+
             {/* Floating Core */}
             <motion.circle 
-                cx="50" cy="50" r="9" fill={c}
-                animate={{ y: [-6, 6, -6] }}
+                cx="50" cy="50" r="10" fill={c}
+                animate={{ y: [-8, 8, -8] }}
                 transition={{ duration: cycleDuration, ease, repeat: Infinity }}
             >
             </motion.circle>
-            {/* Core Highlight */}
+            {/* Core Reflection */}
             <motion.circle 
-                cx="47" cy="47" r="3" fill="white" opacity="0.4"
-                animate={{ y: [-6, 6, -6] }}
+                cx="47" cy="47" r="3" fill="white" opacity="0.5"
+                animate={{ y: [-8, 8, -8] }}
                 transition={{ duration: cycleDuration, ease, repeat: Infinity }}
             />
         </g>
     );
 
     // 4. STACK (Structure & Knowledge)
-    // 3 plates expanding.
     const Stack = () => (
         <g>
             {/* Shadow */}
-            <ellipse cx="50" cy="82" rx="20" ry="4" fill="black" opacity="0.2" filter="blur(3px)" />
+            <ellipse cx="50" cy="85" rx="22" ry="5" fill="black" opacity="0.15" filter="blur(4px)" />
 
-            <motion.rect 
-                x="25" y="25" width="50" height="8" rx="2" fill={c} opacity="0.6"
-                animate={{ y: [0, -6, 0] }}
-                transition={{ duration: cycleDuration, ease, repeat: Infinity, delay: 0.2 }}
-            />
-            <motion.rect 
-                x="25" y="45" width="50" height="8" rx="2" fill={c} opacity="0.8"
-                animate={{ y: [0, 0, 0] }} // Center stays relatively stable
+            {/* Top Plate */}
+            <motion.path 
+                d="M 25 35 L 75 35 L 70 45 L 20 45 Z" fill={c} opacity="0.8"
+                animate={{ y: [0, -8, 0] }}
                 transition={{ duration: cycleDuration, ease, repeat: Infinity }}
             />
-            <motion.rect 
-                x="25" y="65" width="50" height="8" rx="2" fill={c} opacity="1"
-                animate={{ y: [0, 6, 0] }}
-                transition={{ duration: cycleDuration, ease, repeat: Infinity, delay: 0.2 }}
+            {/* Middle Plate */}
+            <motion.path 
+                d="M 25 50 L 75 50 L 70 60 L 20 60 Z" fill={c} opacity="0.9"
+                animate={{ y: [0, 0, 0] }}
+                transition={{ duration: cycleDuration, ease, repeat: Infinity }}
             />
+            {/* Bottom Plate */}
+            <motion.path 
+                d="M 25 65 L 75 65 L 70 75 L 20 75 Z" fill={c} opacity="1"
+                animate={{ y: [0, 8, 0] }}
+                transition={{ duration: cycleDuration, ease, repeat: Infinity }}
+            />
+            
+            {/* Plate Edges Highlights */}
+            <motion.path d="M 25 35 L 75 35" stroke="white" strokeWidth="1" strokeOpacity="0.4" animate={{ y: [0, -8, 0] }} transition={{ duration: cycleDuration, ease, repeat: Infinity }} />
+            <motion.path d="M 25 50 L 75 50" stroke="white" strokeWidth="1" strokeOpacity="0.4" animate={{ y: [0, 0, 0] }} transition={{ duration: cycleDuration, ease, repeat: Infinity }} />
+            <motion.path d="M 25 65 L 75 65" stroke="white" strokeWidth="1" strokeOpacity="0.4" animate={{ y: [0, 8, 0] }} transition={{ duration: cycleDuration, ease, repeat: Infinity }} />
         </g>
     );
 
     // 5. LENS (Vision & Creativity)
-    // Convex disk with breathing glow.
     const Lens = () => (
         <g>
             <defs>
-                <radialGradient id={`grad-lens-${uid}`} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-                    <stop offset="40%" stopColor="#ffffff" stopOpacity="0.9"/>
-                    <stop offset="100%" stopColor={c} stopOpacity="0.9"/>
+                <radialGradient id={`grad-lens-${uid}`} cx="50%" cy="50%" r="50%" fx="30%" fy="30%">
+                    <stop offset="0%" stopColor={c} stopOpacity="0.6" />
+                    <stop offset="100%" stopColor={c} stopOpacity="1" />
                 </radialGradient>
             </defs>
             {/* Shadow */}
-            <ellipse cx="50" cy="85" rx="15" ry="3" fill="black" opacity="0.2" filter="blur(3px)" />
+            <ellipse cx="50" cy="85" rx="18" ry="4" fill="black" opacity="0.15" filter="blur(4px)" />
 
+            {/* Lens Body */}
+            <circle cx="50" cy="50" r="30" fill={`url(#grad-lens-${uid})`} />
+            
+            {/* Convex Border */}
+            <circle cx="50" cy="50" r="30" fill="none" stroke={c} strokeWidth="2" strokeOpacity="0.5" />
+
+            {/* Breathing Center Glow */}
             <motion.circle 
-                cx="50" cy="50" r="30" fill={`url(#grad-lens-${uid})`} 
-                stroke={c} strokeWidth="1" strokeOpacity="0.3"
-                animate={{ r: [30, 32, 30] }}
+                cx="50" cy="50" r="10" fill="white" 
+                animate={{ opacity: [0.1, 0.4, 0.1], r: [10, 15, 10] }}
                 transition={{ duration: cycleDuration, ease, repeat: Infinity }}
+                style={{ mixBlendMode: 'screen' }}
             />
-            {/* Glint / Reflection */}
-            <circle cx="35" cy="35" r="5" fill="white" opacity="0.6" filter="blur(1px)" />
+            
+            {/* Reflection Specular */}
+            <ellipse cx="35" cy="35" rx="8" ry="5" fill="white" opacity="0.3" transform="rotate(-45 35 35)" />
         </g>
     );
 
@@ -229,9 +257,9 @@ const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, co
     };
 
     return (
-        <div className={`relative w-24 h-24 flex items-center justify-center transition-all duration-500 ${isActive ? 'scale-110 opacity-100' : 'opacity-70 grayscale-[0.3] hover:grayscale-0 hover:scale-105'}`}>
+        <div className={`relative w-24 h-24 flex items-center justify-center transition-all duration-500 ${isActive ? 'scale-110 opacity-100' : 'opacity-80 grayscale-[0.2] hover:grayscale-0 hover:scale-105'}`}>
             <motion.div
-                animate={isThinking ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+                animate={isThinking ? { scale: [1, 1.05, 1] } : { scale: 1 }}
                 transition={isThinking ? { duration: 1, ease: "easeInOut", repeat: Infinity } : { duration: 0.5 }}
                 className="w-full h-full"
             >
