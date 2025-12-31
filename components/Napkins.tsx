@@ -10,7 +10,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, CornerUpLeft, CornerUpRight } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, CornerUpLeft, CornerUpRight, MoreHorizontal } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -49,19 +49,13 @@ const UNSPLASH_PRESETS = [
     'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80', // Nature
 ];
 
-// Removed noise for cleaner look
-const NOISE_PATTERN = ``; 
-
-// --- MASONRY BREAKPOINTS ---
 const breakpointColumnsObj = {
   default: 2,
   767: 1 // 1 column for mobile (<= 767px)
 };
 
-// --- HELPER: ALLOW DATA URIS ---
 const allowDataUrls = (url: string) => url;
 
-// --- HELPER: IMAGE COMPRESSION ---
 const processImage = (file: File | Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
         if (!file.type.startsWith('image/')) {
@@ -109,14 +103,12 @@ const processImage = (file: File | Blob): Promise<string> => {
     });
 };
 
-// --- HELPER: EXTRACT URL ---
 const findFirstUrl = (text: string): string | null => {
     const maskedText = text.replace(/!\[.*?\]\(.*?\)/g, '');
     const match = maskedText.match(/(https?:\/\/[^\s\)]+)/);
     return match ? match[0] : null;
 };
 
-// --- COMPONENT: LINK PREVIEW ---
 const LinkPreview = React.memo(({ url }: { url: string }) => {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -184,7 +176,6 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
     );
 });
 
-// Markdown Styles
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
@@ -204,73 +195,8 @@ const markdownComponents = {
     u: ({node, ...props}: any) => <u {...props} /> 
 };
 
-// Converters
-const markdownToHtml = (md: string) => {
-    if (!md) return '';
-    let html = md;
-    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
-    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
-    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
-    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
-        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
-    });
-    html = html.replace(/\n/g, '<br>');
-    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
-    return html;
-};
-
-const htmlToMarkdown = (html: string) => {
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-
-    const wrap = (text: string, marker: string) => {
-        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
-        if (match && match[2]) {
-            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
-        }
-        return text.trim() ? `${marker}${text}${marker}` : '';
-    };
-
-    const walk = (node: Node): string => {
-        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
-        if (node.nodeType === Node.ELEMENT_NODE) {
-            const el = node as HTMLElement;
-            const tag = el.tagName.toLowerCase();
-            let content = '';
-            el.childNodes.forEach(child => content += walk(child));
-            
-            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
-            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
-            if (el.style.fontStyle === 'italic') return wrap(content, '*');
-            
-            switch (tag) {
-                case 'b': case 'strong': return wrap(content, '**');
-                case 'i': case 'em': return wrap(content, '*');
-                case 'u': return content.trim() ? `<u>${content}</u>` : '';
-                case 'code': return `\`${content}\``;
-                case 'h1': return `\n# ${content}\n`;
-                case 'h2': return `\n## ${content}\n`;
-                case 'div': case 'p': return `\n${content}\n`;
-                case 'br': return '\n';
-                case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
-                default: return content;
-            }
-        }
-        return '';
-    };
-    let md = walk(temp);
-    md = md.replace(/\n{3,}/g, '\n\n').trim();
-    md = md.replace(/&nbsp;/g, ' ');
-    return applyTypography(md);
-};
-
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
-// Tag Selector
 const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[]) => void, existingTags: string[], placeholder?: string }> = ({ selectedTags, onChange, existingTags, placeholder = "Добавить теги..." }) => {
     const [input, setInput] = useState('');
     const [isOpen, setIsOpen] = useState(false);
@@ -318,13 +244,11 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
     );
 };
 
-// Cover Picker
 const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => void }> = ({ onSelect, onClose }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS);
     const [loading, setLoading] = useState(false);
     
-    // Robust Env Getter for the API Key inside the component or file scope
     const getUnsplashKey = () => {
         const keys = [
             'UNSPLASH_ACCESS_KEY', 
@@ -446,6 +370,7 @@ interface NoteCardProps {
         moveNoteToSandbox: (id: string) => void;
         archiveNote: (id: string) => void;
         moveNoteToInbox: (id: string) => void;
+        deleteNote: (id: string) => void;
     }
 }
 
@@ -455,7 +380,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
 
     const handleArchive = (e: React.MouseEvent) => {
         e.stopPropagation();
-        // Skip confirmation for smoother flow, or implement toast undo
         setIsExiting(true);
         setTimeout(() => {
             handlers.archiveNote(note.id);
@@ -516,4 +440,275 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                                 <button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1} /></button>
                             </Tooltip>
                             
-                            <div className="w-px h-3 bg-slate-300 dark:bg-slate-600 mx-0
+                            <div className="w-px h-3 bg-slate-300 dark:bg-slate-600 mx-0.5" />
+
+                            <Tooltip content="В архив">
+                                <button onClick={handleArchive} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors opacity-60 hover:opacity-100"><Archive size={16} strokeWidth={1} /></button>
+                            </Tooltip>
+                        </>
+                    ) : (
+                        <Tooltip content="Восстановить">
+                            <button onClick={handleRestore} className="p-2 text-slate-400 hover:text-emerald-600 transition-colors opacity-60 hover:opacity-100"><RotateCcw size={16} strokeWidth={1} /></button>
+                        </Tooltip>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-1 bg-white/50 dark:bg-black/20 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
+                     <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
+                        <button onClick={(e) => handlers.togglePin(e, note)} className={`p-2 transition-colors opacity-60 hover:opacity-100 ${note.isPinned ? 'text-indigo-500' : 'text-slate-400 hover:text-indigo-500'}`}>
+                            <Pin size={16} strokeWidth={1} className={note.isPinned ? "fill-current" : ""} />
+                        </button>
+                    </Tooltip>
+                    <Tooltip content="Удалить">
+                        <button onClick={(e) => { e.stopPropagation(); if(confirm('Удалить навсегда?')) handlers.deleteNote(note.id); }} className="p-2 text-slate-400 hover:text-red-500 transition-colors opacity-60 hover:opacity-100"><Trash2 size={16} strokeWidth={1} /></button>
+                    </Tooltip>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask }) => {
+    const [filter, setFilter] = useState<'inbox' | 'archive'>('inbox');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isInputOpen, setIsInputOpen] = useState(false);
+    const [title, setTitle] = useState('');
+    const [content, setContent] = useState('');
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [selectedColor, setSelectedColor] = useState('white');
+    const [selectedCover, setSelectedCover] = useState<string>();
+    const [activeNote, setActiveNote] = useState<Note | null>(null);
+    const [showCoverPicker, setShowCoverPicker] = useState(false);
+
+    const existingTags = Array.from(new Set(notes.flatMap(n => n.tags)));
+
+    const filteredNotes = notes
+        .filter(n => (filter === 'inbox' ? n.status !== 'archived' : n.status === 'archived'))
+        .filter(n => !searchQuery || n.content.toLowerCase().includes(searchQuery.toLowerCase()) || n.title?.toLowerCase().includes(searchQuery.toLowerCase()) || n.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())))
+        .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || b.createdAt - a.createdAt);
+
+    const handleSave = () => {
+        if (!content.trim() && !title.trim()) return;
+        const note: Note = {
+            id: activeNote ? activeNote.id : Date.now().toString(),
+            title: applyTypography(title),
+            content: applyTypography(content),
+            tags: selectedTags,
+            color: selectedColor,
+            createdAt: activeNote ? activeNote.createdAt : Date.now(),
+            status: activeNote ? activeNote.status : 'inbox',
+            coverUrl: selectedCover,
+            isPinned: activeNote?.isPinned
+        };
+        
+        if (activeNote) {
+            updateNote(note);
+        } else {
+            addNote(note);
+        }
+        
+        handleCloseEditor();
+    };
+
+    const handleCloseEditor = () => {
+        setIsInputOpen(false);
+        setActiveNote(null);
+        setTitle('');
+        setContent('');
+        setSelectedTags([]);
+        setSelectedColor('white');
+        setSelectedCover(undefined);
+    };
+
+    const openEditor = (note?: Note) => {
+        if (note) {
+            setActiveNote(note);
+            setTitle(note.title || '');
+            setContent(note.content);
+            setSelectedTags(note.tags);
+            setSelectedColor(note.color || 'white');
+            setSelectedCover(note.coverUrl);
+        }
+        setIsInputOpen(true);
+    };
+
+    const handleAutoTag = async () => {
+        if (!content) return;
+        const tags = await autoTagNote(content, config);
+        setSelectedTags([...new Set([...selectedTags, ...tags])]);
+    };
+
+    // Handlers wrapper for NoteCard
+    const cardHandlers = useMemo(() => ({
+        handleDragStart: (e: React.DragEvent, id: string) => {
+            e.dataTransfer.setData('noteId', id);
+            e.dataTransfer.effectAllowed = "move";
+        },
+        handleDragOver: (e: React.DragEvent) => e.preventDefault(),
+        handleDrop: (e: React.DragEvent, targetId: string) => {
+            e.preventDefault();
+            const draggedId = e.dataTransfer.getData('noteId');
+            if (draggedId && draggedId !== targetId) {
+                reorderNote(draggedId, targetId);
+            }
+        },
+        handleOpenNote: (note: Note) => openEditor(note),
+        togglePin: (e: React.MouseEvent, note: Note) => {
+            e.stopPropagation();
+            updateNote({ ...note, isPinned: !note.isPinned });
+        },
+        onAddTask,
+        moveNoteToSandbox,
+        archiveNote,
+        moveNoteToInbox,
+        deleteNote
+    }), [onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, deleteNote, reorderNote, updateNote]);
+
+    return (
+        <div className="h-full flex flex-col bg-[#f8fafc] dark:bg-[#0f172a] relative overflow-hidden">
+            {/* HEADER */}
+            <div className="p-4 md:p-8 pb-0 shrink-0 z-20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Заметки</h1>
+                    <div className="flex gap-4 mt-2">
+                        <button onClick={() => setFilter('inbox')} className={`text-sm font-medium transition-colors ${filter === 'inbox' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600'}`}>Входящие</button>
+                        <button onClick={() => setFilter('archive')} className={`text-sm font-medium transition-colors ${filter === 'archive' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600'}`}>Архив</button>
+                    </div>
+                </div>
+                <div className="relative w-full md:w-auto">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input 
+                        type="text" 
+                        placeholder="Поиск..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full md:w-64 pl-9 pr-4 py-2 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition-all shadow-sm"
+                    />
+                </div>
+            </div>
+
+            {/* CONTENT */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar-light p-4 md:p-8 relative z-10" onDragOver={e => e.preventDefault()}>
+                {filteredNotes.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center opacity-60">
+                        <EmptyState 
+                            icon={filter === 'inbox' ? Library : Archive} 
+                            title={filter === 'inbox' ? "Пусто" : "Архив пуст"} 
+                            description={filter === 'inbox' ? "Нажми +, чтобы создать заметку" : "Здесь будут храниться обработанные мысли"} 
+                            color="slate"
+                        />
+                    </div>
+                ) : (
+                    <Masonry
+                        breakpointCols={breakpointColumnsObj}
+                        className="flex w-auto -ml-6"
+                        columnClassName="pl-6 bg-clip-padding"
+                    >
+                        {filteredNotes.map(note => (
+                            <NoteCard 
+                                key={note.id} 
+                                note={note} 
+                                isArchived={filter === 'archive'}
+                                handlers={cardHandlers}
+                            />
+                        ))}
+                    </Masonry>
+                )}
+            </div>
+
+            {/* FAB */}
+            <div className="absolute bottom-6 right-6 z-30">
+                <button 
+                    onClick={() => openEditor()}
+                    className="w-14 h-14 bg-slate-900 dark:bg-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+                >
+                    <Plus size={24} />
+                </button>
+            </div>
+
+            {/* EDITOR MODAL */}
+            <AnimatePresence>
+                {isInputOpen && (
+                    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseEditor}>
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            onClick={e => e.stopPropagation()}
+                            className={`w-full max-w-2xl ${getNoteColorClass(selectedColor)} rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden relative transition-colors duration-300`}
+                        >
+                            {/* Toolbar */}
+                            <div className="flex justify-between items-center p-4 border-b border-black/5 dark:border-white/5 bg-white/50 dark:bg-black/20 backdrop-blur-md">
+                                <div className="flex items-center gap-2">
+                                    <div className="relative">
+                                        <button onClick={() => setShowCoverPicker(!showCoverPicker)} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors" title="Обложка">
+                                            <ImageIcon size={18} />
+                                        </button>
+                                        {showCoverPicker && <CoverPicker onSelect={setSelectedCover} onClose={() => setShowCoverPicker(false)} />}
+                                    </div>
+                                    <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-1" />
+                                    <div className="flex gap-1">
+                                        {colors.map(c => (
+                                            <button 
+                                                key={c.id} 
+                                                onClick={() => setSelectedColor(c.id)}
+                                                className={`w-5 h-5 rounded-full border border-black/10 dark:border-white/10 ${c.class.split(' ')[0]} ${selectedColor === c.id ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-900' : ''}`}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={handleAutoTag} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
+                                        <Sparkles size={12} /> Auto Tag
+                                    </button>
+                                    <button onClick={handleCloseEditor} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Scrollable Content */}
+                            <div className="flex-1 overflow-y-auto custom-scrollbar-light relative">
+                                {selectedCover && (
+                                    <div className="relative h-48 w-full group">
+                                        <img src={selectedCover} className="w-full h-full object-cover" alt="Cover" />
+                                        <button onClick={() => setSelectedCover(undefined)} className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
+                                    </div>
+                                )}
+                                <div className="p-6 md:p-8">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Заголовок" 
+                                        className="w-full bg-transparent text-2xl font-serif font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 dark:placeholder:text-slate-600 outline-none mb-4"
+                                        value={title}
+                                        onChange={e => setTitle(e.target.value)}
+                                    />
+                                    <textarea 
+                                        placeholder="Начни писать..." 
+                                        className="w-full bg-transparent text-base text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-600 outline-none resize-none min-h-[300px] leading-relaxed font-sans"
+                                        value={content}
+                                        onChange={e => setContent(e.target.value)}
+                                    />
+                                    <div className="mt-6 pt-6 border-t border-black/5 dark:border-white/5">
+                                        <TagSelector selectedTags={selectedTags} onChange={setSelectedTags} existingTags={existingTags} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="p-4 bg-white/50 dark:bg-black/20 backdrop-blur-md border-t border-black/5 dark:border-white/5 flex justify-end gap-3">
+                                {activeNote && (
+                                    <button onClick={() => { if(confirm('Удалить?')) { deleteNote(activeNote.id); handleCloseEditor(); } }} className="mr-auto text-red-400 hover:text-red-500 p-2"><Trash2 size={18} /></button>
+                                )}
+                                <button onClick={handleCloseEditor} className="px-4 py-2 text-slate-500 hover:bg-black/5 dark:text-slate-400 dark:hover:bg-white/5 rounded-xl font-medium transition-colors">Отмена</button>
+                                <button onClick={handleSave} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl font-medium shadow-lg hover:scale-105 active:scale-95 transition-all">Сохранить</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+export default Napkins;
