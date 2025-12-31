@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
@@ -23,11 +23,17 @@ interface Props {
   onClearInitialTask?: () => void;
 }
 
-// --- VISUAL CONSTANTS ---
-const SPHERE_COLORS: Record<string, string> = {
-    productivity: '#4682B4', // Steel Blue
-    growth: '#50C878',       // Emerald/Mint
-    relationships: '#F08080' // Light Coral
+// --- TECHNO VISUAL CONSTANTS ---
+const NEON_COLORS: Record<string, string> = {
+    productivity: '#0075FF', // Cyber Blue
+    growth: '#00FFA3',       // Electric Mint
+    relationships: '#FF007A' // Neon Rose
+};
+
+// Dot Grid Background Pattern
+const DOT_GRID_STYLE = {
+    backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
+    backgroundSize: '24px 24px'
 };
 
 const cleanHeader = (children: React.ReactNode): React.ReactNode => {
@@ -810,11 +816,17 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
   const getTaskForModal = () => tasks.find(t => t.id === activeModal?.taskId);
 
-  // --- HELPER: Get Sphere Border Color ---
-  const getSphereBorderColor = (spheres?: string[]): string => {
-      if (!spheres || spheres.length === 0) return 'transparent';
-      const first = spheres[0];
-      return SPHERE_COLORS[first] || 'transparent';
+  // --- HELPER: TECHNO TIME & GLOW ---
+  const getTechTime = (createdAt: number) => {
+      const diff = Date.now() - createdAt;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      return `T+${days}d`;
+  };
+
+  const getTechGlow = (spheres: string[] | undefined, activeFilter: string | null) => {
+      if (!activeFilter || !spheres || !spheres.includes(activeFilter)) return 'none';
+      const color = NEON_COLORS[activeFilter];
+      return `0 0 20px -5px ${color}`;
   };
 
   const renderCardChecklist = (task: Task) => (
@@ -876,23 +888,23 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     
     return (
     <div className="flex flex-col h-full md:h-auto md:min-h-0 bg-transparent">
-        {/* Floating Header */}
-        <h3 className="hidden md:flex font-serif font-medium text-xl text-slate-900 dark:text-slate-100 mb-6 justify-center items-center text-center">
-            {col.title} 
-            <span className="ml-2 text-sm text-slate-400 font-sans font-normal opacity-50">{tasksInCol.length}</span>
-        </h3>
+        {/* Floating Header - Serif Title + Mono Counter */}
+        <div className="hidden md:flex justify-center items-center text-center mb-6 gap-2">
+            <h3 className="font-serif font-medium text-xl text-slate-900 dark:text-slate-100">{col.title}</h3>
+            <span className="text-xs font-mono text-slate-400 bg-white/50 dark:bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700/50 backdrop-blur-sm">{tasksInCol.length}</span>
+        </div>
         
         {col.id === 'todo' && (
              <div className="mb-4 px-1">
                 {!isCreatorOpen ? (
                     <button 
                         onClick={() => setIsCreatorOpen(true)}
-                        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-all uppercase tracking-wider"
+                        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-all uppercase tracking-wider font-mono"
                     >
-                        <Plus size={14} /> Добавить задачу
+                        <Plus size={14} /> NEW_TASK
                     </button>
                 ) : (
-                    <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm animate-in slide-in-from-top-2">
+                    <div className="bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm animate-in slide-in-from-top-2">
                         <input
                             type="text"
                             placeholder="Название"
@@ -912,14 +924,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 onClick={cancelCreateTask}
                                 className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 rounded transition-colors"
                             >
-                                Отмена
+                                CANCEL
                             </button>
                             <button 
                                 onClick={handleCreateTask}
                                 disabled={!newTaskTitle.trim() && !newTaskContent.trim()}
-                                className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 font-medium transition-colors"
+                                className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 font-medium transition-colors font-mono"
                             >
-                                Добавить
+                                EXECUTE
                             </button>
                         </div>
                     </div>
@@ -936,18 +948,18 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     exit={{ opacity: 0 }}
                     className="py-12 flex flex-col items-center justify-center text-center"
                 >
-                   <span className="font-serif text-slate-400 dark:text-slate-600 text-lg italic">Здесь пока пусто</span>
+                   <span className="font-mono text-slate-300 dark:text-slate-700 text-xs uppercase tracking-widest">[NO DATA]</span>
                 </motion.div>
             ) : (
                 tasksInCol.map((task, i) => {
-                    const isDoneColumn = col.id === 'done';
-                    const sphereBorderColor = getSphereBorderColor(task.spheres);
-                    
                     const subtasksTotal = task.subtasks?.length || 0;
                     const subtasksDone = task.subtasks?.filter(s => s.isCompleted).length || 0;
                     const progressPercent = subtasksTotal > 0 ? Math.round((subtasksDone / subtasksTotal) * 100) : 0;
                     const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
                     const hasActiveChallenge = task.activeChallenge && !task.isChallengeCompleted;
+                    
+                    // TECHNO STYLING
+                    const glow = getTechGlow(task.spheres, activeSphereFilter);
 
                     return (
                     <motion.div 
@@ -956,14 +968,19 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1], delay: i * 0.05 }}
+                        whileHover={{ 
+                            y: -8, 
+                            scale: 1.01,
+                            boxShadow: "0 20px 40px -10px rgba(0,0,0,0.15)"
+                        }}
+                        transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
+                        style={{ boxShadow: glow }}
                         draggable 
                         onDragStart={(e) => handleDragStart(e as any, task.id)} 
                         onDrop={(e) => handleTaskDrop(e as any, task.id)} 
                         onDragOver={handleDragOver} 
                         onClick={() => setActiveModal({taskId: task.id, type: 'details'})} 
-                        className={`bg-white dark:bg-[#1e293b] p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] hover:-translate-y-1.5 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-grab relative group active:scale-[1.02] active:shadow-lg overflow-hidden`}
-                        style={{ borderLeft: `2px solid ${sphereBorderColor}` }}
+                        className={`bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-md p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 cursor-grab relative group active:scale-[1.02] active:shadow-lg overflow-hidden`}
                     >
                         
                         {/* HEADER: Title + Control */}
@@ -998,7 +1015,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             <>
                                 {subtasksTotal > 0 && (
                                     <div className="flex items-center gap-3 mt-2 mb-2 h-6 w-full">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 dark:text-slate-500 shrink-0">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 dark:text-slate-500 shrink-0 font-mono">
                                             <ListTodo size={12} />
                                             <span>{subtasksDone}/{subtasksTotal}</span>
                                         </div>
@@ -1056,7 +1073,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             <>
                                 {subtasksTotal > 0 && (
                                     <div className="flex items-center gap-3 mt-2 mb-2 h-6 w-full">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 dark:text-slate-500 shrink-0">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 dark:text-slate-500 shrink-0 font-mono">
                                             <ListTodo size={12} />
                                             <span>{subtasksDone}/{subtasksTotal}</span>
                                         </div>
@@ -1098,8 +1115,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             </>
                         )}
 
-                        <div className="mt-auto pt-3 flex flex-col gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <div className="flex justify-end items-center w-full gap-2">
+                        <div className="mt-auto pt-3 flex flex-col gap-3">
+                            <div className="flex justify-between items-end w-full gap-2">
+                                
+                                {/* TECHNO FOOTER (DATA ACCENTS) */}
+                                <div className="text-[9px] font-mono text-slate-300 dark:text-slate-600 flex gap-2 select-none pointer-events-none">
+                                    <span>[ID: {task.id.slice(-4)}]</span>
+                                    <span>[{getTechTime(task.createdAt)}]</span>
+                                </div>
+
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                {col.id === 'todo' && (
                                     <>
                                         <div className="flex gap-1">
@@ -1225,6 +1250,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         </div>
                                     </>
                                )}
+                               </div>
                             </div>
                         </div>
                     </motion.div>
@@ -1237,8 +1263,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   return (
-    <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden">
-      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc] md:dark:bg-[#0f172a] md:pb-6 transition-colors duration-300">
+    <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden" style={DOT_GRID_STYLE}>
+      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc]/95 md:dark:bg-[#0f172a]/95 md:pb-6 transition-colors duration-300 backdrop-blur-sm">
         <div>
             <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
@@ -1304,7 +1330,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     onClick={() => setActiveMobileTab(col.id as any)}
                     className={getTabClass(col.id, activeMobileTab === col.id)}
                 >
-                    {col.title} <span className="opacity-60 text-[10px]">({activeTasks.filter(t => t.column === col.id).length})</span>
+                    {col.title} <span className="opacity-60 text-[10px] font-mono">({activeTasks.filter(t => t.column === col.id).length})</span>
                 </button>
             ))}
          </div>
