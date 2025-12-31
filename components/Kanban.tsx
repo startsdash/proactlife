@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
@@ -1054,43 +1055,28 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             <>
                                 {renderCardChecklist(task)}
 
-                                {task.activeChallenge && !draftChallenge && (
-                                    <div className="mt-2 mb-2">
-                                        <CollapsibleSection 
-                                            title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} 
-                                            icon={
-                                                task.isChallengeCompleted ? (
-                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                                                ) : (
-                                                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-                                                )
-                                            }
-                                            isCard
-                                        >
-                                            <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-lg p-3 border border-slate-100 dark:border-slate-700 shadow-inner relative overflow-hidden group">
-                                                 <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                     <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
-                                                         <button 
-                                                            onClick={(e) => toggleChallengeCompleteFromCard(e, task)}
-                                                            className={`w-5 h-5 rounded-full border flex items-center justify-center bg-white dark:bg-slate-800 transition-colors ${task.isChallengeCompleted ? 'border-emerald-500 text-emerald-500' : 'border-slate-300 dark:border-slate-500 hover:border-emerald-500 hover:text-emerald-500 text-transparent'}`}
-                                                         >
-                                                             <Check size={12} />
-                                                         </button>
-                                                     </Tooltip>
-                                                 </div>
-
-                                                 {task.isChallengeCompleted ? (
-                                                    <div className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-                                                       <StaticChallengeRenderer content={task.activeChallenge || ''} mode="history" />
-                                                    </div>
-                                                 ) : (
-                                                    <InteractiveChallenge 
-                                                        content={task.activeChallenge || ''} 
-                                                        onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
-                                                    />
-                                                 )}
-                                            </div>
-                                        </CollapsibleSection>
+                                {task.activeChallenge && !task.isChallengeCompleted && !draftChallenge && (
+                                    <div 
+                                        className="mt-3 mb-2 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded-xl p-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors group/challenge"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActiveModal({taskId: task.id, type: 'details'});
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Zap size={12} className="text-indigo-500" fill="currentColor" />
+                                            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Активный челлендж</span>
+                                        </div>
+                                        <div className="pl-1">
+                                             <InteractiveChallenge 
+                                                content={task.activeChallenge} 
+                                                onToggle={(idx) => toggleChallengeCheckbox(idx, task)} 
+                                            />
+                                        </div>
+                                        <div className="mt-2 flex items-center justify-between border-t border-indigo-100 dark:border-indigo-500/20 pt-2 opacity-0 group-hover/challenge:opacity-100 transition-opacity">
+                                            <span className="text-[9px] text-indigo-400 font-medium">Нажмите для деталей</span>
+                                            <ChevronRight size={12} className="text-indigo-400" />
+                                        </div>
                                     </div>
                                 )}
                             </>
