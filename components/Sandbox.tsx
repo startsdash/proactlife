@@ -87,14 +87,23 @@ const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, co
                     <stop offset="0%" stopColor="#ffffff" />
                     <stop offset="100%" stopColor={c} />
                 </linearGradient>
+                <filter id={`glow-mono-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="2" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
             </defs>
-            <rect x="32" y="20" width="36" height="60" rx="8" fill={`url(#grad-mono-${uid})`} stroke={c} strokeWidth="0.5" strokeOpacity="0.3" />
-            {/* Highlight line */}
+            {/* Soft Shadow behind */}
+            <ellipse cx="50" cy="85" rx="15" ry="3" fill="black" opacity="0.2" filter="blur(2px)" />
+            
+            <rect x="32" y="15" width="36" height="65" rx="8" fill={`url(#grad-mono-${uid})`} stroke={c} strokeWidth="0.5" strokeOpacity="0.3" />
+            
+            {/* Highlight line sweep */}
             <motion.rect 
-                x="32" y="20" width="36" height="60" rx="8" 
-                fill="url(#grad-mono-shine)" opacity="0.3"
+                x="32" y="15" width="36" height="65" rx="8" 
+                fill={`url(#grad-mono-${uid})`} opacity="0.3"
                 animate={{ opacity: [0.1, 0.4, 0.1] }}
                 transition={{ duration: cycleDuration, ease, repeat: Infinity }}
+                style={{ mixBlendMode: 'overlay' }}
             />
         </motion.g>
     );
@@ -108,13 +117,22 @@ const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, co
             style={{ transformOrigin: "50% 50%" }}
         >
             <defs>
-                <linearGradient id={`grad-cap-${uid}`} x1="0%" y1="50%" x2="100%" y2="50%">
-                    <stop offset="0%" stopColor="#ffffff" />
+                <linearGradient id={`grad-cap-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#f8fafc" />
                     <stop offset="100%" stopColor={c} />
                 </linearGradient>
             </defs>
-            <rect x="20" y="35" width="60" height="30" rx="15" fill={`url(#grad-cap-${uid})`} stroke={c} strokeWidth="0.5" strokeOpacity="0.3" />
-            <ellipse cx="35" cy="42" rx="8" ry="3" fill="white" opacity="0.6" />
+            {/* Soft Shadow */}
+            <ellipse cx="50" cy="70" rx="25" ry="4" fill="black" opacity="0.2" filter="blur(3px)" />
+
+            <rect x="15" y="35" width="70" height="30" rx="15" fill={`url(#grad-cap-${uid})`} stroke={c} strokeWidth="0.5" strokeOpacity="0.2" />
+            
+            {/* Inner glow pulse */}
+            <motion.ellipse 
+                cx="50" cy="42" rx="15" ry="5" fill="white" opacity="0.4"
+                animate={{ opacity: [0.2, 0.6, 0.2] }}
+                transition={{ duration: cycleDuration, ease, repeat: Infinity }}
+            />
         </motion.g>
     );
 
@@ -123,17 +141,28 @@ const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, co
     const Orbital = () => (
         <g>
             <defs>
-                <linearGradient id={`grad-orb-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#f8fafc" />
-                    <stop offset="100%" stopColor={c} stopOpacity="0.5" />
+                <linearGradient id={`grad-orb-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#e2e8f0" />
+                    <stop offset="100%" stopColor={c} stopOpacity="0.8" />
                 </linearGradient>
             </defs>
+            {/* Shadow */}
+            <ellipse cx="50" cy="85" rx="12" ry="3" fill="black" opacity="0.2" filter="blur(2px)" />
+
             {/* Ring */}
-            <circle cx="50" cy="50" r="28" stroke={`url(#grad-orb-${uid})`} strokeWidth="10" fill="none" />
-            {/* Core */}
+            <circle cx="50" cy="50" r="28" stroke={`url(#grad-orb-${uid})`} strokeWidth="8" fill="none" opacity="0.9" />
+            
+            {/* Floating Core */}
             <motion.circle 
-                cx="50" cy="50" r="10" fill={c}
-                animate={{ y: [-4, 4, -4] }}
+                cx="50" cy="50" r="9" fill={c}
+                animate={{ y: [-6, 6, -6] }}
+                transition={{ duration: cycleDuration, ease, repeat: Infinity }}
+            >
+            </motion.circle>
+            {/* Core Highlight */}
+            <motion.circle 
+                cx="47" cy="47" r="3" fill="white" opacity="0.4"
+                animate={{ y: [-6, 6, -6] }}
                 transition={{ duration: cycleDuration, ease, repeat: Infinity }}
             />
         </g>
@@ -143,19 +172,22 @@ const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, co
     // 3 plates expanding.
     const Stack = () => (
         <g>
+            {/* Shadow */}
+            <ellipse cx="50" cy="82" rx="20" ry="4" fill="black" opacity="0.2" filter="blur(3px)" />
+
             <motion.rect 
-                x="25" y="25" width="50" height="10" rx="2" fill={c} opacity="0.4"
-                animate={{ y: [0, -4, 0] }}
+                x="25" y="25" width="50" height="8" rx="2" fill={c} opacity="0.6"
+                animate={{ y: [0, -6, 0] }}
                 transition={{ duration: cycleDuration, ease, repeat: Infinity, delay: 0.2 }}
             />
             <motion.rect 
-                x="25" y="45" width="50" height="10" rx="2" fill={c} opacity="0.7"
-                animate={{ y: [0, 0, 0] }} // Center stays
+                x="25" y="45" width="50" height="8" rx="2" fill={c} opacity="0.8"
+                animate={{ y: [0, 0, 0] }} // Center stays relatively stable
                 transition={{ duration: cycleDuration, ease, repeat: Infinity }}
             />
             <motion.rect 
-                x="25" y="65" width="50" height="10" rx="2" fill={c} opacity="1"
-                animate={{ y: [0, 4, 0] }}
+                x="25" y="65" width="50" height="8" rx="2" fill={c} opacity="1"
+                animate={{ y: [0, 6, 0] }}
                 transition={{ duration: cycleDuration, ease, repeat: Infinity, delay: 0.2 }}
             />
         </g>
@@ -167,18 +199,21 @@ const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, co
         <g>
             <defs>
                 <radialGradient id={`grad-lens-${uid}`} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9"/>
-                    <stop offset="100%" stopColor={c} stopOpacity="0.8"/>
+                    <stop offset="40%" stopColor="#ffffff" stopOpacity="0.9"/>
+                    <stop offset="100%" stopColor={c} stopOpacity="0.9"/>
                 </radialGradient>
             </defs>
+            {/* Shadow */}
+            <ellipse cx="50" cy="85" rx="15" ry="3" fill="black" opacity="0.2" filter="blur(3px)" />
+
             <motion.circle 
-                cx="50" cy="50" r="32" fill={`url(#grad-lens-${uid})`} 
-                stroke={c} strokeWidth="1" strokeOpacity="0.5"
-                animate={{ r: [32, 34, 32] }}
+                cx="50" cy="50" r="30" fill={`url(#grad-lens-${uid})`} 
+                stroke={c} strokeWidth="1" strokeOpacity="0.3"
+                animate={{ r: [30, 32, 30] }}
                 transition={{ duration: cycleDuration, ease, repeat: Infinity }}
             />
-            {/* Glint */}
-            <circle cx="38" cy="38" r="6" fill="white" opacity="0.4" />
+            {/* Glint / Reflection */}
+            <circle cx="35" cy="35" r="5" fill="white" opacity="0.6" filter="blur(1px)" />
         </g>
     );
 
@@ -194,37 +229,20 @@ const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, co
     };
 
     return (
-        <div className={`relative w-20 h-20 flex items-center justify-center transition-all duration-500 ${isActive ? 'scale-110' : 'opacity-85 grayscale-[0.3] hover:grayscale-0 hover:scale-105'}`}>
+        <div className={`relative w-24 h-24 flex items-center justify-center transition-all duration-500 ${isActive ? 'scale-110 opacity-100' : 'opacity-70 grayscale-[0.3] hover:grayscale-0 hover:scale-105'}`}>
             <motion.div
-                animate={isThinking ? { rotate: 360 } : { rotate: 0 }}
-                transition={isThinking ? { duration: 2, ease: "linear", repeat: Infinity } : { duration: 0.5 }}
+                animate={isThinking ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+                transition={isThinking ? { duration: 1, ease: "easeInOut", repeat: Infinity } : { duration: 0.5 }}
                 className="w-full h-full"
             >
-                <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-md">
-                    <defs>
-                        <filter id={`shadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
-                            <feOffset dx="0" dy="4" result="offsetblur" />
-                            <feComponentTransfer>
-                                <feFuncA type="linear" slope="0.3" />
-                            </feComponentTransfer>
-                            <feMerge>
-                                <feMergeNode />
-                                <feMergeNode in="SourceGraphic" />
-                            </feMerge>
-                        </filter>
-                    </defs>
-                    
-                    {/* Ambient Shadow Base */}
-                    <ellipse cx="50" cy="92" rx="20" ry="4" fill="black" opacity="0.15" filter="blur(4px)" />
-
+                <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-sm">
                     {/* Shape Content */}
                     {renderShape()}
                     
-                    {/* Activity Indicator Dot */}
+                    {/* Active Indicator Dot */}
                     {isActive && (
                         <motion.circle 
-                            cx="50" cy="92" r="2" fill={c}
+                            cx="50" cy="94" r="2.5" fill={c}
                             initial={{ scale: 0 }} animate={{ scale: 1 }}
                         />
                     )}
@@ -235,18 +253,22 @@ const AbstractShape = ({ type, color, isActive, isThinking }: { type: string, co
 };
 
 const getMentorShapeType = (id: string): string => {
-    // Structure & Logic
-    if (id.includes('peterson') || id.includes('structure')) return 'monolith';
-    if (id.includes('greene') || id.includes('power')) return 'stack';
+    const lowerId = id.toLowerCase();
     
-    // Vision & Wisdom
-    if (id.includes('bible') || id.includes('spirit') || id.includes('epictetus') || id.includes('aurelius') || id.includes('seneca') || id.includes('pageau')) return 'lens';
+    // 1. Monolith (Stability, Structure, Logic)
+    if (lowerId.includes('peterson') || lowerId.includes('structure') || lowerId.includes('logic')) return 'monolith';
     
-    // Chaos & Perspective
-    if (id.includes('taleb') || id.includes('chaos') || id.includes('Carlin')) return 'orbital';
+    // 2. Stack (Strategy, Layers, Power, Complexity)
+    if (lowerId.includes('greene') || lowerId.includes('power') || lowerId.includes('war')) return 'stack';
     
-    // Psychology & Life
-    if (id.includes('psycholog') || id.includes('beta') || id.includes('capsule')) return 'capsule';
+    // 3. Lens (Vision, Wisdom, Perspective, Spirit)
+    if (lowerId.includes('bible') || lowerId.includes('spirit') || lowerId.includes('epictetus') || lowerId.includes('aurelius') || lowerId.includes('seneca') || lowerId.includes('pageau') || lowerId.includes('vision')) return 'lens';
+    
+    // 4. Orbital (Chaos, Balance, System, Perspective)
+    if (lowerId.includes('taleb') || lowerId.includes('chaos') || lowerId.includes('carlin') || lowerId.includes('system')) return 'orbital';
+    
+    // 5. Capsule (Life, Psychology, Human, Growth)
+    if (lowerId.includes('psycholog') || lowerId.includes('beta') || lowerId.includes('capsule') || lowerId.includes('human')) return 'capsule';
     
     return 'lens'; // Default fallback
 };
