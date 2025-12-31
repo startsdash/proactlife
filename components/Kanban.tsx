@@ -70,12 +70,12 @@ const markdownComponents = {
 };
 
 // --- NEW COMPONENT: SEGMENTED PROGRESS BAR ---
-const SegmentedProgressBar = ({ total, current, color = 'text-indigo-500' }: { total: number, current: number, color?: string }) => {
+const SegmentedProgressBar = ({ total, current, color = 'text-indigo-500', className = '' }: { total: number, current: number, color?: string, className?: string }) => {
     // Extract base color name for background (simplified assumption: input is a tailwind text class)
     const bgClass = color.replace('text-', 'bg-');
     
     return (
-        <div className="flex items-center gap-3 w-full mb-4 animate-in fade-in slide-in-from-left-2 duration-500">
+        <div className={`flex items-center gap-1.5 w-full mb-3 animate-in fade-in slide-in-from-left-2 duration-500 ${className}`}>
             <div className="flex-1 flex gap-1 h-1.5">
                 {Array.from({ length: total }).map((_, i) => (
                     <div
@@ -88,8 +88,8 @@ const SegmentedProgressBar = ({ total, current, color = 'text-indigo-500' }: { t
                     />
                 ))}
             </div>
-            <div className="font-mono text-[10px] text-slate-400 font-bold tracking-widest">
-                [ {String(current).padStart(2, '0')} / {String(total).padStart(2, '0')} ]
+            <div className="font-mono text-[9px] text-slate-400 font-bold tracking-widest shrink-0">
+                {String(current).padStart(2, '0')}/{String(total).padStart(2, '0')}
             </div>
         </div>
     );
@@ -858,39 +858,53 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       return `0 0 20px -5px ${color}`;
   };
 
-  const renderCardChecklist = (task: Task) => (
+  const renderCardChecklist = (task: Task) => {
+    const subtasksTotal = task.subtasks?.length || 0;
+    const subtasksDone = task.subtasks?.filter(s => s.isCompleted).length || 0;
+    const firstSphere = task.spheres && task.spheres.length > 0 ? task.spheres[0] : null;
+    const sphereColorClass = firstSphere && NEON_COLORS[firstSphere] ? `text-[${NEON_COLORS[firstSphere]}]` : 'text-indigo-500';
+
+    return (
     <div className="mt-2 mb-2">
         <CollapsibleSection
             title="Чек-лист"
             icon={<ListTodo size={12}/>}
             isCard
         >
-            <div className="space-y-1.5">
-                {task.subtasks?.map(subtask => (
-                    <div
-                    key={subtask.id}
-                    draggable
-                    onDragStart={(e) => handleSubtaskDragStart(e, subtask.id, task.id)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleSubtaskDrop(e, subtask.id, task)}
-                    className="flex items-center gap-2 group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 p-1 rounded"
-                    onClick={(e) => { e.stopPropagation(); handleToggleSubtask(subtask.id, task.id); }}
+            {subtasksTotal > 0 && (
+                <div className="mb-2">
+                    <SegmentedProgressBar total={subtasksTotal} current={subtasksDone} color={sphereColorClass} className="mb-0" />
+                </div>
+            )}
+            <div className="space-y-1">
+                {task.subtasks?.map(s => (
+                    <div 
+                        key={s.id} 
+                        className="group flex items-start gap-3 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-all duration-200 cursor-pointer relative"
+                        draggable
+                        onDragStart={(e) => handleSubtaskDragStart(e, s.id, task.id)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleSubtaskDrop(e, s.id, task)}
+                        onClick={(e) => { e.stopPropagation(); handleToggleSubtask(s.id, task.id); }}
                     >
-                        <div className="text-slate-300 dark:text-slate-600 cursor-move opacity-0 group-hover:opacity-100 -ml-1 transition-opacity">
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-1 text-slate-300 dark:text-slate-600 cursor-move opacity-0 group-hover:opacity-100 transition-opacity">
                              <GripVertical size={12} />
                         </div>
-                        <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500'}`}>
-                            {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                        
+                        {/* CUSTOM CHECKBOX (Same style as modal) */}
+                        <div className={`
+                            w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all duration-300 mt-0.5
+                            ${s.isCompleted 
+                                ? 'bg-indigo-500 border-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' 
+                                : 'border-slate-300 dark:border-slate-600 group-hover:border-indigo-400 bg-white dark:bg-transparent'
+                            }
+                        `}>
+                            {s.isCompleted && <Check size={10} className="text-white" strokeWidth={3} />}
                         </div>
-                        <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
-                            {subtask.text}
-                        </span>
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(subtask.id, task.id); }}
-                            className="text-slate-300 dark:text-slate-600 hover:text-red-500 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                            <X size={12} />
-                        </button>
+                        
+                        <span className={`text-xs flex-1 break-words leading-relaxed transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-slate-700 dark:text-slate-200"}`}>{s.text}</span>
+                        
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(s.id, task.id); }} className="text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"><X size={12}/></button>
                     </div>
                 ))}
                 <div className="flex gap-1 mt-2" onClick={e => e.stopPropagation()}>
@@ -909,7 +923,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             </div>
         </CollapsibleSection>
     </div>
-  );
+  )};
 
   const renderColumn = (col: typeof columns[0]) => {
     if (!col) return null;
@@ -981,9 +995,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 </motion.div>
             ) : (
                 tasksInCol.map((task, i) => {
-                    const subtasksTotal = task.subtasks?.length || 0;
-                    const subtasksDone = task.subtasks?.filter(s => s.isCompleted).length || 0;
-                    const progressPercent = subtasksTotal > 0 ? Math.round((subtasksDone / subtasksTotal) * 100) : 0;
                     const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
                     const hasActiveChallenge = task.activeChallenge && !task.isChallengeCompleted;
                     
@@ -1042,23 +1053,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         {/* DOING SPECIFIC MODULES */}
                         {col.id === 'doing' && (
                             <>
-                                {subtasksTotal > 0 && (
-                                    <div className="flex items-center gap-3 mt-2 mb-2 h-6 w-full">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 dark:text-slate-500 shrink-0 font-mono">
-                                            <ListTodo size={12} />
-                                            <span>{subtasksDone}/{subtasksTotal}</span>
-                                        </div>
-                                        <div className="flex-1 flex flex-col justify-center h-full">
-                                            <div className="h-1 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
-                                                <div 
-                                                    className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-400' : 'bg-indigo-400'}`} 
-                                                    style={{ width: `${progressPercent}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
                                 {renderCardChecklist(task)}
 
                                 {task.activeChallenge && !draftChallenge && (
@@ -1100,85 +1094,33 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         {/* DONE COLUMN SPECIFIC RENDER ORDER */}
                         {col.id === 'done' && (
                             <>
-                                {subtasksTotal > 0 && (
-                                    <div className="flex items-center gap-3 mt-2 mb-2 h-6 w-full">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 dark:text-slate-500 shrink-0 font-mono">
-                                            <ListTodo size={12} />
-                                            <span>{subtasksDone}/{subtasksTotal}</span>
-                                        </div>
-                                        <div className="flex-1 flex flex-col justify-center h-full">
-                                            <div className="h-1 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
-                                                <div 
-                                                    className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 100 ? 'bg-emerald-400' : 'bg-indigo-400'}`} 
-                                                    style={{ width: `${progressPercent}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                                {task.subtasks && task.subtasks.length > 0 && (
-                                     <div className="mt-2 mb-2">
-                                         <CollapsibleSection 
-                                            title="Чек-лист" 
-                                            icon={<ListTodo size={12}/>} 
-                                            isCard
-                                         >
-                                             <div className="space-y-1.5">
-                                                 {task.subtasks.map(subtask => (
-                                                     <div 
-                                                        key={subtask.id} 
-                                                        className="flex items-center gap-2 p-1 rounded opacity-70"
-                                                     >
-                                                         <div className={`mt-0.5 shrink-0 ${subtask.isCompleted ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'}`}>
-                                                             {subtask.isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                                                         </div>
-                                                         <span className={`text-xs flex-1 break-words leading-snug ${subtask.isCompleted ? 'text-slate-400 line-through' : 'text-slate-600 dark:text-slate-400'}`}>
-                                                             {subtask.text}
-                                                         </span>
-                                                     </div>
-                                                 ))}
-                                             </div>
-                                         </CollapsibleSection>
-                                     </div>
-                                )}
+                                {renderCardChecklist(task)}
                             </>
                         )}
 
-                        <div className="mt-auto pt-3 flex flex-col gap-3">
-                            <div className="flex justify-between items-end w-full gap-2">
-                                
-                                {/* TECHNO FOOTER (DATA ACCENTS) */}
-                                <div className="text-[9px] font-mono text-slate-300 dark:text-slate-600 flex gap-2 select-none pointer-events-none">
-                                    <span>[ID: {task.id.slice(-4)}]</span>
-                                    <span>[{getTechTime(task.createdAt)}]</span>
-                                </div>
-
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="mt-auto pt-3 flex items-end justify-between gap-2">
+                            {/* Left: Actions (Napkins Style) */}
+                            <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                {col.id === 'todo' && (
-                                    <>
-                                        <div className="flex gap-1">
-                                            <Tooltip content="В работу">
-                                                <button 
-                                                    onClick={(e) => moveToDoing(e, task)} 
-                                                    className="p-1.5 text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                                                >
-                                                    <Play size={16} className="fill-current" />
-                                                </button>
-                                            </Tooltip>
-                                        </div>
-                                    </>
+                                    <Tooltip content="В работу">
+                                        <button 
+                                            onClick={(e) => moveToDoing(e, task)} 
+                                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
+                                        >
+                                            <Play size={16} className="fill-current" />
+                                        </button>
+                                    </Tooltip>
                                )}
 
                                {col.id === 'doing' && (
                                    <>
-                                   <div className="flex gap-1">
                                        <Tooltip content={hasJournalEntry ? "В Дневнике" : "В Дневник"}>
                                            <button 
                                                 onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }}
-                                                className={`p-1.5 rounded-lg transition-colors ${
+                                                className={`p-2 rounded-full transition-all opacity-60 hover:opacity-100 ${
                                                     hasJournalEntry 
                                                     ? 'text-cyan-500 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100' 
-                                                    : 'text-slate-300 hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/20'
+                                                    : 'text-slate-400 dark:text-slate-500 hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/20'
                                                 }`}
                                            >
                                                 <Book size={16} />
@@ -1203,10 +1145,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                             generateChallenge(e, task.id, task.content);
                                                         }
                                                     }} 
-                                                    className={`p-1.5 rounded-lg transition-colors
+                                                    className={`p-2 rounded-full transition-all opacity-60 hover:opacity-100
                                                         ${hasActiveChallenge 
                                                             ? 'text-slate-200 dark:text-slate-700 cursor-not-allowed' 
-                                                            : 'text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
+                                                            : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
                                                         }`}
                                                >
                                                     {generatingChallengeFor === task.id ? (
@@ -1227,7 +1169,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                            >
                                                <button 
                                                     onClick={(e) => openTherapy(e, task)} 
-                                                    className="p-1.5 text-slate-300 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors"
+                                                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
                                                >
                                                    {generatingTherapyFor === task.id ? (
                                                         <div className="relative w-4 h-4 flex items-center justify-center">
@@ -1239,47 +1181,50 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                </button>
                                            </Tooltip>
                                        )}
-                                   </div>
-                                   <Tooltip content="Завершить">
-                                        <button 
-                                            onClick={(e) => handleQuickComplete(e, task)} 
-                                            className="p-1.5 rounded-lg text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
-                                        >
-                                            <Check size={16} strokeWidth={3} />
-                                        </button>
-                                    </Tooltip>
+                                       <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                                       <Tooltip content="Завершить">
+                                            <button 
+                                                onClick={(e) => handleQuickComplete(e, task)} 
+                                                className="p-2 rounded-full text-slate-400 dark:text-slate-500 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all opacity-60 hover:opacity-100"
+                                            >
+                                                <Check size={16} strokeWidth={3} />
+                                            </button>
+                                        </Tooltip>
                                    </>
                                )}
                                
                                {col.id === 'done' && (
                                     <>
-                                        <div className="flex gap-1">
-                                            <Tooltip content="В Зал славы">
-                                                <button 
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
-                                                    }} 
-                                                    className="p-1.5 text-slate-300 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
-                                                >
-                                                    <Trophy size={16} /> 
-                                                </button>
-                                            </Tooltip>
-                                            <Tooltip content="Вернуть в работу">
-                                                <button 
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        updateTask({ ...task, column: 'doing' }); 
-                                                    }} 
-                                                    className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-                                                >
-                                                    <RotateCcw size={16} strokeWidth={2} />
-                                                </button>
-                                            </Tooltip>
-                                        </div>
+                                        <Tooltip content="В Зал славы">
+                                            <button 
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
+                                                }} 
+                                                className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
+                                            >
+                                                <Trophy size={16} /> 
+                                            </button>
+                                        </Tooltip>
+                                        <Tooltip content="Вернуть в работу">
+                                            <button 
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    updateTask({ ...task, column: 'doing' }); 
+                                                }} 
+                                                className="p-2 rounded-full text-slate-400 dark:text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all opacity-60 hover:opacity-100"
+                                            >
+                                                <RotateCcw size={16} strokeWidth={2} />
+                                            </button>
+                                        </Tooltip>
                                     </>
                                )}
-                               </div>
+                            </div>
+
+                            {/* Right: Meta Data */}
+                            <div className="text-[9px] font-mono text-slate-300 dark:text-slate-600 flex gap-2 select-none pointer-events-none">
+                                <span>[ID: {task.id.slice(-4)}]</span>
+                                <span>[{getTechTime(task.createdAt)}]</span>
                             </div>
                         </div>
                     </motion.div>
