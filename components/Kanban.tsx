@@ -1504,87 +1504,89 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
       {/* 2. Sticky Header (Hides on scroll down) */}
       <motion.div 
-            className="sticky top-0 z-40 w-full mb-[-24px]"
+            className="sticky top-0 z-40 w-full mb-[-20px]"
             animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
       >
-            <div 
-                className="w-full px-3 md:px-8 pb-6 pt-2 bg-white/65 dark:bg-[#0f172a]/65 border-b border-black/10 dark:border-white/10 transition-colors duration-500"
-                style={{
-                    backdropFilter: 'blur(25px) saturate(160%)',
-                    WebkitBackdropFilter: 'blur(25px) saturate(160%)',
-                    maskImage: 'linear-gradient(to bottom, black 85%, rgba(0,0,0,0.5) 92%, transparent 100%)',
-                    WebkitMaskImage: 'linear-gradient(to bottom, black 85%, rgba(0,0,0,0.5) 92%, transparent 100%)'
-                }}
-            >
-                <div className="relative z-10 max-w-5xl mx-auto w-full">
-                    <div className="flex gap-2">
-                        <div className="relative flex-1">
-                            <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
-                            <input 
-                                ref={searchInputRef}
-                                type="text" 
-                                placeholder="Поиск задач..." 
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-[#1e293b]/80 border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400"
-                            />
-                            {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
-                        </div>
-                        
-                        <Tooltip content="Сферы" side="bottom">
-                            <button 
-                                onClick={() => setShowSphereSelector(!showSphereSelector)} 
-                                className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showSphereSelector || activeSphereFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white/80 dark:bg-[#1e293b]/80 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
-                            >
-                                <Layout size={20} />
-                            </button>
-                        </Tooltip>
+            {/* Extended Blur/Gradient Backdrop */}
+            <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
+                <div 
+                    className="absolute inset-0 backdrop-blur-xl"
+                    style={{
+                        maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)',
+                        WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)'
+                    }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
+            </div>
 
-                        <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="bottom">
-                            <button 
-                                onClick={toggleSortOrder} 
-                                className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white/80 dark:bg-[#1e293b]/80 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                            >
-                                {sortOrder === 'asc' ? <ArrowUp size={20} /> : <ArrowDown size={20} />}
-                            </button>
-                        </Tooltip>
+            <div className="relative z-10 max-w-5xl mx-auto w-full px-3 md:px-8 pb-2">
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
+                        <input 
+                            ref={searchInputRef}
+                            type="text" 
+                            placeholder="Поиск задач..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400"
+                        />
+                        {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
                     </div>
+                    
+                    <Tooltip content="Сферы" side="bottom">
+                        <button 
+                            onClick={() => setShowSphereSelector(!showSphereSelector)} 
+                            className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showSphereSelector || activeSphereFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
+                        >
+                            <Layout size={20} />
+                        </button>
+                    </Tooltip>
 
-                    {/* Sphere Selector Expansion */}
-                    {(showSphereSelector || activeSphereFilter) && (
-                        <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200 scrollbar-none">
-                            <button 
-                                onClick={() => setActiveSphereFilter(null)} 
-                                className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${!activeSphereFilter ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white/80 dark:bg-[#1e293b]/80 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}
-                            >
-                                Все
-                            </button>
-                            {SPHERES.map(s => {
-                                 const isActive = activeSphereFilter === s.id;
-                                 return (
-                                     <button
-                                        key={s.id}
-                                        onClick={() => setActiveSphereFilter(isActive ? null : s.id)}
-                                        className={`px-3 py-1.5 text-xs font-mono font-bold rounded-full transition-all flex items-center gap-1.5 border uppercase tracking-wider whitespace-nowrap
-                                            ${isActive 
-                                                ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400`
-                                                : 'bg-white/80 dark:bg-[#1e293b]/80 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'
-                                            }
-                                        `}
-                                     >
-                                         {isActive ? `[ ${s.label} ]` : s.label}
-                                     </button>
-                                 );
-                            })}
-                        </div>
-                    )}
+                    <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="bottom">
+                        <button 
+                            onClick={toggleSortOrder} 
+                            className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                        >
+                            {sortOrder === 'asc' ? <ArrowUp size={20} /> : <ArrowDown size={20} />}
+                        </button>
+                    </Tooltip>
                 </div>
+
+                {/* Sphere Selector Expansion */}
+                {(showSphereSelector || activeSphereFilter) && (
+                    <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200 scrollbar-none">
+                        <button 
+                            onClick={() => setActiveSphereFilter(null)} 
+                            className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${!activeSphereFilter ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}
+                        >
+                            Все
+                        </button>
+                        {SPHERES.map(s => {
+                             const isActive = activeSphereFilter === s.id;
+                             return (
+                                 <button
+                                    key={s.id}
+                                    onClick={() => setActiveSphereFilter(isActive ? null : s.id)}
+                                    className={`px-3 py-1.5 text-xs font-mono font-bold rounded-full transition-all flex items-center gap-1.5 border uppercase tracking-wider whitespace-nowrap
+                                        ${isActive 
+                                            ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400`
+                                            : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'
+                                        }
+                                    `}
+                                 >
+                                     {isActive ? `[ ${s.label} ]` : s.label}
+                                 </button>
+                             );
+                        })}
+                    </div>
+                )}
             </div>
       </motion.div>
 
       {/* 3. Content Area */}
-      <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pt-12 pb-8 flex-1 min-h-0">
+      <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pt-10 pb-8 flex-1 min-h-0">
          {/* Mobile Tabs */}
          <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 shrink-0 z-10 mb-4 bg-transparent">
             {columns.map(col => (
