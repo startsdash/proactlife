@@ -104,19 +104,24 @@ const processImage = (file: File | Blob): Promise<string> => {
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
+    // Basic Markdown Headers
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    // Formatting
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
     html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
     html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
     html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
-    // Replace newlines with <br> but avoid doubling them after block elements
-    html = html.replace(/\n/g, '<br>');
-    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
+    
+    // NOTE: We do NOT replace \n with <br> globally here because we use `whitespace-pre-wrap` in CSS.
+    // This allows natural editing without fighting <br> tags.
+    // However, we ensure block elements don't get messy.
+    
     return html;
 };
 
@@ -125,6 +130,8 @@ const htmlToMarkdown = (html: string) => {
     temp.innerHTML = html;
 
     const wrap = (text: string, marker: string) => {
+        // Simple wrap check to avoid double wrapping
+        if (text.startsWith(marker) && text.endsWith(marker)) return text;
         const match = text.match(/^(\s*)(.*?)(\s*)$/s);
         if (match && match[2]) {
             return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
@@ -149,7 +156,8 @@ const htmlToMarkdown = (html: string) => {
                 case 'code': return `\`${content}\``;
                 case 'h1': return `\n# ${content}\n`;
                 case 'h2': return `\n## ${content}\n`;
-                case 'div': case 'p': return `\n${content}\n`;
+                case 'div': return `${content}\n`; // divs imply a line break, but not double
+                case 'p': return `${content}\n\n`; // paragraphs imply double break
                 case 'br': return '\n';
                 case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
                 default: return content;
@@ -158,7 +166,7 @@ const htmlToMarkdown = (html: string) => {
         return '';
     };
     let md = walk(temp);
-    md = md.replace(/\n{3,}/g, '\n\n').trim();
+    md = md.replace(/\n{3,}/g, '\n\n').trim(); // Collapse excessive newlines
     md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
 };
@@ -796,7 +804,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       } else {
           hasInitializedEditRef.current = false;
       }
-  }, [isEditingTask, activeModal?.taskId]); // Removed `tasks` dependency to prevent re-initialization loops
+  }, [isEditingTask, activeModal?.taskId, tasks]); // Depend on ID, not object reference if possible, but tasks needed for lookup
 
   const columns = [
     { id: 'todo', title: 'Нужно сделать' },
@@ -1309,8 +1317,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <div 
                             ref={creationContentRef}
                             contentEditable
-                            className="w-full min-h-[120px] max-h-[300px] overflow-y-auto outline-none text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-sans mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
-                            style={{ whiteSpace: 'pre-wrap' }}
+                            className="w-full min-h-[120px] max-h-[300px] overflow-y-auto outline-none text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-sans mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text whitespace-pre-wrap"
                             onInput={handleCreationInput}
                             onBlur={() => saveCreationSelection()}
                             onMouseUp={() => saveCreationSelection()}
@@ -1828,8 +1835,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             contentEditable 
                                             suppressContentEditableWarning={true}
                                             onInput={handleEditInput} 
-                                            className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1"
-                                            style={{ whiteSpace: 'pre-wrap' }}
+                                            className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans whitespace-pre-wrap [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1"
                                             data-placeholder="Описание задачи..." 
                                         />
 
