@@ -1163,6 +1163,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
   const getTaskForModal = () => tasks.find(t => t.id === activeModal?.taskId);
 
+  const handleTitleSave = () => {
+      const task = getTaskForModal();
+      if (task && (task.title || '') !== editTaskTitle.trim()) {
+          updateTask({ ...task, title: applyTypography(editTaskTitle.trim()) });
+      }
+  };
+
   // --- HELPER: TECHNO TIME & GLOW ---
   const getTechGlow = (spheres: string[] | undefined, activeFilter: string | null) => {
       if (!activeFilter || !spheres || !spheres.includes(activeFilter)) return 'none';
@@ -1678,20 +1685,26 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 
                 {/* MODAL HEADER */}
                 <div className="flex justify-between items-start mb-6 shrink-0 border-b border-slate-100 dark:border-slate-700/50 pb-4">
-                    <div className="flex flex-col gap-1 pr-4">
+                    <div className="flex flex-col gap-1 pr-4 w-full">
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
                             Хаб <ChevronRight size={10} /> {activeModal.type === 'challenge' ? 'Вызов' : activeModal.type === 'stuck' ? 'Терапия' : 'Задача'}
                         </div>
-                        <h3 className="text-2xl font-serif font-bold text-slate-900 dark:text-white leading-tight">
-                            {activeModal.type === 'stuck' && <span className="flex items-center gap-2"><Bot size={24} className="text-violet-500"/> Личный консультант</span>}
-                            {activeModal.type === 'challenge' && <span className="flex items-center gap-2"><Zap size={24} className="text-indigo-500"/> Новый вызов</span>}
-                            {activeModal.type === 'details' && (() => {
-                                const task = getTaskForModal();
-                                if (task?.title) return applyTypography(task.title);
-                                if (task) return 'Детали задачи'; 
-                                return '';
-                            })()}
-                        </h3>
+                        {activeModal.type === 'details' ? (
+                            <input 
+                                type="text" 
+                                placeholder="Название" 
+                                value={editTaskTitle} 
+                                onChange={(e) => setEditTaskTitle(e.target.value)} 
+                                onBlur={handleSaveTaskContent}
+                                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                                className="text-2xl font-sans font-bold text-slate-900 dark:text-white leading-tight bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full p-0 m-0" 
+                            />
+                        ) : (
+                            <h3 className="text-2xl font-serif font-bold text-slate-900 dark:text-white leading-tight">
+                                {activeModal.type === 'stuck' && <span className="flex items-center gap-2"><Bot size={24} className="text-violet-500"/> Личный консультант</span>}
+                                {activeModal.type === 'challenge' && <span className="flex items-center gap-2"><Zap size={24} className="text-indigo-500"/> Новый вызов</span>}
+                            </h3>
+                        )}
                     </div>
                     <div className="flex items-center shrink-0 gap-1">
                         {activeModal.type === 'details' && !isEditingTask && (
@@ -1768,15 +1781,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 {/* TEXT EDITING */}
                                 {isEditingTask ? (
                                     <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
-                                        <div className="mb-4">
-                                            <input 
-                                                type="text" 
-                                                placeholder="Название" 
-                                                value={editTaskTitle} 
-                                                onChange={(e) => setEditTaskTitle(e.target.value)} 
-                                                className="w-full bg-slate-50 dark:bg-black/20 rounded-xl p-3 text-xl font-serif font-bold text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none placeholder:text-slate-300 transition-colors" 
-                                            />
-                                        </div>
                                         
                                         {/* Editor Toolbar */}
                                         <div className="flex items-center justify-between mb-2 gap-2">
