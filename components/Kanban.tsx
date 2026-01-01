@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette, Bold, Italic, Image as ImageIcon } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette, Bold, Italic, Eraser, Image as ImageIcon } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
@@ -604,6 +604,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
           saveCreationSnapshot(creationContentRef.current.innerHTML);
       }
   };
+  
+  const handleClearCreationStyle = (e: React.MouseEvent) => {
+      e.preventDefault();
+      execCreationCmd('removeFormat');
+      execCreationCmd('formatBlock', 'div'); 
+  };
 
   const saveCreationSelection = () => {
       const sel = window.getSelection();
@@ -671,14 +677,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       setEditHistoryIndex(newHistory.length - 1);
   }, [editHistory, editHistoryIndex]);
 
-  const handleEditInput = () => {
+  const handleEditInput = useCallback(() => {
       if (editHistoryTimeoutRef.current) clearTimeout(editHistoryTimeoutRef.current);
       editHistoryTimeoutRef.current = setTimeout(() => {
           if (editContentEditableRef.current) {
               saveEditSnapshot(editContentEditableRef.current.innerHTML);
           }
       }, 500);
-  };
+  }, [saveEditSnapshot]);
 
   const execEditCmd = (command: string, value: string | undefined = undefined) => {
       document.execCommand(command, false, value);
@@ -704,6 +710,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       }
   };
   
+  const handleClearEditStyle = (e: React.MouseEvent) => {
+      e.preventDefault();
+      execEditCmd('removeFormat');
+      execEditCmd('formatBlock', 'div'); 
+  };
+
   // KEYBOARD SHORTCUT FOR SEARCH
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1313,6 +1325,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
                                 <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('bold'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
                                 <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
+                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                <Tooltip content="Очистить"><button onMouseDown={handleClearCreationStyle} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
                             </div>
                             <button onClick={handleCreateTask} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors">
                                 <Plus size={20} />
@@ -1624,7 +1638,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         </button>
                     </Tooltip>
 
-                    <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="bottom">
+                    <Tooltip content="Сортировка" side="bottom">
                         <button 
                             onClick={toggleSortOrder} 
                             className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
@@ -1803,6 +1817,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
                                                 <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('bold'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Bold size={16} /></button></Tooltip>
                                                 <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('italic'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button></Tooltip>
+                                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                <Tooltip content="Очистить"><button onMouseDown={handleClearEditStyle} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
                                             </div>
                                         </div>
 
