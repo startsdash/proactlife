@@ -7,7 +7,7 @@ import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileTex
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
   tasks: Task[];
@@ -440,17 +440,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [editTaskContent, setEditTaskContent] = useState('');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const { scrollY } = useScroll({ container: scrollContainerRef });
-  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
-
-  useMotionValueEvent(scrollY, "change", (latest) => {
-      const previous = scrollY.getPrevious() || 0;
-      const diff = latest - previous;
-      const isScrollingDown = diff > 0;
-      if (latest > 100 && isScrollingDown) setIsHeaderHidden(true);
-      else setIsHeaderHidden(false);
-  });
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
@@ -1274,12 +1263,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   return (
-    <div ref={scrollContainerRef} className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden" style={DOT_GRID_STYLE}>
-      <motion.header 
-        className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc]/95 md:dark:bg-[#0f172a]/95 md:pb-6 transition-colors duration-300 backdrop-blur-sm"
-        animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
-      >
+    <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden" style={DOT_GRID_STYLE}>
+      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc]/95 md:dark:bg-[#0f172a]/95 md:pb-6 transition-colors duration-300 backdrop-blur-sm">
         <div>
             <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
@@ -1342,7 +1327,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                  </Tooltip>
              </div>
         </div>
-      </motion.header>
+      </header>
 
       {/* Columns */}
       <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-0 overflow-hidden md:overflow-visible">
