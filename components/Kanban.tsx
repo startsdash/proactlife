@@ -1553,7 +1553,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     <div ref={scrollContainerRef} className="flex flex-col h-full relative overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
       
       {/* 1. Title Section (Scrolls away) */}
-      <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pt-3 md:pt-8 mb-6">
+      <div className="w-full px-4 md:px-8 pt-4 md:pt-8 mb-6">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
                 <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
@@ -1580,7 +1580,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
             </div>
 
-            <div className="relative z-10 max-w-5xl mx-auto w-full px-3 md:px-8 pb-2">
+            <div className="relative z-10 w-full px-4 md:px-8 pb-2">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
@@ -1646,7 +1646,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       </motion.div>
 
       {/* 3. Content Area */}
-      <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pt-10 pb-8 flex-1 min-h-0">
+      <div className="w-full px-4 md:px-8 pt-10 pb-8 flex-1 min-h-0">
          {/* Mobile Tabs */}
          <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 shrink-0 z-10 mb-4 bg-transparent">
             {columns.map(col => (
