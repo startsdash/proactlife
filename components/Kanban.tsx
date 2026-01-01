@@ -3,11 +3,11 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 
 interface Props {
   tasks: Task[];
@@ -428,6 +428,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [cardSubtaskInputs, setCardSubtaskInputs] = useState<{[taskId: string]: string}>({});
   const [activeSphereFilter, setActiveSphereFilter] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [showSphereSelector, setShowSphereSelector] = useState(false);
   
   // NEW TASK CREATION STATE
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
@@ -440,6 +441,17 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [editTaskContent, setEditTaskContent] = useState('');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const { scrollY } = useScroll({ container: scrollContainerRef });
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+      const previous = scrollY.getPrevious() || 0;
+      const diff = latest - previous;
+      const isScrollingDown = diff > 0;
+      if (latest > 100 && isScrollingDown) setIsHeaderHidden(true);
+      else setIsHeaderHidden(false);
+  });
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
@@ -963,7 +975,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     const sortedTasks = getSortedTasks(tasksInCol);
     
     return (
-    <div className="flex flex-col h-full md:h-auto md:min-h-0 bg-transparent">
+    <div className="flex flex-col flex-1 h-full min-h-0 bg-transparent">
         {/* Floating Header - Serif Title + Mono Counter */}
         <div className="hidden md:flex justify-center items-center text-center mb-6 gap-2">
             <h3 className="font-serif font-medium text-xl text-slate-900 dark:text-slate-100">{col.title}</h3>
@@ -1015,7 +1027,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             </div>
         )}
 
-        <div className="flex-1 overflow-y-auto md:overflow-visible min-h-0 space-y-4 pb-2 px-1 custom-scrollbar-light md:flex-none" onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
+        <div className="flex-1 space-y-4 pb-2 px-1 flex-none" onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
             <AnimatePresence>
             {sortedTasks.length === 0 ? (
                 <motion.div 
@@ -1263,76 +1275,105 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   return (
-    <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden" style={DOT_GRID_STYLE}>
-      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc]/95 md:dark:bg-[#0f172a]/95 md:pb-6 transition-colors duration-300 backdrop-blur-sm">
-        <div>
-            <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
-        </div>
-        
-        {/* Search & Filter */}
-        <div className="flex flex-col gap-2 w-full md:w-auto">
-             <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none w-full md:w-auto">
-                 {/* Sphere Filters (Tech Tags Style) */}
-                 <div className="flex items-center bg-transparent shrink-0 gap-2">
-                     <button 
-                        onClick={() => setActiveSphereFilter(null)}
-                        className={`px-3 py-1.5 text-xs font-mono font-medium rounded-lg transition-all border ${!activeSphereFilter ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-transparent shadow-md' : 'text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300'}`}
-                     >
-                         [ВСЕ]
-                     </button>
-                     {SPHERES.map(s => {
-                         const isActive = activeSphereFilter === s.id;
-                         // Using consistent styling for tags
-                         return (
-                             <button
-                                key={s.id}
-                                onClick={() => setActiveSphereFilter(isActive ? null : s.id)}
-                                className={`px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition-all flex items-center gap-1.5 border uppercase tracking-wider
-                                    ${isActive 
-                                        ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400`
-                                        : 'bg-transparent border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'
-                                    }
-                                `}
-                             >
-                                 {isActive ? `[ ${s.label} ]` : s.label}
-                             </button>
-                         );
-                     })}
-                 </div>
+    <div ref={scrollContainerRef} className="flex flex-col h-full relative overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
+      
+      {/* 1. Title Section (Scrolls away) */}
+      <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pt-3 md:pt-8 mb-6">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+                <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
+            </div>
+        </header>
+      </div>
 
-                 {/* Search Input (Focus Tool) */}
-                 <div className="relative group min-w-[240px] flex-1">
-                    <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
-                    <input 
-                        ref={searchInputRef}
-                        type="text" 
-                        placeholder="Поиск задач или контекста..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-14 py-2.5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-xl text-xs font-sans text-slate-700 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 shadow-sm transition-all focus:shadow-[0_0_15px_rgba(99,102,241,0.15)]"
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono text-slate-400 opacity-50 pointer-events-none hidden md:block">
-                        [ CTRL + F ]
+      {/* 2. Sticky Header (Hides on scroll down) */}
+      <motion.div 
+            className="sticky top-0 z-40 w-full mb-[-20px]"
+            animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+      >
+            {/* Extended Blur/Gradient Backdrop */}
+            <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
+                <div 
+                    className="absolute inset-0 backdrop-blur-xl"
+                    style={{
+                        maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)',
+                        WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)'
+                    }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
+            </div>
+
+            <div className="relative z-10 max-w-5xl mx-auto w-full px-3 md:px-8 pb-2">
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
+                        <input 
+                            ref={searchInputRef}
+                            type="text" 
+                            placeholder="Поиск задач..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400"
+                        />
+                        {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
                     </div>
-                    {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 md:hidden"><X size={12} /></button>
-                    )}
-                 </div>
-                 
-                 <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
-                     <button onClick={toggleSortOrder} className="p-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0 shadow-sm transition-all hover:bg-white dark:hover:bg-slate-800">
-                         {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-                     </button>
-                 </Tooltip>
-             </div>
-        </div>
-      </header>
+                    
+                    <Tooltip content="Сферы" side="bottom">
+                        <button 
+                            onClick={() => setShowSphereSelector(!showSphereSelector)} 
+                            className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showSphereSelector || activeSphereFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
+                        >
+                            <Layout size={20} />
+                        </button>
+                    </Tooltip>
 
-      {/* Columns */}
-      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-0 overflow-hidden md:overflow-visible">
+                    <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="bottom">
+                        <button 
+                            onClick={toggleSortOrder} 
+                            className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                        >
+                            {sortOrder === 'asc' ? <ArrowUp size={20} /> : <ArrowDown size={20} />}
+                        </button>
+                    </Tooltip>
+                </div>
+
+                {/* Sphere Selector Expansion */}
+                {(showSphereSelector || activeSphereFilter) && (
+                    <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200 scrollbar-none">
+                        <button 
+                            onClick={() => setActiveSphereFilter(null)} 
+                            className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${!activeSphereFilter ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}
+                        >
+                            Все
+                        </button>
+                        {SPHERES.map(s => {
+                             const isActive = activeSphereFilter === s.id;
+                             return (
+                                 <button
+                                    key={s.id}
+                                    onClick={() => setActiveSphereFilter(isActive ? null : s.id)}
+                                    className={`px-3 py-1.5 text-xs font-mono font-bold rounded-full transition-all flex items-center gap-1.5 border uppercase tracking-wider whitespace-nowrap
+                                        ${isActive 
+                                            ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400`
+                                            : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'
+                                        }
+                                    `}
+                                 >
+                                     {isActive ? `[ ${s.label} ]` : s.label}
+                                 </button>
+                             );
+                        })}
+                    </div>
+                )}
+            </div>
+      </motion.div>
+
+      {/* 3. Content Area */}
+      <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pt-6 pb-8 flex-1 min-h-0">
          {/* Mobile Tabs */}
-         <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10">
+         <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 shrink-0 z-10 mb-4 bg-transparent">
             {columns.map(col => (
                 <button
                     key={col.id}
@@ -1344,17 +1385,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             ))}
          </div>
 
-         <div className="flex-1 overflow-x-hidden md:overflow-visible p-4 md:p-0">
-             <div className="flex flex-col md:flex-row gap-8 h-full md:h-auto min-h-0 md:items-start">
-                {columns.map(col => {
-                   const isHiddenOnMobile = activeMobileTab !== col.id;
-                   return (
-                       <div key={col.id} className={`flex-1 min-w-[300px] flex-col min-h-0 h-full md:h-auto ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}>
-                           {renderColumn(col)}
-                       </div>
-                   );
-                })}
-             </div>
+         <div className="flex flex-col md:flex-row gap-8 h-full md:items-start">
+            {columns.map(col => {
+               const isHiddenOnMobile = activeMobileTab !== col.id;
+               return (
+                   <div key={col.id} className={`flex-1 min-w-[300px] flex-col h-full ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}>
+                       {renderColumn(col)}
+                   </div>
+               );
+            })}
          </div>
       </div>
 
