@@ -444,9 +444,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isScrolled, setIsScrolled] = useState(false);
 
+  // Smooth scroll detection for header transition
   useMotionValueEvent(scrollY, "change", (latest) => {
-    if (latest > 20 && !isScrolled) setIsScrolled(true);
-    if (latest <= 20 && isScrolled) setIsScrolled(false);
+    if (latest > 50 && !isScrolled) setIsScrolled(true);
+    if (latest <= 50 && isScrolled) setIsScrolled(false);
   });
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
@@ -1273,24 +1274,36 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   return (
     <div ref={scrollContainerRef} className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
       <motion.header
-        className="shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-0 z-30 w-full"
+        className="shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-0 z-40 w-full"
         initial={false}
         animate={{
             paddingTop: isScrolled ? 16 : 32,
             paddingBottom: isScrolled ? 16 : 24,
-            paddingLeft: isScrolled ? 24 : 32,
-            paddingRight: isScrolled ? 24 : 32,
+            paddingLeft: 32,
+            paddingRight: 32,
         }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
       >
-        {/* Glass Background & Border */}
-        <div className="absolute inset-0 backdrop-blur-xl bg-[#f8fafc]/70 dark:bg-[#0f172a]/70 border-b border-slate-200/50 dark:border-slate-800/50 -z-10 shadow-sm transition-all duration-300" />
-        
-        {/* The Horizon Fog (Gradient Mask Extension) */}
-        <div 
-            className="absolute bottom-0 left-0 right-0 h-8 translate-y-full bg-gradient-to-b from-[#f8fafc]/70 to-transparent dark:from-[#0f172a]/70 dark:to-transparent pointer-events-none -z-10" 
-            style={{ backdropFilter: 'blur(4px)' }}
-        />
+        {/* --- FOGGY PORTAL BACKGROUND --- */}
+        <div className="absolute inset-0 -z-10 overflow-visible">
+            {/* 1. Main Glass Pane */}
+            <div className="absolute inset-0 bg-[#f8fafc]/70 dark:bg-[#0f172a]/70 backdrop-blur-xl border-b border-slate-200/30 dark:border-slate-800/30 shadow-[0_4px_30px_rgba(0,0,0,0.03)]" />
+            
+            {/* 2. The Fog Extension (Gradient Blur) */}
+            <div className="absolute inset-x-0 bottom-0 translate-y-full h-24 pointer-events-none -z-10">
+                {/* Blur Fade */}
+                <div 
+                    className="absolute inset-0" 
+                    style={{ 
+                        backdropFilter: 'blur(12px)', 
+                        maskImage: 'linear-gradient(to bottom, black 20%, transparent 100%)', 
+                        WebkitMaskImage: 'linear-gradient(to bottom, black 20%, transparent 100%)' 
+                    }} 
+                />
+                {/* Color Fade */}
+                <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc]/80 to-transparent dark:from-[#0f172a]/80 dark:to-transparent" />
+            </div>
+        </div>
 
         <div>
             <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
@@ -1357,7 +1370,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       </motion.header>
 
       {/* Columns */}
-      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-0 overflow-hidden md:overflow-visible">
+      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-10 overflow-hidden md:overflow-visible">
          {/* Mobile Tabs */}
          <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10">
             {columns.map(col => (
