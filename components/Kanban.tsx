@@ -205,7 +205,7 @@ const SegmentedProgressBar = ({ total, current, color = 'text-indigo-500', class
     
     return (
         <div className={`flex items-center gap-1.5 w-full mb-3 animate-in fade-in slide-in-from-left-2 duration-500 ${className}`}>
-            <div className="flex-1 flex gap-1 h-1.5">
+            <div className="flex-1 flex gap-1 h-1">
                 {Array.from({ length: total }).map((_, i) => (
                     <div
                         key={i}
@@ -1199,10 +1199,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         onDrop={(e) => handleSubtaskDrop(e, s.id, task)}
                         onClick={(e) => { e.stopPropagation(); handleToggleSubtask(s.id, task.id); }}
                     >
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-1 text-slate-300 dark:text-slate-600 cursor-move opacity-0 group-hover:opacity-100 transition-opacity">
-                             <GripVertical size={12} />
-                        </div>
-                        
                         {/* CUSTOM CHECKBOX (Same style as modal) */}
                         <div className={`
                             w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all duration-300 mt-0.5
@@ -1851,13 +1847,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                             onDrop={!isDone ? (e) => handleSubtaskDrop(e, s.id, task) : undefined}
                                                             onClick={() => !isDone && handleToggleSubtask(s.id)}
                                                         >
-                                                            {!isDone && (
-                                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 text-slate-300 dark:text-slate-600 cursor-move hover:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                                                     <GripVertical size={12} />
-                                                                </div>
-                                                            )}
-                                                            
-                                                            {/* CUSTOM CHECKBOX */}
+                                                            {/* Custom Checkbox */}
                                                             <div className={`
                                                                 w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-all duration-300 mt-0.5
                                                                 ${s.isCompleted 
