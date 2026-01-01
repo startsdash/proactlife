@@ -1710,6 +1710,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                     <Trash2 size={18} />
                                                 </button>
                                             </Tooltip>
+                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                                         </>
                                     );
                                 }
@@ -1765,13 +1766,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 {/* TEXT EDITING */}
                                 {isEditingTask ? (
                                     <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
-                                        <input 
-                                            type="text" 
-                                            placeholder="Название" 
-                                            value={editTaskTitle} 
-                                            onChange={(e) => setEditTaskTitle(e.target.value)} 
-                                            className="px-0 pb-2 bg-transparent text-xl font-sans font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 dark:placeholder:text-slate-600 outline-none border-b border-transparent focus:border-indigo-200 dark:focus:border-indigo-900/50 mb-4 transition-colors" 
-                                        />
+                                        <div className="mb-4">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Название" 
+                                                value={editTaskTitle} 
+                                                onChange={(e) => setEditTaskTitle(e.target.value)} 
+                                                className="w-full bg-slate-50 dark:bg-black/20 rounded-xl p-3 text-xl font-serif font-bold text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none placeholder:text-slate-300 transition-colors" 
+                                            />
+                                        </div>
                                         
                                         {/* Editor Toolbar */}
                                         <div className="flex items-center justify-between mb-2 gap-2">
@@ -1793,7 +1796,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             ref={editContentEditableRef} 
                                             contentEditable 
                                             onInput={handleEditInput} 
-                                            className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 py-2 leading-relaxed font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text" 
+                                            className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1"
                                             style={{ whiteSpace: 'pre-wrap' }} 
                                             data-placeholder="Описание задачи..." 
                                         />
