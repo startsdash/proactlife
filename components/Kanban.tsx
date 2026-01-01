@@ -1264,70 +1264,86 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
   return (
     <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden" style={DOT_GRID_STYLE}>
-      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc]/95 md:dark:bg-[#0f172a]/95 md:pb-6 transition-colors duration-300 backdrop-blur-sm">
-        <div>
-            <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
-        </div>
-        
-        {/* Search & Filter */}
-        <div className="flex flex-col gap-2 w-full md:w-auto">
-             <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none w-full md:w-auto">
-                 {/* Sphere Filters (Tech Tags Style) */}
-                 <div className="flex items-center bg-transparent shrink-0 gap-2">
-                     <button 
-                        onClick={() => setActiveSphereFilter(null)}
-                        className={`px-3 py-1.5 text-xs font-mono font-medium rounded-lg transition-all border ${!activeSphereFilter ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-transparent shadow-md' : 'text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300'}`}
-                     >
-                         [ВСЕ]
-                     </button>
-                     {SPHERES.map(s => {
-                         const isActive = activeSphereFilter === s.id;
-                         // Using consistent styling for tags
-                         return (
-                             <button
-                                key={s.id}
-                                onClick={() => setActiveSphereFilter(isActive ? null : s.id)}
-                                className={`px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition-all flex items-center gap-1.5 border uppercase tracking-wider
-                                    ${isActive 
-                                        ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400`
-                                        : 'bg-transparent border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'
-                                    }
-                                `}
-                             >
-                                 {isActive ? `[ ${s.label} ]` : s.label}
-                             </button>
-                         );
-                     })}
-                 </div>
+      
+      {/* 1. Title Section (Non-sticky) */}
+      <div className="p-4 md:p-8 pb-4 shrink-0">
+        <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
+      </div>
 
-                 {/* Search Input (Focus Tool) */}
-                 <div className="relative group min-w-[240px] flex-1">
-                    <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
-                    <input 
-                        ref={searchInputRef}
-                        type="text" 
-                        placeholder="Поиск задач или контекста..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-14 py-2.5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-xl text-xs font-sans text-slate-700 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 shadow-sm transition-all focus:shadow-[0_0_15px_rgba(99,102,241,0.15)]"
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono text-slate-400 opacity-50 pointer-events-none hidden md:block">
-                        [ CTRL + F ]
-                    </div>
-                    {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 md:hidden"><X size={12} /></button>
-                    )}
-                 </div>
-                 
-                 <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
-                     <button onClick={toggleSortOrder} className="p-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0 shadow-sm transition-all hover:bg-white dark:hover:bg-slate-800">
-                         {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-                     </button>
-                 </Tooltip>
-             </div>
-        </div>
-      </header>
+      {/* 2. Sticky Portal (Search & Filters) */}
+      <div className="sticky top-0 z-50 w-full mb-8">
+          {/* Frost Background Layer */}
+          <div className="absolute inset-0 -z-10"
+               style={{
+                   backdropFilter: 'blur(30px) saturate(150%)',
+                   WebkitBackdropFilter: 'blur(30px) saturate(150%)',
+                   maskImage: 'linear-gradient(to bottom, black 75%, rgba(0,0,0,0.4) 90%, transparent 100%)',
+                   WebkitMaskImage: 'linear-gradient(to bottom, black 75%, rgba(0,0,0,0.4) 90%, transparent 100%)'
+               }}
+          >
+              <div className="absolute inset-0 bg-white/60 dark:bg-[#0f172a]/60" />
+          </div>
+
+          {/* Controls Container */}
+          <div className="px-4 md:px-8 pb-6 pt-2 flex flex-col md:flex-row justify-end items-start md:items-center gap-2">
+                <div className="flex flex-col gap-2 w-full md:w-auto">
+                     <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none w-full md:w-auto">
+                         {/* Sphere Filters */}
+                         <div className="flex items-center bg-transparent shrink-0 gap-2">
+                             <button 
+                                onClick={() => setActiveSphereFilter(null)}
+                                className={`px-3 py-1.5 text-xs font-mono font-medium rounded-lg transition-all border ${!activeSphereFilter ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-transparent shadow-md' : 'text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300'}`}
+                             >
+                                 [ВСЕ]
+                             </button>
+                             {SPHERES.map(s => {
+                                 const isActive = activeSphereFilter === s.id;
+                                 return (
+                                     <button
+                                        key={s.id}
+                                        onClick={() => setActiveSphereFilter(isActive ? null : s.id)}
+                                        className={`px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition-all flex items-center gap-1.5 border uppercase tracking-wider
+                                            ${isActive 
+                                                ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400`
+                                                : 'bg-transparent border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'
+                                            }
+                                        `}
+                                     >
+                                         {isActive ? `[ ${s.label} ]` : s.label}
+                                     </button>
+                                 );
+                             })}
+                         </div>
+
+                         {/* Search Input */}
+                         <div className="relative group min-w-[240px] flex-1">
+                            <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
+                            <input 
+                                ref={searchInputRef}
+                                type="text" 
+                                placeholder="Поиск задач или контекста..." 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-9 pr-14 py-2.5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-xl text-xs font-sans text-slate-700 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 shadow-sm transition-all focus:shadow-[0_0_15px_rgba(99,102,241,0.15)]"
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono text-slate-400 opacity-50 pointer-events-none hidden md:block">
+                                [ CTRL + F ]
+                            </div>
+                            {searchQuery && (
+                                <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 md:hidden"><X size={12} /></button>
+                            )}
+                         </div>
+                         
+                         <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
+                             <button onClick={toggleSortOrder} className="p-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0 shadow-sm transition-all hover:bg-white dark:hover:bg-slate-800">
+                                 {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                             </button>
+                         </Tooltip>
+                     </div>
+                </div>
+          </div>
+      </div>
 
       {/* Columns */}
       <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-0 overflow-hidden md:overflow-visible">
