@@ -1285,7 +1285,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <div className="flex justify-between items-start gap-2 mb-2">
                              <div className="flex-1 pt-0.5 min-w-0">
                                 {task.title ? (
-                                    <h4 className="font-serif text-lg font-medium text-slate-900 dark:text-white leading-tight break-words tracking-tight">
+                                    <h4 className="font-sans text-lg font-medium text-slate-900 dark:text-white leading-tight break-words tracking-tight">
                                         <HighlightedText text={applyTypography(task.title)} highlight={searchQuery} />
                                     </h4>
                                 ) : null}
@@ -1616,7 +1616,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
                             Хаб <ChevronRight size={10} /> {activeModal.type === 'challenge' ? 'Вызов' : activeModal.type === 'stuck' ? 'Терапия' : 'Задача'}
                         </div>
-                        <h3 className="text-xl font-serif font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                        <h3 className="text-xl font-sans font-bold text-slate-900 dark:text-slate-100 leading-tight">
                             {activeModal.type === 'stuck' && <span className="flex items-center gap-2"><Bot size={20} className="text-violet-500"/> Личный консультант</span>}
                             {activeModal.type === 'challenge' && <span className="flex items-center gap-2"><Zap size={20} className="text-indigo-500"/> Новый вызов</span>}
                             {activeModal.type === 'details' && (() => {
@@ -1704,7 +1704,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             <input 
                                                 value={editTaskTitle} 
                                                 onChange={(e) => setEditTaskTitle(e.target.value)} 
-                                                className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-base font-bold text-slate-800 dark:text-slate-200 focus:border-indigo-300 dark:focus:border-indigo-500 transition-colors font-serif"
+                                                className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-base font-bold text-slate-800 dark:text-slate-200 focus:border-indigo-300 dark:focus:border-indigo-500 transition-colors font-sans"
                                                 placeholder="Название задачи..."
                                             />
                                         </div>
