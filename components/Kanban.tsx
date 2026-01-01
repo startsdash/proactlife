@@ -554,7 +554,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   // EDIT TASK STATE
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [editTaskTitle, setEditTaskTitle] = useState('');
-  const [editTaskContent, setEditTaskContent] = useState('');
+  
+  // New Rich Text State for Edit Mode
+  const [editHistory, setEditHistory] = useState<string[]>(['']);
+  const [editHistoryIndex, setEditHistoryIndex] = useState(0);
+  const editContentEditableRef = useRef<HTMLDivElement>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -654,6 +658,46 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       }
   };
 
+  // --- EDIT MODE HELPERS ---
+  const saveEditSnapshot = useCallback((content: string) => {
+      if (content === editHistory[editHistoryIndex]) return;
+      const newHistory = editHistory.slice(0, editHistoryIndex + 1);
+      newHistory.push(content);
+      if (newHistory.length > 20) newHistory.shift();
+      setEditHistory(newHistory);
+      setEditHistoryIndex(newHistory.length - 1);
+  }, [editHistory, editHistoryIndex]);
+
+  const handleEditInput = () => {
+      if (editContentEditableRef.current) {
+          saveEditSnapshot(editContentEditableRef.current.innerHTML);
+      }
+  };
+
+  const execEditCmd = (command: string, value: string | undefined = undefined) => {
+      document.execCommand(command, false, value);
+      if (editContentEditableRef.current) {
+          editContentEditableRef.current.focus();
+          saveEditSnapshot(editContentEditableRef.current.innerHTML);
+      }
+  };
+
+  const execEditUndo = () => {
+      if (editHistoryIndex > 0) {
+          const prevIndex = editHistoryIndex - 1;
+          setEditHistoryIndex(prevIndex);
+          if (editContentEditableRef.current) editContentEditableRef.current.innerHTML = editHistory[prevIndex];
+      }
+  };
+
+  const execEditRedo = () => {
+      if (editHistoryIndex < editHistory.length - 1) {
+          const nextIndex = editHistoryIndex + 1;
+          setEditHistoryIndex(nextIndex);
+          if (editContentEditableRef.current) editContentEditableRef.current.innerHTML = editHistory[nextIndex];
+      }
+  };
+
   // KEYBOARD SHORTCUT FOR SEARCH
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -707,13 +751,30 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
           const task = tasks.find(t => t.id === activeModal.taskId);
           if (task) {
               setEditTaskTitle(task.title || '');
-              setEditTaskContent(task.content || '');
           }
       } else {
           setIsEditingTask(false);
           setShowHistory(false);
       }
   }, [activeModal, tasks]);
+
+  // Sync effect for Edit Mode Content
+  useEffect(() => {
+      if (isEditingTask && activeModal?.taskId) {
+          const task = tasks.find(t => t.id === activeModal.taskId);
+          if (task) {
+              setEditTaskTitle(task.title || '');
+              // Delay to allow ref to mount
+              setTimeout(() => {
+                  if (editContentEditableRef.current) {
+                      editContentEditableRef.current.innerHTML = markdownToHtml(task.content);
+                      setEditHistory([editContentEditableRef.current.innerHTML]);
+                      setEditHistoryIndex(0);
+                  }
+              }, 10);
+          }
+      }
+  }, [isEditingTask, activeModal]);
 
   const columns = [
     { id: 'todo', title: 'Нужно сделать' },
@@ -774,11 +835,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const handleSaveTaskContent = () => {
       const task = getTaskForModal();
       if (!task) return;
-      if (editTaskContent.trim() || editTaskTitle.trim()) {
+      
+      const rawHtml = editContentEditableRef.current?.innerHTML || '';
+      const content = htmlToMarkdown(rawHtml);
+
+      if (content.trim() || editTaskTitle.trim()) {
           updateTask({ 
               ...task, 
               title: applyTypography(editTaskTitle.trim()), 
-              content: applyTypography(editTaskContent) 
+              content: applyTypography(content) 
           });
           setIsEditingTask(false);
       }
@@ -1199,7 +1264,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             <input 
                                 type="text" 
                                 placeholder="Название" 
-                                className="w-full bg-transparent text-lg font-serif font-bold text-slate-900 dark:text-white outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                                className="w-full bg-transparent text-lg font-sans font-bold text-slate-900 dark:text-white outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
                                 value={newTaskTitle}
                                 onChange={e => setNewTaskTitle(e.target.value)}
                                 autoFocus
@@ -1709,12 +1774,21 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         </div>
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Описание</label>
-                                            <textarea 
-                                                value={editTaskContent} 
-                                                onChange={(e) => setEditTaskContent(e.target.value)} 
-                                                className="w-full h-32 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm text-slate-800 dark:text-slate-200 resize-none focus:border-indigo-300 dark:focus:border-indigo-500 transition-colors font-sans leading-relaxed"
-                                                placeholder="Описание (Markdown)..."
-                                            />
+                                            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                                                <div className="flex items-center gap-1 p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                                                    <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
+                                                    <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
+                                                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                    <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('bold'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Bold size={16} /></button></Tooltip>
+                                                    <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('italic'); }} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400"><Italic size={16} /></button></Tooltip>
+                                                </div>
+                                                <div 
+                                                    ref={editContentEditableRef}
+                                                    contentEditable 
+                                                    className="w-full h-32 p-3 outline-none text-sm text-slate-800 dark:text-slate-200 resize-none font-sans leading-relaxed overflow-y-auto [&_h1]:text-xl [&_h1]:font-bold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
+                                                    onInput={handleEditInput}
+                                                />
+                                            </div>
                                         </div>
                                         <div className="flex justify-end gap-2 pt-2">
                                             <button onClick={() => setIsEditingTask(false)} className="px-4 py-2 text-xs font-medium text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">Отмена</button>
