@@ -428,7 +428,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [cardSubtaskInputs, setCardSubtaskInputs] = useState<{[taskId: string]: string}>({});
   const [activeSphereFilter, setActiveSphereFilter] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
   
   // NEW TASK CREATION STATE
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
@@ -441,7 +440,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [editTaskContent, setEditTaskContent] = useState('');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
@@ -459,12 +457,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  const handleScroll = () => {
-      if (scrollRef.current) {
-          setIsScrolled(scrollRef.current.scrollTop > 10);
-      }
-  };
 
   // Filtering Logic (X-Ray Effect)
   const isMatch = (task: Task) => {
@@ -1271,29 +1263,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   return (
-    <div 
-        className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden" 
-        style={DOT_GRID_STYLE}
-        ref={scrollRef}
-        onScroll={handleScroll}
-    >
-      <header className={`
-        shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 
-        md:sticky md:top-0 md:z-30 
-        transition-all duration-500 ease-in-out
-        ${isScrolled 
-            ? 'p-4 md:px-8 md:py-3 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50 shadow-sm' 
-            : 'p-4 md:p-8 md:pb-6 bg-transparent border-b border-transparent'
-        }
-      `}>
-        {/* Fog Gradient */}
-        {isScrolled && (
-           <div className="absolute top-full left-0 right-0 h-8 bg-gradient-to-b from-white/70 to-transparent dark:from-slate-900/70 dark:to-transparent pointer-events-none transition-opacity duration-500" />
-        )}
-
-        <div className="transition-all duration-300">
-            <h1 className={`font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans transition-all duration-300 ${isScrolled ? 'text-xl md:text-2xl' : 'text-3xl'}`}>Спринты</h1>
-            <p className={`text-slate-500 dark:text-slate-400 text-sm font-sans overflow-hidden transition-all duration-300 ${isScrolled ? 'h-0 opacity-0 mt-0' : 'mt-2 h-auto opacity-100'}`}>Фокус на главном</p>
+    <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden" style={DOT_GRID_STYLE}>
+      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc]/95 md:dark:bg-[#0f172a]/95 md:pb-6 transition-colors duration-300 backdrop-blur-sm">
+        <div>
+            <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
         </div>
         
         {/* Search & Filter */}
