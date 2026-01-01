@@ -7,7 +7,7 @@ import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileTex
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
   tasks: Task[];
@@ -33,8 +33,7 @@ const NEON_COLORS: Record<string, string> = {
 // Dot Grid Background Pattern
 const DOT_GRID_STYLE = {
     backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
-    backgroundSize: '24px 24px',
-    backgroundAttachment: 'fixed' // Ensure static layer
+    backgroundSize: '24px 24px'
 };
 
 // --- UTILS ---
@@ -115,53 +114,6 @@ const SegmentedProgressBar = ({ total, current, color = 'text-indigo-500', class
     );
 };
 
-const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }> = ({ task, updateTask }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    
-    const toggleSphere = (sphereId: string) => {
-        const current = task.spheres || [];
-        const newSpheres = current.includes(sphereId) 
-            ? current.filter(s => s !== sphereId)
-            : [...current, sphereId];
-        updateTask({ ...task, spheres: newSpheres });
-    };
-
-    return (
-        <div className="relative">
-            <button 
-                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="p-1.5 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 transition-colors opacity-0 group-hover:opacity-100"
-                title="Сфера"
-            >
-                <Target size={14} strokeWidth={1.5} />
-            </button>
-            
-            {isOpen && (
-                <>
-                    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
-                    <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
-                        {SPHERES.map(s => {
-                            const isSelected = task.spheres?.includes(s.id);
-                            const Icon = ICON_MAP[s.icon];
-                            return (
-                                <button
-                                    key={s.id}
-                                    onClick={() => toggleSphere(s.id)}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                                >
-                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} />}
-                                    <span className="flex-1">{s.label}</span>
-                                    {isSelected && <Check size={12} className="text-indigo-500" />}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </>
-            )}
-        </div>
-    );
-};
-
 const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -235,6 +187,53 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
     );
 };
 
+const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }> = ({ task, updateTask }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    const toggleSphere = (sphereId: string) => {
+        const current = task.spheres || [];
+        const newSpheres = current.includes(sphereId) 
+            ? current.filter(s => s !== sphereId)
+            : [...current, sphereId];
+        updateTask({ ...task, spheres: newSpheres });
+    };
+
+    return (
+        <div className="relative">
+            <button 
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                className="p-1.5 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 transition-colors opacity-0 group-hover:opacity-100"
+                title="Сфера"
+            >
+                <Target size={14} strokeWidth={1.5} />
+            </button>
+            
+            {isOpen && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
+                    <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
+                        {SPHERES.map(s => {
+                            const isSelected = task.spheres?.includes(s.id);
+                            const Icon = ICON_MAP[s.icon];
+                            return (
+                                <button
+                                    key={s.id}
+                                    onClick={() => toggleSphere(s.id)}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                >
+                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} />}
+                                    <span className="flex-1">{s.label}</span>
+                                    {isSelected && <Check size={12} className="text-indigo-500" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
 const CollapsibleSection: React.FC<{
   title: string;
   children: React.ReactNode;
@@ -271,6 +270,12 @@ const CollapsibleSection: React.FC<{
       )}
     </div>
   );
+};
+
+const getChallengeStats = (content: string) => {
+    const total = (content.match(/\[[xX ]\]/gm) || []).length;
+    const checked = (content.match(/\[[xX]\]/gm) || []).length;
+    return { total, checked, percent: total > 0 ? Math.round((checked / total) * 100) : 0 };
 };
 
 const InteractiveChallenge: React.FC<{ 
@@ -435,15 +440,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [editTaskContent, setEditTaskContent] = useState('');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const { scrollY } = useScroll({ container: scrollContainerRef });
-  const [isSticky, setIsSticky] = useState(false);
-
-  // Use scroll position to detect when search bar is likely stuck (offset by title height ~120px)
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    if (latest > 80 && !isSticky) setIsSticky(true);
-    if (latest <= 80 && isSticky) setIsSticky(false);
-  });
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
@@ -1267,30 +1263,17 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   return (
-    <div ref={scrollContainerRef} className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
-      
-      {/* 1. SECTION TITLE (Non-Sticky, flows with content) */}
-      <div className="shrink-0 px-4 md:px-8 pt-10 pb-6 md:pb-10">
-          <h1 className="text-4xl font-serif font-medium text-slate-900 dark:text-slate-100 tracking-tight">Спринты</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-3 text-base font-sans max-w-lg leading-relaxed">
-              Фокус на главном. Управляй потоком задач.
-          </p>
-      </div>
-
-      {/* 2. STICKY SEARCH BAR (Sticks to top) */}
-      <div className="sticky top-0 z-40 w-full">
-          {/* Glass Backdrop (Always present to ensure content sliding under is blurred) */}
-          <div className={`absolute inset-0 transition-opacity duration-500 bg-[#f8fafc]/85 dark:bg-[#0f172a]/85 backdrop-blur-xl border-b border-black/5 dark:border-slate-800/50 shadow-sm ${isSticky ? 'opacity-100' : 'opacity-0 md:opacity-100'}`} />
-          
-          {/* Mobile optimization: Always show glass on mobile or desktop sticky */}
-          <div className="absolute inset-0 md:hidden bg-[#f8fafc]/90 dark:bg-[#0f172a]/90 backdrop-blur-xl border-b border-black/5 dark:border-white/5 shadow-sm" />
-
-          {/* Fade Gradient at bottom */}
-          <div className="absolute inset-x-0 bottom-0 translate-y-full h-8 bg-gradient-to-b from-[#f8fafc]/50 to-transparent dark:from-[#0f172a]/50 dark:to-transparent pointer-events-none" />
-
-          <div className="relative z-10 px-4 md:px-8 py-3 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-             <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1 md:pb-0 scrollbar-none w-full md:w-auto">
-                 {/* Sphere Filters */}
+    <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden" style={DOT_GRID_STYLE}>
+      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc]/95 md:dark:bg-[#0f172a]/95 md:pb-6 transition-colors duration-300 backdrop-blur-sm">
+        <div>
+            <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
+        </div>
+        
+        {/* Search & Filter */}
+        <div className="flex flex-col gap-2 w-full md:w-auto">
+             <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none w-full md:w-auto">
+                 {/* Sphere Filters (Tech Tags Style) */}
                  <div className="flex items-center bg-transparent shrink-0 gap-2">
                      <button 
                         onClick={() => setActiveSphereFilter(null)}
@@ -1300,6 +1283,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                      </button>
                      {SPHERES.map(s => {
                          const isActive = activeSphereFilter === s.id;
+                         // Using consistent styling for tags
                          return (
                              <button
                                 key={s.id}
@@ -1317,19 +1301,19 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                      })}
                  </div>
 
-                 {/* Search Input */}
-                 <div className="relative group min-w-[200px] flex-1 md:flex-none">
+                 {/* Search Input (Focus Tool) */}
+                 <div className="relative group min-w-[240px] flex-1">
                     <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
                     <input 
                         ref={searchInputRef}
                         type="text" 
-                        placeholder="Поиск..." 
+                        placeholder="Поиск задач или контекста..." 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-14 py-2 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-xl text-xs font-sans text-slate-700 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 shadow-sm transition-all focus:shadow-[0_0_15px_rgba(99,102,241,0.15)]"
+                        className="w-full pl-9 pr-14 py-2.5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-xl text-xs font-sans text-slate-700 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 shadow-sm transition-all focus:shadow-[0_0_15px_rgba(99,102,241,0.15)]"
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono text-slate-400 opacity-50 pointer-events-none hidden md:block">
-                        [ / ]
+                        [ CTRL + F ]
                     </div>
                     {searchQuery && (
                         <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 md:hidden"><X size={12} /></button>
@@ -1337,18 +1321,18 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                  </div>
                  
                  <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
-                     <button onClick={toggleSortOrder} className="p-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0 shadow-sm transition-all hover:bg-white dark:hover:bg-slate-800">
+                     <button onClick={toggleSortOrder} className="p-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0 shadow-sm transition-all hover:bg-white dark:hover:bg-slate-800">
                          {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
                      </button>
                  </Tooltip>
              </div>
-          </div>
-      </div>
+        </div>
+      </header>
 
       {/* Columns */}
-      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 pt-6 overflow-hidden md:overflow-visible">
+      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-0 overflow-hidden md:overflow-visible">
          {/* Mobile Tabs */}
-         <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10 mb-4 mx-4 rounded-xl overflow-hidden shadow-sm">
+         <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10">
             {columns.map(col => (
                 <button
                     key={col.id}
