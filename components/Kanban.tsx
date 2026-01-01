@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette, Bold, Italic, Heading1, Heading2, Eraser, Image as ImageIcon } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
@@ -51,6 +51,115 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
         });
     }
     return children;
+};
+
+// --- RICH TEXT HELPERS (Ported from Napkins) ---
+const processImage = (file: File | Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        if (!file.type.startsWith('image/')) {
+            reject(new Error('File is not an image'));
+            return;
+        }
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                const MAX_HEIGHT = 800;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    resolve(dataUrl);
+                } else {
+                    reject(new Error('Canvas context failed'));
+                }
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+};
+
+const markdownToHtml = (md: string) => {
+    if (!md) return '';
+    let html = md;
+    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
+    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
+    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
+    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
+        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
+    });
+    html = html.replace(/\n/g, '<br>');
+    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
+    return html;
+};
+
+const htmlToMarkdown = (html: string) => {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+
+    const wrap = (text: string, marker: string) => {
+        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
+        if (match && match[2]) {
+            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
+        }
+        return text.trim() ? `${marker}${text}${marker}` : '';
+    };
+
+    const walk = (node: Node): string => {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            const tag = el.tagName.toLowerCase();
+            let content = '';
+            el.childNodes.forEach(child => content += walk(child));
+            
+            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
+            if (el.style.fontStyle === 'italic') return wrap(content, '*');
+            
+            switch (tag) {
+                case 'b': case 'strong': return wrap(content, '**');
+                case 'i': case 'em': return wrap(content, '*');
+                case 'code': return `\`${content}\``;
+                case 'h1': return `\n# ${content}\n`;
+                case 'h2': return `\n## ${content}\n`;
+                case 'div': case 'p': return `\n${content}\n`;
+                case 'br': return '\n';
+                case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
+                default: return content;
+            }
+        }
+        return '';
+    };
+    let md = walk(temp);
+    md = md.replace(/\n{3,}/g, '\n\n').trim();
+    md = md.replace(/&nbsp;/g, ' ');
+    return applyTypography(md);
 };
 
 // Highlight Helper
@@ -433,7 +542,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   // NEW TASK CREATION STATE
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskContent, setNewTaskContent] = useState('');
+  
+  // Creation Editor State
+  const [creationHistory, setCreationHistory] = useState<string[]>(['']);
+  const [creationHistoryIndex, setCreationHistoryIndex] = useState(0);
+  const creationContentRef = useRef<HTMLDivElement>(null);
+  const creationFileRef = useRef<HTMLInputElement>(null);
+  const lastCreationSelection = useRef<Range | null>(null);
 
   // EDIT TASK STATE
   const [isEditingTask, setIsEditingTask] = useState(false);
@@ -457,6 +572,86 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
 
   const baseActiveTasks = tasks.filter(t => !t.isArchived);
+
+  // Creation Editor Helpers
+  const saveCreationSnapshot = useCallback((content: string) => {
+      if (content === creationHistory[creationHistoryIndex]) return;
+      const newHistory = creationHistory.slice(0, creationHistoryIndex + 1);
+      newHistory.push(content);
+      if (newHistory.length > 20) newHistory.shift();
+      setCreationHistory(newHistory);
+      setCreationHistoryIndex(newHistory.length - 1);
+  }, [creationHistory, creationHistoryIndex]);
+
+  const handleCreationInput = () => {
+      if (creationContentRef.current) {
+          saveCreationSnapshot(creationContentRef.current.innerHTML);
+      }
+  };
+
+  const execCreationCmd = (command: string, value: string | undefined = undefined) => {
+      document.execCommand(command, false, value);
+      if (creationContentRef.current) {
+          creationContentRef.current.focus();
+          saveCreationSnapshot(creationContentRef.current.innerHTML);
+      }
+  };
+
+  const saveCreationSelection = () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && creationContentRef.current && creationContentRef.current.contains(sel.anchorNode)) {
+          lastCreationSelection.current = sel.getRangeAt(0).cloneRange();
+      }
+  };
+
+  const restoreCreationSelection = () => {
+      const sel = window.getSelection();
+      if (sel && lastCreationSelection.current) {
+          sel.removeAllRanges();
+          sel.addRange(lastCreationSelection.current);
+      }
+  };
+
+  const insertImageAtCursor = (base64: string) => {
+      if (creationContentRef.current) creationContentRef.current.focus();
+      // If we have a saved selection inside the editor, restore it
+      if (lastCreationSelection.current) {
+          restoreCreationSelection();
+      }
+      
+      document.execCommand('insertImage', false, base64);
+      
+      // Basic styling fix for inserted images since execCommand just puts <img>
+      // We can't easily style it without complex logic, so we rely on global CSS or simple cleanup
+      if (creationContentRef.current) saveCreationSnapshot(creationContentRef.current.innerHTML);
+  };
+
+  const handleCreationImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          try {
+              const base64 = await processImage(file);
+              insertImageAtCursor(base64);
+          } catch (err) { console.error(err); }
+          e.target.value = '';
+      }
+  };
+
+  const execCreationUndo = () => {
+      if (creationHistoryIndex > 0) {
+          const prevIndex = creationHistoryIndex - 1;
+          setCreationHistoryIndex(prevIndex);
+          if (creationContentRef.current) creationContentRef.current.innerHTML = creationHistory[prevIndex];
+      }
+  };
+
+  const execCreationRedo = () => {
+      if (creationHistoryIndex < creationHistory.length - 1) {
+          const nextIndex = creationHistoryIndex + 1;
+          setCreationHistoryIndex(nextIndex);
+          if (creationContentRef.current) creationContentRef.current.innerHTML = creationHistory[nextIndex];
+      }
+  };
 
   // KEYBOARD SHORTCUT FOR SEARCH
   useEffect(() => {
@@ -546,24 +741,32 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   const handleCreateTask = () => {
-      if (!newTaskTitle.trim() && !newTaskContent.trim()) return;
+      const rawHtml = creationContentRef.current?.innerHTML || '';
+      const mdContent = htmlToMarkdown(rawHtml);
+      
+      if (!newTaskTitle.trim() && !mdContent.trim()) return;
+      
       const newTask: Task = {
           id: Date.now().toString(),
           title: applyTypography(newTaskTitle.trim()),
-          content: applyTypography(newTaskContent.trim()),
+          content: mdContent,
           column: 'todo',
           createdAt: Date.now(),
           spheres: activeSphereFilter ? [activeSphereFilter] : []
       };
       addTask(newTask);
       setNewTaskTitle('');
-      setNewTaskContent('');
+      if(creationContentRef.current) creationContentRef.current.innerHTML = '';
+      setCreationHistory(['']);
+      setCreationHistoryIndex(0);
       setIsCreatorOpen(false);
   };
 
   const cancelCreateTask = () => {
       setNewTaskTitle('');
-      setNewTaskContent('');
+      if(creationContentRef.current) creationContentRef.current.innerHTML = '';
+      setCreationHistory(['']);
+      setCreationHistoryIndex(0);
       setIsCreatorOpen(false);
   };
 
@@ -986,40 +1189,51 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
              <div className="mb-4 px-1">
                 {!isCreatorOpen ? (
                     <button 
-                        onClick={() => setIsCreatorOpen(true)}
+                        onClick={() => { setIsCreatorOpen(true); setTimeout(() => creationContentRef.current?.focus(), 100); }}
                         className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-all uppercase tracking-wider font-mono"
                     >
                         <Plus size={14} /> NEW_TASK
                     </button>
                 ) : (
-                    <div className="bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm animate-in slide-in-from-top-2">
-                        <input
-                            type="text"
-                            placeholder="Название"
-                            className="w-full text-sm font-serif font-bold text-slate-800 dark:text-slate-200 bg-transparent outline-none mb-2 placeholder:font-normal placeholder:text-slate-400"
-                            value={newTaskTitle}
-                            onChange={(e) => setNewTaskTitle(e.target.value)}
-                            autoFocus
+                    <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg animate-in slide-in-from-top-2 relative z-20">
+                        <div className="flex justify-between items-start mb-2">
+                            <input 
+                                type="text" 
+                                placeholder="Название" 
+                                className="w-full bg-transparent text-lg font-serif font-bold text-slate-900 dark:text-white outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                                value={newTaskTitle}
+                                onChange={e => setNewTaskTitle(e.target.value)}
+                                autoFocus
+                            />
+                            <button onClick={cancelCreateTask} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"><X size={20} /></button>
+                        </div>
+                        
+                        <div 
+                            ref={creationContentRef}
+                            contentEditable
+                            className="w-full min-h-[120px] max-h-[300px] overflow-y-auto outline-none text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-sans mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
+                            onInput={handleCreationInput}
+                            onBlur={() => saveCreationSelection()}
+                            onMouseUp={() => saveCreationSelection()}
+                            onKeyUp={() => saveCreationSelection()}
+                            data-placeholder="Контекст задачи..."
                         />
-                        <textarea
-                            placeholder="Контекст..."
-                            className="w-full h-16 text-sm text-slate-700 dark:text-slate-300 bg-transparent outline-none resize-none placeholder:text-slate-400 leading-relaxed font-sans"
-                            value={newTaskContent}
-                            onChange={(e) => setNewTaskContent(e.target.value)}
-                        />
-                        <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-                            <button 
-                                onClick={cancelCreateTask}
-                                className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 rounded transition-colors"
-                            >
-                                CANCEL
-                            </button>
-                            <button 
-                                onClick={handleCreateTask}
-                                disabled={!newTaskTitle.trim() && !newTaskContent.trim()}
-                                className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 font-medium transition-colors font-mono"
-                            >
-                                EXECUTE
+
+                        {/* Toolbar */}
+                        <div className="flex items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-700 pt-3">
+                            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1 mask-fade-right">
+                                <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execCreationUndo(); }} disabled={creationHistoryIndex <= 0} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
+                                <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execCreationRedo(); }} disabled={creationHistoryIndex >= creationHistory.length - 1} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
+                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                <Tooltip content="Заголовок"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500"><Heading1 size={16} /></button></Tooltip>
+                                <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('bold'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
+                                <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
+                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                <Tooltip content="Картинка"><label className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded cursor-pointer text-slate-400 dark:text-slate-500"><input ref={creationFileRef} type="file" accept="image/*" className="hidden" onChange={handleCreationImageUpload} /><ImageIcon size={16} /></label></Tooltip>
+                                <Tooltip content="Очистить"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('removeFormat'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
+                            </div>
+                            <button onClick={handleCreateTask} className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-indigo-700 transition-colors shadow-sm">
+                                Создать
                             </button>
                         </div>
                     </div>
