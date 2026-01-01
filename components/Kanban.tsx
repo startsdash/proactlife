@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2 } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
@@ -36,6 +36,7 @@ const DOT_GRID_STYLE = {
     backgroundSize: '24px 24px'
 };
 
+// --- UTILS ---
 const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     if (typeof children === 'string') return children.replace(/:\s*$/, '');
     if (Array.isArray(children)) {
@@ -50,6 +51,25 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
         });
     }
     return children;
+};
+
+// Highlight Helper
+const HighlightedText = ({ text, highlight, className = "" }: { text: string, highlight: string, className?: string }) => {
+    if (!highlight.trim()) return <span className={className}>{text}</span>;
+    const parts = text.split(new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+    return (
+        <span className={className}>
+            {parts.map((part, i) => 
+                part.toLowerCase() === highlight.toLowerCase() ? (
+                    <span key={i} className="text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.3)] bg-indigo-50/50 dark:bg-indigo-900/30 font-medium px-0.5 rounded-sm">
+                        {part}
+                    </span>
+                ) : (
+                    part
+                )
+            )}
+        </span>
+    );
 };
 
 const markdownComponents = {
@@ -71,7 +91,6 @@ const markdownComponents = {
 
 // --- NEW COMPONENT: SEGMENTED PROGRESS BAR ---
 const SegmentedProgressBar = ({ total, current, color = 'text-indigo-500', className = '' }: { total: number, current: number, color?: string, className?: string }) => {
-    // Extract base color name for background (simplified assumption: input is a tailwind text class)
     const bgClass = color.replace('text-', 'bg-');
     
     return (
@@ -403,7 +422,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [generatingChallengeFor, setGeneratingChallengeFor] = useState<string | null>(null);
   const [generatingTherapyFor, setGeneratingTherapyFor] = useState<string | null>(null);
   const [draftChallenge, setDraftChallenge] = useState<string | null>(null);
-  const [filterJournal, setFilterJournal] = useState<'all' | 'linked'>('all');
   const [sortOrder, setSortOrder] = useState<'manual' | 'desc' | 'asc'>('manual');
   const [searchQuery, setSearchQuery] = useState('');
   const [newSubtaskText, setNewSubtaskText] = useState('');
@@ -421,12 +439,27 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [editTaskTitle, setEditTaskTitle] = useState('');
   const [editTaskContent, setEditTaskContent] = useState('');
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
 
   const baseActiveTasks = tasks.filter(t => !t.isArchived);
 
-  const activeTasks = baseActiveTasks.filter(task => {
+  // KEYBOARD SHORTCUT FOR SEARCH
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Filtering Logic (X-Ray Effect)
+  const isMatch = (task: Task) => {
       // 1. Sphere Filter
       if (activeSphereFilter) {
           const hasSphere = task.spheres?.includes(activeSphereFilter);
@@ -440,18 +473,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
           const inContent = task.content.toLowerCase().includes(q);
           if (!inTitle && !inContent) return false;
       }
-      
-      // 3. Journal Filter (Optional)
-      if (filterJournal === 'linked') {
-          const hasEntry = journalEntries.some(e => e.linkedTaskId === task.id);
-          if (!hasEntry) return false;
-      }
       return true;
-  }).sort((a, b) => {
-      if (sortOrder === 'manual') return 0;
-      if (sortOrder === 'desc') return b.createdAt - a.createdAt;
-      return a.createdAt - b.createdAt;
-  });
+  };
+
+  const getSortedTasks = (taskList: Task[]) => {
+      return [...taskList].sort((a, b) => {
+          if (sortOrder === 'manual') return 0;
+          if (sortOrder === 'desc') return b.createdAt - a.createdAt;
+          return a.createdAt - b.createdAt;
+      });
+  };
 
   useEffect(() => {
     if (initialTaskId) {
@@ -556,7 +587,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     e.preventDefault();
     const taskId = e.dataTransfer.getData('taskId');
     if (!taskId) return;
-    const task = activeTasks.find(t => t.id === taskId);
+    const task = baseActiveTasks.find(t => t.id === taskId);
     if (!task || task.column === colId) return;
     
     if (!canMoveTask(task, colId)) return;
@@ -567,8 +598,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       e.preventDefault(); e.stopPropagation();
       const draggedTaskId = e.dataTransfer.getData('taskId');
       if (!draggedTaskId) return;
-      const draggedTask = activeTasks.find(t => t.id === draggedTaskId);
-      const targetTask = activeTasks.find(t => t.id === targetTaskId);
+      const draggedTask = baseActiveTasks.find(t => t.id === draggedTaskId);
+      const targetTask = baseActiveTasks.find(t => t.id === targetTaskId);
       if (!draggedTask || !targetTask) return;
       
       if (sortOrder !== 'manual') setSortOrder('manual');
@@ -927,7 +958,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
   const renderColumn = (col: typeof columns[0]) => {
     if (!col) return null;
-    const tasksInCol = activeTasks.filter(t => t.column === col.id);
+    // X-RAY LOGIC: Filter by column, but apply dimming in map based on search/sphere
+    const tasksInCol = baseActiveTasks.filter(t => t.column === col.id);
+    const sortedTasks = getSortedTasks(tasksInCol);
     
     return (
     <div className="flex flex-col h-full md:h-auto md:min-h-0 bg-transparent">
@@ -984,7 +1017,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
         <div className="flex-1 overflow-y-auto md:overflow-visible min-h-0 space-y-4 pb-2 px-1 custom-scrollbar-light md:flex-none" onDrop={(e) => handleColumnDrop(e, col.id)} onDragOver={handleDragOver}>
             <AnimatePresence>
-            {tasksInCol.length === 0 ? (
+            {sortedTasks.length === 0 ? (
                 <motion.div 
                     initial={{ opacity: 0 }} 
                     animate={{ opacity: 0.5 }} 
@@ -994,7 +1027,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                    <span className="font-mono text-slate-300 dark:text-slate-700 text-xs uppercase tracking-widest">[NO DATA]</span>
                 </motion.div>
             ) : (
-                tasksInCol.map((task, i) => {
+                sortedTasks.map((task, i) => {
+                    const match = isMatch(task);
+                    // X-Ray Styling: Faded if no match
+                    const dimStyle = !match ? "opacity-10 grayscale blur-[1px] pointer-events-none scale-95" : "";
+
                     const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
                     const hasActiveChallenge = task.activeChallenge && !task.isChallengeCompleted;
                     
@@ -1006,28 +1043,30 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         key={task.id}
                         layout 
                         initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        animate={{ opacity: match ? 1 : 0.1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        whileHover={{ 
+                        whileHover={match ? { 
                             y: -8, 
                             scale: 1.01,
                             boxShadow: "0 20px 40px -10px rgba(0,0,0,0.15)"
-                        }}
+                        } : {}}
                         transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
                         style={{ boxShadow: glow }}
-                        draggable 
+                        draggable={match}
                         onDragStart={(e) => handleDragStart(e as any, task.id)} 
                         onDrop={(e) => handleTaskDrop(e as any, task.id)} 
                         onDragOver={handleDragOver} 
-                        onClick={() => setActiveModal({taskId: task.id, type: 'details'})} 
-                        className={`bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-md p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 cursor-grab relative group active:scale-[1.02] active:shadow-lg overflow-hidden`}
+                        onClick={() => match && setActiveModal({taskId: task.id, type: 'details'})} 
+                        className={`bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-md p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group active:scale-[1.02] active:shadow-lg overflow-hidden ${dimStyle} ${match ? 'cursor-grab' : ''}`}
                     >
                         
                         {/* HEADER: Title + Control */}
                         <div className="flex justify-between items-start gap-2 mb-2">
                              <div className="flex-1 pt-0.5 min-w-0">
                                 {task.title ? (
-                                    <h4 className="font-serif text-lg font-medium text-slate-900 dark:text-white leading-tight break-words tracking-tight">{applyTypography(task.title)}</h4>
+                                    <h4 className="font-serif text-lg font-medium text-slate-900 dark:text-white leading-tight break-words tracking-tight">
+                                        <HighlightedText text={applyTypography(task.title)} highlight={searchQuery} />
+                                    </h4>
                                 ) : null}
                              </div>
                              
@@ -1234,46 +1273,55 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
         {/* Search & Filter */}
         <div className="flex flex-col gap-2 w-full md:w-auto">
              <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none w-full md:w-auto">
-                 {/* Sphere Filters */}
-                 <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 shrink-0">
+                 {/* Sphere Filters (Tech Tags Style) */}
+                 <div className="flex items-center bg-transparent shrink-0 gap-2">
                      <button 
                         onClick={() => setActiveSphereFilter(null)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${!activeSphereFilter ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                        className={`px-3 py-1.5 text-xs font-mono font-medium rounded-lg transition-all border ${!activeSphereFilter ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-transparent shadow-md' : 'text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300'}`}
                      >
-                         Все
+                         [ВСЕ]
                      </button>
                      {SPHERES.map(s => {
-                         const Icon = ICON_MAP[s.icon];
+                         const isActive = activeSphereFilter === s.id;
+                         // Using consistent styling for tags
                          return (
                              <button
                                 key={s.id}
-                                onClick={() => setActiveSphereFilter(activeSphereFilter === s.id ? null : s.id)}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${activeSphereFilter === s.id ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                                onClick={() => setActiveSphereFilter(isActive ? null : s.id)}
+                                className={`px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition-all flex items-center gap-1.5 border uppercase tracking-wider
+                                    ${isActive 
+                                        ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400`
+                                        : 'bg-transparent border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'
+                                    }
+                                `}
                              >
-                                 {Icon && <Icon size={12} className={activeSphereFilter === s.id ? s.text : 'text-slate-400'} />}
-                                 <span className={activeSphereFilter === s.id ? s.text : ''}>{s.label}</span>
+                                 {isActive ? `[ ${s.label} ]` : s.label}
                              </button>
                          );
                      })}
                  </div>
 
-                 {/* Search Input */}
-                 <div className="relative group min-w-[140px]">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                 {/* Search Input (Focus Tool) */}
+                 <div className="relative group min-w-[240px] flex-1">
+                    <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
                     <input 
+                        ref={searchInputRef}
                         type="text" 
-                        placeholder="Поиск..." 
+                        placeholder="Поиск задач или контекста..." 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-8 pr-7 py-2 bg-white dark:bg-slate-800 border border-transparent rounded-xl text-xs font-medium text-slate-700 dark:text-slate-300 placeholder:text-slate-400 outline-none ring-1 ring-transparent focus:ring-indigo-500/20 shadow-sm transition-all"
+                        className="w-full pl-9 pr-14 py-2.5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-xl text-xs font-sans text-slate-700 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 shadow-sm transition-all focus:shadow-[0_0_15px_rgba(99,102,241,0.15)]"
                     />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono text-slate-400 opacity-50 pointer-events-none hidden md:block">
+                        [ CTRL + F ]
+                    </div>
                     {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={12} /></button>
+                        <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 md:hidden"><X size={12} /></button>
                     )}
                  </div>
                  
                  <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
-                     <button onClick={toggleSortOrder} className="p-2 bg-white dark:bg-slate-800 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0 shadow-sm transition-all hover:bg-slate-50">
+                     <button onClick={toggleSortOrder} className="p-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0 shadow-sm transition-all hover:bg-white dark:hover:bg-slate-800">
                          {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
                      </button>
                  </Tooltip>
@@ -1291,7 +1339,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     onClick={() => setActiveMobileTab(col.id as any)}
                     className={getTabClass(col.id, activeMobileTab === col.id)}
                 >
-                    {col.title} <span className="opacity-60 text-[10px] font-mono">({activeTasks.filter(t => t.column === col.id).length})</span>
+                    {col.title} <span className="opacity-60 text-[10px] font-mono">({baseActiveTasks.filter(t => t.column === col.id).length})</span>
                 </button>
             ))}
          </div>
