@@ -796,7 +796,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       } else {
           hasInitializedEditRef.current = false;
       }
-  }, [isEditingTask, activeModal?.taskId, tasks]); // Depend on ID, not object reference if possible, but tasks needed for lookup
+  }, [isEditingTask, activeModal?.taskId]); // Removed `tasks` dependency to prevent re-initialization loops
 
   const columns = [
     { id: 'todo', title: 'Нужно сделать' },
@@ -1310,6 +1310,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             ref={creationContentRef}
                             contentEditable
                             className="w-full min-h-[120px] max-h-[300px] overflow-y-auto outline-none text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-sans mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
+                            style={{ whiteSpace: 'pre-wrap' }}
                             onInput={handleCreationInput}
                             onBlur={() => saveCreationSelection()}
                             onMouseUp={() => saveCreationSelection()}
@@ -1828,6 +1829,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             suppressContentEditableWarning={true}
                                             onInput={handleEditInput} 
                                             className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1"
+                                            style={{ whiteSpace: 'pre-wrap' }}
                                             data-placeholder="Описание задачи..." 
                                         />
 
