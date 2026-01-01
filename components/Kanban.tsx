@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette, Bold, Italic, Heading1, Heading2, Eraser, Image as ImageIcon } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette, Bold, Italic, Image as ImageIcon } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
@@ -114,6 +114,7 @@ const markdownToHtml = (md: string) => {
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
+    // Replace newlines with <br> but avoid doubling them after block elements
     html = html.replace(/\n/g, '<br>');
     html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
     return html;
@@ -560,6 +561,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [editHistoryIndex, setEditHistoryIndex] = useState(0);
   const editContentEditableRef = useRef<HTMLDivElement>(null);
   const editHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasInitializedEditRef = useRef(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -702,12 +704,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       }
   };
   
-  const handleClearEditStyle = (e: React.MouseEvent) => {
-      e.preventDefault();
-      execEditCmd('removeFormat');
-      execEditCmd('formatBlock', 'div'); 
-  };
-
   // KEYBOARD SHORTCUT FOR SEARCH
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -768,23 +764,27 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       }
   }, [activeModal, tasks]);
 
-  // Sync effect for Edit Mode Content
+  // Sync effect for Edit Mode Content - FIX DUPLICATION by using ref check and careful dependency
   useEffect(() => {
       if (isEditingTask && activeModal?.taskId) {
-          const task = tasks.find(t => t.id === activeModal.taskId);
-          if (task) {
-              setEditTaskTitle(task.title || '');
-              // Delay to allow ref to mount
-              setTimeout(() => {
-                  if (editContentEditableRef.current) {
-                      editContentEditableRef.current.innerHTML = markdownToHtml(task.content);
-                      setEditHistory([editContentEditableRef.current.innerHTML]);
-                      setEditHistoryIndex(0);
-                  }
-              }, 10);
+          if (!hasInitializedEditRef.current) {
+               const task = tasks.find(t => t.id === activeModal.taskId);
+               if (task && editContentEditableRef.current) {
+                   setEditTaskTitle(task.title || '');
+                   
+                   // Only set content if empty to prevent overwrite issues on re-renders, 
+                   // though ref check should handle it.
+                   const html = markdownToHtml(task.content);
+                   editContentEditableRef.current.innerHTML = html;
+                   setEditHistory([html]);
+                   setEditHistoryIndex(0);
+                   hasInitializedEditRef.current = true;
+               }
           }
+      } else {
+          hasInitializedEditRef.current = false;
       }
-  }, [isEditingTask, activeModal]);
+  }, [isEditingTask, activeModal?.taskId, tasks]); // Depend on ID, not object reference if possible, but tasks needed for lookup
 
   const columns = [
     { id: 'todo', title: 'Нужно сделать' },
@@ -1803,8 +1803,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
                                                 <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('bold'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Bold size={16} /></button></Tooltip>
                                                 <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('italic'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button></Tooltip>
-                                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                                <Tooltip content="Очистить"><button onMouseDown={handleClearEditStyle} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
                                             </div>
                                         </div>
 
@@ -1814,7 +1812,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             suppressContentEditableWarning={true}
                                             onInput={handleEditInput} 
                                             className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1"
-                                            style={{ whiteSpace: 'pre-wrap' }} 
                                             data-placeholder="Описание задачи..." 
                                         />
 
