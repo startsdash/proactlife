@@ -1442,41 +1442,38 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
                                 <div className="h-px bg-slate-100 dark:bg-slate-700/50 w-full my-2"></div>
 
-                                {/* ACTIVE/FINAL CHALLENGE */}
+                                {/* ACTIVE/FINAL CHALLENGE (COLLAPSED BY DEFAULT) */}
                                 {task.activeChallenge && (
-                                    <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-xl p-5 border border-slate-100 dark:border-slate-700 shadow-inner relative overflow-hidden group">
-                                        
-                                        <div className="flex justify-between items-start mb-3">
-                                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                                {task.isChallengeCompleted ? (
-                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                                                ) : (
-                                                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-                                                )}
-                                                {task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"}
-                                            </h4>
-                                            
-                                            {/* Action Button */}
-                                            {!isDone && (
-                                                <div className="flex gap-2 z-10">
-                                                    <Tooltip content="Удалить челлендж">
-                                                        <button onClick={(e) => deleteActiveChallenge(e)} className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </Tooltip>
-                                                    <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
-                                                         <button 
-                                                            onClick={() => toggleChallengeComplete()}
-                                                            className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:text-emerald-500 text-transparent'}`}
-                                                         >
-                                                             <Check size={12} strokeWidth={3} />
-                                                         </button>
-                                                     </Tooltip>
-                                                </div>
-                                            )}
-                                        </div>
+                                    <CollapsibleSection
+                                        title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"}
+                                        icon={
+                                            task.isChallengeCompleted 
+                                            ? <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" /> 
+                                            : <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+                                        }
+                                        defaultOpen={false}
+                                        actions={!isDone ? (
+                                            <div className="flex items-center gap-3">
+                                                <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); toggleChallengeComplete(); }}
+                                                        className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:text-emerald-500 text-transparent'}`}
+                                                    >
+                                                        <Check size={12} strokeWidth={3} />
+                                                    </button>
+                                                </Tooltip>
+                                                
+                                                <div className="w-px h-3 bg-slate-300 dark:bg-slate-600"></div>
 
-                                        <div className="font-serif text-sm italic text-slate-800 dark:text-slate-100 leading-relaxed pl-1">
+                                                <Tooltip content="Удалить челлендж">
+                                                    <button onClick={(e) => deleteActiveChallenge(e)} className="text-slate-300 hover:text-red-500 transition-colors">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </Tooltip>
+                                            </div>
+                                        ) : null}
+                                    >
+                                        <div className="font-serif text-sm italic text-slate-800 dark:text-slate-100 leading-relaxed pl-1 pt-1">
                                             {task.isChallengeCompleted ? (
                                                 <StaticChallengeRenderer content={task.activeChallenge} mode="history" />
                                             ) : (
@@ -1488,16 +1485,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 />
                                             )}
                                         </div>
-                                    </div>
+                                    </CollapsibleSection>
                                 )}
 
-                                {/* CHECKLIST - Expanded by default if active */}
+                                {/* CHECKLIST (COLLAPSED BY DEFAULT) */}
                                 {(task.subtasks && task.subtasks.length > 0 || !isDone) && (
-                                    <div className="py-2">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2"><ListTodo size={12}/> Чек-лист</h4>
-                                        </div>
-                                        
+                                    <CollapsibleSection
+                                        title="Чек-лист"
+                                        icon={<ListTodo size={14}/>}
+                                        defaultOpen={false}
+                                    >
                                         {/* SEGMENTED PROGRESS BAR */}
                                         {subtasksTotal > 0 && (
                                             <SegmentedProgressBar total={subtasksTotal} current={subtasksDone} color={sphereColorClass} />
@@ -1552,7 +1549,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
+                                    </CollapsibleSection>
                                 )}
 
                                 <div className="h-px bg-slate-100 dark:bg-slate-700/50 w-full my-2"></div>
