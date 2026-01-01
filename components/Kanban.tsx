@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
@@ -1179,10 +1180,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     
     return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-transparent">
-        {/* Floating Header - Serif Title + Mono Counter -> CHANGING TO SANS + UPPERCASE */}
-        <div className="hidden md:flex justify-center items-center text-center mb-6 gap-2">
-            <h3 className="font-sans text-sm font-semibold uppercase tracking-wider text-[#2F3437] dark:text-slate-300">{col.title}</h3>
-            <span className="text-[10px] font-mono text-[#6B6E70] dark:text-slate-500 bg-white/50 dark:bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700/50 backdrop-blur-sm">{tasksInCol.length}</span>
+        {/* Floating Header - Architectural Graphite Style */}
+        <div className="hidden md:flex items-center mb-4 gap-3 pl-1 select-none">
+            <h3 className="font-sans font-semibold text-[0.85rem] uppercase tracking-[0.15em] text-[#2F3437] dark:text-slate-200">
+                {col.title}
+            </h3>
+            <span className="font-mono text-xs font-normal text-[#2F3437]/60 dark:text-slate-500/60">
+                [ {String(tasksInCol.length).padStart(2, '0')} ]
+            </span>
         </div>
         
         {col.id === 'todo' && (
@@ -1581,7 +1586,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       </motion.div>
 
       {/* 3. Content Area */}
-      <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pt-6 pb-8 flex-1 min-h-0">
+      <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pt-10 pb-8 flex-1 min-h-0">
          {/* Mobile Tabs */}
          <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 shrink-0 z-10 mb-4 bg-transparent">
             {columns.map(col => (
