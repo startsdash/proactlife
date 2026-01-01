@@ -7,7 +7,7 @@ import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileTex
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 
 interface Props {
   tasks: Task[];
@@ -440,6 +440,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [editTaskContent, setEditTaskContent] = useState('');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const { scrollY } = useScroll({ container: scrollContainerRef });
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    if (latest > 20 && !isScrolled) setIsScrolled(true);
+    if (latest <= 20 && isScrolled) setIsScrolled(false);
+  });
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
@@ -1263,8 +1271,27 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   return (
-    <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden" style={DOT_GRID_STYLE}>
-      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc]/95 md:dark:bg-[#0f172a]/95 md:pb-6 transition-colors duration-300 backdrop-blur-sm">
+    <div ref={scrollContainerRef} className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
+      <motion.header
+        className="shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-0 z-30 w-full"
+        initial={false}
+        animate={{
+            paddingTop: isScrolled ? 16 : 32,
+            paddingBottom: isScrolled ? 16 : 24,
+            paddingLeft: isScrolled ? 24 : 32,
+            paddingRight: isScrolled ? 24 : 32,
+        }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+      >
+        {/* Glass Background & Border */}
+        <div className="absolute inset-0 backdrop-blur-xl bg-[#f8fafc]/70 dark:bg-[#0f172a]/70 border-b border-slate-200/50 dark:border-slate-800/50 -z-10 shadow-sm transition-all duration-300" />
+        
+        {/* The Horizon Fog (Gradient Mask Extension) */}
+        <div 
+            className="absolute bottom-0 left-0 right-0 h-8 translate-y-full bg-gradient-to-b from-[#f8fafc]/70 to-transparent dark:from-[#0f172a]/70 dark:to-transparent pointer-events-none -z-10" 
+            style={{ backdropFilter: 'blur(4px)' }}
+        />
+
         <div>
             <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
@@ -1327,7 +1354,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                  </Tooltip>
              </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Columns */}
       <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-0 overflow-hidden md:overflow-visible">
