@@ -115,53 +115,6 @@ const SegmentedProgressBar = ({ total, current, color = 'text-indigo-500', class
     );
 };
 
-const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }> = ({ task, updateTask }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    
-    const toggleSphere = (sphereId: string) => {
-        const current = task.spheres || [];
-        const newSpheres = current.includes(sphereId) 
-            ? current.filter(s => s !== sphereId)
-            : [...current, sphereId];
-        updateTask({ ...task, spheres: newSpheres });
-    };
-
-    return (
-        <div className="relative">
-            <button 
-                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="p-1.5 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 transition-colors opacity-0 group-hover:opacity-100"
-                title="Сфера"
-            >
-                <Target size={14} strokeWidth={1.5} />
-            </button>
-            
-            {isOpen && (
-                <>
-                    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
-                    <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
-                        {SPHERES.map(s => {
-                            const isSelected = task.spheres?.includes(s.id);
-                            const Icon = ICON_MAP[s.icon];
-                            return (
-                                <button
-                                    key={s.id}
-                                    onClick={() => toggleSphere(s.id)}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                                >
-                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} />}
-                                    <span className="flex-1">{s.label}</span>
-                                    {isSelected && <Check size={12} className="text-indigo-500" />}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </>
-            )}
-        </div>
-    );
-};
-
 const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -230,6 +183,53 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                         );
                     })}
                 </div>
+            )}
+        </div>
+    );
+};
+
+const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }> = ({ task, updateTask }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    const toggleSphere = (sphereId: string) => {
+        const current = task.spheres || [];
+        const newSpheres = current.includes(sphereId) 
+            ? current.filter(s => s !== sphereId)
+            : [...current, sphereId];
+        updateTask({ ...task, spheres: newSpheres });
+    };
+
+    return (
+        <div className="relative">
+            <button 
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                className="p-1.5 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 transition-colors opacity-0 group-hover:opacity-100"
+                title="Сфера"
+            >
+                <Target size={14} strokeWidth={1.5} />
+            </button>
+            
+            {isOpen && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
+                    <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
+                        {SPHERES.map(s => {
+                            const isSelected = task.spheres?.includes(s.id);
+                            const Icon = ICON_MAP[s.icon];
+                            return (
+                                <button
+                                    key={s.id}
+                                    onClick={() => toggleSphere(s.id)}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                >
+                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} />}
+                                    <span className="flex-1">{s.label}</span>
+                                    {isSelected && <Check size={12} className="text-indigo-500" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </>
             )}
         </div>
     );
@@ -445,11 +445,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // Smooth scroll detection for header transition (threshold adjusted for new title block)
+  // Smooth scroll detection for header transition
   useMotionValueEvent(scrollY, "change", (latest) => {
-    const threshold = 100;
-    if (latest > threshold && !isScrolled) setIsScrolled(true);
-    if (latest <= threshold && isScrolled) setIsScrolled(false);
+    if (latest > 50 && !isScrolled) setIsScrolled(true);
+    if (latest <= 50 && isScrolled) setIsScrolled(false);
   });
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
@@ -1275,40 +1274,51 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
   return (
     <div ref={scrollContainerRef} className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
-      
-      {/* 1. SECTION TITLE (Static, scrolls away) */}
-      <div className="shrink-0 px-4 md:px-8 pt-12 pb-8">
-        <h1 className="text-4xl md:text-5xl font-serif font-light text-slate-900 dark:text-white tracking-tight leading-none mb-2">
-            Спринты
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm font-sans max-w-md">
-            Фокус на главном. Управляйте потоком задач.
-        </p>
-      </div>
-
-      {/* 2. STICKY SEARCH BAR */}
-      <div className="sticky top-0 z-40 w-full mb-6">
-        {/* Foggy Glass Background - Visible mainly when content scrolls under */}
-        <div className="absolute inset-0 w-full h-full pointer-events-none">
-            {/* Main Blur Layer with conditional opacity based on scroll could be added, but always-on looks fine if styled right */}
-            <div 
-                className="absolute inset-0 bg-[#f8fafc]/85 dark:bg-[#0f172a]/85 backdrop-blur-[25px] border-b border-black/5 dark:border-white/5 shadow-sm transition-opacity duration-500"
-                style={{ opacity: isScrolled ? 1 : 0 }}
-            />
-            {/* Gradient fade at bottom - always useful for visual hierarchy if static, but let's link to scroll too */}
-            <div 
-                className="absolute inset-x-0 bottom-0 translate-y-full h-8 bg-gradient-to-b from-[#f8fafc]/50 to-transparent dark:from-[#0f172a]/50 dark:to-transparent pointer-events-none transition-opacity duration-500"
-                style={{ opacity: isScrolled ? 1 : 0 }}
-            />
+      <motion.header
+        className="shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-0 z-40 w-full"
+        initial={false}
+        animate={{
+            paddingTop: isScrolled ? 16 : 32,
+            paddingBottom: isScrolled ? 16 : 24,
+            paddingLeft: 32,
+            paddingRight: 32,
+        }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+      >
+        {/* --- FOGGY PORTAL BACKGROUND --- */}
+        <div className="absolute inset-0 -z-10 overflow-visible">
+            {/* 1. Main Glass Pane */}
+            <div className="absolute inset-0 bg-[#f8fafc]/70 dark:bg-[#0f172a]/70 backdrop-blur-xl border-b border-black/5 dark:border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.03)]" />
+            
+            {/* 2. The Fog Extension (Gradient Blur) */}
+            <div className="absolute inset-x-0 bottom-0 translate-y-full h-24 pointer-events-none -z-10">
+                {/* Blur Fade */}
+                <div 
+                    className="absolute inset-0" 
+                    style={{ 
+                        backdropFilter: 'blur(12px)', 
+                        maskImage: 'linear-gradient(to bottom, black 20%, transparent 100%)', 
+                        WebkitMaskImage: 'linear-gradient(to bottom, black 20%, transparent 100%)' 
+                    }} 
+                />
+                {/* Color Fade */}
+                <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc]/80 to-transparent dark:from-[#0f172a]/80 dark:to-transparent" />
+            </div>
         </div>
 
-        <div className="relative z-10 px-4 md:px-8 py-3">
+        <div>
+            <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
+        </div>
+        
+        {/* Search & Filter */}
+        <div className="flex flex-col gap-2 w-full md:w-auto">
              <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none w-full md:w-auto">
                  {/* Sphere Filters (Tech Tags Style) */}
                  <div className="flex items-center bg-transparent shrink-0 gap-2">
                      <button 
                         onClick={() => setActiveSphereFilter(null)}
-                        className={`px-3 py-1.5 text-xs font-mono font-medium rounded-lg transition-all border ${!activeSphereFilter ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-transparent shadow-md' : 'bg-white/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300'}`}
+                        className={`px-3 py-1.5 text-xs font-mono font-medium rounded-lg transition-all border ${!activeSphereFilter ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-transparent shadow-md' : 'text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300'}`}
                      >
                          [ВСЕ]
                      </button>
@@ -1322,7 +1332,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 className={`px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition-all flex items-center gap-1.5 border uppercase tracking-wider
                                     ${isActive 
                                         ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400`
-                                        : 'bg-white/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'
+                                        : 'bg-transparent border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'
                                     }
                                 `}
                              >
@@ -1341,7 +1351,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         placeholder="Поиск задач или контекста..." 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-14 py-2.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl text-xs font-sans text-slate-700 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 shadow-sm transition-all focus:shadow-[0_0_15px_rgba(99,102,241,0.15)]"
+                        className="w-full pl-9 pr-14 py-2.5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-xl text-xs font-sans text-slate-700 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 shadow-sm transition-all focus:shadow-[0_0_15px_rgba(99,102,241,0.15)]"
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono text-slate-400 opacity-50 pointer-events-none hidden md:block">
                         [ CTRL + F ]
@@ -1352,18 +1362,18 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                  </div>
                  
                  <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
-                     <button onClick={toggleSortOrder} className="p-2.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0 shadow-sm transition-all hover:bg-white dark:hover:bg-slate-800">
+                     <button onClick={toggleSortOrder} className="p-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0 shadow-sm transition-all hover:bg-white dark:hover:bg-slate-800">
                          {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
                      </button>
                  </Tooltip>
              </div>
         </div>
-      </div>
+      </motion.header>
 
       {/* Columns */}
-      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 overflow-hidden md:overflow-visible">
+      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-14 overflow-hidden md:overflow-visible">
          {/* Mobile Tabs */}
-         <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10 sticky top-0">
+         <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10">
             {columns.map(col => (
                 <button
                     key={col.id}
