@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
@@ -721,7 +720,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   ];
 
   const getTabClass = (id: string, active: boolean) => {
-    const base = "flex-1 py-3 text-xs font-serif font-bold uppercase tracking-wider border-b-2 transition-colors text-center";
+    const base = "flex-1 py-3 text-xs font-sans font-bold uppercase tracking-wider border-b-2 transition-colors text-center";
     if (!active) return `${base} border-transparent text-slate-400 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50`;
     
     if (id === 'todo') return `${base} border-slate-400 text-slate-700 dark:text-slate-200 bg-white dark:bg-[#1e293b]`;
@@ -1181,7 +1180,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     <div className="flex flex-col flex-1 h-full min-h-0 bg-transparent">
         {/* Floating Header - Serif Title + Mono Counter */}
         <div className="hidden md:flex justify-center items-center text-center mb-6 gap-2">
-            <h3 className="font-serif font-medium text-xl text-slate-900 dark:text-slate-100">{col.title}</h3>
+            <h3 className="font-sans font-medium text-xl text-slate-900 dark:text-slate-100">{col.title}</h3>
             <span className="text-xs font-mono text-slate-400 bg-white/50 dark:bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700/50 backdrop-blur-sm">{tasksInCol.length}</span>
         </div>
         
