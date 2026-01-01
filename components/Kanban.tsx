@@ -183,10 +183,10 @@ const HighlightedText = ({ text, highlight, className = "" }: { text: string, hi
 
 // Markdown Styles - Updated for Deep Graphite
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-[#2F3437] dark:text-slate-400 leading-relaxed font-sans" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-[#2F3437] dark:text-slate-300 leading-relaxed font-sans" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-[#2F3437] dark:text-slate-400" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-[#2F3437] dark:text-slate-400" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-[#2F3437] dark:text-slate-300" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-[#2F3437] dark:text-slate-300" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed" {...props} />,
     h1: ({node, children, ...props}: any) => <h1 className="text-sm font-semibold mt-3 mb-2 text-[#2F3437] dark:text-slate-200 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h1>,
     h2: ({node, children, ...props}: any) => <h2 className="text-xs font-semibold mt-2 mb-2 text-[#2F3437] dark:text-slate-200 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h2>,
@@ -404,7 +404,7 @@ const InteractiveChallenge: React.FC<{
             const trimmedBuffer = textBuffer.trim(); 
             if (trimmedBuffer) {
                 renderedParts.push(
-                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-[#2F3437] dark:text-slate-300 mb-1 last:mb-0">
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-[#2F3437] dark:text-slate-300 font-sans mb-1 last:mb-0">
                         <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
                     </div>
                 );
@@ -432,7 +432,7 @@ const InteractiveChallenge: React.FC<{
                         <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-400'}`}>
                             {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                         </div>
-                        <span className={`text-sm ${isChecked ? 'text-[#6B6E70] dark:text-slate-500 line-through' : 'text-[#2F3437] dark:text-slate-300'}`}>
+                        <span className={`text-sm font-sans ${isChecked ? 'text-[#6B6E70] dark:text-slate-500 line-through' : 'text-[#2F3437] dark:text-slate-300'}`}>
                             <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{applyTypography(label)}</ReactMarkdown>
                         </span>
                     </button>
@@ -471,7 +471,7 @@ const StaticChallengeRenderer: React.FC<{
              const trimmedBuffer = textBuffer.trim();
              if (trimmedBuffer) {
                 renderedParts.push(
-                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-[#2F3437] dark:text-slate-300 mb-1 last:mb-0">
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-[#2F3437] dark:text-slate-300 font-sans mb-1 last:mb-0">
                         <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
                     </div>
                 );
@@ -512,7 +512,7 @@ const StaticChallengeRenderer: React.FC<{
                     <div className={`mt-0.5 shrink-0 ${iconClass}`}>
                         <Icon size={16} />
                     </div>
-                    <span className={`text-sm text-[#2F3437] dark:text-slate-300`}>
+                    <span className={`text-sm text-[#2F3437] dark:text-slate-300 font-sans`}>
                         <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{applyTypography(label)}</ReactMarkdown>
                     </span>
                 </div>
@@ -1682,9 +1682,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
                             Хаб <ChevronRight size={10} /> {activeModal.type === 'challenge' ? 'Вызов' : activeModal.type === 'stuck' ? 'Терапия' : 'Задача'}
                         </div>
-                        <h3 className="text-xl font-sans font-bold text-slate-900 dark:text-slate-100 leading-tight">
-                            {activeModal.type === 'stuck' && <span className="flex items-center gap-2"><Bot size={20} className="text-violet-500"/> Личный консультант</span>}
-                            {activeModal.type === 'challenge' && <span className="flex items-center gap-2"><Zap size={20} className="text-indigo-500"/> Новый вызов</span>}
+                        <h3 className="text-2xl font-serif font-bold text-slate-900 dark:text-white leading-tight">
+                            {activeModal.type === 'stuck' && <span className="flex items-center gap-2"><Bot size={24} className="text-violet-500"/> Личный консультант</span>}
+                            {activeModal.type === 'challenge' && <span className="flex items-center gap-2"><Zap size={24} className="text-indigo-500"/> Новый вызов</span>}
                             {activeModal.type === 'details' && (() => {
                                 const task = getTaskForModal();
                                 if (task?.title) return applyTypography(task.title);
@@ -1726,9 +1726,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <div className="space-y-4">
                             {aiResponse ? (
                                 <div className="space-y-4">
-                                    <div className="bg-violet-50 dark:bg-violet-900/20 p-6 rounded-2xl border border-violet-100 dark:border-violet-800/50 shadow-inner">
+                                    <div className="bg-violet-50/30 dark:bg-violet-900/10 p-6 rounded-2xl border border-violet-100/50 dark:border-violet-800/30">
                                         <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase tracking-widest mb-3">Совет</div>
-                                        <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium"><ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown></div>
+                                        <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown></div>
                                     </div>
                                 </div>
                             ) : (
@@ -1742,11 +1742,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
                     {activeModal.type === 'challenge' && draftChallenge && (
                         <div className="flex flex-col h-full">
-                            <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 leading-relaxed text-sm shadow-inner relative overflow-hidden">
+                            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-800 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-3 opacity-30">
                                     <div className="w-16 h-16 bg-indigo-500 rounded-full blur-2xl" />
                                 </div>
-                                <StaticChallengeRenderer content={draftChallenge} mode="draft" />
+                                <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed">
+                                    <StaticChallengeRenderer content={draftChallenge} mode="draft" />
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1915,7 +1917,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                     </div>
                                                 ) : null}
                                             >
-                                                <div className="font-serif text-sm italic text-slate-800 dark:text-slate-100 leading-relaxed pl-1 pt-1">
+                                                <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed pl-1 pt-1">
                                                     {task.isChallengeCompleted ? (
                                                         <StaticChallengeRenderer content={task.activeChallenge} mode="history" />
                                                     ) : (
@@ -1937,7 +1939,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                     {task.challengeHistory?.map((h, i) => (
                                                         <div key={`ch-${i}`} className="text-sm bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50 relative group">
                                                             <div className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Zap size={10}/> Архивный челлендж</div>
-                                                            <div className="opacity-70"><StaticChallengeRenderer content={h} mode="history" /></div>
+                                                            <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><StaticChallengeRenderer content={h} mode="history" /></div>
                                                             {!isDone && (
                                                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <Tooltip content="Удалить">
@@ -1950,7 +1952,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                     {task.consultationHistory?.map((h, i) => (
                                                         <div key={`cons-${i}`} className="text-sm bg-violet-50/30 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-800/30 relative group">
                                                             <div className="text-[9px] font-bold text-violet-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Bot size={10}/> Консультация</div>
-                                                            <div className="text-[#2F3437] dark:text-slate-300 leading-relaxed opacity-80"><ReactMarkdown components={markdownComponents}>{applyTypography(h)}</ReactMarkdown></div>
+                                                            <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{applyTypography(h)}</ReactMarkdown></div>
                                                             {!isDone && (
                                                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <Tooltip content="Удалить">
@@ -1973,7 +1975,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     <div className="mt-6 flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-700/50">
                         <button 
                             onClick={saveTherapyResponse} 
-                            className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-xl hover:bg-violet-700 transition-colors shadow-lg shadow-violet-200 dark:shadow-none text-xs font-bold uppercase tracking-wider"
+                            className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"
                         >
                             <Save size={16} /> Сохранить в историю
                         </button>
@@ -1983,7 +1985,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     <div className="mt-6 flex justify-end gap-2 shrink-0 pt-4 border-t border-slate-100 dark:border-slate-700/50">
                         <button 
                             onClick={acceptDraftChallenge} 
-                            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none text-sm font-bold uppercase tracking-wider active:scale-95"
+                            className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"
                         >
                             <Rocket size={18} /> Принять вызов
                         </button>
