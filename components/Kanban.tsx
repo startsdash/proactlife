@@ -854,6 +854,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
           setIsEditingTask(false);
       }
   };
+  
+  const handleTitleAutosave = () => {
+      const task = getTaskForModal();
+      if (!task) return;
+      const newTitle = applyTypography(editTaskTitle.trim());
+      if ((task.title || '') !== newTitle) {
+          updateTask({ ...task, title: newTitle });
+      }
+  };
 
   const canMoveTask = (task: Task, targetColId: string): boolean => {
     if (task.column === 'doing' && targetColId !== 'doing') {
@@ -1695,7 +1704,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 placeholder="Название" 
                                 value={editTaskTitle} 
                                 onChange={(e) => setEditTaskTitle(e.target.value)} 
-                                onBlur={handleSaveTaskContent}
+                                onBlur={() => { if (!isEditingTask) handleTitleAutosave(); }}
                                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                                 className="text-2xl font-sans font-bold text-slate-900 dark:text-white leading-tight bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full p-0 m-0" 
                             />
