@@ -1093,12 +1093,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const getTaskForModal = () => tasks.find(t => t.id === activeModal?.taskId);
 
   // --- HELPER: TECHNO TIME & GLOW ---
-  const getTechTime = (createdAt: number) => {
-      const diff = Date.now() - createdAt;
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      return `T+${days}d`;
-  };
-
   const getTechGlow = (spheres: string[] | undefined, activeFilter: string | null) => {
       if (!activeFilter || !spheres || !spheres.includes(activeFilter)) return 'none';
       const color = NEON_COLORS[activeFilter];
@@ -1477,7 +1471,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             {/* Right: Meta Data */}
                             <div className="text-[10px] font-mono text-[#6B6E70] dark:text-slate-500 flex gap-2 select-none pointer-events-none">
                                 <span>[ID: {task.id.slice(-4)}]</span>
-                                <span>[{getTechTime(task.createdAt)}]</span>
                             </div>
                         </div>
                     </motion.div>
