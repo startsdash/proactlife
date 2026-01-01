@@ -7,7 +7,7 @@ import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileTex
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
   tasks: Task[];
@@ -32,7 +32,7 @@ const NEON_COLORS: Record<string, string> = {
 
 // Dot Grid Background Pattern
 const DOT_GRID_STYLE = {
-    backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)',
+    backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
     backgroundSize: '24px 24px'
 };
 
@@ -272,6 +272,12 @@ const CollapsibleSection: React.FC<{
   );
 };
 
+const getChallengeStats = (content: string) => {
+    const total = (content.match(/\[[xX ]\]/gm) || []).length;
+    const checked = (content.match(/\[[xX]\]/gm) || []).length;
+    return { total, checked, percent: total > 0 ? Math.round((checked / total) * 100) : 0 };
+};
+
 const InteractiveChallenge: React.FC<{ 
     content: string, 
     onToggle: (index: number) => void,
@@ -422,7 +428,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [cardSubtaskInputs, setCardSubtaskInputs] = useState<{[taskId: string]: string}>({});
   const [activeSphereFilter, setActiveSphereFilter] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   
   // NEW TASK CREATION STATE
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
@@ -435,21 +440,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [editTaskContent, setEditTaskContent] = useState('');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const { scrollY } = useScroll({ container: scrollContainerRef });
-
-  // SCROLL DETECTION FOR TITLE HIDING
-  useMotionValueEvent(scrollY, "change", (latest) => {
-      const previous = scrollY.getPrevious() || 0;
-      const diff = latest - previous;
-      // If scrolling down significantly or past the top threshold
-      if (latest > 60 && diff > 0) {
-          setIsHeaderHidden(true);
-      } else if (diff < -5) {
-          // If scrolling up significantly
-          setIsHeaderHidden(false);
-      }
-  });
 
   const hasChallengeAuthors = useMemo(() => config.challengeAuthors && config.challengeAuthors.length > 0, [config.challengeAuthors]);
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
@@ -975,7 +965,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     return (
     <div className="flex flex-col h-full md:h-auto md:min-h-0 bg-transparent">
         {/* Floating Header - Serif Title + Mono Counter */}
-        <div className="hidden md:flex justify-center items-center text-center mb-6 gap-2 pt-6">
+        <div className="hidden md:flex justify-center items-center text-center mb-6 gap-2">
             <h3 className="font-serif font-medium text-xl text-slate-900 dark:text-slate-100">{col.title}</h3>
             <span className="text-xs font-mono text-slate-400 bg-white/50 dark:bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700/50 backdrop-blur-sm">{tasksInCol.length}</span>
         </div>
@@ -1273,111 +1263,76 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   return (
-    <div 
-        ref={scrollContainerRef}
-        className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden bg-transparent" 
-        style={DOT_GRID_STYLE}
-    >
-      
-      {/* FROZEN HEADER CONTAINER */}
-      <motion.div 
-        className="sticky top-0 z-40 w-full"
-        initial={false}
-      >
-          {/* TITLE SECTION (Collapsible) */}
-          <motion.div
-            animate={{ 
-                height: isHeaderHidden ? 0 : 'auto',
-                opacity: isHeaderHidden ? 0 : 1,
-                marginBottom: isHeaderHidden ? 0 : 24
-            }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="overflow-hidden px-4 md:px-8 bg-transparent relative z-10"
-          >
-             <div className="pt-8 pb-2">
-                <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
-             </div>
-          </motion.div>
-
-          {/* STICKY TOOLBAR (The Ice Block) */}
-          <div className="px-4 md:px-8 pb-4 relative">
-             {/* The Glass Background & Texture */}
-             <div 
-                className="absolute inset-0 w-full h-full backdrop-blur-xl border-b border-white/20 dark:border-white/5"
-                style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.4)', // Light frost
-                    ...DOT_GRID_STYLE // Grid inside the glass
-                }} 
-             />
-             {/* Dark mode overlay adjustment */}
-             <div className="absolute inset-0 w-full h-full bg-slate-900/10 dark:bg-slate-900/60 pointer-events-none" />
-
-             {/* Gradient Dissolve Mask at Bottom */}
-             <div className="absolute top-full left-0 right-0 h-12 bg-gradient-to-b from-white/40 to-transparent dark:from-slate-900/40 pointer-events-none backdrop-blur-md" style={{ maskImage: 'linear-gradient(to bottom, black, transparent)' }} />
-
-             <div className="relative z-20 flex flex-col gap-2 w-full md:w-auto pt-4">
-                 <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none w-full md:w-auto">
-                     {/* Sphere Filters (Tech Tags Style) */}
-                     <div className="flex items-center bg-transparent shrink-0 gap-2">
-                         <button 
-                            onClick={() => setActiveSphereFilter(null)}
-                            className={`px-3 py-1.5 text-xs font-mono font-medium rounded-lg transition-all border ${!activeSphereFilter ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-transparent shadow-md' : 'text-slate-500 dark:text-slate-400 border-slate-400/30 hover:border-slate-500 hover:bg-white/40 dark:hover:bg-black/20'}`}
-                         >
-                             [ВСЕ]
-                         </button>
-                         {SPHERES.map(s => {
-                             const isActive = activeSphereFilter === s.id;
-                             return (
-                                 <button
-                                    key={s.id}
-                                    onClick={() => setActiveSphereFilter(isActive ? null : s.id)}
-                                    className={`px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition-all flex items-center gap-1.5 border uppercase tracking-wider
-                                        ${isActive 
-                                            ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 ring-offset-transparent ring-${s.color}-400`
-                                            : 'bg-transparent border-slate-400/30 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-500 hover:bg-white/40 dark:hover:bg-black/20'
-                                        }
-                                    `}
-                                 >
-                                     {isActive ? `[ ${s.label} ]` : s.label}
-                                 </button>
-                             );
-                         })}
-                     </div>
-
-                     {/* Search Input (Focus Tool) */}
-                     <div className="relative group min-w-[240px] flex-1">
-                        <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-500'}`} />
-                        <input 
-                            ref={searchInputRef}
-                            type="text" 
-                            placeholder="Поиск задач или контекста..." 
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-9 pr-14 py-2.5 bg-white/40 dark:bg-black/20 border border-white/40 dark:border-white/10 rounded-xl text-xs font-sans text-slate-800 dark:text-slate-200 placeholder:text-slate-500/70 outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 shadow-sm transition-all focus:shadow-[0_0_15px_rgba(99,102,241,0.15)] focus:bg-white/70 dark:focus:bg-black/40"
-                        />
-                        <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono text-slate-400 opacity-50 pointer-events-none hidden md:block transition-opacity duration-300 ${isHeaderHidden ? 'opacity-0' : 'opacity-50'}`}>
-                            [ CTRL + F ]
-                        </div>
-                        {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 md:hidden"><X size={12} /></button>
-                        )}
-                     </div>
-                     
-                     <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
-                         <button onClick={toggleSortOrder} className="p-2.5 bg-white/40 dark:bg-black/20 border border-white/40 dark:border-white/10 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 shrink-0 shadow-sm transition-all hover:bg-white/70 dark:hover:bg-black/40">
-                             {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-                         </button>
-                     </Tooltip>
+    <div className="flex flex-col h-full relative md:overflow-y-auto md:overflow-x-hidden custom-scrollbar-light overflow-hidden" style={DOT_GRID_STYLE}>
+      <header className="p-4 md:p-8 pb-0 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:sticky md:top-0 md:z-30 md:bg-[#f8fafc]/95 md:dark:bg-[#0f172a]/95 md:pb-6 transition-colors duration-300 backdrop-blur-sm">
+        <div>
+            <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
+        </div>
+        
+        {/* Search & Filter */}
+        <div className="flex flex-col gap-2 w-full md:w-auto">
+             <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-none w-full md:w-auto">
+                 {/* Sphere Filters (Tech Tags Style) */}
+                 <div className="flex items-center bg-transparent shrink-0 gap-2">
+                     <button 
+                        onClick={() => setActiveSphereFilter(null)}
+                        className={`px-3 py-1.5 text-xs font-mono font-medium rounded-lg transition-all border ${!activeSphereFilter ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-transparent shadow-md' : 'text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300'}`}
+                     >
+                         [ВСЕ]
+                     </button>
+                     {SPHERES.map(s => {
+                         const isActive = activeSphereFilter === s.id;
+                         // Using consistent styling for tags
+                         return (
+                             <button
+                                key={s.id}
+                                onClick={() => setActiveSphereFilter(isActive ? null : s.id)}
+                                className={`px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition-all flex items-center gap-1.5 border uppercase tracking-wider
+                                    ${isActive 
+                                        ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400`
+                                        : 'bg-transparent border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'
+                                    }
+                                `}
+                             >
+                                 {isActive ? `[ ${s.label} ]` : s.label}
+                             </button>
+                         );
+                     })}
                  </div>
-            </div>
-          </div>
-      </motion.div>
+
+                 {/* Search Input (Focus Tool) */}
+                 <div className="relative group min-w-[240px] flex-1">
+                    <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
+                    <input 
+                        ref={searchInputRef}
+                        type="text" 
+                        placeholder="Поиск задач или контекста..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-14 py-2.5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-xl text-xs font-sans text-slate-700 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 shadow-sm transition-all focus:shadow-[0_0_15px_rgba(99,102,241,0.15)]"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono text-slate-400 opacity-50 pointer-events-none hidden md:block">
+                        [ CTRL + F ]
+                    </div>
+                    {searchQuery && (
+                        <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 md:hidden"><X size={12} /></button>
+                    )}
+                 </div>
+                 
+                 <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="left">
+                     <button onClick={toggleSortOrder} className="p-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 shrink-0 shadow-sm transition-all hover:bg-white dark:hover:bg-slate-800">
+                         {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                     </button>
+                 </Tooltip>
+             </div>
+        </div>
+      </header>
 
       {/* Columns */}
-      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-4 overflow-hidden md:overflow-visible relative z-0">
+      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-0 overflow-hidden md:overflow-visible">
          {/* Mobile Tabs */}
-         <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10 sticky top-[130px]">
+         <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10">
             {columns.map(col => (
                 <button
                     key={col.id}
