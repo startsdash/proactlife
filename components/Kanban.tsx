@@ -180,20 +180,21 @@ const HighlightedText = ({ text, highlight, className = "" }: { text: string, hi
     );
 };
 
+// Markdown Styles - Updated for Deep Graphite
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-sans" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-[#2F3437] dark:text-slate-400 leading-relaxed font-sans" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-slate-600 dark:text-slate-300" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-slate-600 dark:text-slate-300" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-[#2F3437] dark:text-slate-400" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-[#2F3437] dark:text-slate-400" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed" {...props} />,
-    h1: ({node, children, ...props}: any) => <h1 className="text-base font-serif font-bold mt-3 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
-    h2: ({node, children, ...props}: any) => <h2 className="text-sm font-serif font-bold mt-2 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
-    h3: ({node, children, ...props}: any) => <h3 className="text-xs font-bold mt-2 mb-1 text-slate-500 dark:text-slate-400 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
-    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-indigo-200 dark:border-indigo-800 pl-3 py-1 my-2 text-xs text-slate-500 dark:text-slate-400 italic" {...props} />,
+    h1: ({node, children, ...props}: any) => <h1 className="text-sm font-semibold mt-3 mb-2 text-[#2F3437] dark:text-slate-200 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h1>,
+    h2: ({node, children, ...props}: any) => <h2 className="text-xs font-semibold mt-2 mb-2 text-[#2F3437] dark:text-slate-200 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h2>,
+    h3: ({node, children, ...props}: any) => <h3 className="text-[10px] font-bold mt-2 mb-1 text-[#6B6E70] dark:text-slate-500 uppercase tracking-widest" {...props}>{cleanHeader(children)}</h3>,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-indigo-200 dark:border-indigo-800 pl-3 py-1 my-2 text-xs text-[#6B6E70] dark:text-slate-500 italic" {...props} />,
     code: ({node, inline, className, children, ...props}: any) => {
          return inline 
-            ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-slate-600 dark:text-slate-400" {...props}>{children}</code>
-            : <code className="block bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+            ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-[#6B6E70] dark:text-slate-400" {...props}>{children}</code>
+            : <code className="block bg-slate-50 dark:bg-slate-800/50 text-[#6B6E70] dark:text-slate-400 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     }
 };
 
@@ -215,7 +216,7 @@ const SegmentedProgressBar = ({ total, current, color = 'text-indigo-500', class
                     />
                 ))}
             </div>
-            <div className="font-mono text-[9px] text-slate-400 font-bold tracking-widest shrink-0">
+            <div className="font-mono text-[9px] text-[#6B6E70] dark:text-slate-500 font-bold tracking-widest shrink-0">
                 {String(current).padStart(2, '0')}/{String(total).padStart(2, '0')}
             </div>
         </div>
@@ -261,15 +262,15 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                                     return sp ? <div key={s} className={`w-3 h-3 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
                                 })}
                             </div>
-                            <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                            <span className="text-sm font-medium text-[#2F3437] dark:text-slate-200 truncate">
                                 {selected.map(id => SPHERES.find(s => s.id === id)?.label).join(', ')}
                             </span>
                         </>
                     ) : (
-                        <span className="text-sm text-slate-400">Выбери сферу</span>
+                        <span className="text-sm text-[#6B6E70]">Выбери сферу</span>
                     )}
                 </div>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`text-[#6B6E70] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
             
             {isOpen && (
@@ -281,9 +282,9 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                             <button
                                 key={s.id}
                                 onClick={() => toggleSphere(s.id)}
-                                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-[#2F3437] dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                             >
-                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-slate-400'} />}
+                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-[#6B6E70]'} />}
                                 <span className="flex-1">{s.label}</span>
                                 {isSelected && <Check size={14} className="text-indigo-500" />}
                             </button>
@@ -327,9 +328,9 @@ const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }
                                 <button
                                     key={s.id}
                                     onClick={() => toggleSphere(s.id)}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-[#2F3437] dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                                 >
-                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} />}
+                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-[#6B6E70]'} />}
                                     <span className="flex-1">{s.label}</span>
                                     {isSelected && <Check size={12} className="text-indigo-500" />}
                                 </button>
@@ -358,7 +359,7 @@ const CollapsibleSection: React.FC<{
         onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} 
         className={`w-full flex items-center justify-between ${isCard ? 'p-2' : 'p-4'} cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-700/30 transition-colors group/header`}
       >
-        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+        <div className="flex items-center gap-2 text-[10px] font-bold text-[#6B6E70] dark:text-slate-500 uppercase tracking-wider">
            {icon}
            {title}
         </div>
@@ -402,7 +403,7 @@ const InteractiveChallenge: React.FC<{
             const trimmedBuffer = textBuffer.trim(); 
             if (trimmedBuffer) {
                 renderedParts.push(
-                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 mb-1 last:mb-0">
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-[#2F3437] dark:text-slate-300 mb-1 last:mb-0">
                         <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
                     </div>
                 );
@@ -430,7 +431,7 @@ const InteractiveChallenge: React.FC<{
                         <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-400'}`}>
                             {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                         </div>
-                        <span className={`text-sm ${isChecked ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
+                        <span className={`text-sm ${isChecked ? 'text-[#6B6E70] dark:text-slate-500 line-through' : 'text-[#2F3437] dark:text-slate-300'}`}>
                             <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{applyTypography(label)}</ReactMarkdown>
                         </span>
                     </button>
@@ -469,7 +470,7 @@ const StaticChallengeRenderer: React.FC<{
              const trimmedBuffer = textBuffer.trim();
              if (trimmedBuffer) {
                 renderedParts.push(
-                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 mb-1 last:mb-0">
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-[#2F3437] dark:text-slate-300 mb-1 last:mb-0">
                         <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
                     </div>
                 );
@@ -510,7 +511,7 @@ const StaticChallengeRenderer: React.FC<{
                     <div className={`mt-0.5 shrink-0 ${iconClass}`}>
                         <Icon size={16} />
                     </div>
-                    <span className={`text-sm text-slate-700 dark:text-slate-300`}>
+                    <span className={`text-sm text-[#2F3437] dark:text-slate-300`}>
                         <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{applyTypography(label)}</ReactMarkdown>
                     </span>
                 </div>
@@ -721,9 +722,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
   const getTabClass = (id: string, active: boolean) => {
     const base = "flex-1 py-3 text-xs font-sans font-bold uppercase tracking-wider border-b-2 transition-colors text-center";
-    if (!active) return `${base} border-transparent text-slate-400 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50`;
+    if (!active) return `${base} border-transparent text-[#6B6E70] border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50`;
     
-    if (id === 'todo') return `${base} border-slate-400 text-slate-700 dark:text-slate-200 bg-white dark:bg-[#1e293b]`;
+    if (id === 'todo') return `${base} border-slate-400 text-[#2F3437] dark:text-slate-200 bg-white dark:bg-[#1e293b]`;
     if (id === 'doing') return `${base} border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-900/10`;
     if (id === 'done') return `${base} border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-900/10`;
     return base;
@@ -1147,7 +1148,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             {s.isCompleted && <Check size={10} className="text-white" strokeWidth={3} />}
                         </div>
                         
-                        <span className={`text-sm flex-1 break-words leading-relaxed transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-slate-700 dark:text-slate-200"}`}>{s.text}</span>
+                        <span className={`text-sm flex-1 break-words leading-relaxed transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-[#2F3437] dark:text-slate-200"}`}>{s.text}</span>
                         
                         <button onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(s.id, task.id); }} className="text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"><X size={12}/></button>
                     </div>
@@ -1178,10 +1179,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     
     return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-transparent">
-        {/* Floating Header - Serif Title + Mono Counter */}
+        {/* Floating Header - Serif Title + Mono Counter -> CHANGING TO SANS + UPPERCASE */}
         <div className="hidden md:flex justify-center items-center text-center mb-6 gap-2">
-            <h3 className="font-sans font-medium text-xl text-slate-900 dark:text-slate-100">{col.title}</h3>
-            <span className="text-xs font-mono text-slate-400 bg-white/50 dark:bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700/50 backdrop-blur-sm">{tasksInCol.length}</span>
+            <h3 className="font-sans text-sm font-semibold uppercase tracking-wider text-[#2F3437] dark:text-slate-300">{col.title}</h3>
+            <span className="text-[10px] font-mono text-[#6B6E70] dark:text-slate-500 bg-white/50 dark:bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700/50 backdrop-blur-sm">{tasksInCol.length}</span>
         </div>
         
         {col.id === 'todo' && (
@@ -1285,7 +1286,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <div className="flex justify-between items-start gap-2 mb-2">
                              <div className="flex-1 pt-0.5 min-w-0">
                                 {task.title ? (
-                                    <h4 className="font-sans text-lg font-medium text-slate-900 dark:text-white leading-tight break-words tracking-tight">
+                                    <h4 className="font-sans text-sm font-medium text-[#2F3437] dark:text-slate-200 leading-snug break-words group-hover:text-black dark:group-hover:text-white transition-colors tracking-tight">
                                         <HighlightedText text={applyTypography(task.title)} highlight={searchQuery} />
                                     </h4>
                                 ) : null}
@@ -1298,7 +1299,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
                         {/* CONTENT */}
                         <div className="mb-3">
-                            <div className={`text-slate-600 dark:text-slate-400 font-sans text-sm leading-relaxed line-clamp-3 ${!task.title ? 'text-base' : ''}`}>
+                            <div className={`text-[#2F3437] dark:text-slate-400 font-sans text-sm leading-relaxed line-clamp-3 ${!task.title ? 'text-base' : ''}`}>
                                  <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
                             </div>
                         </div>
@@ -1469,7 +1470,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             </div>
 
                             {/* Right: Meta Data */}
-                            <div className="text-[9px] font-mono text-slate-300 dark:text-slate-600 flex gap-2 select-none pointer-events-none">
+                            <div className="text-[10px] font-mono text-[#6B6E70] dark:text-slate-500 flex gap-2 select-none pointer-events-none">
                                 <span>[ID: {task.id.slice(-4)}]</span>
                                 <span>[{getTechTime(task.createdAt)}]</span>
                             </div>
@@ -1724,7 +1725,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     </div>
                                 ) : (
                                     <div className="group relative pr-1">
-                                        <div className="text-slate-700 dark:text-slate-300 text-sm font-normal leading-relaxed font-sans">
+                                        <div className="text-[#2F3437] dark:text-slate-300 text-sm font-normal leading-relaxed font-sans">
                                             <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
                                         </div>
                                     </div>
@@ -1824,7 +1825,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                         {s.isCompleted && <Check size={12} className="text-white" strokeWidth={3} />}
                                                     </div>
                                                     
-                                                    <span className={`text-sm flex-1 break-words leading-relaxed transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-slate-700 dark:text-slate-200"}`}>{s.text}</span>
+                                                    <span className={`text-sm flex-1 break-words leading-relaxed transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-[#2F3437] dark:text-slate-200"}`}>{s.text}</span>
                                                     
                                                     {!isDone && (
                                                         <button onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(s.id); }} className="text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"><X size={14}/></button>
@@ -1883,7 +1884,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 {task.consultationHistory?.map((h, i) => (
                                                     <div key={`cons-${i}`} className="text-sm bg-violet-50/30 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-800/30 relative group">
                                                         <div className="text-[9px] font-bold text-violet-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Bot size={10}/> Консультация</div>
-                                                        <div className="text-slate-600 dark:text-slate-300 leading-relaxed opacity-80"><ReactMarkdown components={markdownComponents}>{applyTypography(h)}</ReactMarkdown></div>
+                                                        <div className="text-[#2F3437] dark:text-slate-300 leading-relaxed opacity-80"><ReactMarkdown components={markdownComponents}>{applyTypography(h)}</ReactMarkdown></div>
                                                         {!isDone && (
                                                             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                 <Tooltip content="Удалить">
@@ -1900,7 +1901,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 
                                 {task.description && (
                                     <CollapsibleSection title="Контекст" icon={<FileText size={12}/>}>
-                                        <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-sans">
+                                        <div className="text-xs text-[#6B6E70] dark:text-slate-400 leading-relaxed font-sans">
                                             <ReactMarkdown components={markdownComponents}>{applyTypography(task.description)}</ReactMarkdown>
                                         </div>
                                     </CollapsibleSection>
