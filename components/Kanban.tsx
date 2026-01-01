@@ -1817,7 +1817,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     <div className="group relative pr-1">
                                         {/* 1. Context (Description) */}
                                         {task.description && (
-                                            <CollapsibleSection title="Контекст" icon={<FileText size={12}/>} defaultOpen={true}>
+                                            <CollapsibleSection title="Контекст" icon={<FileText size={12}/>}>
                                                 <div className="text-xs text-[#6B6E70] dark:text-slate-400 leading-relaxed font-sans">
                                                     <ReactMarkdown components={markdownComponents}>{applyTypography(task.description)}</ReactMarkdown>
                                                 </div>
@@ -1834,7 +1834,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             <CollapsibleSection
                                                 title="Чек-лист"
                                                 icon={<ListTodo size={14}/>}
-                                                defaultOpen={true}
                                             >
                                                 {/* SEGMENTED PROGRESS BAR */}
                                                 {subtasksTotal > 0 && (
@@ -1902,7 +1901,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                     ? <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" /> 
                                                     : <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
                                                 }
-                                                defaultOpen={true}
                                                 actions={!isDone ? (
                                                     <div className="flex items-center gap-3">
                                                         <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
@@ -1941,50 +1939,36 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
                                         {/* 4. History (Collapsible) */}
                                         {((task.challengeHistory && task.challengeHistory.length > 0) || (task.consultationHistory && task.consultationHistory.length > 0)) && (
-                                            <div>
-                                                <button 
-                                                    onClick={() => setShowHistory(!showHistory)}
-                                                    className="w-full flex items-center justify-between py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/30 rounded-lg px-2 transition-colors -ml-2"
-                                                >
-                                                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                        <History size={12} /> История
-                                                    </div>
-                                                    <div className="text-slate-400">
-                                                        {showHistory ? <Minus size={12} /> : <Plus size={12} />}
-                                                    </div>
-                                                </button>
-                                                
-                                                {showHistory && (
-                                                    <div className="space-y-4 pt-2 animate-in slide-in-from-top-2">
-                                                        {task.challengeHistory?.map((h, i) => (
-                                                            <div key={`ch-${i}`} className="text-sm bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50 relative group">
-                                                                <div className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Zap size={10}/> Архивный челлендж</div>
-                                                                <div className="opacity-70"><StaticChallengeRenderer content={h} mode="history" /></div>
-                                                                {!isDone && (
-                                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <Tooltip content="Удалить">
-                                                                            <button onClick={() => deleteChallengeFromHistory(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button>
-                                                                        </Tooltip>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                        {task.consultationHistory?.map((h, i) => (
-                                                            <div key={`cons-${i}`} className="text-sm bg-violet-50/30 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-800/30 relative group">
-                                                                <div className="text-[9px] font-bold text-violet-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Bot size={10}/> Консультация</div>
-                                                                <div className="text-[#2F3437] dark:text-slate-300 leading-relaxed opacity-80"><ReactMarkdown components={markdownComponents}>{applyTypography(h)}</ReactMarkdown></div>
-                                                                {!isDone && (
-                                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <Tooltip content="Удалить">
-                                                                            <button onClick={() => deleteConsultation(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button>
-                                                                        </Tooltip>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <CollapsibleSection title="История" icon={<History size={14}/>}>
+                                                <div className="space-y-4">
+                                                    {task.challengeHistory?.map((h, i) => (
+                                                        <div key={`ch-${i}`} className="text-sm bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50 relative group">
+                                                            <div className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Zap size={10}/> Архивный челлендж</div>
+                                                            <div className="opacity-70"><StaticChallengeRenderer content={h} mode="history" /></div>
+                                                            {!isDone && (
+                                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Tooltip content="Удалить">
+                                                                        <button onClick={() => deleteChallengeFromHistory(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button>
+                                                                    </Tooltip>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                    {task.consultationHistory?.map((h, i) => (
+                                                        <div key={`cons-${i}`} className="text-sm bg-violet-50/30 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-800/30 relative group">
+                                                            <div className="text-[9px] font-bold text-violet-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Bot size={10}/> Консультация</div>
+                                                            <div className="text-[#2F3437] dark:text-slate-300 leading-relaxed opacity-80"><ReactMarkdown components={markdownComponents}>{applyTypography(h)}</ReactMarkdown></div>
+                                                            {!isDone && (
+                                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Tooltip content="Удалить">
+                                                                        <button onClick={() => deleteConsultation(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button>
+                                                                    </Tooltip>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </CollapsibleSection>
                                         )}
                                     </div>
                                 )}
