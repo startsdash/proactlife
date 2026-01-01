@@ -33,7 +33,8 @@ const NEON_COLORS: Record<string, string> = {
 // Dot Grid Background Pattern
 const DOT_GRID_STYLE = {
     backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
-    backgroundSize: '24px 24px'
+    backgroundSize: '24px 24px',
+    backgroundAttachment: 'fixed' // Ensure static layer
 };
 
 // --- UTILS ---
@@ -1287,7 +1288,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
         {/* --- FOGGY PORTAL BACKGROUND --- */}
         <div className="absolute inset-0 -z-10 overflow-visible">
             {/* 1. Main Glass Pane */}
-            <div className="absolute inset-0 bg-[#f8fafc]/70 dark:bg-[#0f172a]/70 backdrop-blur-xl border-b border-slate-200/30 dark:border-slate-800/30 shadow-[0_4px_30px_rgba(0,0,0,0.03)]" />
+            <div className="absolute inset-0 bg-[#f8fafc]/70 dark:bg-[#0f172a]/70 backdrop-blur-xl border-b border-black/5 dark:border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.03)]" />
             
             {/* 2. The Fog Extension (Gradient Blur) */}
             <div className="absolute inset-x-0 bottom-0 translate-y-full h-24 pointer-events-none -z-10">
@@ -1370,7 +1371,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       </motion.header>
 
       {/* Columns */}
-      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-10 overflow-hidden md:overflow-visible">
+      <div className="flex-1 flex flex-col p-0 md:px-8 md:pb-8 md:pt-14 overflow-hidden md:overflow-visible">
          {/* Mobile Tabs */}
          <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 z-10">
             {columns.map(col => (
