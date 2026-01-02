@@ -1,9 +1,10 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Brain, Star, XCircle } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, BrainCircuit, Star, XCircle } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 
@@ -127,7 +128,7 @@ const TaskSelect: React.FC<{
   );
 };
 
-// --- REUSABLE SPHERE SELECTOR ---
+// --- REUSABLE SPHERE SELECTOR (AURA RINGS) ---
 const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -161,14 +162,15 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                 <div className="flex items-center gap-2 overflow-hidden">
                     {selected.length > 0 ? (
                         <>
-                            <div className="flex -space-x-1 shrink-0">
+                            <div className="flex -space-x-1.5 shrink-0">
                                 {selected.map(s => {
                                     const sp = SPHERES.find(x => x.id === s);
-                                    // Aura Ring Style
+                                    // Aura Ring Style: Hollow circle with colored border, overlapping
                                     return sp ? (
                                         <div 
                                             key={s} 
-                                            className={`w-3 h-3 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
+                                            className={`w-3.5 h-3.5 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
+                                            style={{ borderWidth: '1.5px' }}
                                         /> 
                                     ) : null;
                                 })}
@@ -227,20 +229,25 @@ const JournalEntrySphereSelector: React.FC<{
         <div className="relative">
             <button 
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg transition-colors border border-slate-100 dark:border-slate-700 hover:border-indigo-100 dark:hover:border-indigo-800"
+                className="flex items-center gap-2 text-[10px] font-bold text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50 px-2 py-1.5 rounded-lg transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
             >
                 {entry.spheres && entry.spheres.length > 0 ? (
-                    <div className="flex -space-x-1">
+                    <div className="flex -space-x-1.5 opacity-80">
                         {entry.spheres.map(s => {
                             const sp = SPHERES.find(x => x.id === s);
-                            return sp ? <div key={s} className={`w-2 h-2 rounded-full border ${sp.text.replace('text-', 'border-')} bg-transparent`} /> : null;
+                            return sp ? (
+                                <div 
+                                    key={s} 
+                                    className={`w-2.5 h-2.5 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
+                                    style={{ borderWidth: '1px' }}
+                                />
+                            ) : null;
                         })}
                     </div>
                 ) : (
                     <Target size={12} strokeWidth={1} />
                 )}
-                <span>Сфера</span>
-                <ChevronDown size={10} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1} />
+                <span className="uppercase tracking-wider">Сфера</span>
             </button>
             
             {isOpen && (
@@ -651,7 +658,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                                     <div className="w-1.5 h-1.5 bg-current rounded-[1px] relative z-10" />
                                                 </div>
                                             ) : (
-                                                <Brain size={16} strokeWidth={1} />
+                                                <BrainCircuit size={16} strokeWidth={1} />
                                             )}
                                         </button>
                                     </Tooltip>
@@ -755,10 +762,17 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                             <span>{formatDate(entry.date)}</span>
                             {/* Sphere Aura Rings */}
                             {entry.spheres && entry.spheres.length > 0 && (
-                                <div className="flex -space-x-1">
+                                <div className="flex -space-x-1.5 opacity-80">
                                     {entry.spheres.map(s => {
                                         const sp = SPHERES.find(x => x.id === s);
-                                        return sp ? <div key={s} className={`w-2 h-2 rounded-full border ${sp.text.replace('text-', 'border-')} bg-transparent`} /> : null;
+                                        // Aura Ring Style
+                                        return sp ? (
+                                            <div 
+                                                key={s} 
+                                                className={`w-3.5 h-3.5 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
+                                                style={{ borderWidth: '1.5px' }}
+                                            /> 
+                                        ) : null;
                                     })}
                                 </div>
                             )}
@@ -775,7 +789,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                             {!isEditing && (
                                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                         <button onClick={() => toggleInsight(entry)} className="p-1.5 text-slate-300 hover:text-amber-500 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
-                                            <Star size={14} strokeWidth={1} className={entry.isInsight ? "fill-amber-500 text-amber-500" : ""} />
+                                            <Sparkle size={14} strokeWidth={1} className={entry.isInsight ? "fill-transparent text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]" : "text-[#2F3437] dark:text-slate-400"} />
                                         </button>
                                 </div>
                             )}
@@ -830,7 +844,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       {analysisResult && (
           <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setAnalysisResult(null)}>
               <div className="bg-white dark:bg-[#1e293b] w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><Brain size={20} strokeWidth={1} className="text-indigo-600 dark:text-indigo-400" /> Анализ Пути (Наставник)</h3><button onClick={() => setAnalysisResult(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
+                  <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><BrainCircuit size={20} strokeWidth={1} className="text-indigo-600 dark:text-indigo-400" /> Анализ Пути (Наставник)</h3><button onClick={() => setAnalysisResult(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
                   <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 leading-relaxed text-sm"><ReactMarkdown components={markdownComponents}>{analysisResult}</ReactMarkdown></div>
                   <div className="mt-8 flex justify-end gap-2">
                       <Tooltip content="Сохранить в историю">
@@ -846,7 +860,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
               <div className="bg-white dark:bg-[#1e293b] w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                   <div className="flex justify-between items-center mb-6 shrink-0"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><History size={20} strokeWidth={1} className="text-indigo-600 dark:text-indigo-400" /> История Наставника</h3><button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
                   <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar-light space-y-4">
-                      {mentorAnalyses.length === 0 ? (<div className="py-10"><EmptyState icon={Brain} title="Пусто" description="Посоветуйся с Наставником, чтобы начать историю" color="indigo" /></div>) : (
+                      {mentorAnalyses.length === 0 ? (<div className="py-10"><EmptyState icon={BrainCircuit} title="Пусто" description="Посоветуйся с Наставником, чтобы начать историю" color="indigo" /></div>) : (
                           mentorAnalyses.sort((a,b) => b.date - a.date).map(analysis => (
                               <div key={analysis.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-100 dark:border-slate-700 group">
                                   <div className="flex justify-between items-start mb-3">
@@ -912,7 +926,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     {selectedEntry.aiFeedback && (
                         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 relative mt-4 border border-slate-100 dark:border-slate-700">
                             <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1 rounded bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 shadow-sm text-slate-500"><Brain size={12} /></div>
+                                <div className="p-1 rounded bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 shadow-sm text-slate-500"><BrainCircuit size={12} /></div>
                                 <span className="text-xs font-bold text-slate-500">Ментор</span>
                             </div>
                             <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown></div>
@@ -933,7 +947,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end items-center gap-1">
                         <Tooltip content={selectedEntry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
                             <button onClick={() => toggleInsight(selectedEntry)} className={`p-2 rounded-lg transition-all ${selectedEntry.isInsight ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
-                                <Star size={16} strokeWidth={1} className={selectedEntry.isInsight ? "fill-current" : ""} />
+                                <Sparkle size={16} strokeWidth={1} className={selectedEntry.isInsight ? "fill-transparent text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]" : "text-[#2F3437] dark:text-slate-400"} />
                             </button>
                         </Tooltip>
                         <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="right" direction="up" />
