@@ -62,6 +62,7 @@ export interface Task {
   reflection?: string;
   blockerAnalysis?: string;
   coverUrl?: string; // NEW: Task Cover Image
+  color?: string; // NEW: Task Background Color
   
   subtasks?: Subtask[]; // Checklist items
 

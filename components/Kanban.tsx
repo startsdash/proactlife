@@ -38,6 +38,18 @@ const UNSPLASH_PRESETS = [
     'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80', // Nature
 ];
 
+const colors = [
+    { id: 'white', class: 'bg-white dark:bg-[#1e293b]', hex: '#ffffff' },
+    { id: 'red', class: 'bg-red-50 dark:bg-red-900/20', hex: '#fef2f2' },
+    { id: 'amber', class: 'bg-amber-50 dark:bg-amber-900/20', hex: '#fffbeb' },
+    { id: 'emerald', class: 'bg-emerald-50 dark:bg-emerald-900/20', hex: '#ecfdf5' },
+    { id: 'blue', class: 'bg-blue-50 dark:bg-blue-900/20', hex: '#eff6ff' },
+    { id: 'indigo', class: 'bg-indigo-50 dark:bg-indigo-900/20', hex: '#eef2ff' },
+    { id: 'purple', class: 'bg-purple-50 dark:bg-purple-900/20', hex: '#faf5ff' },
+];
+
+const getTaskColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
+
 // Dot Grid Background Pattern
 const DOT_GRID_STYLE = {
     backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
@@ -705,6 +717,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [creationCover, setCreationCover] = useState<string | null>(null);
   const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
+  const [creationColor, setCreationColor] = useState('white');
+  const [showCreationColorPicker, setShowCreationColorPicker] = useState(false);
   
   // Creation Editor State
   const [creationHistory, setCreationHistory] = useState<string[]>(['']);
@@ -717,6 +731,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [editTaskTitle, setEditTaskTitle] = useState('');
   const [editCover, setEditCover] = useState<string | null>(null);
   const [showEditCoverPicker, setShowEditCoverPicker] = useState(false);
+  const [editColor, setEditColor] = useState('white');
+  const [showEditColorPicker, setShowEditColorPicker] = useState(false);
   
   // New Rich Text State for Edit Mode
   const [editHistory, setEditHistory] = useState<string[]>(['']);
@@ -936,6 +952,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                if (task && editContentEditableRef.current) {
                    setEditTaskTitle(task.title || '');
                    setEditCover(task.coverUrl || null);
+                   setEditColor(task.color || 'white');
                    
                    const html = markdownToHtml(task.content);
                    // Directly setting innerHTML can be risky if React re-renders, 
@@ -990,11 +1007,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
           column: 'todo',
           createdAt: Date.now(),
           spheres: activeSphereFilter ? [activeSphereFilter] : [],
-          coverUrl: creationCover || undefined
+          coverUrl: creationCover || undefined,
+          color: creationColor
       };
       addTask(newTask);
       setNewTaskTitle('');
       setCreationCover(null);
+      setCreationColor('white');
       if(creationContentRef.current) creationContentRef.current.innerHTML = '';
       setCreationHistory(['']);
       setCreationHistoryIndex(0);
@@ -1004,6 +1023,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const cancelCreateTask = () => {
       setNewTaskTitle('');
       setCreationCover(null);
+      setCreationColor('white');
       if(creationContentRef.current) creationContentRef.current.innerHTML = '';
       setCreationHistory(['']);
       setCreationHistoryIndex(0);
@@ -1018,12 +1038,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const content = htmlToMarkdown(rawHtml);
 
       // Check if title or content changed before updating
-      if (content !== task.content || editTaskTitle.trim() !== task.title || editCover !== task.coverUrl) {
+      if (content !== task.content || editTaskTitle.trim() !== task.title || editCover !== task.coverUrl || editColor !== task.color) {
           updateTask({ 
               ...task, 
               title: applyTypography(editTaskTitle.trim()), 
               content: applyTypography(content),
-              coverUrl: editCover || undefined
+              coverUrl: editCover || undefined,
+              color: editColor
           });
       }
       setIsEditingTask(false);
@@ -1451,7 +1472,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <Plus size={14} /> NEW_TASK
                     </button>
                 ) : (
-                    <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg animate-in slide-in-from-top-2 relative z-20">
+                    <div className={`${getTaskColorClass(creationColor)} backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg animate-in slide-in-from-top-2 relative z-20`}>
                         {creationCover && (
                             <div className="relative w-full h-32 group rounded-t-xl overflow-hidden mb-2 -mt-4 -mx-4 w-[calc(100%+2rem)]">
                                 <img src={creationCover} alt="Cover" className="w-full h-full object-cover" />
@@ -1501,6 +1522,29 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         </button>
                                     </Tooltip>
                                     {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} />}
+                                </div>
+                                <div className="relative">
+                                    <Tooltip content="Фон">
+                                        <button 
+                                            onMouseDown={(e) => { e.preventDefault(); setShowCreationColorPicker(!showCreationColorPicker); }} 
+                                            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500 transition-colors"
+                                        >
+                                            <Palette size={16} />
+                                        </button>
+                                    </Tooltip>
+                                    {showCreationColorPicker && (
+                                        <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-1.5 z-50">
+                                            {colors.map(c => (
+                                                <button 
+                                                    key={c.id} 
+                                                    onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowCreationColorPicker(false); }} 
+                                                    className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} 
+                                                    style={{ backgroundColor: c.hex }} 
+                                                    title={c.id} 
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <button onClick={handleCreateTask} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors">
@@ -1554,7 +1598,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         onDrop={(e) => handleTaskDrop(e as any, task.id)} 
                         onDragOver={handleDragOver} 
                         onClick={() => match && setActiveModal({taskId: task.id, type: 'details'})} 
-                        className={`bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-md p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group active:scale-[1.02] active:shadow-lg overflow-hidden ${dimStyle} ${match ? 'cursor-grab' : ''}`}
+                        className={`${getTaskColorClass(task.color)} backdrop-blur-md p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group active:scale-[1.02] active:shadow-lg overflow-hidden ${dimStyle} ${match ? 'cursor-grab' : ''}`}
                     >
                         
                         {task.coverUrl && (
@@ -1889,7 +1933,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
       {activeModal && (
         <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-2xl flex items-center justify-center p-4" onClick={handleCloseModal}>
-            <div className="bg-white/90 dark:bg-[#0f172a]/90 w-full max-w-lg rounded-3xl shadow-2xl p-6 md:p-8 border border-white/20 dark:border-slate-700/50 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col relative backdrop-filter" onClick={(e) => e.stopPropagation()}>
+            <div className={`w-full max-w-lg rounded-3xl shadow-2xl p-6 md:p-8 border border-white/20 dark:border-slate-700/50 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col relative backdrop-filter ${activeModal.type === 'details' && !isEditingTask ? getTaskColorClass(getTaskForModal()?.color) : 'bg-white/90 dark:bg-[#0f172a]/90'}`} onClick={(e) => e.stopPropagation()}>
                 
                 {(isEditingTask ? editCover : getTaskForModal()?.coverUrl) && (
                     <div className="h-40 w-full shrink-0 relative mb-6 -mx-8 -mt-8 w-[calc(100%+4rem)] group overflow-hidden">
@@ -2000,7 +2044,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             <div className="space-y-6">
                                 {/* TEXT EDITING */}
                                 {isEditingTask ? (
-                                    <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
+                                    <div className={`flex flex-col animate-in fade-in duration-200 relative z-10 p-4 rounded-xl ${getTaskColorClass(editColor)}`}>
                                         
                                         {/* Editor Toolbar */}
                                         <div className="flex items-center justify-between mb-2 gap-2">
@@ -2023,6 +2067,29 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                     </Tooltip>
                                                     {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} />}
                                                 </div>
+                                                <div className="relative">
+                                                    <Tooltip content="Фон">
+                                                        <button 
+                                                            onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} 
+                                                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"
+                                                        >
+                                                            <Palette size={16} />
+                                                        </button>
+                                                    </Tooltip>
+                                                    {showEditColorPicker && (
+                                                        <div className="absolute top-full mt-2 left-0 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-1.5 z-50">
+                                                            {colors.map(c => (
+                                                                <button 
+                                                                    key={c.id} 
+                                                                    onMouseDown={(e) => { e.preventDefault(); setEditColor(c.id); setShowEditColorPicker(false); }} 
+                                                                    className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${editColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} 
+                                                                    style={{ backgroundColor: c.hex }} 
+                                                                    title={c.id} 
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 
@@ -2033,17 +2100,17 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             contentEditable 
                                             suppressContentEditableWarning={true}
                                             onInput={handleEditInput} 
-                                            className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1"
+                                            className="w-full h-64 bg-transparent outline-none overflow-y-auto font-sans text-base text-slate-800 dark:text-slate-200 [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1"
                                             data-placeholder="Описание задачи..." 
                                         />
 
                                         {/* SPHERES IN EDIT MODE ONLY */}
-                                        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                                        <div className="mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50">
                                             <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
                                             <SphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
                                         </div>
 
-                                        <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-6 border-t border-slate-100 dark:border-slate-700 mt-4">
+                                        <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-6 border-t border-slate-200/50 dark:border-slate-700/50 mt-4">
                                             <button onClick={() => setIsEditingTask(false)} className="px-5 py-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 w-full md:w-auto text-center font-medium">Отмена</button>
                                             <button onClick={handleSaveTaskContent} className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"><Check size={18} /> Сохранить</button>
                                         </div>
