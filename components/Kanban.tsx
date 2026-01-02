@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -24,7 +25,7 @@ interface Props {
   onClearInitialTask?: () => void;
 }
 
-// --- TECHNO VISUAL CONSTANTS ---
+// --- VISUAL CONSTANTS ---
 const NEON_COLORS: Record<string, string> = {
     productivity: '#0075FF', // Cyber Blue
     growth: '#00FFA3',       // Electric Mint
@@ -44,6 +45,18 @@ const DOT_GRID_STYLE = {
     backgroundSize: '24px 24px'
 };
 
+const colors = [
+    { id: 'white', class: 'bg-white dark:bg-[#1e293b]', hex: '#ffffff' },
+    { id: 'red', class: 'bg-red-50 dark:bg-red-900/20', hex: '#fef2f2' },
+    { id: 'amber', class: 'bg-amber-50 dark:bg-amber-900/20', hex: '#fffbeb' },
+    { id: 'emerald', class: 'bg-emerald-50 dark:bg-emerald-900/20', hex: '#ecfdf5' },
+    { id: 'blue', class: 'bg-blue-50 dark:bg-blue-900/20', hex: '#eff6ff' },
+    { id: 'indigo', class: 'bg-indigo-50 dark:bg-indigo-900/20', hex: '#eef2ff' },
+    { id: 'purple', class: 'bg-purple-50 dark:bg-purple-900/20', hex: '#faf5ff' },
+];
+
+const getTaskColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
+
 // --- UTILS ---
 const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     if (typeof children === 'string') return children.replace(/:\s*$/, '');
@@ -61,7 +74,7 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     return children;
 };
 
-// --- RICH TEXT HELPERS (Ported from Napkins) ---
+// --- RICH TEXT HELPERS ---
 const processImage = (file: File | Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
         if (!file.type.startsWith('image/')) {
@@ -152,7 +165,6 @@ const CoverPicker: React.FC<{
         }
     }, [triggerRef]);
 
-    // Robust Env Getter for the API Key inside the component or file scope
     const getUnsplashKey = () => {
         const keys = [
             'UNSPLASH_ACCESS_KEY', 
@@ -273,7 +285,6 @@ const CoverPicker: React.FC<{
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
-    // Standard Markdown replacements
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
@@ -285,8 +296,6 @@ const markdownToHtml = (md: string) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
     
-    // Crucial: Handle Newlines for ContentEditable
-    // We replace newlines with <br> but avoid double <br> after block elements
     html = html.replace(/\n/g, '<br>');
     html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
     return html;
@@ -296,14 +305,9 @@ const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
 
-    // Improved wrapper: Pushes whitespace outside the markers
     const wrap = (text: string, marker: string) => {
-        // Match leading whitespace, content, trailing whitespace
-        // Include non-breaking space in whitespace character set to prevent "**Text **"
         const match = text.match(/^([\s\u00A0]*)(.*?)([\s\u00A0]*)$/s);
         if (match) {
-            // group 1: leading space, group 2: content, group 3: trailing space
-            // If content is empty, don't wrap empty string with bold tags
             if (!match[2]) return match[1] + match[3];
             return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
         }
@@ -312,7 +316,6 @@ const htmlToMarkdown = (html: string) => {
 
     const walk = (node: Node): string => {
         if (node.nodeType === Node.TEXT_NODE) {
-            // Replace NBSP with normal space immediately
             return (node.textContent || '').replace(/\u00A0/g, ' ');
         }
         if (node.nodeType === Node.ELEMENT_NODE) {
@@ -325,13 +328,10 @@ const htmlToMarkdown = (html: string) => {
             let content = '';
             el.childNodes.forEach(child => content += walk(child));
             
-            // Block Elements: Just append newline at end to avoid double spacing
             if (tag === 'div' || tag === 'p') {
-                // If content is empty, it might be a spacer line
                 return content.trim() ? `${content}\n` : '\n'; 
             }
 
-            // Inline Formatting
             const styleBold = el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700;
             const styleItalic = el.style.fontStyle === 'italic';
 
@@ -352,20 +352,15 @@ const htmlToMarkdown = (html: string) => {
     };
     
     let md = walk(temp);
-    
-    // Normalize newlines: Replace 3+ newlines with 2 to allow max one empty line
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     return applyTypography(md);
 };
 
-// Helper: Prepare content for ReactMarkdown display
-// Ensures visual fidelity by forcing hard breaks for newlines
 const formatForDisplay = (content: string) => {
     if (!content) return '';
     return content.replace(/\n/g, '  \n');
 };
 
-// Highlight Helper
 const HighlightedText = ({ text, highlight, className = "" }: { text: string, highlight: string, className?: string }) => {
     if (!highlight.trim()) return <span className={className}>{text}</span>;
     const parts = text.split(new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
@@ -384,7 +379,6 @@ const HighlightedText = ({ text, highlight, className = "" }: { text: string, hi
     );
 };
 
-// Markdown Styles
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-[#2F3437] dark:text-slate-300 leading-relaxed font-sans" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
@@ -402,7 +396,6 @@ const markdownComponents = {
     }
 };
 
-// --- NEW COMPONENT: SEGMENTED PROGRESS BAR ---
 const SegmentedProgressBar = ({ total, current, color = 'text-indigo-500', className = '' }: { total: number, current: number, color?: string, className?: string }) => {
     const bgClass = color.replace('text-', 'bg-');
     
@@ -749,8 +742,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [creationCover, setCreationCover] = useState<string | null>(null);
+  const [creationColor, setCreationColor] = useState('white');
   const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
-  const creationPickerTriggerRef = useRef<HTMLButtonElement>(null); // NEW REF
+  const [showCreationColorPicker, setShowCreationColorPicker] = useState(false);
+  const creationPickerTriggerRef = useRef<HTMLButtonElement>(null); 
   
   // Creation Editor State
   const [creationHistory, setCreationHistory] = useState<string[]>(['']);
@@ -762,8 +757,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [editTaskTitle, setEditTaskTitle] = useState('');
   const [editCover, setEditCover] = useState<string | null>(null);
+  const [editColor, setEditColor] = useState('white');
   const [showEditCoverPicker, setShowEditCoverPicker] = useState(false);
-  const editPickerTriggerRef = useRef<HTMLButtonElement>(null); // NEW REF
+  const [showEditColorPicker, setShowEditColorPicker] = useState(false);
+  const editPickerTriggerRef = useRef<HTMLButtonElement>(null); 
   
   // New Rich Text State for Edit Mode
   const [editHistory, setEditHistory] = useState<string[]>(['']);
@@ -983,6 +980,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                if (task && editContentEditableRef.current) {
                    setEditTaskTitle(task.title || '');
                    setEditCover(task.coverUrl || null);
+                   setEditColor(task.color || 'white');
                    
                    const html = markdownToHtml(task.content);
                    // Directly setting innerHTML can be risky if React re-renders, 
@@ -1037,11 +1035,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
           column: 'todo',
           createdAt: Date.now(),
           spheres: activeSphereFilter ? [activeSphereFilter] : [],
-          coverUrl: creationCover || undefined
+          coverUrl: creationCover || undefined,
+          color: creationColor
       };
       addTask(newTask);
       setNewTaskTitle('');
       setCreationCover(null);
+      setCreationColor('white');
       if(creationContentRef.current) creationContentRef.current.innerHTML = '';
       setCreationHistory(['']);
       setCreationHistoryIndex(0);
@@ -1051,6 +1051,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const cancelCreateTask = () => {
       setNewTaskTitle('');
       setCreationCover(null);
+      setCreationColor('white');
       if(creationContentRef.current) creationContentRef.current.innerHTML = '';
       setCreationHistory(['']);
       setCreationHistoryIndex(0);
@@ -1065,12 +1066,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const content = htmlToMarkdown(rawHtml);
 
       // Check if title or content changed before updating
-      if (content !== task.content || editTaskTitle.trim() !== task.title || editCover !== task.coverUrl) {
+      if (content !== task.content || editTaskTitle.trim() !== task.title || editCover !== task.coverUrl || editColor !== task.color) {
           updateTask({ 
               ...task, 
               title: applyTypography(editTaskTitle.trim()), 
               content: applyTypography(content),
-              coverUrl: editCover || undefined
+              coverUrl: editCover || undefined,
+              color: editColor
           });
       }
       setIsEditingTask(false);
@@ -1498,7 +1500,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <Plus size={14} /> NEW_TASK
                     </button>
                 ) : (
-                    <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg animate-in slide-in-from-top-2 relative z-20">
+                    <div className={`${getTaskColorClass(creationColor)} border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg animate-in slide-in-from-top-2 relative z-20`}>
                         {creationCover && (
                             <div className="relative w-full h-32 group rounded-t-xl overflow-hidden mb-2 -mt-4 -mx-4 w-[calc(100%_+_2rem)]">
                                 <img src={creationCover} alt="Cover" className="w-full h-full object-cover" />
@@ -1549,6 +1551,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         </button>
                                     </Tooltip>
                                     {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationPickerTriggerRef} />}
+                                </div>
+                                <div className="relative">
+                                    <Tooltip content="Фон задачи">
+                                        <button onMouseDown={(e) => { e.preventDefault(); setShowCreationColorPicker(!showCreationColorPicker); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-400 dark:text-slate-500">
+                                            <Palette size={16} />
+                                        </button>
+                                    </Tooltip>
+                                    {showCreationColorPicker && <div className="absolute bottom-full mb-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowCreationColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}
                                 </div>
                             </div>
                             <button onClick={handleCreateTask} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors">
@@ -1602,7 +1612,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         onDrop={(e) => handleTaskDrop(e as any, task.id)} 
                         onDragOver={handleDragOver} 
                         onClick={() => match && setActiveModal({taskId: task.id, type: 'details'})} 
-                        className={`bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group active:scale-[1.02] active:shadow-lg overflow-hidden ${dimStyle} ${match ? 'cursor-grab' : ''}`}
+                        className={`${getTaskColorClass(task.color)} backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group active:scale-[1.02] active:shadow-lg overflow-hidden ${dimStyle} ${match ? 'cursor-grab' : ''}`}
                     >
                         
                         {task.coverUrl && (
@@ -1865,7 +1875,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
       {activeModal && (
         <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-2xl flex items-center justify-center p-4" onClick={handleCloseModal}>
-            <div className="bg-white/90 dark:bg-[#0f172a]/90 w-full max-w-lg rounded-3xl shadow-2xl p-6 md:p-8 border border-white/20 dark:border-slate-700/50 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col relative backdrop-filter" onClick={(e) => e.stopPropagation()}>
+            <div className={`${isEditingTask ? getTaskColorClass(editColor) : getTaskColorClass(getTaskForModal()?.color)} w-full max-w-lg rounded-3xl shadow-2xl p-6 md:p-8 border border-white/20 dark:border-slate-700/50 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col relative backdrop-filter`} onClick={(e) => e.stopPropagation()}>
                 
                 {(isEditingTask ? editCover : getTaskForModal()?.coverUrl) && (
                     <div className="h-40 w-full shrink-0 relative mb-6 -mx-8 -mt-8 w-[calc(100%_+_4rem)] group overflow-hidden">
@@ -1979,6 +1989,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                         </button>
                                                     </Tooltip>
                                                     {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editPickerTriggerRef} />}
+                                                </div>
+                                                <div className="relative">
+                                                    <Tooltip content="Фон задачи">
+                                                        <button onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
+                                                            <Palette size={16} />
+                                                        </button>
+                                                    </Tooltip>
+                                                    {showEditColorPicker && <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setEditColor(c.id); setShowEditColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${editColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}
                                                 </div>
                                             </div>
                                         </div>
