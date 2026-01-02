@@ -265,11 +265,12 @@ const CoverPicker: React.FC<{
     );
 };
 
-// --- CONVERTERS & UTILS ---
+// --- IMPROVED MARKDOWN CONVERTERS ---
 
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
+    // Standard Markdown replacements
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
@@ -280,6 +281,9 @@ const markdownToHtml = (md: string) => {
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
+    
+    // Crucial: Handle Newlines for ContentEditable
+    // We replace newlines with <br> but avoid double <br> after block elements
     html = html.replace(/\n/g, '<br>');
     html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
     return html;
@@ -289,88 +293,133 @@ const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
 
+    // Improved wrapper: Pushes whitespace outside the markers
     const wrap = (text: string, marker: string) => {
-        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
-        if (match && match[2]) {
+        // Match leading whitespace, content, trailing whitespace
+        // Include non-breaking space in whitespace character set to prevent "**Text **"
+        const match = text.match(/^([\s\u00A0]*)(.*?)([\s\u00A0]*)$/s);
+        if (match) {
+            // group 1: leading space, group 2: content, group 3: trailing space
+            // If content is empty, don't wrap empty string with bold tags
+            if (!match[2]) return match[1] + match[3];
             return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
         }
-        return text.trim() ? `${marker}${text}${marker}` : '';
+        return text;
     };
 
     const walk = (node: Node): string => {
-        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+        if (node.nodeType === Node.TEXT_NODE) {
+            // Replace NBSP with normal space immediately
+            return (node.textContent || '').replace(/\u00A0/g, ' ');
+        }
         if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as HTMLElement;
             const tag = el.tagName.toLowerCase();
+            
+            if (tag === 'br') return '\n';
+            if (tag === 'img') return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
+            
             let content = '';
             el.childNodes.forEach(child => content += walk(child));
             
-            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
-            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
-            if (el.style.fontStyle === 'italic') return wrap(content, '*');
+            // Block Elements: Just append newline at end to avoid double spacing
+            if (tag === 'div' || tag === 'p') {
+                // If content is empty, it might be a spacer line
+                return content.trim() ? `${content}\n` : '\n'; 
+            }
+
+            // Inline Formatting
+            const styleBold = el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700;
+            const styleItalic = el.style.fontStyle === 'italic';
+
+            if (styleBold) return wrap(content, '**');
+            if (styleItalic) return wrap(content, '*');
             
             switch (tag) {
                 case 'b': case 'strong': return wrap(content, '**');
                 case 'i': case 'em': return wrap(content, '*');
-                case 'u': return content.trim() ? `<u>${content}</u>` : '';
                 case 'code': return `\`${content}\``;
+                case 'u': return `<u>${content}</u>`;
                 case 'h1': return `\n# ${content}\n`;
                 case 'h2': return `\n## ${content}\n`;
-                case 'div': case 'p': return `\n${content}\n`;
-                case 'br': return '\n';
-                case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
                 default: return content;
             }
         }
         return '';
     };
+    
     let md = walk(temp);
+    
+    // Normalize newlines: Replace 3+ newlines with 2 to allow max one empty line
     md = md.replace(/\n{3,}/g, '\n\n').trim();
-    md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
 };
 
-const formatForDisplay = (text: string) => text.replace(/\n/g, '  \n');
+// Helper: Prepare content for ReactMarkdown display
+// Ensures visual fidelity by forcing hard breaks for newlines
+const formatForDisplay = (content: string) => {
+    if (!content) return '';
+    return content.replace(/\n/g, '  \n');
+};
 
-// --- COMPONENTS ---
-
-const HighlightedText: React.FC<{ text: string, highlight: string }> = ({ text, highlight }) => {
-    if (!highlight.trim()) return <>{text}</>;
-    const regex = new RegExp(`(${highlight})`, 'gi');
-    const parts = text.split(regex);
+// Highlight Helper
+const HighlightedText = ({ text, highlight, className = "" }: { text: string, highlight: string, className?: string }) => {
+    if (!highlight.trim()) return <span className={className}>{text}</span>;
+    const parts = text.split(new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
     return (
-        <span>
+        <span className={className}>
             {parts.map((part, i) => 
-                regex.test(part) ? <span key={i} className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded px-0.5">{part}</span> : part
+                part.toLowerCase() === highlight.toLowerCase() ? (
+                    <span key={i} className="text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.3)] bg-indigo-50/50 dark:bg-indigo-900/30 font-medium px-0.5 rounded-sm">
+                        {part}
+                    </span>
+                ) : (
+                    part
+                )
             )}
         </span>
     );
 };
 
+// Markdown Styles
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-slate-800 dark:text-slate-300 leading-relaxed" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-[#2F3437] dark:text-slate-300 leading-relaxed font-sans" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-slate-800 dark:text-slate-300" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-slate-800 dark:text-slate-300" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-[#2F3437] dark:text-slate-300" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-[#2F3437] dark:text-slate-300" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed" {...props} />,
-    h1: ({node, children, ...props}: any) => <h1 className="text-base font-bold mt-3 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
-    h2: ({node, children, ...props}: any) => <h2 className="text-sm font-bold mt-2 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
-    h3: ({node, children, ...props}: any) => <h3 className="text-xs font-bold mt-2 mb-1 text-slate-900 dark:text-slate-100 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
-    h4: ({node, children, ...props}: any) => <h4 className="text-xs font-bold mt-2 mb-1 text-slate-800 dark:text-slate-200" {...props}>{cleanHeader(children)}</h4>,
-    blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-indigo-200 dark:border-indigo-800 pl-4 py-1 my-2 text-sm text-slate-600 dark:text-slate-400 italic bg-indigo-50/30 dark:bg-indigo-900/20 rounded-r-lg" {...props} />,
+    h1: ({node, children, ...props}: any) => <h1 className="text-sm font-semibold mt-3 mb-2 text-[#2F3437] dark:text-slate-200 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h1>,
+    h2: ({node, children, ...props}: any) => <h2 className="text-xs font-semibold mt-2 mb-2 text-[#2F3437] dark:text-slate-200 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h2>,
+    h3: ({node, children, ...props}: any) => <h3 className="text-[10px] font-bold mt-2 mb-1 text-[#6B6E70] dark:text-slate-500 uppercase tracking-widest" {...props}>{cleanHeader(children)}</h3>,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-indigo-200 dark:border-indigo-800 pl-3 py-1 my-2 text-xs text-[#6B6E70] dark:text-slate-500 italic" {...props} />,
     code: ({node, inline, className, children, ...props}: any) => {
          return inline 
-            ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400 border border-slate-200 dark:border-slate-700" {...props}>{children}</code>
-            : <code className="block bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+            ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-[#6B6E70] dark:text-slate-400" {...props}>{children}</code>
+            : <code className="block bg-slate-50 dark:bg-slate-800/50 text-[#6B6E70] dark:text-slate-400 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     }
 };
 
-const SegmentedProgressBar: React.FC<{ total: number, current: number, color?: string, className?: string }> = ({ total, current, color = 'text-indigo-500', className = '' }) => {
+// --- NEW COMPONENT: SEGMENTED PROGRESS BAR ---
+const SegmentedProgressBar = ({ total, current, color = 'text-indigo-500', className = '' }: { total: number, current: number, color?: string, className?: string }) => {
+    const bgClass = color.replace('text-', 'bg-');
+    
     return (
-        <div className={`flex gap-1 mb-3 ${className}`}>
-            {Array.from({ length: total }).map((_, i) => (
-                <div key={i} className={`h-1.5 rounded-full flex-1 transition-colors duration-300 ${i < current ? color.replace('text-', 'bg-') : 'bg-slate-100 dark:bg-slate-800'}`} />
-            ))}
+        <div className={`flex items-center gap-1.5 w-full mb-3 animate-in fade-in slide-in-from-left-2 duration-500 ${className}`}>
+            <div className="flex-1 flex gap-1 h-1">
+                {Array.from({ length: total }).map((_, i) => (
+                    <div
+                        key={i}
+                        className={`flex-1 rounded-full transition-all duration-500 ${
+                            i < current
+                                ? `${bgClass} shadow-[0_0_8px_currentColor] ${color}`
+                                : 'bg-slate-200 dark:bg-slate-700'
+                        }`}
+                    />
+                ))}
+            </div>
+            <div className="font-mono text-[9px] text-[#6B6E70] dark:text-slate-500 font-bold tracking-widest shrink-0">
+                {String(current).padStart(2, '0')}/{String(total).padStart(2, '0')}
+            </div>
         </div>
     );
 };
@@ -402,7 +451,7 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
             <button 
                 onClick={() => setIsOpen(!isOpen)}
                 className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all outline-none ${
-                  isOpen ? 'border-indigo-400 ring-2 ring-indigo-50 dark:ring-indigo-900 bg-white dark:bg-[#1e293b]' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                  isOpen ? 'border-indigo-400 ring-2 ring-indigo-50 dark:ring-indigo-900 bg-white dark:bg-[#1e293b]' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-white dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                 }`}
             >
                 <div className="flex items-center gap-2 overflow-hidden">
@@ -414,15 +463,15 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                                     return sp ? <div key={s} className={`w-3 h-3 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
                                 })}
                             </div>
-                            <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                            <span className="text-sm font-medium text-[#2F3437] dark:text-slate-200 truncate">
                                 {selected.map(id => SPHERES.find(s => s.id === id)?.label).join(', ')}
                             </span>
                         </>
                     ) : (
-                        <span className="text-sm text-slate-400">Выбери сферу</span>
+                        <span className="text-sm text-[#6B6E70]">Выбери сферу</span>
                     )}
                 </div>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`text-[#6B6E70] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
             
             {isOpen && (
@@ -436,7 +485,7 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                                 onClick={() => toggleSphere(s.id)}
                                 className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                             >
-                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-slate-400'} />}
+                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-[#6B6E70]'} />}
                                 <span className="flex-1">{s.label}</span>
                                 {isSelected && <Check size={14} className="text-indigo-500" />}
                             </button>
@@ -463,28 +512,16 @@ const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }
         <div className="relative">
             <button 
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1 rounded-md transition-colors border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800"
+                className="p-1.5 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 transition-colors opacity-0 group-hover:opacity-100"
+                title="Сфера"
             >
-                {task.spheres && task.spheres.length > 0 ? (
-                    <div className="flex -space-x-1">
-                        {task.spheres.map(s => {
-                            const sp = SPHERES.find(x => x.id === s);
-                            return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
-                        })}
-                    </div>
-                ) : (
-                    <Target size={12} />
-                )}
-                <span>Сфера</span>
+                <Target size={14} strokeWidth={1.5} />
             </button>
             
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
-                    <div 
-                        className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5" 
-                        onClick={e => e.stopPropagation()}
-                    >
+                    <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
                         {SPHERES.map(s => {
                             const isSelected = task.spheres?.includes(s.id);
                             const Icon = ICON_MAP[s.icon];
@@ -492,9 +529,9 @@ const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }
                                 <button
                                     key={s.id}
                                     onClick={() => toggleSphere(s.id)}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-[#2F3437] dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                                 >
-                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} />}
+                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-[#6B6E70]'} />}
                                     <span className="flex-1">{s.label}</span>
                                     {isSelected && <Check size={12} className="text-indigo-500" />}
                                 </button>
@@ -513,29 +550,30 @@ const CollapsibleSection: React.FC<{
   icon?: React.ReactNode;
   isCard?: boolean;
   actions?: React.ReactNode;
-}> = ({ title, children, icon, isCard, actions }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  defaultOpen?: boolean;
+}> = ({ title, children, icon, isCard = false, actions, defaultOpen = false }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className={`${isCard ? 'bg-slate-50/50 dark:bg-slate-800/30' : 'bg-slate-50 dark:bg-slate-800'} rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden mb-3`}>
-      <div className="flex items-center justify-between pr-2">
-          <button 
-            onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} 
-            className="flex-1 flex items-center gap-2 p-3 text-left hover:bg-slate-100/50 dark:hover:bg-slate-700/50 transition-colors"
-          >
-            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-               {icon}
-               {title}
+    <div className={`${isCard ? 'bg-slate-50/50 dark:bg-slate-800/30 mb-2' : 'bg-slate-50 dark:bg-slate-800 mb-3'} rounded-xl border border-slate-100 dark:border-slate-700/50 overflow-hidden`}>
+      <div 
+        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} 
+        className={`w-full flex items-center justify-between ${isCard ? 'p-2' : 'p-4'} cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-700/30 transition-colors group/header`}
+      >
+        <div className="flex items-center gap-2 text-[10px] font-bold text-[#6B6E70] dark:text-slate-500 uppercase tracking-wider">
+           {icon}
+           {title}
+        </div>
+        <div className="flex items-center gap-3">
+            {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
+            <div className="text-slate-300 dark:text-slate-600">
+                {isOpen ? <Minus size={12} /> : <Plus size={12} />}
             </div>
-            <div className="text-slate-400">
-              {isOpen ? <Minus size={12} /> : <Plus size={12} />}
-            </div>
-          </button>
-          {actions && <div className="shrink-0">{actions}</div>}
+        </div>
       </div>
       {isOpen && (
-        <div className="px-3 pb-3 pt-0 animate-in slide-in-from-top-1 duration-200">
-           <div className={`pt-2 border-t border-slate-200/50 dark:border-slate-700/50 text-sm ${isCard ? 'text-xs' : ''}`}>
+        <div className={`${isCard ? 'px-2 pb-2' : 'px-4 pb-4'} pt-0 animate-in slide-in-from-top-1 duration-200`}>
+           <div className="pt-2 border-t border-slate-200/30 dark:border-slate-700/30 text-sm">
              {children}
            </div>
         </div>
@@ -545,16 +583,9 @@ const CollapsibleSection: React.FC<{
 };
 
 const getChallengeStats = (content: string) => {
-    const lines = content.split('\n');
-    let total = 0;
-    let completed = 0;
-    lines.forEach(line => {
-        if (line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[[xX ]\]/)) {
-            total++;
-            if (line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[[xX]\]/)) completed++;
-        }
-    });
-    return { total, completed };
+    const total = (content.match(/\[[xX ]\]/gm) || []).length;
+    const checked = (content.match(/\[[xX]\]/gm) || []).length;
+    return { total, checked, percent: total > 0 ? Math.round((checked / total) * 100) : 0 };
 };
 
 const InteractiveChallenge: React.FC<{ 
@@ -563,70 +594,90 @@ const InteractiveChallenge: React.FC<{
     onPin?: (index: number) => void,
     pinnedIndices?: number[]
 }> = ({ content, onToggle, onPin, pinnedIndices = [] }) => {
-    const lines = content.split('\n');
-    let checkboxCounter = 0;
-    
-    return (
-        <div className="space-y-1">
-            {lines.map((line, i) => {
-                const match = line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
-                if (match) {
-                    const currentIndex = checkboxCounter++;
-                    const isChecked = match[1].toLowerCase() === 'x';
-                    const label = match[2];
-                    const isPinned = pinnedIndices.includes(currentIndex);
-                    
-                    return (
-                        <div key={i} className={`flex items-start gap-2 group p-1 rounded-lg transition-colors ${isChecked ? 'opacity-60' : ''} ${isPinned ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30' : 'hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onToggle(currentIndex); }}
-                                className={`mt-0.5 shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-all ${isChecked ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white dark:bg-transparent border-slate-300 dark:border-slate-600 hover:border-emerald-400'}`}
-                            >
-                                {isChecked && <Check size={10} strokeWidth={3} />}
-                            </button>
-                            <span className={`text-sm flex-1 break-words leading-relaxed ${isChecked ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                                <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
-                            </span>
-                            {onPin && !isChecked && (
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); onPin(currentIndex); }} 
-                                    className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${isPinned ? 'text-indigo-500 opacity-100' : 'text-slate-300 hover:text-indigo-500'}`}
-                                >
-                                    <Pin size={12} className={isPinned ? "fill-current" : ""} />
-                                </button>
-                            )}
+    const cleanContent = content.trim().replace(/^#+\s*[^\n]*(\n+|$)/, '').trim();
+    const lines = cleanContent.split('\n');
+    let checkboxIndex = 0;
+    const renderedParts: React.ReactNode[] = [];
+    let textBuffer = '';
+
+    const flushBuffer = (keyPrefix: string) => {
+        if (textBuffer) {
+            const trimmedBuffer = textBuffer.trim(); 
+            if (trimmedBuffer) {
+                renderedParts.push(
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-[#2F3437] dark:text-slate-300 font-sans mb-1 last:mb-0">
+                        <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(textBuffer))}</ReactMarkdown>
+                    </div>
+                );
+            }
+            textBuffer = '';
+        }
+    };
+
+    lines.forEach((line, i) => {
+        const match = line.match(/^(\s*)(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
+        if (match) {
+            flushBuffer(`line-${i}`);
+            const currentIdx = checkboxIndex++;
+            const isChecked = match[2].toLowerCase() === 'x';
+            const label = match[3];
+            const indent = match[1].length * 6; 
+            const isPinned = pinnedIndices.includes(currentIdx);
+
+            renderedParts.push(
+                <div key={`cb-row-${i}`} className="flex items-start gap-2 group px-1 mb-0.5 w-full" style={{ marginLeft: `${indent}px` }}>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onToggle(currentIdx); }}
+                        className="flex-1 flex items-start gap-2 text-left py-1 hover:bg-black/5 dark:hover:bg-white/5 rounded"
+                    >
+                        <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-400'}`}>
+                            {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                         </div>
-                    );
-                } else if (line.trim()) {
-                    return <div key={i} className="text-sm text-slate-600 dark:text-slate-400 pl-1 mb-1"><ReactMarkdown components={markdownComponents}>{line}</ReactMarkdown></div>;
-                }
-                return null;
-            })}
-        </div>
-    );
+                        <span className={`text-sm font-sans ${isChecked ? 'text-[#6B6E70] dark:text-slate-500 line-through' : 'text-[#2F3437] dark:text-slate-300'}`}>
+                            <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{formatForDisplay(applyTypography(label))}</ReactMarkdown>
+                        </span>
+                    </button>
+                    {onPin && (
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Tooltip content={isPinned ? "Открепить от карточки" : "Закрепить на карточке"}>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); onPin(currentIdx); }}
+                                    className={`p-1.5 rounded transition-colors ${isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-300 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                                >
+                                    <Pin size={14} className={isPinned ? "fill-current" : ""} />
+                                </button>
+                            </Tooltip>
+                        </div>
+                    )}
+                </div>
+            );
+        } else {
+            textBuffer += line + '\n';
+        }
+    });
+    flushBuffer('end');
+    return <>{renderedParts}</>;
 };
 
 const StaticChallengeRenderer: React.FC<{ 
     content: string,
     mode: 'draft' | 'history'
 }> = ({ content, mode }) => {
-    // Trim header lines (often # Challenge Title) to focus on content
     const cleanContent = content.trim().replace(/^#+\s*[^\n]*(\n+|$)/, '').trim();
-    
     const lines = cleanContent.split('\n');
     const renderedParts: React.ReactNode[] = [];
     let textBuffer = '';
 
     const flushBuffer = (keyPrefix: string) => {
         if (textBuffer) {
-            const trimmedBuffer = textBuffer.trim();
-            if (trimmedBuffer) {
+             const trimmedBuffer = textBuffer.trim();
+             if (trimmedBuffer) {
                 renderedParts.push(
-                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 dark:text-slate-200 mb-1 last:mb-0">
-                        <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-[#2F3437] dark:text-slate-300 font-sans mb-1 last:mb-0">
+                        <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(textBuffer))}</ReactMarkdown>
                     </div>
                 );
-            }
+             }
             textBuffer = '';
         }
     };
@@ -638,8 +689,8 @@ const StaticChallengeRenderer: React.FC<{
             const isChecked = match[1].toLowerCase() === 'x';
             const label = match[2];
             const leadingSpaces = line.search(/\S|$/);
-            const indent = leadingSpaces * 4; // Approx pixel indent per space
-            
+            const indent = leadingSpaces * 4; 
+
             let Icon = Circle;
             let iconClass = "text-slate-300 dark:text-slate-600";
             
@@ -663,8 +714,8 @@ const StaticChallengeRenderer: React.FC<{
                     <div className={`mt-0.5 shrink-0 ${iconClass}`}>
                         <Icon size={16} />
                     </div>
-                    <span className={`text-sm text-slate-700 dark:text-slate-300`}>
-                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
+                    <span className={`text-sm text-[#2F3437] dark:text-slate-300 font-sans`}>
+                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{formatForDisplay(applyTypography(label))}</ReactMarkdown>
                     </span>
                 </div>
             );
@@ -672,9 +723,7 @@ const StaticChallengeRenderer: React.FC<{
             textBuffer += line + '\n';
         }
     });
-    
     flushBuffer('end');
-
     return <>{renderedParts}</>;
 };
 
@@ -1760,6 +1809,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     );
   };
 
+  // ... (Main render logic with activeModal)
+
   return (
     <div ref={scrollContainerRef} className="flex flex-col h-full relative overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
       {/* ... (Titles and Search bar - same) ... */}
@@ -1988,7 +2039,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         );
                     })()}
                 </div>
-                {/* Footer actions for modals */}
+                {/* ... (Footer actions for modals - same) ... */}
                 {activeModal.type === 'stuck' && aiResponse && (<div className="mt-6 flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-700/50 pr-1"><button onClick={saveTherapyResponse} className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"><Save size={16} /> Сохранить в историю</button></div>)}
                 {activeModal.type === 'challenge' && draftChallenge && (<div className="mt-6 flex justify-end gap-2 shrink-0 pt-4 border-t border-slate-100 dark:border-slate-700/50 pr-1"><button onClick={acceptDraftChallenge} className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"><Rocket size={18} /> Принять вызов</button></div>)}
             </div>
