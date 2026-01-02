@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -1552,11 +1554,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 </div>
                                 <div className="relative">
                                     <Tooltip content="Фон задачи">
-                                        <button onClick={(e) => { e.preventDefault(); setShowCreationColorPicker(!showCreationColorPicker); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-400 dark:text-slate-500">
+                                        <button onMouseDown={(e) => { e.preventDefault(); setShowCreationColorPicker(!showCreationColorPicker); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-400 dark:text-slate-500">
                                             <Palette size={16} />
                                         </button>
                                     </Tooltip>
-                                    {showCreationColorPicker && <div className="absolute bottom-full mb-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50">{colors.map(c => <button key={c.id} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCreationColor(c.id); setShowCreationColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}
+                                    {showCreationColorPicker && <div className="absolute bottom-full mb-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowCreationColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}
                                 </div>
                             </div>
                             <button onClick={handleCreateTask} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors">
@@ -1990,11 +1992,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 </div>
                                                 <div className="relative">
                                                     <Tooltip content="Фон задачи">
-                                                        <button onClick={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
+                                                        <button onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
                                                             <Palette size={16} />
                                                         </button>
                                                     </Tooltip>
-                                                    {showEditColorPicker && <div className="absolute bottom-full mb-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50">{colors.map(c => <button key={c.id} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditColor(c.id); setShowEditColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${editColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}
+                                                    {showEditColorPicker && <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setEditColor(c.id); setShowEditColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${editColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}
                                                 </div>
                                             </div>
                                         </div>
