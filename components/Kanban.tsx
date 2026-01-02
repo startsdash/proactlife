@@ -430,7 +430,8 @@ const InteractiveChallenge: React.FC<{
     onPin?: (index: number) => void,
     pinnedIndices?: number[]
 }> = ({ content, onToggle, onPin, pinnedIndices = [] }) => {
-    const lines = content.split('\n');
+    const cleanContent = content.trim().replace(/^#+\s*[^\n]*(\n+|$)/, '').trim();
+    const lines = cleanContent.split('\n');
     let checkboxIndex = 0;
     const renderedParts: React.ReactNode[] = [];
     let textBuffer = '';
@@ -498,7 +499,8 @@ const StaticChallengeRenderer: React.FC<{
     content: string,
     mode: 'draft' | 'history'
 }> = ({ content, mode }) => {
-    const lines = content.split('\n');
+    const cleanContent = content.trim().replace(/^#+\s*[^\n]*(\n+|$)/, '').trim();
+    const lines = cleanContent.split('\n');
     const renderedParts: React.ReactNode[] = [];
     let textBuffer = '';
 
@@ -1823,7 +1825,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             <div className="bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
                                 <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed">
                                     <StaticChallengeRenderer 
-                                        content={draftChallenge.replace(/^#\s*.*?(?:\n|$)/, '').trim()} 
+                                        content={draftChallenge} 
                                         mode="draft" 
                                     />
                                 </div>

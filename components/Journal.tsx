@@ -324,7 +324,8 @@ const StaticChallengeRenderer: React.FC<{
     content: string,
     mode: 'draft' | 'history'
 }> = ({ content, mode }) => {
-    const lines = content.split('\n');
+    const cleanContent = content.trim().replace(/^#+\s*[^\n]*(\n+|$)/, '').trim();
+    const lines = cleanContent.split('\n');
     const renderedParts: React.ReactNode[] = [];
     let textBuffer = '';
 
