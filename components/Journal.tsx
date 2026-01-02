@@ -1,10 +1,9 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll, XCircle, Send, Lightbulb, Target, Sparkles } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Brain, Star, XCircle } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 
@@ -88,14 +87,14 @@ const TaskSelect: React.FC<{
         <span className={`text-xs truncate ${selectedId ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-400'}`}>
           {selectedTask ? (
              <span className="flex items-center gap-2">
-                {selectedTask.column === 'done' ? <CheckCircle2 size={14} className="text-emerald-500" /> : <Circle size={14} className="text-indigo-500" />}
+                {selectedTask.column === 'done' ? <CheckCircle2 size={14} className="text-emerald-500" strokeWidth={1} /> : <Circle size={14} className="text-indigo-500" strokeWidth={1} />}
                 {selectedTask.content}
              </span>
           ) : (
             "Без привязки (Свободная мысль)"
           )}
         </span>
-        <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1} />
       </button>
 
       {isOpen && (
@@ -114,7 +113,7 @@ const TaskSelect: React.FC<{
                 className="w-full text-left px-4 py-3 text-xs hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-start gap-2 group"
               >
                  <div className="mt-0.5 shrink-0">
-                    {t.column === 'done' ? <CheckCircle2 size={12} className="text-emerald-500" /> : <Circle size={12} className="text-indigo-500" />}
+                    {t.column === 'done' ? <CheckCircle2 size={12} className="text-emerald-500" strokeWidth={1} /> : <Circle size={12} className="text-indigo-500" strokeWidth={1} />}
                  </div>
                  <span className="text-slate-700 dark:text-slate-300 group-hover:text-indigo-900 dark:group-hover:text-indigo-200 line-clamp-2">{t.content}</span>
               </button>
@@ -165,7 +164,13 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                             <div className="flex -space-x-1 shrink-0">
                                 {selected.map(s => {
                                     const sp = SPHERES.find(x => x.id === s);
-                                    return sp ? <div key={s} className={`w-3 h-3 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
+                                    // Aura Ring Style
+                                    return sp ? (
+                                        <div 
+                                            key={s} 
+                                            className={`w-3 h-3 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
+                                        /> 
+                                    ) : null;
                                 })}
                             </div>
                             <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
@@ -176,7 +181,7 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                         <span className="text-xs text-slate-400">Выбери сферу</span>
                     )}
                 </div>
-                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1} />
             </button>
             
             {isOpen && (
@@ -190,9 +195,9 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                                 onClick={() => toggleSphere(s.id)}
                                 className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                             >
-                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-slate-400'} />}
+                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-slate-400'} strokeWidth={1} />}
                                 <span className="flex-1">{s.label}</span>
-                                {isSelected && <Check size={14} className="text-indigo-500" />}
+                                {isSelected && <Check size={14} className="text-indigo-500" strokeWidth={1} />}
                             </button>
                         );
                     })}
@@ -228,14 +233,14 @@ const JournalEntrySphereSelector: React.FC<{
                     <div className="flex -space-x-1">
                         {entry.spheres.map(s => {
                             const sp = SPHERES.find(x => x.id === s);
-                            return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
+                            return sp ? <div key={s} className={`w-2 h-2 rounded-full border ${sp.text.replace('text-', 'border-')} bg-transparent`} /> : null;
                         })}
                     </div>
                 ) : (
-                    <Target size={12} />
+                    <Target size={12} strokeWidth={1} />
                 )}
                 <span>Сфера</span>
-                <ChevronDown size={10} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={10} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1} />
             </button>
             
             {isOpen && (
@@ -254,9 +259,9 @@ const JournalEntrySphereSelector: React.FC<{
                                     onClick={() => toggleSphere(s.id)}
                                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                                 >
-                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} />}
+                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} strokeWidth={1} />}
                                     <span className="flex-1">{s.label}</span>
-                                    {isSelected && <Check size={12} className="text-indigo-500" />}
+                                    {isSelected && <Check size={12} className="text-indigo-500" strokeWidth={1} />}
                                 </button>
                             );
                         })}
@@ -276,7 +281,7 @@ const SphereBadgeList: React.FC<{ spheres: string[] }> = ({ spheres }) => {
                 const Icon = ICON_MAP[sp.icon];
                 return (
                     <div key={s} className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${sp.bg} ${sp.text} ${sp.border}`}>
-                        {Icon && <Icon size={10} />}
+                        {Icon && <Icon size={10} strokeWidth={1} />}
                         {sp.label}
                     </div>
                 );
@@ -306,7 +311,7 @@ const CollapsibleSection: React.FC<{
         <div className="flex items-center gap-2">
             {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
             <div className="text-slate-400">
-                {isOpen ? <Minus size={14} /> : <Plus size={14} />}
+                {isOpen ? <Minus size={14} strokeWidth={1} /> : <Plus size={14} strokeWidth={1} />}
             </div>
         </div>
       </div>
@@ -371,7 +376,7 @@ const StaticChallengeRenderer: React.FC<{
                     style={{ marginLeft: `${indent}px` }}
                 >
                     <div className={`mt-0.5 shrink-0 ${iconClass}`}>
-                        <Icon size={16} />
+                        <Icon size={16} strokeWidth={1} />
                     </div>
                     <span className={`text-sm text-slate-700 dark:text-slate-300`}>
                         <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
@@ -486,7 +491,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
   const RenderIcon = ({ name, className }: { name: string, className?: string }) => {
     const Icon = ICON_MAP[name] || ICON_MAP['User'];
-    return <Icon className={className} size={14} />;
+    return <Icon className={className} size={14} strokeWidth={1} />;
   };
 
   const filteredEntries = entries.filter(entry => {
@@ -577,13 +582,13 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         <div className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-sm p-5 flex flex-col gap-5 relative z-10">
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
-              <Link size={10} /> Контекст
+              <Link size={10} strokeWidth={1} /> Контекст
             </label>
             <TaskSelect tasks={availableTasks} selectedId={linkedTaskId} onSelect={setLinkedTaskId} />
           </div>
           <div>
              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
-               <Zap size={10} /> Сферы
+               <Zap size={10} strokeWidth={1} /> Сферы
              </label>
              <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
           </div>
@@ -601,7 +606,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
             disabled={!content.trim()} 
             className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium text-sm transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
           >
-            <Send size={16} strokeWidth={1.5} /> 
+            <Send size={16} strokeWidth={1} /> 
             <span className="font-serif">Записать мысль</span>
           </button>
         </div>
@@ -646,14 +651,14 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                                     <div className="w-1.5 h-1.5 bg-current rounded-[1px] relative z-10" />
                                                 </div>
                                             ) : (
-                                                <Bot size={16} />
+                                                <Brain size={16} strokeWidth={1} />
                                             )}
                                         </button>
                                     </Tooltip>
 
                                     <Tooltip content="История диалогов" side="left">
                                         <button onClick={() => setShowHistory(true)} className="px-3 py-2 rounded-lg border transition-all flex items-center justify-center gap-2 bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm">
-                                            <Scroll size={16} />
+                                            <History size={16} strokeWidth={1} />
                                             <span className="text-xs font-medium">История</span>
                                         </button>
                                     </Tooltip>
@@ -664,7 +669,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     
                     <div className="flex gap-2">
                         <div className="relative flex-1 group">
-                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" strokeWidth={1} />
                             <input 
                                 type="text" 
                                 value={searchQuery}
@@ -682,7 +687,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     onClick={() => setShowDatePicker(!showDatePicker)}
                                     className={`p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square ${hasActiveDateFilter || showDatePicker ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400' : 'bg-white/80 dark:bg-[#1e293b]/80 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
                                 >
-                                    <Calendar size={18} />
+                                    <Calendar size={18} strokeWidth={1} />
                                     {hasActiveDateFilter && <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
                                 </button>
                             </Tooltip>
@@ -709,7 +714,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
                                 className="p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square bg-white/80 dark:bg-[#1e293b]/80 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"
                             >
-                                {sortOrder === 'desc' ? <ArrowDown size={18} /> : <ArrowUp size={18} />}
+                                {sortOrder === 'desc' ? <ArrowDown size={18} strokeWidth={1} /> : <ArrowUp size={18} strokeWidth={1} />}
                             </button>
                         </Tooltip>
                     </div>
@@ -748,12 +753,12 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     <div className="flex justify-between items-center mb-4">
                         <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
                             <span>{formatDate(entry.date)}</span>
-                            {/* Sphere dots */}
+                            {/* Sphere Aura Rings */}
                             {entry.spheres && entry.spheres.length > 0 && (
-                                <div className="flex -space-x-1 opacity-50">
+                                <div className="flex -space-x-1">
                                     {entry.spheres.map(s => {
                                         const sp = SPHERES.find(x => x.id === s);
-                                        return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`} /> : null;
+                                        return sp ? <div key={s} className={`w-2 h-2 rounded-full border ${sp.text.replace('text-', 'border-')} bg-transparent`} /> : null;
                                     })}
                                 </div>
                             )}
@@ -761,8 +766,8 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
                         <div className="flex items-center gap-2">
                             {entry.isInsight && (
-                                <div className="text-amber-400 p-1 rounded-full bg-amber-50 dark:bg-amber-900/20">
-                                    <Lightbulb size={14} fill="currentColor" className="fill-amber-400" />
+                                <div className="text-amber-400 p-1 rounded-full bg-amber-50 dark:bg-amber-900/20 shadow-[0_0_10px_rgba(251,191,36,0.3)]">
+                                    <Sparkle size={14} fill="currentColor" strokeWidth={1} className="fill-amber-400" />
                                 </div>
                             )}
                             
@@ -770,7 +775,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                             {!isEditing && (
                                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                         <button onClick={() => toggleInsight(entry)} className="p-1.5 text-slate-300 hover:text-amber-500 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
-                                            <Sparkles size={14} />
+                                            <Star size={14} strokeWidth={1} className={entry.isInsight ? "fill-amber-500 text-amber-500" : ""} />
                                         </button>
                                 </div>
                             )}
@@ -825,11 +830,11 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       {analysisResult && (
           <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setAnalysisResult(null)}>
               <div className="bg-white dark:bg-[#1e293b] w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><Bot className="text-indigo-600 dark:text-indigo-400" /> Анализ Пути (Наставник)</h3><button onClick={() => setAnalysisResult(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
+                  <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><Brain size={20} strokeWidth={1} className="text-indigo-600 dark:text-indigo-400" /> Анализ Пути (Наставник)</h3><button onClick={() => setAnalysisResult(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
                   <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 leading-relaxed text-sm"><ReactMarkdown components={markdownComponents}>{analysisResult}</ReactMarkdown></div>
                   <div className="mt-8 flex justify-end gap-2">
                       <Tooltip content="Сохранить в историю">
-                          <button onClick={handleSaveAnalysis} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"><Save size={20} /></button>
+                          <button onClick={handleSaveAnalysis} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"><Save size={20} strokeWidth={1} /></button>
                       </Tooltip>
                   </div>
               </div>
@@ -839,9 +844,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       {showHistory && (
           <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
               <div className="bg-white dark:bg-[#1e293b] w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex justify-between items-center mb-6 shrink-0"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><Scroll className="text-indigo-600 dark:text-indigo-400" /> История Наставника</h3><button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
+                  <div className="flex justify-between items-center mb-6 shrink-0"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><History size={20} strokeWidth={1} className="text-indigo-600 dark:text-indigo-400" /> История Наставника</h3><button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
                   <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar-light space-y-4">
-                      {mentorAnalyses.length === 0 ? (<div className="py-10"><EmptyState icon={Bot} title="Пусто" description="Посоветуйся с Наставником, чтобы начать историю" color="indigo" /></div>) : (
+                      {mentorAnalyses.length === 0 ? (<div className="py-10"><EmptyState icon={Brain} title="Пусто" description="Посоветуйся с Наставником, чтобы начать историю" color="indigo" /></div>) : (
                           mentorAnalyses.sort((a,b) => b.date - a.date).map(analysis => (
                               <div key={analysis.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-100 dark:border-slate-700 group">
                                   <div className="flex justify-between items-start mb-3">
@@ -866,7 +871,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     <div className="flex flex-col gap-1">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">Детали записи</h3>
                         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                            <Calendar size={12} /> {formatDate(selectedEntry.date)}
+                            <Calendar size={12} strokeWidth={1} /> {formatDate(selectedEntry.date)}
                         </div>
                     </div>
                     <div className="flex items-center shrink-0">
@@ -874,18 +879,18 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                             <>
                                 <Tooltip content="Редактировать">
                                     <button onClick={() => startEditing(selectedEntry)} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                        <Edit3 size={20} />
+                                        <Edit3 size={20} strokeWidth={1} />
                                     </button>
                                 </Tooltip>
                                 <Tooltip content="Удалить">
                                     <button onClick={() => { if(window.confirm('Удалить запись?')) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
-                                        <Trash2 size={20} />
+                                        <Trash2 size={20} strokeWidth={1} />
                                     </button>
                                 </Tooltip>
                                 <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-2"></div>
                             </>
                         )}
-                        <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1"><X size={24} /></button>
+                        <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1"><X size={24} strokeWidth={1} /></button>
                     </div>
                 </div>
 
@@ -907,7 +912,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     {selectedEntry.aiFeedback && (
                         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 relative mt-4 border border-slate-100 dark:border-slate-700">
                             <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1 rounded bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 shadow-sm text-slate-500"><Bot size={12} /></div>
+                                <div className="p-1 rounded bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 shadow-sm text-slate-500"><Brain size={12} /></div>
                                 <span className="text-xs font-bold text-slate-500">Ментор</span>
                             </div>
                             <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown></div>
@@ -928,7 +933,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end items-center gap-1">
                         <Tooltip content={selectedEntry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
                             <button onClick={() => toggleInsight(selectedEntry)} className={`p-2 rounded-lg transition-all ${selectedEntry.isInsight ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
-                                <Lightbulb size={16} className={selectedEntry.isInsight ? "fill-current" : ""} />
+                                <Star size={16} strokeWidth={1} className={selectedEntry.isInsight ? "fill-current" : ""} />
                             </button>
                         </Tooltip>
                         <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="right" direction="up" />
@@ -941,10 +946,10 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       {viewingTask && (
         <div className="fixed inset-0 z-[110] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setViewingTask(null)}>
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">Контекст мысли</h3><button onClick={() => setViewingTask(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
+                <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">Контекст мысли</h3><button onClick={() => setViewingTask(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} strokeWidth={1} /></button></div>
                 <div className="space-y-4">
                     <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
-                        <div className="flex justify-between items-center mb-3"><span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${viewingTask.column === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.column === 'done' ? <CheckCircle2 size={12} /> : <Circle size={12} />}{viewingTask.column === 'done' ? 'Сделано' : 'В процессе'}{viewingTask.isArchived && " (В архиве)"}</span></div>
+                        <div className="flex justify-between items-center mb-3"><span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${viewingTask.column === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.column === 'done' ? <CheckCircle2 size={12} strokeWidth={1} /> : <Circle size={12} strokeWidth={1} />}{viewingTask.column === 'done' ? 'Сделано' : 'В процессе'}{viewingTask.isArchived && " (В архиве)"}</span></div>
                         <div className="text-sm text-slate-800 dark:text-slate-200 font-normal leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.content}</ReactMarkdown></div>
                         {viewingTask.spheres && viewingTask.spheres.length > 0 && (
                             <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
