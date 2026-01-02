@@ -101,6 +101,8 @@ const processImage = (file: File | Blob): Promise<string> => {
     });
 };
 
+// --- IMPROVED MARKDOWN CONVERTERS ---
+
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
@@ -114,7 +116,7 @@ const markdownToHtml = (md: string) => {
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
-    // Replace newlines with <br> but avoid doubling them after block elements
+    // Strict newline replacement for editor
     html = html.replace(/\n/g, '<br>');
     html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
     return html;
@@ -133,13 +135,24 @@ const htmlToMarkdown = (html: string) => {
     };
 
     const walk = (node: Node): string => {
-        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+        if (node.nodeType === Node.TEXT_NODE) {
+            // Only trim if it's purely whitespace to avoid collapsing significant spaces
+            // But usually we want to preserve internal spaces
+            return node.textContent || '';
+        }
         if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as HTMLElement;
             const tag = el.tagName.toLowerCase();
+            
+            // Handle BR explicitly
+            if (tag === 'br') return '\n';
+            
             let content = '';
             el.childNodes.forEach(child => content += walk(child));
             
+            // Clean up invisible chars but keep spaces
+            content = content.replace(/\u200B/g, ''); 
+
             if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
             if (el.style.fontStyle === 'italic') return wrap(content, '*');
             
@@ -149,15 +162,22 @@ const htmlToMarkdown = (html: string) => {
                 case 'code': return `\`${content}\``;
                 case 'h1': return `\n# ${content}\n`;
                 case 'h2': return `\n## ${content}\n`;
-                case 'div': case 'p': return `\n${content}\n`;
-                case 'br': return '\n';
+                case 'div': 
+                case 'p': 
+                    // Block elements act as line containers. 
+                    // If content is empty (e.g. <p><br></p>), the BR handled it.
+                    // If content has text, ensure it ends with newline if not already.
+                    return content.endsWith('\n') ? content : `${content}\n`;
                 case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
                 default: return content;
             }
         }
         return '';
     };
+    
     let md = walk(temp);
+    
+    // Cleanup multiple newlines but preserve single ones
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
@@ -784,8 +804,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                if (task && editContentEditableRef.current) {
                    setEditTaskTitle(task.title || '');
                    
-                   // Only set content if empty to prevent overwrite issues on re-renders, 
-                   // though ref check should handle it.
                    const html = markdownToHtml(task.content);
                    editContentEditableRef.current.innerHTML = html;
                    setEditHistory([html]);
@@ -861,14 +879,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const rawHtml = editContentEditableRef.current?.innerHTML || '';
       const content = htmlToMarkdown(rawHtml);
 
-      if (content.trim() || editTaskTitle.trim()) {
+      // Check if title or content changed before updating
+      if (content !== task.content || editTaskTitle.trim() !== task.title) {
           updateTask({ 
               ...task, 
               title: applyTypography(editTaskTitle.trim()), 
               content: applyTypography(content) 
           });
-          setIsEditingTask(false);
       }
+      setIsEditingTask(false);
   };
   
   const handleTitleAutosave = () => {
@@ -1400,7 +1419,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         {/* CONTENT */}
                         <div className="mb-3">
                             <div className={`text-[#2F3437] dark:text-slate-400 font-sans text-sm leading-relaxed line-clamp-3 ${!task.title ? 'text-base' : ''}`}>
-                                 <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
+                                 <ReactMarkdown components={markdownComponents}>{applyTypography(task.content).replace(/\n/g, '  \n')}</ReactMarkdown>
                             </div>
                         </div>
 
@@ -1768,7 +1787,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 <div className="space-y-4">
                                     <div className="bg-violet-50/30 dark:bg-violet-900/10 p-6 rounded-2xl border border-violet-100/50 dark:border-violet-800/30">
                                         <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase tracking-widest mb-3">Совет</div>
-                                        <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{aiResponse}</ReactMarkdown></div>
+                                        <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{aiResponse.replace(/\n/g, '  \n')}</ReactMarkdown></div>
                                     </div>
                                 </div>
                             ) : (
@@ -1848,14 +1867,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         {task.description && (
                                             <CollapsibleSection title="Контекст" icon={<FileText size={12}/>}>
                                                 <div className="text-xs text-[#6B6E70] dark:text-slate-400 leading-relaxed font-sans">
-                                                    <ReactMarkdown components={markdownComponents}>{applyTypography(task.description)}</ReactMarkdown>
+                                                    <ReactMarkdown components={markdownComponents}>{applyTypography(task.description).replace(/\n/g, '  \n')}</ReactMarkdown>
                                                 </div>
                                             </CollapsibleSection>
                                         )}
 
                                         {/* Main Content */}
                                         <div className="text-[#2F3437] dark:text-slate-300 text-sm font-normal leading-relaxed font-sans mb-4">
-                                            <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
+                                            <ReactMarkdown components={markdownComponents}>{applyTypography(task.content).replace(/\n/g, '  \n')}</ReactMarkdown>
                                         </div>
 
                                         {/* 2. Checklist */}
@@ -1980,7 +1999,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                     {task.consultationHistory?.map((h, i) => (
                                                         <div key={`cons-${i}`} className="text-sm bg-violet-50/30 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-800/30 relative group">
                                                             <div className="text-[9px] font-bold text-violet-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Bot size={10}/> Консультация</div>
-                                                            <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{applyTypography(h)}</ReactMarkdown></div>
+                                                            <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{applyTypography(h).replace(/\n/g, '  \n')}</ReactMarkdown></div>
                                                             {!isDone && (
                                                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <Tooltip content="Удалить">
