@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll, XCircle, Send, Lightbulb, Target } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Bot, Loader2, Save, Scroll, XCircle, Send, Lightbulb, Target, Sparkles } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 
@@ -39,23 +39,21 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     return children;
 };
 
+// --- LITERARY TYPOGRAPHY COMPONENTS ---
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-slate-800 dark:text-slate-300 leading-relaxed" {...props} />,
-    a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-slate-800 dark:text-slate-300" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-slate-800 dark:text-slate-300" {...props} />,
-    li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed [&>p]:mb-0" {...props} />,
-    h1: ({node, children, ...props}: any) => <h1 className="text-base font-bold mt-3 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h1>,
-    h2: ({node, children, ...props}: any) => <h2 className="text-sm font-bold mt-2 mb-2 text-slate-900 dark:text-slate-100 tracking-tight" {...props}>{cleanHeader(children)}</h2>,
-    h3: ({node, children, ...props}: any) => <h3 className="text-xs font-bold mt-2 mb-1 text-slate-900 dark:text-slate-100 uppercase tracking-wide" {...props}>{cleanHeader(children)}</h3>,
-    h4: ({node, children, ...props}: any) => <h4 className="text-xs font-bold mt-2 mb-1 text-slate-800 dark:text-slate-200" {...props}>{cleanHeader(children)}</h4>,
-    blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-indigo-200 dark:border-indigo-800 pl-4 py-1 my-2 text-sm text-slate-600 dark:text-slate-400 italic bg-indigo-50/30 dark:bg-indigo-900/20 rounded-r-lg" {...props} />,
-    strong: ({node, ...props}: any) => <strong className="font-bold text-slate-900 dark:text-slate-100" {...props} />,
-    em: ({node, ...props}: any) => <em className="italic text-slate-800 dark:text-slate-200" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-3 last:mb-0 text-base text-[#2F3437] dark:text-slate-300 leading-relaxed font-serif" {...props} />,
+    a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2 decoration-1" target="_blank" rel="noopener noreferrer" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-3 space-y-1 text-sm text-[#2F3437] dark:text-slate-300 font-serif" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-3 space-y-1 text-sm text-[#2F3437] dark:text-slate-300 font-serif" {...props} />,
+    li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed" {...props} />,
+    h1: ({node, children, ...props}: any) => <h1 className="text-lg font-bold mt-4 mb-2 text-[#2F3437] dark:text-slate-100 font-sans tracking-tight" {...props}>{cleanHeader(children)}</h1>,
+    h2: ({node, children, ...props}: any) => <h2 className="text-base font-bold mt-3 mb-2 text-[#2F3437] dark:text-slate-100 font-sans tracking-tight" {...props}>{cleanHeader(children)}</h2>,
+    h3: ({node, children, ...props}: any) => <h3 className="text-sm font-bold mt-3 mb-1 text-slate-500 dark:text-slate-400 uppercase tracking-widest font-sans" {...props}>{cleanHeader(children)}</h3>,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 dark:border-slate-600 pl-4 py-1 my-3 text-sm text-slate-500 italic font-serif" {...props} />,
     code: ({node, inline, className, children, ...props}: any) => {
          return inline 
-            ? <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400 border border-slate-200 dark:border-slate-700" {...props}>{children}</code>
-            : <code className="block bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 p-2 rounded-lg text-xs font-mono my-2 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+            ? <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase tracking-wide" {...props}>{children}</code>
+            : <code className="block bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 p-3 rounded-lg text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     }
 };
 
@@ -555,6 +553,12 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
   const hasActiveDateFilter = !!dateRange.from || !!dateRange.to;
 
+  const formatDate = (timestamp: number) => {
+      return new Date(timestamp)
+          .toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })
+          .toUpperCase();
+  };
+
   return (
     <div className="flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] custom-scrollbar-light">
       <div className="w-full md:w-1/3 flex flex-col p-4 md:p-8 md:border-r border-b md:border-b-0 border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1e293b] md:bg-transparent shrink-0">
@@ -597,7 +601,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       <div className="flex-1 flex flex-col p-4 md:p-8 md:overflow-y-auto bg-slate-50/50 dark:bg-slate-900/50 md:bg-transparent min-h-0 md:min-h-0">
         <div className="flex flex-col gap-3 mb-4 md:mb-6 shrink-0 max-w-3xl mx-auto w-full">
              <div className="flex justify-between items-center">
-                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Хроника</h3>
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest font-sans">Хроника</h3>
                 <div className="flex items-center gap-2">
                     {hasMentorTool && (
                         <>
@@ -607,7 +611,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     onClick={handleAnalyzePath} 
                                     disabled={displayedEntries.length === 0} 
                                     className={`flex items-center justify-center p-2 rounded-lg border transition-all shadow-sm ${
-                                        // Highlighted style always active
                                         'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
                                     } ${isAnalyzing ? 'animate-pulse' : ''}`}
                                 >
@@ -622,7 +625,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 </button>
                             </Tooltip>
 
-                            {/* History Button (Moved Second, Added Label) */}
+                            {/* History Button */}
                             <Tooltip content="История диалогов" side="left">
                                 <button onClick={() => setShowHistory(true)} className="px-3 py-2 rounded-lg border transition-all flex items-center justify-center gap-2 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm">
                                     <Scroll size={16} />
@@ -703,44 +706,48 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
               const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
 
               return (
-                <div key={entry.id} onClick={() => setSelectedEntryId(entry.id)} className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 md:p-6 relative group hover:shadow-md transition-shadow cursor-pointer">
+                <div 
+                    key={entry.id} 
+                    onClick={() => setSelectedEntryId(entry.id)} 
+                    className={`relative p-6 md:p-8 rounded-2xl border transition-all duration-300 group cursor-pointer
+                        ${entry.isInsight 
+                            ? 'bg-gradient-to-br from-amber-50/80 to-white dark:from-amber-900/10 dark:to-[#1e293b] border-amber-200/50 dark:border-amber-800/30 shadow-sm' 
+                            : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md'
+                        }
+                    `}
+                >
                   
                   {/* CARD HEADER - ALIGNED */}
-                  <div className="flex justify-between items-start mb-3">
-                      <div className="flex flex-col gap-2 pt-1">
-                          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                              <Calendar size={12} /> {new Date(entry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
-                          </div>
-                          {!isEditing && linkedTask && (
-                                <div className="-ml-2">
-                                    <Tooltip content="Контекст (задача)">
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); setViewingTask(linkedTask); }}
-                                            className={`p-2 rounded-lg transition-all hover:bg-slate-50 dark:hover:bg-slate-800 ${
-                                                linkedTask.column === 'done' ? 'text-emerald-500' :
-                                                linkedTask.column === 'doing' ? 'text-indigo-500' :
-                                                'text-slate-400'
-                                            }`}
-                                        >
-                                            <Link size={16} />
-                                        </button>
-                                    </Tooltip>
-                                </div>
+                  <div className="flex justify-between items-center mb-4">
+                      <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
+                          <span>{formatDate(entry.date)}</span>
+                          {/* Sphere dots */}
+                          {entry.spheres && entry.spheres.length > 0 && (
+                              <div className="flex -space-x-1 opacity-50">
+                                  {entry.spheres.map(s => {
+                                      const sp = SPHERES.find(x => x.id === s);
+                                      return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`} /> : null;
+                                  })}
+                              </div>
                           )}
                       </div>
 
-                      {!isEditing && (
-                        <div className="flex items-center gap-1 z-10 -mt-1 -mr-2" onClick={(e) => e.stopPropagation()}>
-                             <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
-                                <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-all ${entry.isInsight ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-300 dark:text-slate-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
-                                    <Lightbulb size={16} className={entry.isInsight ? "fill-current" : ""} />
-                                </button>
-                             </Tooltip>
-                             <div>
-                                <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} />
-                             </div>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                           {entry.isInsight && (
+                               <div className="text-amber-400 p-1 rounded-full bg-amber-50 dark:bg-amber-900/20">
+                                   <Lightbulb size={14} fill="currentColor" className="fill-amber-400" />
+                               </div>
+                           )}
+                           
+                           {/* Quick Actions on Hover */}
+                           {!isEditing && (
+                               <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                    <button onClick={() => toggleInsight(entry)} className="p-1.5 text-slate-300 hover:text-amber-500 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
+                                        <Sparkles size={14} />
+                                    </button>
+                               </div>
+                           )}
+                      </div>
                   </div>
 
                   {isEditing ? (
@@ -752,15 +759,32 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                           </div>
                       </div>
                   ) : (
-                    <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed mb-4 font-normal mt-2 pr-16 md:pr-0"><ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown></div>
+                    <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
+                        <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
+                    </div>
                   )}
-                  {entry.aiFeedback && (
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 relative mt-4">
-                      <div className="flex items-center gap-2 mb-2">
-                         <div className={`p-1 rounded bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 shadow-sm ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
-                         <span className={`text-xs font-bold ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
+
+                  {/* Context Link */}
+                  {linkedTask && !isEditing && (
+                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                          <button 
+                              onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
+                              className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                          >
+                              <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                                  [ CONTEXT: {linkedTask.content.substring(0, 50)}{linkedTask.content.length > 50 ? '...' : ''} ]
+                              </span>
+                          </button>
                       </div>
-                      <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
+                  )}
+
+                  {entry.aiFeedback && (
+                    <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
+                      <div className="flex items-center gap-2 mb-1">
+                         <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
+                         <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
+                      </div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
                     </div>
                   )}
                 </div>
@@ -798,7 +822,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                         <button onClick={() => { if (confirm("Удалить этот анализ?")) deleteMentorAnalysis(analysis.id); }} className="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={16} /></button>
                                       </Tooltip>
                                   </div>
-                                  <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{analysis.content}</ReactMarkdown></div>
+                                  <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-serif"><ReactMarkdown components={markdownComponents}>{analysis.content}</ReactMarkdown></div>
                               </div>
                           ))
                       )}
@@ -813,25 +837,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex flex-col gap-1">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">Детали записи</h3>
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            <Calendar size={12} /> {new Date(selectedEntry.date).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                            <Calendar size={12} /> {formatDate(selectedEntry.date)}
                         </div>
-                        {selectedLinkedTask && (
-                             <div className="-ml-2 mt-1">
-                                <Tooltip content="Контекст (задача)">
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); setViewingTask(selectedLinkedTask); }}
-                                        className={`p-2 rounded-lg transition-all hover:bg-slate-50 dark:hover:bg-slate-800 ${
-                                            selectedLinkedTask.column === 'done' ? 'text-emerald-500' :
-                                            selectedLinkedTask.column === 'doing' ? 'text-indigo-500' :
-                                            'text-slate-400'
-                                        }`}
-                                    >
-                                        <Link size={16} />
-                                    </button>
-                                </Tooltip>
-                            </div>
-                        )}
                     </div>
                     <div className="flex items-center shrink-0">
                         {editingId !== selectedEntry.id && (
@@ -863,7 +871,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                           </div>
                       </div>
                     ) : (
-                      <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed font-normal">
+                      <div className="font-serif text-slate-800 dark:text-slate-200 text-base leading-relaxed font-normal">
                           <ReactMarkdown components={markdownComponents}>{selectedEntry.content}</ReactMarkdown>
                       </div>
                     )}
@@ -874,10 +882,21 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 <div className="p-1 rounded bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 shadow-sm text-slate-500"><Bot size={12} /></div>
                                 <span className="text-xs font-bold text-slate-500">Ментор</span>
                             </div>
-                            <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1"><ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown></div>
+                            <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown></div>
                         </div>
                     )}
                     
+                    {selectedLinkedTask && (
+                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(selectedLinkedTask.id); }}
+                                className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx"
+                            >
+                                <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity">[ CONTEXT: {selectedLinkedTask.content.substring(0, 40)}{selectedLinkedTask.content.length > 40 ? '...' : ''} ]</span>
+                            </button>
+                        </div>
+                    )}
+
                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end items-center gap-1">
                         <Tooltip content={selectedEntry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
                             <button onClick={() => toggleInsight(selectedEntry)} className={`p-2 rounded-lg transition-all ${selectedEntry.isInsight ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
