@@ -284,8 +284,9 @@ const CoverPicker: React.FC<{
 const ColorPickerPopover: React.FC<{ 
     onSelect: (colorId: string) => void, 
     onClose: () => void, 
-    triggerRef: React.RefObject<HTMLElement> 
-}> = ({ onSelect, onClose, triggerRef }) => {
+    triggerRef: React.RefObject<HTMLElement>,
+    direction?: 'up' | 'down' | 'auto'
+}> = ({ onSelect, onClose, triggerRef, direction = 'auto' }) => {
     const [style, setStyle] = useState<React.CSSProperties>({});
 
     useEffect(() => {
@@ -304,8 +305,10 @@ const ColorPickerPopover: React.FC<{
             let top = rect.bottom + 8;
             let left = rect.left;
 
-            // Flip vertically if not enough space below
-            if (bottomSpace < height && topSpace > height) {
+            const shouldGoUp = direction === 'up' || (direction === 'auto' && bottomSpace < height && topSpace > height);
+
+            // Flip vertically
+            if (shouldGoUp) {
                 top = rect.top - height - 8;
             }
 
@@ -321,7 +324,7 @@ const ColorPickerPopover: React.FC<{
                 zIndex: 9999
             });
         }
-    }, [triggerRef]);
+    }, [triggerRef, direction]);
 
     return createPortal(
         <>
@@ -1543,8 +1546,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const ColorPickerPopover: React.FC<{ 
     onSelect: (colorId: string) => void, 
     onClose: () => void, 
-    triggerRef: React.RefObject<HTMLElement> 
-}> = ({ onSelect, onClose, triggerRef }) => {
+    triggerRef: React.RefObject<HTMLElement>,
+    direction?: 'up' | 'down' | 'auto'
+}> = ({ onSelect, onClose, triggerRef, direction = 'auto' }) => {
     const [style, setStyle] = useState<React.CSSProperties>({});
 
     useEffect(() => {
@@ -1563,8 +1567,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             let top = rect.bottom + 8;
             let left = rect.left;
 
-            // Flip vertically if not enough space below
-            if (bottomSpace < height && topSpace > height) {
+            // Logic to force UP if direction is 'up' OR if auto and not enough space below
+            const forceUp = direction === 'up';
+            const autoUp = direction === 'auto' && bottomSpace < height && topSpace > height;
+
+            if (forceUp || autoUp) {
                 top = rect.top - height - 8;
             }
 
@@ -1580,7 +1587,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 zIndex: 9999
             });
         }
-    }, [triggerRef]);
+    }, [triggerRef, direction]);
 
     return createPortal(
         <>
@@ -1695,7 +1702,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             <Palette size={16} />
                                         </button>
                                     </Tooltip>
-                                    {showCreationColorPicker && <ColorPickerPopover onSelect={setCreationColor} onClose={() => setShowCreationColorPicker(false)} triggerRef={creationColorTriggerRef} />}
+                                    {showCreationColorPicker && <ColorPickerPopover onSelect={setCreationColor} onClose={() => setShowCreationColorPicker(false)} triggerRef={creationColorTriggerRef} direction="up" />}
                                 </div>
                             </div>
                             <button onClick={handleCreateTask} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors">
