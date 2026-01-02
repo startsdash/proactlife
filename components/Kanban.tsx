@@ -129,9 +129,24 @@ const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
 
+    // Improved wrapper: Pushes whitespace outside the markers
+    const wrap = (text: string, marker: string) => {
+        // Match leading whitespace, content, trailing whitespace
+        // Include non-breaking space in whitespace character set to prevent "**Text **"
+        const match = text.match(/^([\s\u00A0]*)(.*?)([\s\u00A0]*)$/s);
+        if (match) {
+            // group 1: leading space, group 2: content, group 3: trailing space
+            // If content is empty, don't wrap empty string with bold tags
+            if (!match[2]) return match[1] + match[3];
+            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
+        }
+        return text;
+    };
+
     const walk = (node: Node): string => {
         if (node.nodeType === Node.TEXT_NODE) {
-            return node.textContent || '';
+            // Replace NBSP with normal space immediately
+            return (node.textContent || '').replace(/\u00A0/g, ' ');
         }
         if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as HTMLElement;
@@ -143,29 +158,36 @@ const htmlToMarkdown = (html: string) => {
             let content = '';
             el.childNodes.forEach(child => content += walk(child));
             
-            // Clean up zero-width spaces
-            content = content.replace(/\u200B/g, ''); 
+            // Block Elements: Just append newline at end to avoid double spacing
+            if (tag === 'div' || tag === 'p') {
+                // If content is empty, it might be a spacer line
+                return content.trim() ? `${content}\n` : '\n'; 
+            }
 
-            // Inline formatting
-            if (tag === 'b' || tag === 'strong' || el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return `**${content}**`;
-            if (tag === 'i' || tag === 'em' || el.style.fontStyle === 'italic') return `*${content}*`;
-            if (tag === 'code') return `\`${content}\``;
-            if (tag === 'u') return `<u>${content}</u>`;
+            // Inline Formatting
+            const styleBold = el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700;
+            const styleItalic = el.style.fontStyle === 'italic';
 
-            // Block formatting
-            if (tag === 'h1') return `\n# ${content}\n`;
-            if (tag === 'h2') return `\n## ${content}\n`;
-            if (tag === 'div' || tag === 'p') return `\n${content}\n`;
+            if (styleBold) return wrap(content, '**');
+            if (styleItalic) return wrap(content, '*');
             
-            return content;
+            switch (tag) {
+                case 'b': case 'strong': return wrap(content, '**');
+                case 'i': case 'em': return wrap(content, '*');
+                case 'code': return `\`${content}\``;
+                case 'u': return `<u>${content}</u>`;
+                case 'h1': return `\n# ${content}\n`;
+                case 'h2': return `\n## ${content}\n`;
+                default: return content;
+            }
         }
         return '';
     };
     
     let md = walk(temp);
     
-    // Normalize newlines: multiple \n becomes \n\n, then trim
-    md = md.replace(/\n\s*\n/g, '\n\n').trim();
+    // Normalize newlines: Replace 3+ newlines with 2 to allow max one empty line
+    md = md.replace(/\n{3,}/g, '\n\n').trim();
     return applyTypography(md);
 };
 
