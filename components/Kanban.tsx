@@ -1515,7 +1515,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 <div className="relative">
                                     <Tooltip content="Обложка">
                                         <button 
-                                            onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} 
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); setShowCreationCoverPicker(!showCreationCoverPicker); }} 
                                             className={`p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
                                         >
                                             <Layout size={16} />
@@ -1526,18 +1527,20 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 <div className="relative">
                                     <Tooltip content="Фон">
                                         <button 
-                                            onMouseDown={(e) => { e.preventDefault(); setShowCreationColorPicker(!showCreationColorPicker); }} 
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); setShowCreationColorPicker(!showCreationColorPicker); }} 
                                             className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500 transition-colors"
                                         >
                                             <Palette size={16} />
                                         </button>
                                     </Tooltip>
                                     {showCreationColorPicker && (
-                                        <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-1.5 z-50">
+                                        <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-1.5 z-50" onMouseDown={e => e.preventDefault()}>
                                             {colors.map(c => (
                                                 <button 
                                                     key={c.id} 
-                                                    onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowCreationColorPicker(false); }} 
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); setCreationColor(c.id); setShowCreationColorPicker(false); }} 
                                                     className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} 
                                                     style={{ backgroundColor: c.hex }} 
                                                     title={c.id} 
@@ -2059,7 +2062,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 <div className="relative">
                                                     <Tooltip content="Обложка">
                                                         <button 
-                                                            onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} 
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); setShowEditCoverPicker(!showEditCoverPicker); }} 
                                                             className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors ${editCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}
                                                         >
                                                             <Layout size={16} />
@@ -2070,18 +2074,20 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 <div className="relative">
                                                     <Tooltip content="Фон">
                                                         <button 
-                                                            onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} 
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); setShowEditColorPicker(!showEditColorPicker); }} 
                                                             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"
                                                         >
                                                             <Palette size={16} />
                                                         </button>
                                                     </Tooltip>
                                                     {showEditColorPicker && (
-                                                        <div className="absolute top-full mt-2 left-0 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-1.5 z-50">
+                                                        <div className="absolute top-full mt-2 left-0 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-1.5 z-50" onMouseDown={e => e.preventDefault()}>
                                                             {colors.map(c => (
                                                                 <button 
                                                                     key={c.id} 
-                                                                    onMouseDown={(e) => { e.preventDefault(); setEditColor(c.id); setShowEditColorPicker(false); }} 
+                                                                    type="button"
+                                                                    onClick={(e) => { e.stopPropagation(); setEditColor(c.id); setShowEditColorPicker(false); }} 
                                                                     className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${editColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} 
                                                                     style={{ backgroundColor: c.hex }} 
                                                                     title={c.id} 
