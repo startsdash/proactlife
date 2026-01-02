@@ -106,6 +106,7 @@ const processImage = (file: File | Blob): Promise<string> => {
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
+    // Standard Markdown replacements
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
@@ -116,7 +117,9 @@ const markdownToHtml = (md: string) => {
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
-    // Strict newline replacement for editor
+    
+    // Crucial: Handle Newlines for ContentEditable
+    // We replace newlines with <br> but avoid double <br> after block elements
     html = html.replace(/\n/g, '<br>');
     html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
     return html;
@@ -126,61 +129,51 @@ const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
 
-    const wrap = (text: string, marker: string) => {
-        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
-        if (match && match[2]) {
-            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
-        }
-        return text.trim() ? `${marker}${text}${marker}` : '';
-    };
-
     const walk = (node: Node): string => {
         if (node.nodeType === Node.TEXT_NODE) {
-            // Only trim if it's purely whitespace to avoid collapsing significant spaces
-            // But usually we want to preserve internal spaces
             return node.textContent || '';
         }
         if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as HTMLElement;
             const tag = el.tagName.toLowerCase();
             
-            // Handle BR explicitly
             if (tag === 'br') return '\n';
+            if (tag === 'img') return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
             
             let content = '';
             el.childNodes.forEach(child => content += walk(child));
             
-            // Clean up invisible chars but keep spaces
+            // Clean up zero-width spaces
             content = content.replace(/\u200B/g, ''); 
 
-            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
-            if (el.style.fontStyle === 'italic') return wrap(content, '*');
+            // Inline formatting
+            if (tag === 'b' || tag === 'strong' || el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return `**${content}**`;
+            if (tag === 'i' || tag === 'em' || el.style.fontStyle === 'italic') return `*${content}*`;
+            if (tag === 'code') return `\`${content}\``;
+            if (tag === 'u') return `<u>${content}</u>`;
+
+            // Block formatting
+            if (tag === 'h1') return `\n# ${content}\n`;
+            if (tag === 'h2') return `\n## ${content}\n`;
+            if (tag === 'div' || tag === 'p') return `\n${content}\n`;
             
-            switch (tag) {
-                case 'b': case 'strong': return wrap(content, '**');
-                case 'i': case 'em': return wrap(content, '*');
-                case 'code': return `\`${content}\``;
-                case 'h1': return `\n# ${content}\n`;
-                case 'h2': return `\n## ${content}\n`;
-                case 'div': 
-                case 'p': 
-                    // Block elements act as line containers. 
-                    // If content is empty (e.g. <p><br></p>), the BR handled it.
-                    // If content has text, ensure it ends with newline if not already.
-                    return content.endsWith('\n') ? content : `${content}\n`;
-                case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
-                default: return content;
-            }
+            return content;
         }
         return '';
     };
     
     let md = walk(temp);
     
-    // Cleanup multiple newlines but preserve single ones
-    md = md.replace(/\n{3,}/g, '\n\n').trim();
-    md = md.replace(/&nbsp;/g, ' ');
+    // Normalize newlines: multiple \n becomes \n\n, then trim
+    md = md.replace(/\n\s*\n/g, '\n\n').trim();
     return applyTypography(md);
+};
+
+// Helper: Prepare content for ReactMarkdown display
+// Ensures visual fidelity by forcing hard breaks for newlines
+const formatForDisplay = (content: string) => {
+    if (!content) return '';
+    return content.replace(/\n/g, '  \n');
 };
 
 // Highlight Helper
@@ -202,7 +195,7 @@ const HighlightedText = ({ text, highlight, className = "" }: { text: string, hi
     );
 };
 
-// Markdown Styles - Updated for Deep Graphite
+// Markdown Styles
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-[#2F3437] dark:text-slate-300 leading-relaxed font-sans" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
@@ -426,7 +419,7 @@ const InteractiveChallenge: React.FC<{
             if (trimmedBuffer) {
                 renderedParts.push(
                     <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-[#2F3437] dark:text-slate-300 font-sans mb-1 last:mb-0">
-                        <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
+                        <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(textBuffer))}</ReactMarkdown>
                     </div>
                 );
             }
@@ -454,7 +447,7 @@ const InteractiveChallenge: React.FC<{
                             {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                         </div>
                         <span className={`text-sm font-sans ${isChecked ? 'text-[#6B6E70] dark:text-slate-500 line-through' : 'text-[#2F3437] dark:text-slate-300'}`}>
-                            <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{applyTypography(label)}</ReactMarkdown>
+                            <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{formatForDisplay(applyTypography(label))}</ReactMarkdown>
                         </span>
                     </button>
                     {onPin && (
@@ -493,7 +486,7 @@ const StaticChallengeRenderer: React.FC<{
              if (trimmedBuffer) {
                 renderedParts.push(
                     <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-[#2F3437] dark:text-slate-300 font-sans mb-1 last:mb-0">
-                        <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
+                        <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(textBuffer))}</ReactMarkdown>
                     </div>
                 );
              }
@@ -534,7 +527,7 @@ const StaticChallengeRenderer: React.FC<{
                         <Icon size={16} />
                     </div>
                     <span className={`text-sm text-[#2F3437] dark:text-slate-300 font-sans`}>
-                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{applyTypography(label)}</ReactMarkdown>
+                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{formatForDisplay(applyTypography(label))}</ReactMarkdown>
                     </span>
                 </div>
             );
@@ -799,12 +792,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   // Sync effect for Edit Mode Content - FIX DUPLICATION by using ref check and careful dependency
   useEffect(() => {
       if (isEditingTask && activeModal?.taskId) {
+          // KEY CHANGE: Ensure we rely on a cleaner init check
           if (!hasInitializedEditRef.current) {
                const task = tasks.find(t => t.id === activeModal.taskId);
                if (task && editContentEditableRef.current) {
                    setEditTaskTitle(task.title || '');
                    
                    const html = markdownToHtml(task.content);
+                   // Directly setting innerHTML can be risky if React re-renders, 
+                   // but with key={activeModal.taskId} on the editable div, we are safer.
                    editContentEditableRef.current.innerHTML = html;
                    setEditHistory([html]);
                    setEditHistoryIndex(0);
@@ -1419,7 +1415,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         {/* CONTENT */}
                         <div className="mb-3">
                             <div className={`text-[#2F3437] dark:text-slate-400 font-sans text-sm leading-relaxed line-clamp-3 ${!task.title ? 'text-base' : ''}`}>
-                                 <ReactMarkdown components={markdownComponents}>{applyTypography(task.content).replace(/\n/g, '  \n')}</ReactMarkdown>
+                                 <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.content))}</ReactMarkdown>
                             </div>
                         </div>
 
@@ -1787,7 +1783,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 <div className="space-y-4">
                                     <div className="bg-violet-50/30 dark:bg-violet-900/10 p-6 rounded-2xl border border-violet-100/50 dark:border-violet-800/30">
                                         <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase tracking-widest mb-3">Совет</div>
-                                        <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{aiResponse.replace(/\n/g, '  \n')}</ReactMarkdown></div>
+                                        <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{formatForDisplay(aiResponse)}</ReactMarkdown></div>
                                     </div>
                                 </div>
                             ) : (
@@ -1842,6 +1838,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         </div>
 
                                         <div 
+                                            // KEY FIX: Use key to force DOM re-mount when switching tasks to avoid content leak
+                                            key={activeModal.taskId}
                                             ref={editContentEditableRef} 
                                             contentEditable 
                                             suppressContentEditableWarning={true}
@@ -1867,14 +1865,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         {task.description && (
                                             <CollapsibleSection title="Контекст" icon={<FileText size={12}/>}>
                                                 <div className="text-xs text-[#6B6E70] dark:text-slate-400 leading-relaxed font-sans">
-                                                    <ReactMarkdown components={markdownComponents}>{applyTypography(task.description).replace(/\n/g, '  \n')}</ReactMarkdown>
+                                                    <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.description))}</ReactMarkdown>
                                                 </div>
                                             </CollapsibleSection>
                                         )}
 
                                         {/* Main Content */}
                                         <div className="text-[#2F3437] dark:text-slate-300 text-sm font-normal leading-relaxed font-sans mb-4">
-                                            <ReactMarkdown components={markdownComponents}>{applyTypography(task.content).replace(/\n/g, '  \n')}</ReactMarkdown>
+                                            <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.content))}</ReactMarkdown>
                                         </div>
 
                                         {/* 2. Checklist */}
@@ -1999,7 +1997,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                     {task.consultationHistory?.map((h, i) => (
                                                         <div key={`cons-${i}`} className="text-sm bg-violet-50/30 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-800/30 relative group">
                                                             <div className="text-[9px] font-bold text-violet-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Bot size={10}/> Консультация</div>
-                                                            <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{applyTypography(h).replace(/\n/g, '  \n')}</ReactMarkdown></div>
+                                                            <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(h))}</ReactMarkdown></div>
                                                             {!isDone && (
                                                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <Tooltip content="Удалить">
