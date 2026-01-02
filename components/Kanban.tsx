@@ -1803,9 +1803,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <div className="space-y-4">
                             {aiResponse ? (
                                 <div className="space-y-4">
-                                    <div className="bg-violet-50/30 dark:bg-violet-900/10 p-6 rounded-2xl border border-violet-100/50 dark:border-violet-800/30">
-                                        <div className="flex items-center gap-2 text-indigo-500 dark:text-indigo-400 font-bold text-xs tracking-widest mb-3">Совет</div>
-                                        <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{formatForDisplay(aiResponse)}</ReactMarkdown></div>
+                                    <div className="bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
+                                        <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed">
+                                            <ReactMarkdown components={markdownComponents}>{formatForDisplay(aiResponse)}</ReactMarkdown>
+                                        </div>
                                     </div>
                                 </div>
                             ) : (
@@ -1819,12 +1820,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
                     {activeModal.type === 'challenge' && draftChallenge && (
                         <div className="flex flex-col h-full">
-                            <div className="bg-violet-50/30 dark:bg-violet-900/10 p-6 rounded-2xl border border-violet-100/50 dark:border-violet-800/30 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-3 opacity-30">
-                                    <div className="w-16 h-16 bg-indigo-500 rounded-full blur-2xl" />
-                                </div>
+                            <div className="bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
                                 <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed">
-                                    <StaticChallengeRenderer content={draftChallenge} mode="draft" />
+                                    <StaticChallengeRenderer 
+                                        content={draftChallenge.replace(/^#\s*.*?(?:\n|$)/, '').trim()} 
+                                        mode="draft" 
+                                    />
                                 </div>
                             </div>
                         </div>
