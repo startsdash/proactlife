@@ -305,10 +305,11 @@ const ColorPickerPopover: React.FC<{
             let top = rect.bottom + 8;
             let left = rect.left;
 
-            const shouldGoUp = direction === 'up' || (direction === 'auto' && bottomSpace < height && topSpace > height);
+            // Logic to force UP if direction is 'up' OR if auto and not enough space below
+            const forceUp = direction === 'up';
+            const autoUp = direction === 'auto' && bottomSpace < height && topSpace > height;
 
-            // Flip vertically
-            if (shouldGoUp) {
+            if (forceUp || autoUp) {
                 top = rect.top - height - 8;
             }
 
@@ -365,6 +366,7 @@ const markdownToHtml = (md: string) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
     
+    // Improved new line handling: Replace newlines with BR, but clean up around block elements
     html = html.replace(/\n/g, '<br>');
     html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
     return html;
@@ -397,9 +399,14 @@ const htmlToMarkdown = (html: string) => {
             let content = '';
             el.childNodes.forEach(child => content += walk(child));
             
+            // Robust Block Elements Handling
             if (tag === 'div' || tag === 'p') {
-                return content.trim() ? `${content}\n` : '\n'; 
+                const trimmed = content.trim();
+                return trimmed ? `${trimmed}\n` : '\n'; 
             }
+            if (tag === 'li') return `\n- ${content.trim()}`;
+            if (tag === 'ul' || tag === 'ol') return `\n${content}\n`;
+            if (tag === 'blockquote') return `\n> ${content.trim()}\n`;
 
             const styleBold = el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700;
             const styleItalic = el.style.fontStyle === 'italic';
@@ -895,28 +902,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       }
   };
 
-  const restoreCreationSelection = () => {
-      const sel = window.getSelection();
-      if (sel && lastCreationSelection.current) {
-          sel.removeAllRanges();
-          sel.addRange(lastCreationSelection.current);
-      }
-  };
-
-  const insertImageAtCursor = (base64: string) => {
-      if (creationContentRef.current) creationContentRef.current.focus();
-      // If we have a saved selection inside the editor, restore it
-      if (lastCreationSelection.current) {
-          restoreCreationSelection();
-      }
-      
-      document.execCommand('insertImage', false, base64);
-      
-      // Basic styling fix for inserted images since execCommand just puts <img>
-      // We can't easily style it without complex logic, so we rely on global CSS or simple cleanup
-      if (creationContentRef.current) saveCreationSnapshot(creationContentRef.current.innerHTML);
-  };
-
   const execCreationUndo = () => {
       if (creationHistoryIndex > 0) {
           const prevIndex = creationHistoryIndex - 1;
@@ -1042,10 +1027,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       }
   }, [activeModal, tasks]);
 
-  // Sync effect for Edit Mode Content - FIX DUPLICATION by using ref check and careful dependency
+  // Sync effect for Edit Mode Content
   useEffect(() => {
       if (isEditingTask && activeModal?.taskId) {
-          // KEY CHANGE: Ensure we rely on a cleaner init check
           if (!hasInitializedEditRef.current) {
                const task = tasks.find(t => t.id === activeModal.taskId);
                if (task && editContentEditableRef.current) {
@@ -1054,8 +1038,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                    setEditColor(task.color || 'white');
                    
                    const html = markdownToHtml(task.content);
-                   // Directly setting innerHTML can be risky if React re-renders, 
-                   // but with key={activeModal.taskId} on the editable div, we are safer.
                    editContentEditableRef.current.innerHTML = html;
                    setEditHistory([html]);
                    setEditHistoryIndex(0);
@@ -1065,7 +1047,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       } else {
           hasInitializedEditRef.current = false;
       }
-  }, [isEditingTask, activeModal?.taskId, tasks]); // Depend on ID, not object reference if possible, but tasks needed for lookup
+  }, [isEditingTask, activeModal?.taskId, tasks]);
 
   const columns = [
     { id: 'todo', title: 'Нужно сделать' },
@@ -1136,7 +1118,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const rawHtml = editContentEditableRef.current?.innerHTML || '';
       const content = htmlToMarkdown(rawHtml);
 
-      // Check if title or content changed before updating
       if (content !== task.content || editTaskTitle.trim() !== task.title || editCover !== task.coverUrl || editColor !== task.color) {
           updateTask({ 
               ...task, 
@@ -1292,11 +1273,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       }
   };
   
-  const toggleChallengeCompleteFromCard = (e: React.MouseEvent, task: Task) => {
-      e.stopPropagation();
-      updateTask({ ...task, isChallengeCompleted: !task.isChallengeCompleted });
-  };
-
   const toggleChallengeCheckbox = (globalIndex: number, task: Task) => {
       if (!task.activeChallenge) return;
       const lines = task.activeChallenge.split('\n');
@@ -1466,13 +1442,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
   const getTaskForModal = () => tasks.find(t => t.id === activeModal?.taskId);
 
-  const handleTitleSave = () => {
-      const task = getTaskForModal();
-      if (task && (task.title || '') !== editTaskTitle.trim()) {
-          updateTask({ ...task, title: applyTypography(editTaskTitle.trim()) });
-      }
-  };
-
   // --- HELPER: TECHNO TIME & GLOW ---
   const getTechGlow = (spheres: string[] | undefined, activeFilter: string | null) => {
       if (!activeFilter || !spheres || !spheres.includes(activeFilter)) return 'none';
@@ -1543,75 +1512,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     </div>
   )};
 
-  const ColorPickerPopover: React.FC<{ 
-    onSelect: (colorId: string) => void, 
-    onClose: () => void, 
-    triggerRef: React.RefObject<HTMLElement>,
-    direction?: 'up' | 'down' | 'auto'
-}> = ({ onSelect, onClose, triggerRef, direction = 'auto' }) => {
-    const [style, setStyle] = useState<React.CSSProperties>({});
-
-    useEffect(() => {
-        if (triggerRef.current) {
-            const rect = triggerRef.current.getBoundingClientRect();
-            const viewportH = window.innerHeight;
-            const viewportW = window.innerWidth;
-            
-            // Approximate size of picker
-            const height = 50; 
-            const width = 220; 
-
-            const topSpace = rect.top;
-            const bottomSpace = viewportH - rect.bottom;
-            
-            let top = rect.bottom + 8;
-            let left = rect.left;
-
-            // Logic to force UP if direction is 'up' OR if auto and not enough space below
-            const forceUp = direction === 'up';
-            const autoUp = direction === 'auto' && bottomSpace < height && topSpace > height;
-
-            if (forceUp || autoUp) {
-                top = rect.top - height - 8;
-            }
-
-            // Flip horizontally if right edge goes off screen
-            if (left + width > viewportW) {
-                left = viewportW - width - 16;
-            }
-
-            setStyle({
-                position: 'fixed',
-                top,
-                left,
-                zIndex: 9999
-            });
-        }
-    }, [triggerRef, direction]);
-
-    return createPortal(
-        <>
-            <div className="fixed inset-0 z-[9998]" onClick={onClose} />
-            <div 
-                className="fixed bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-[9999] flex-wrap max-w-[200px]" 
-                style={style}
-                onMouseDown={e => e.stopPropagation()}
-            >
-                {colors.map(c => (
-                    <button 
-                        key={c.id} 
-                        onMouseDown={(e) => { e.preventDefault(); onSelect(c.id); onClose(); }} 
-                        className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform`} 
-                        style={{ backgroundColor: c.hex }} 
-                        title={c.id} 
-                    />
-                ))}
-            </div>
-        </>,
-        document.body
-    );
-};
-
   const renderColumn = (col: typeof columns[0]) => {
     if (!col) return null;
     // X-RAY LOGIC: Filter by column, but apply dimming in map based on search/sphere
@@ -1662,6 +1562,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         <div 
                             ref={creationContentRef}
                             contentEditable
+                            style={{ whiteSpace: 'pre-wrap' }}
                             className="w-full min-h-[120px] max-h-[300px] overflow-y-auto outline-none text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-sans mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
                             onInput={handleCreationInput}
                             onBlur={() => saveCreationSelection()}
@@ -1728,13 +1629,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             ) : (
                 sortedTasks.map((task, i) => {
                     const match = isMatch(task);
-                    // X-Ray Styling: Faded if no match
                     const dimStyle = !match ? "opacity-10 grayscale blur-[1px] pointer-events-none scale-95" : "";
-
                     const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
                     const hasActiveChallenge = task.activeChallenge && !task.isChallengeCompleted;
-                    
-                    // TECHNO STYLING
                     const glow = getTechGlow(task.spheres, activeSphereFilter);
 
                     return (
@@ -1765,9 +1662,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             </div>
                         )}
 
-                        {/* Content Wrapper - Padded */}
                         <div className="p-5 flex flex-col gap-0 h-full">
-                            {/* HEADER: Title + Control */}
                             <div className="flex justify-between items-start gap-2 mb-2">
                                  <div className="flex-1 pt-0.5 min-w-0">
                                     {task.title ? (
@@ -1782,21 +1677,18 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                  </div>
                             </div>
 
-                            {/* CONTENT */}
                             <div className="mb-3">
                                 <div className={`text-[#2F3437] dark:text-slate-400 font-sans text-sm leading-relaxed line-clamp-3 ${!task.title ? 'text-base' : ''}`}>
                                      <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.content))}</ReactMarkdown>
                                 </div>
                             </div>
 
-                            {/* TODO SPECIFIC MODULES */}
                             {col.id === 'todo' && (
                                 <>
                                     {renderCardChecklist(task)}
                                 </>
                             )}
 
-                            {/* DOING SPECIFIC MODULES */}
                             {col.id === 'doing' && (
                                 <>
                                     {renderCardChecklist(task)}
@@ -1824,7 +1716,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 </>
                             )}
 
-                            {/* DONE COLUMN SPECIFIC RENDER ORDER */}
                             {col.id === 'done' && (
                                 <>
                                     {renderCardChecklist(task)}
@@ -1832,7 +1723,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             )}
 
                             <div className="mt-auto pt-3 flex items-end justify-between gap-2">
-                                {/* Left: Actions (Napkins Style) */}
                                 <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                    {col.id === 'todo' && (
                                         <Tooltip content="В работу">
@@ -1954,7 +1844,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                    )}
                                 </div>
 
-                                {/* Right: Meta Data */}
                                 <div className="text-[10px] font-mono text-[#6B6E70] dark:text-slate-500 flex gap-2 select-none pointer-events-none">
                                     <span>[ID: {task.id.slice(-4)}]</span>
                                 </div>
@@ -1969,11 +1858,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     );
   };
 
-  // ... (Main render logic with activeModal)
-
   return (
     <div ref={scrollContainerRef} className="flex flex-col h-full relative overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
-      {/* ... (Titles and Search bar - same) ... */}
       <div className="w-full px-4 md:px-8 pt-4 md:pt-8 mb-6">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
@@ -1984,7 +1870,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       </div>
 
       <motion.div className="sticky top-0 z-40 w-full mb-[-20px]" animate={{ y: isHeaderHidden ? '-100%' : '0%' }} transition={{ duration: 0.3, ease: 'easeInOut' }}>
-            {/* ... Search Bar Content ... */}
             <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
                 <div className="absolute inset-0 backdrop-blur-xl" style={{ maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)' }} />
                 <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
@@ -2076,7 +1961,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0 pr-1">
-                    {/* ... (Stuck / Challenge content blocks - same) ... */}
                     {activeModal.type === 'stuck' && (
                         <div className="space-y-4">
                             {aiResponse ? (
@@ -2139,7 +2023,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                         <button 
                                                             ref={editColorTriggerRef}
                                                             onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} 
-                                                            className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors ${editColor !== 'white' ? 'text-indigo-500' : ''}`}
+                                                            className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors ${editColor !== 'white' ? 'text-indigo-500' : ''}`}
                                                         >
                                                             <Palette size={16} />
                                                         </button>
@@ -2148,14 +2032,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 </div>
                                             </div>
                                         </div>
-                                        {/* ... (Edit Content Editable) ... */}
                                         <div 
                                             key={activeModal.taskId}
                                             ref={editContentEditableRef} 
                                             contentEditable 
                                             suppressContentEditableWarning={true}
+                                            style={{ whiteSpace: 'pre-wrap' }}
                                             onInput={handleEditInput} 
-                                            className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1"
+                                            className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
                                             data-placeholder="Описание задачи..." 
                                         />
                                         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
@@ -2169,7 +2053,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     </div>
                                 ) : (
                                     <div className="group relative pr-1">
-                                        {/* ... (Read mode content: Description, Content, Checklist, Challenge, History) ... */}
                                         {task.description && (<CollapsibleSection title="Контекст" icon={<FileText size={12}/>}><div className="text-xs text-[#6B6E70] dark:text-slate-400 leading-relaxed font-sans"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.description))}</ReactMarkdown></div></CollapsibleSection>)}
                                         <div className="text-[#2F3437] dark:text-slate-300 text-sm font-normal leading-relaxed font-sans mb-4"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.content))}</ReactMarkdown></div>
                                         
@@ -2211,7 +2094,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         );
                     })()}
                 </div>
-                {/* ... (Footer actions for modals - same) ... */}
                 {activeModal.type === 'stuck' && aiResponse && (<div className="mt-6 flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-700/50 pr-1"><button onClick={saveTherapyResponse} className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"><Save size={16} /> Сохранить в историю</button></div>)}
                 {activeModal.type === 'challenge' && draftChallenge && (<div className="mt-6 flex justify-end gap-2 shrink-0 pt-4 border-t border-slate-100 dark:border-slate-700/50 pr-1"><button onClick={acceptDraftChallenge} className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"><Rocket size={18} /> Принять вызов</button></div>)}
             </div>
