@@ -57,38 +57,6 @@ const markdownComponents = {
     }
 };
 
-const CollapsibleSection: React.FC<{
-  title: string;
-  children: React.ReactNode;
-  icon?: React.ReactNode;
-}> = ({ title, children, icon }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden mb-3">
-      <button 
-        onClick={() => setIsOpen(!isOpen)} 
-        className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-      >
-        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-           {icon}
-           {title}
-        </div>
-        <div className="text-slate-400">
-          {isOpen ? <Minus size={14} /> : <Plus size={14} />}
-        </div>
-      </button>
-      {isOpen && (
-        <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-1 duration-200">
-           <div className="pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-sm">
-             {children}
-           </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const TaskSelect: React.FC<{
   tasks: Task[];
   selectedId: string;
@@ -113,11 +81,11 @@ const TaskSelect: React.FC<{
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all outline-none ${
-          isOpen ? 'border-indigo-400 ring-2 ring-indigo-50 dark:ring-indigo-900 bg-white dark:bg-[#1e293b]' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+        className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all outline-none text-left ${
+          isOpen ? 'border-indigo-300 bg-white dark:bg-slate-800 ring-2 ring-indigo-50/50' : 'border-slate-200/60 dark:border-slate-700/60 bg-transparent hover:bg-slate-50/50 dark:hover:bg-slate-800/50'
         }`}
       >
-        <span className={`text-sm truncate ${selectedId ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-400'}`}>
+        <span className={`text-xs truncate ${selectedId ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-400'}`}>
           {selectedTask ? (
              <span className="flex items-center gap-2">
                 {selectedTask.column === 'done' ? <CheckCircle2 size={14} className="text-emerald-500" /> : <Circle size={14} className="text-indigo-500" />}
@@ -127,14 +95,14 @@ const TaskSelect: React.FC<{
             "Без привязки (Свободная мысль)"
           )}
         </span>
-        <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-60 overflow-y-auto z-50 animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-60 overflow-y-auto z-50 animate-in fade-in zoom-in-95 duration-100">
           <button
             onClick={() => { onSelect(''); setIsOpen(false); }}
-            className="w-full text-left px-4 py-3 text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-50 dark:border-slate-700 transition-colors"
+            className="w-full text-left px-4 py-3 text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 transition-colors"
           >
             Без привязки (Свободная мысль)
           </button>
@@ -143,16 +111,16 @@ const TaskSelect: React.FC<{
               <button
                 key={t.id}
                 onClick={() => { onSelect(t.id); setIsOpen(false); }}
-                className="w-full text-left px-4 py-3 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-start gap-2 group"
+                className="w-full text-left px-4 py-3 text-xs hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-start gap-2 group"
               >
                  <div className="mt-0.5 shrink-0">
-                    {t.column === 'done' ? <CheckCircle2 size={14} className="text-emerald-500" /> : <Circle size={14} className="text-indigo-500" />}
+                    {t.column === 'done' ? <CheckCircle2 size={12} className="text-emerald-500" /> : <Circle size={12} className="text-indigo-500" />}
                  </div>
                  <span className="text-slate-700 dark:text-slate-300 group-hover:text-indigo-900 dark:group-hover:text-indigo-200 line-clamp-2">{t.content}</span>
               </button>
             ))
           ) : (
-             <div className="px-4 py-3 text-xs text-slate-400 italic text-center">Нет активных задач</div>
+             <div className="px-4 py-3 text-[10px] text-slate-400 italic text-center">Нет активных задач</div>
           )}
         </div>
       )}
@@ -187,8 +155,8 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
         <div className="relative" ref={dropdownRef}>
             <button 
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all outline-none ${
-                  isOpen ? 'border-indigo-400 ring-2 ring-indigo-50 dark:ring-indigo-900 bg-white dark:bg-[#1e293b]' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all outline-none text-left ${
+                  isOpen ? 'border-indigo-300 bg-white/80 dark:bg-slate-800 ring-2 ring-indigo-50/50' : 'border-slate-200/60 dark:border-slate-700/60 bg-transparent hover:bg-slate-50/50 dark:hover:bg-slate-800/50'
                 }`}
             >
                 <div className="flex items-center gap-2 overflow-hidden">
@@ -200,19 +168,19 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                                     return sp ? <div key={s} className={`w-3 h-3 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
                                 })}
                             </div>
-                            <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                            <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
                                 {selected.map(id => SPHERES.find(s => s.id === id)?.label).join(', ')}
                             </span>
                         </>
                     ) : (
-                        <span className="text-sm text-slate-400">Выбери сферу</span>
+                        <span className="text-xs text-slate-400">Выбери сферу</span>
                     )}
                 </div>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
             
             {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5">
                     {SPHERES.map(s => {
                         const isSelected = selected.includes(s.id);
                         const Icon = ICON_MAP[s.icon];
@@ -220,7 +188,7 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                             <button
                                 key={s.id}
                                 onClick={() => toggleSphere(s.id)}
-                                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                             >
                                 {Icon && <Icon size={14} className={isSelected ? s.text : 'text-slate-400'} />}
                                 <span className="flex-1">{s.label}</span>
@@ -300,22 +268,57 @@ const JournalEntrySphereSelector: React.FC<{
 };
 
 const SphereBadgeList: React.FC<{ spheres: string[] }> = ({ spheres }) => {
-    if (!spheres || spheres.length === 0) return null;
     return (
-        <div className="flex flex-wrap gap-1 mt-2">
-            {spheres.map(id => {
-                const s = SPHERES.find(sp => sp.id === id);
-                if (!s) return null;
-                const Icon = ICON_MAP[s.icon];
+        <div className="flex flex-wrap gap-2">
+            {spheres.map(s => {
+                const sp = SPHERES.find(sphere => sphere.id === s);
+                if (!sp) return null;
+                const Icon = ICON_MAP[sp.icon];
                 return (
-                    <span key={id} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${s.bg} ${s.text}`}>
+                    <div key={s} className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${sp.bg} ${sp.text} ${sp.border}`}>
                         {Icon && <Icon size={10} />}
-                        {s.label}
-                    </span>
+                        {sp.label}
+                    </div>
                 );
             })}
         </div>
     );
+};
+
+const CollapsibleSection: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+  actions?: React.ReactNode;
+}> = ({ title, children, icon, actions }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden mb-3">
+      <div 
+        onClick={() => setIsOpen(!isOpen)} 
+        className="w-full flex items-center justify-between p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+      >
+        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+           {icon}
+           {title}
+        </div>
+        <div className="flex items-center gap-2">
+            {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
+            <div className="text-slate-400">
+                {isOpen ? <Minus size={14} /> : <Plus size={14} />}
+            </div>
+        </div>
+      </div>
+      {isOpen && (
+        <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-1 duration-200">
+           <div className="pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-sm">
+             {children}
+           </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const StaticChallengeRenderer: React.FC<{ 
@@ -400,6 +403,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const [showHistory, setShowHistory] = useState(false);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const analysisAbortController = useRef<AbortController | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const hasMentorTool = useMemo(() => {
       const tool = config.aiTools.find(t => t.id === 'journal_mentor');
@@ -560,238 +564,262 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] custom-scrollbar-light">
-      <div className="w-full md:w-1/3 flex flex-col p-4 md:p-8 md:border-r border-b md:border-b-0 border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1e293b] md:bg-transparent shrink-0">
-        <header className="mb-4 md:mb-6">
-          <h1 className="text-2xl font-light text-slate-800 dark:text-slate-200 tracking-tight">
+    <div className="flex flex-col md:flex-row h-full overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]">
+      {/* LEFT PANEL: INPUT (Glass Refinement) */}
+      <div className="w-full md:w-1/3 flex flex-col p-4 md:p-8 md:border-r border-b md:border-b-0 border-slate-100 dark:border-slate-800/50 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 overflow-y-auto">
+        <header className="mb-6 md:mb-8">
+          <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-serif">
             Дневник
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Факты, эмоции, гипотезы</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-serif italic">Факты, эмоции, гипотезы</p>
         </header>
-        <div className="bg-white dark:bg-[#1e293b] rounded-2xl md:shadow-sm md:border border-slate-200 dark:border-slate-700 md:p-4 flex flex-col gap-4">
+        
+        <div className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-sm p-5 flex flex-col gap-5 relative z-10">
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1">
-              <Link size={12} /> Контекст (Задача)
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
+              <Link size={10} /> Контекст
             </label>
             <TaskSelect tasks={availableTasks} selectedId={linkedTaskId} onSelect={setLinkedTaskId} />
           </div>
           <div>
-             <label className="block text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1">
-               <Zap size={12} /> Сферы (Для статистики)
+             <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
+               <Zap size={10} /> Сферы
              </label>
              <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
           </div>
-          <textarea 
-            className="w-full h-32 md:h-40 resize-none outline-none text-sm text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-300 dark:focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono" 
-            placeholder="О чем ты думаешь? Чему научило это событие? (Поддерживается Markdown)" 
-            value={content} 
-            onChange={(e) => setContent(e.target.value)} 
-          />
+          <div className="relative">
+             <textarea 
+                className="w-full h-40 md:h-56 resize-none outline-none text-base text-slate-800 dark:text-slate-200 bg-transparent p-1 placeholder:text-slate-400/50 dark:placeholder:text-slate-500/50 font-serif leading-relaxed" 
+                placeholder="О чем ты думаешь? Чему научило это событие? (Поддерживается Markdown)" 
+                value={content} 
+                onChange={(e) => setContent(e.target.value)} 
+              />
+              <div className="absolute bottom-0 left-0 w-full h-px bg-slate-200/50 dark:bg-slate-700/50" />
+          </div>
           <button 
             onClick={handlePost} 
             disabled={!content.trim()} 
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 text-sm font-medium transition-all shadow-md shadow-slate-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium text-sm transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
           >
-            <Send size={16} /> 
-            Записать мысль
+            <Send size={16} strokeWidth={1.5} /> 
+            <span className="font-serif">Записать мысль</span>
           </button>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col p-4 md:p-8 md:overflow-y-auto bg-slate-50/50 dark:bg-slate-900/50 md:bg-transparent min-h-0 md:min-h-0">
-        <div className="flex flex-col gap-3 mb-4 md:mb-6 shrink-0 max-w-3xl mx-auto w-full">
-             <div className="flex justify-between items-center">
-                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest font-sans">Хроника</h3>
-                <div className="flex items-center gap-2">
-                    {hasMentorTool && (
-                        <>
-                            {/* Mentor Button (Moved First) */}
-                            <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="bottom" disabled={isAnalyzing}>
-                                <button 
-                                    onClick={handleAnalyzePath} 
-                                    disabled={displayedEntries.length === 0} 
-                                    className={`flex items-center justify-center p-2 rounded-lg border transition-all shadow-sm ${
-                                        'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
-                                    } ${isAnalyzing ? 'animate-pulse' : ''}`}
-                                >
-                                    {isAnalyzing ? (
-                                        <div className="relative w-3.5 h-3.5 flex items-center justify-center">
-                                            <Loader2 size={14} className="animate-spin absolute inset-0" />
-                                            <div className="w-1.5 h-1.5 bg-current rounded-[1px] relative z-10" />
-                                        </div>
-                                    ) : (
-                                        <Bot size={16} />
-                                    )}
-                                </button>
-                            </Tooltip>
+      {/* RIGHT PANEL: CHRONICLE (Glass Horizon) */}
+      <div 
+        className="flex-1 flex flex-col relative bg-slate-50/30 dark:bg-slate-900/30 min-h-0"
+        ref={scrollContainerRef}
+      >
+        {/* STICKY HEADER (Glass Horizon) */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar-light px-4 md:px-8 pb-20">
+            <div className="sticky top-0 z-30 w-full mb-6">
+                 {/* FOG LAYER */}
+                 <div className="absolute inset-0 h-[160%] pointer-events-none -z-10 -mx-8">
+                    <div 
+                        className="absolute inset-0 backdrop-blur-xl bg-white/70 dark:bg-[#0f172a]/70"
+                        style={{
+                            maskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)',
+                            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)'
+                        }}
+                    />
+                </div>
 
-                            {/* History Button */}
-                            <Tooltip content="История диалогов" side="left">
-                                <button onClick={() => setShowHistory(true)} className="px-3 py-2 rounded-lg border transition-all flex items-center justify-center gap-2 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm">
-                                    <Scroll size={16} />
-                                    <span className="text-xs font-medium">История</span>
+                <div className="pt-6 pb-2 max-w-3xl mx-auto w-full">
+                     <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-mono">Хроника</h3>
+                        <div className="flex items-center gap-2">
+                            {hasMentorTool && (
+                                <>
+                                    <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="bottom" disabled={isAnalyzing}>
+                                        <button 
+                                            onClick={handleAnalyzePath} 
+                                            disabled={displayedEntries.length === 0} 
+                                            className={`flex items-center justify-center p-2 rounded-lg border transition-all shadow-sm ${
+                                                'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
+                                            } ${isAnalyzing ? 'animate-pulse' : ''}`}
+                                        >
+                                            {isAnalyzing ? (
+                                                <div className="relative w-3.5 h-3.5 flex items-center justify-center">
+                                                    <Loader2 size={14} className="animate-spin absolute inset-0" />
+                                                    <div className="w-1.5 h-1.5 bg-current rounded-[1px] relative z-10" />
+                                                </div>
+                                            ) : (
+                                                <Bot size={16} />
+                                            )}
+                                        </button>
+                                    </Tooltip>
+
+                                    <Tooltip content="История диалогов" side="left">
+                                        <button onClick={() => setShowHistory(true)} className="px-3 py-2 rounded-lg border transition-all flex items-center justify-center gap-2 bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm">
+                                            <Scroll size={16} />
+                                            <span className="text-xs font-medium">История</span>
+                                        </button>
+                                    </Tooltip>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                        <div className="relative flex-1 group">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                            <input 
+                                type="text" 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Поиск..."
+                                className="w-full pl-9 pr-8 py-2 bg-slate-100/50 dark:bg-slate-800/50 border border-transparent focus:border-slate-200 dark:focus:border-slate-700 rounded-xl text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-800 transition-all font-serif placeholder:font-sans"
+                            />
+                            {searchQuery && (
+                                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={14} /></button>
+                            )}
+                        </div>
+                        <div className="relative" ref={datePickerRef}>
+                            <Tooltip content="Фильтр по дате">
+                                <button 
+                                    onClick={() => setShowDatePicker(!showDatePicker)}
+                                    className={`p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square ${hasActiveDateFilter || showDatePicker ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400' : 'bg-white/80 dark:bg-[#1e293b]/80 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                                >
+                                    <Calendar size={18} />
+                                    {hasActiveDateFilter && <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
                                 </button>
                             </Tooltip>
-                        </>
-                    )}
+                            {showDatePicker && (
+                                <div className="absolute top-full right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 w-64 p-4 animate-in fade-in zoom-in-95 duration-100">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="text-xs font-bold text-slate-500 uppercase">Период</span>
+                                        {hasActiveDateFilter && (
+                                            <button onClick={() => setDateRange({from: '', to: ''})} className="text-[10px] text-red-400 hover:text-red-600 font-medium">
+                                                Сбросить
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div><label className="block text-[10px] text-slate-400 mb-1 ml-1">С даты</label><input type="date" value={dateRange.from} onChange={(e) => setDateRange({...dateRange, from: e.target.value})} className="w-full p-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-300" /></div>
+                                        <div><label className="block text-[10px] text-slate-400 mb-1 ml-1">По дату</label><input type="date" value={dateRange.to} onChange={(e) => setDateRange({...dateRange, to: e.target.value})} className="w-full p-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-300" /></div>
+                                    </div>
+                                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 text-center"><button onClick={() => setShowDatePicker(false)} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline">Готово</button></div>
+                                </div>
+                            )}
+                        </div>
+                        <Tooltip content={sortOrder === 'desc' ? "Новые сверху" : "Старые сверху"}>
+                            <button 
+                                onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                                className="p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square bg-white/80 dark:bg-[#1e293b]/80 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"
+                            >
+                                {sortOrder === 'desc' ? <ArrowDown size={18} /> : <ArrowUp size={18} />}
+                            </button>
+                        </Tooltip>
+                    </div>
                 </div>
             </div>
-            <div className="flex gap-2">
-                <div className="relative flex-1">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input 
-                        type="text" 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Поиск по записям..."
-                        className="w-full pl-9 pr-8 py-2 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900 focus:border-indigo-200 dark:focus:border-indigo-800 dark:text-slate-200 transition-all shadow-sm"
-                    />
-                    {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={14} /></button>
-                    )}
-                </div>
-                <div className="relative" ref={datePickerRef}>
-                    <Tooltip content="Фильтр по дате">
-                        <button 
-                            onClick={() => setShowDatePicker(!showDatePicker)}
-                            className={`p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square ${hasActiveDateFilter || showDatePicker ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
-                        >
-                            <Calendar size={18} />
-                            {hasActiveDateFilter && <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
-                        </button>
-                    </Tooltip>
-                    {showDatePicker && (
-                        <div className="absolute top-full right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 w-64 p-4 animate-in fade-in zoom-in-95 duration-100">
-                            <div className="flex justify-between items-center mb-3">
-                                <span className="text-xs font-bold text-slate-500 uppercase">Период</span>
-                                {hasActiveDateFilter && (
-                                    <button onClick={() => setDateRange({from: '', to: ''})} className="text-[10px] text-red-400 hover:text-red-600 font-medium">
-                                        Сбросить
-                                    </button>
-                                )}
+
+            {displayedEntries.length === 0 ? (
+            <div className="py-10">
+                <EmptyState 
+                    icon={Book} 
+                    title="Страницы пусты" 
+                    description={searchQuery || hasActiveDateFilter ? 'Ничего не найдено по вашему запросу' : 'Записывай свои мысли, связывай их с задачами, чтобы отслеживать свой путь'}
+                    color="cyan"
+                />
+            </div>
+            ) : (
+            <div className="max-w-3xl mx-auto w-full space-y-6">
+                {displayedEntries.map(entry => {
+                const mentor = config.mentors.find(m => m.id === entry.mentorId);
+                const isEditing = editingId === entry.id;
+                const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
+
+                return (
+                    <div 
+                        key={entry.id} 
+                        onClick={() => setSelectedEntryId(entry.id)} 
+                        className={`relative p-6 md:p-8 rounded-2xl border transition-all duration-300 group cursor-pointer
+                            ${entry.isInsight 
+                                ? 'bg-gradient-to-br from-amber-50/80 to-white dark:from-amber-900/10 dark:to-[#1e293b] border-amber-200/50 dark:border-amber-800/30 shadow-sm' 
+                                : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md'
+                            }
+                        `}
+                    >
+                    
+                    {/* CARD HEADER - ALIGNED */}
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
+                            <span>{formatDate(entry.date)}</span>
+                            {/* Sphere dots */}
+                            {entry.spheres && entry.spheres.length > 0 && (
+                                <div className="flex -space-x-1 opacity-50">
+                                    {entry.spheres.map(s => {
+                                        const sp = SPHERES.find(x => x.id === s);
+                                        return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`} /> : null;
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            {entry.isInsight && (
+                                <div className="text-amber-400 p-1 rounded-full bg-amber-50 dark:bg-amber-900/20">
+                                    <Lightbulb size={14} fill="currentColor" className="fill-amber-400" />
+                                </div>
+                            )}
+                            
+                            {/* Quick Actions on Hover */}
+                            {!isEditing && (
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                        <button onClick={() => toggleInsight(entry)} className="p-1.5 text-slate-300 hover:text-amber-500 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
+                                            <Sparkles size={14} />
+                                        </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {isEditing ? (
+                        <div className="mb-4" onClick={(e) => e.stopPropagation()}>
+                            <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
+                            <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
+                                <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
+                                <button onClick={() => saveEdit(entry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
                             </div>
-                            <div className="space-y-3">
-                                <div><label className="block text-[10px] text-slate-400 mb-1 ml-1">С даты</label><input type="date" value={dateRange.from} onChange={(e) => setDateRange({...dateRange, from: e.target.value})} className="w-full p-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-300" /></div>
-                                <div><label className="block text-[10px] text-slate-400 mb-1 ml-1">По дату</label><input type="date" value={dateRange.to} onChange={(e) => setDateRange({...dateRange, to: e.target.value})} className="w-full p-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-300" /></div>
-                            </div>
-                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 text-center"><button onClick={() => setShowDatePicker(false)} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline">Готово</button></div>
+                        </div>
+                    ) : (
+                        <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
+                            <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
                         </div>
                     )}
-                </div>
-                <Tooltip content={sortOrder === 'desc' ? "Новые сверху" : "Старые сверху"}>
-                    <button 
-                        onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                        className="p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"
-                    >
-                        {sortOrder === 'desc' ? <ArrowDown size={18} /> : <ArrowUp size={18} />}
-                    </button>
-                </Tooltip>
+
+                    {/* Context Link */}
+                    {linkedTask && !isEditing && (
+                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
+                                className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                            >
+                                <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                                    [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{linkedTask.content}</span> ]
+                                </span>
+                            </button>
+                        </div>
+                    )}
+
+                    {entry.aiFeedback && (
+                        <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
+                            <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
+                        </div>
+                        <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
+                        </div>
+                    )}
+                    </div>
+                );
+                })}
             </div>
+            )}
         </div>
-        
-        {displayedEntries.length === 0 ? (
-           <div className="py-10">
-               <EmptyState 
-                   icon={Book} 
-                   title="Страницы пусты" 
-                   description={searchQuery || hasActiveDateFilter ? 'Ничего не найдено по вашему запросу' : 'Записывай свои мысли, связывай их с задачами, чтобы отслеживать свой путь'}
-                   color="cyan"
-               />
-           </div>
-        ) : (
-          <div className="space-y-6 max-w-3xl pb-20 md:pb-0 mx-auto w-full">
-            {displayedEntries.map(entry => {
-              const mentor = config.mentors.find(m => m.id === entry.mentorId);
-              const isEditing = editingId === entry.id;
-              const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
-
-              return (
-                <div 
-                    key={entry.id} 
-                    onClick={() => setSelectedEntryId(entry.id)} 
-                    className={`relative p-6 md:p-8 rounded-2xl border transition-all duration-300 group cursor-pointer
-                        ${entry.isInsight 
-                            ? 'bg-gradient-to-br from-amber-50/80 to-white dark:from-amber-900/10 dark:to-[#1e293b] border-amber-200/50 dark:border-amber-800/30 shadow-sm' 
-                            : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md'
-                        }
-                    `}
-                >
-                  
-                  {/* CARD HEADER - ALIGNED */}
-                  <div className="flex justify-between items-center mb-4">
-                      <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
-                          <span>{formatDate(entry.date)}</span>
-                          {/* Sphere dots */}
-                          {entry.spheres && entry.spheres.length > 0 && (
-                              <div className="flex -space-x-1 opacity-50">
-                                  {entry.spheres.map(s => {
-                                      const sp = SPHERES.find(x => x.id === s);
-                                      return sp ? <div key={s} className={`w-2 h-2 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`} /> : null;
-                                  })}
-                              </div>
-                          )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                           {entry.isInsight && (
-                               <div className="text-amber-400 p-1 rounded-full bg-amber-50 dark:bg-amber-900/20">
-                                   <Lightbulb size={14} fill="currentColor" className="fill-amber-400" />
-                               </div>
-                           )}
-                           
-                           {/* Quick Actions on Hover */}
-                           {!isEditing && (
-                               <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                    <button onClick={() => toggleInsight(entry)} className="p-1.5 text-slate-300 hover:text-amber-500 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
-                                        <Sparkles size={14} />
-                                    </button>
-                               </div>
-                           )}
-                      </div>
-                  </div>
-
-                  {isEditing ? (
-                      <div className="mb-4" onClick={(e) => e.stopPropagation()}>
-                          <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
-                          <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
-                              <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
-                              <button onClick={() => saveEdit(entry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
-                          </div>
-                      </div>
-                  ) : (
-                    <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
-                        <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
-                    </div>
-                  )}
-
-                  {/* Context Link */}
-                  {linkedTask && !isEditing && (
-                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
-                          <button 
-                              onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
-                              className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
-                          >
-                              <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                                  [ CONTEXT: {linkedTask.content.substring(0, 50)}{linkedTask.content.length > 50 ? '...' : ''} ]
-                              </span>
-                          </button>
-                      </div>
-                  )}
-
-                  {entry.aiFeedback && (
-                    <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
-                      <div className="flex items-center gap-2 mb-1">
-                         <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
-                         <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
-                      </div>
-                      <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {analysisResult && (
