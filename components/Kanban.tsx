@@ -280,6 +280,72 @@ const CoverPicker: React.FC<{
     );
 };
 
+// --- Color Picker Component ---
+const ColorPickerPopover: React.FC<{ 
+    onSelect: (colorId: string) => void, 
+    onClose: () => void, 
+    triggerRef: React.RefObject<HTMLElement> 
+}> = ({ onSelect, onClose, triggerRef }) => {
+    const [style, setStyle] = useState<React.CSSProperties>({});
+
+    useEffect(() => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const viewportH = window.innerHeight;
+            const viewportW = window.innerWidth;
+            
+            // Approximate size of picker
+            const height = 50; 
+            const width = 220; 
+
+            const topSpace = rect.top;
+            const bottomSpace = viewportH - rect.bottom;
+            
+            let top = rect.bottom + 8;
+            let left = rect.left;
+
+            // Flip vertically if not enough space below
+            if (bottomSpace < height && topSpace > height) {
+                top = rect.top - height - 8;
+            }
+
+            // Flip horizontally if right edge goes off screen
+            if (left + width > viewportW) {
+                left = viewportW - width - 16;
+            }
+
+            setStyle({
+                position: 'fixed',
+                top,
+                left,
+                zIndex: 9999
+            });
+        }
+    }, [triggerRef]);
+
+    return createPortal(
+        <>
+            <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+            <div 
+                className="fixed bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-[9999] flex-wrap max-w-[200px]" 
+                style={style}
+                onMouseDown={e => e.stopPropagation()}
+            >
+                {colors.map(c => (
+                    <button 
+                        key={c.id} 
+                        onMouseDown={(e) => { e.preventDefault(); onSelect(c.id); onClose(); }} 
+                        className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform`} 
+                        style={{ backgroundColor: c.hex }} 
+                        title={c.id} 
+                    />
+                ))}
+            </div>
+        </>,
+        document.body
+    );
+};
+
 // --- IMPROVED MARKDOWN CONVERTERS ---
 
 const markdownToHtml = (md: string) => {
@@ -746,6 +812,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
   const [showCreationColorPicker, setShowCreationColorPicker] = useState(false);
   const creationPickerTriggerRef = useRef<HTMLButtonElement>(null); 
+  const creationColorTriggerRef = useRef<HTMLButtonElement>(null);
   
   // Creation Editor State
   const [creationHistory, setCreationHistory] = useState<string[]>(['']);
@@ -761,6 +828,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [showEditCoverPicker, setShowEditCoverPicker] = useState(false);
   const [showEditColorPicker, setShowEditColorPicker] = useState(false);
   const editPickerTriggerRef = useRef<HTMLButtonElement>(null); 
+  const editColorTriggerRef = useRef<HTMLButtonElement>(null);
   
   // New Rich Text State for Edit Mode
   const [editHistory, setEditHistory] = useState<string[]>(['']);
@@ -1472,6 +1540,71 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     </div>
   )};
 
+  const ColorPickerPopover: React.FC<{ 
+    onSelect: (colorId: string) => void, 
+    onClose: () => void, 
+    triggerRef: React.RefObject<HTMLElement> 
+}> = ({ onSelect, onClose, triggerRef }) => {
+    const [style, setStyle] = useState<React.CSSProperties>({});
+
+    useEffect(() => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const viewportH = window.innerHeight;
+            const viewportW = window.innerWidth;
+            
+            // Approximate size of picker
+            const height = 50; 
+            const width = 220; 
+
+            const topSpace = rect.top;
+            const bottomSpace = viewportH - rect.bottom;
+            
+            let top = rect.bottom + 8;
+            let left = rect.left;
+
+            // Flip vertically if not enough space below
+            if (bottomSpace < height && topSpace > height) {
+                top = rect.top - height - 8;
+            }
+
+            // Flip horizontally if right edge goes off screen
+            if (left + width > viewportW) {
+                left = viewportW - width - 16;
+            }
+
+            setStyle({
+                position: 'fixed',
+                top,
+                left,
+                zIndex: 9999
+            });
+        }
+    }, [triggerRef]);
+
+    return createPortal(
+        <>
+            <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+            <div 
+                className="fixed bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-[9999] flex-wrap max-w-[200px]" 
+                style={style}
+                onMouseDown={e => e.stopPropagation()}
+            >
+                {colors.map(c => (
+                    <button 
+                        key={c.id} 
+                        onMouseDown={(e) => { e.preventDefault(); onSelect(c.id); onClose(); }} 
+                        className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform`} 
+                        style={{ backgroundColor: c.hex }} 
+                        title={c.id} 
+                    />
+                ))}
+            </div>
+        </>,
+        document.body
+    );
+};
+
   const renderColumn = (col: typeof columns[0]) => {
     if (!col) return null;
     // X-RAY LOGIC: Filter by column, but apply dimming in map based on search/sphere
@@ -1554,11 +1687,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 </div>
                                 <div className="relative">
                                     <Tooltip content="Фон задачи">
-                                        <button onMouseDown={(e) => { e.preventDefault(); setShowCreationColorPicker(!showCreationColorPicker); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-400 dark:text-slate-500">
+                                        <button 
+                                            ref={creationColorTriggerRef}
+                                            onMouseDown={(e) => { e.preventDefault(); setShowCreationColorPicker(!showCreationColorPicker); }} 
+                                            className={`p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors ${creationColor !== 'white' ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
+                                        >
                                             <Palette size={16} />
                                         </button>
                                     </Tooltip>
-                                    {showCreationColorPicker && <div className="absolute bottom-full mb-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowCreationColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}
+                                    {showCreationColorPicker && <ColorPickerPopover onSelect={setCreationColor} onClose={() => setShowCreationColorPicker(false)} triggerRef={creationColorTriggerRef} />}
                                 </div>
                             </div>
                             <button onClick={handleCreateTask} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors">
@@ -1992,11 +2129,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 </div>
                                                 <div className="relative">
                                                     <Tooltip content="Фон задачи">
-                                                        <button onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
+                                                        <button 
+                                                            ref={editColorTriggerRef}
+                                                            onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} 
+                                                            className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors ${editColor !== 'white' ? 'text-indigo-500' : ''}`}
+                                                        >
                                                             <Palette size={16} />
                                                         </button>
                                                     </Tooltip>
-                                                    {showEditColorPicker && <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setEditColor(c.id); setShowEditColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${editColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}
+                                                    {showEditColorPicker && <ColorPickerPopover onSelect={setEditColor} onClose={() => setShowEditColorPicker(false)} triggerRef={editColorTriggerRef} />}
                                                 </div>
                                             </div>
                                         </div>
