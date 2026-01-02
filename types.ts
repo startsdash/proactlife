@@ -1,5 +1,4 @@
 
-
 declare global {
   interface Window {
     confetti: any;
@@ -62,6 +61,7 @@ export interface Task {
   reflection?: string;
   blockerAnalysis?: string;
   coverUrl?: string; // NEW: Task Cover Image
+  color?: string; // NEW: Task Color
   
   subtasks?: Subtask[]; // Checklist items
 

@@ -31,6 +31,16 @@ const NEON_COLORS: Record<string, string> = {
     relationships: '#FF007A' // Neon Rose
 };
 
+const TASK_COLORS = [
+    { id: 'white', class: 'bg-white/80 dark:bg-[#1e293b]/90', hex: '#ffffff' },
+    { id: 'red', class: 'bg-red-50/90 dark:bg-red-900/20', hex: '#fef2f2' },
+    { id: 'amber', class: 'bg-amber-50/90 dark:bg-amber-900/20', hex: '#fffbeb' },
+    { id: 'emerald', class: 'bg-emerald-50/90 dark:bg-emerald-900/20', hex: '#ecfdf5' },
+    { id: 'blue', class: 'bg-blue-50/90 dark:bg-blue-900/20', hex: '#eff6ff' },
+    { id: 'indigo', class: 'bg-indigo-50/90 dark:bg-indigo-900/20', hex: '#eef2ff' },
+    { id: 'purple', class: 'bg-purple-50/90 dark:bg-purple-900/20', hex: '#faf5ff' },
+];
+
 const UNSPLASH_PRESETS = [
     'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=400&q=80', // Rain
     'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&q=80', // Gradient
@@ -59,6 +69,10 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
         });
     }
     return children;
+};
+
+const getTaskColorClass = (colorId?: string) => {
+    return TASK_COLORS.find(c => c.id === colorId)?.class || 'bg-white/80 dark:bg-[#1e293b]/90';
 };
 
 // --- RICH TEXT HELPERS (Ported from Napkins) ---
@@ -749,8 +763,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [creationCover, setCreationCover] = useState<string | null>(null);
+  const [creationColor, setCreationColor] = useState('white');
   const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
-  const creationPickerTriggerRef = useRef<HTMLButtonElement>(null); // NEW REF
+  const [showCreationColorPicker, setShowCreationColorPicker] = useState(false);
+  const creationPickerTriggerRef = useRef<HTMLButtonElement>(null); 
   
   // Creation Editor State
   const [creationHistory, setCreationHistory] = useState<string[]>(['']);
@@ -762,8 +778,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [editTaskTitle, setEditTaskTitle] = useState('');
   const [editCover, setEditCover] = useState<string | null>(null);
+  const [editColor, setEditColor] = useState('white');
   const [showEditCoverPicker, setShowEditCoverPicker] = useState(false);
-  const editPickerTriggerRef = useRef<HTMLButtonElement>(null); // NEW REF
+  const [showEditColorPicker, setShowEditColorPicker] = useState(false);
+  const editPickerTriggerRef = useRef<HTMLButtonElement>(null); 
+  const editColorPickerTriggerRef = useRef<HTMLButtonElement>(null);
   
   // New Rich Text State for Edit Mode
   const [editHistory, setEditHistory] = useState<string[]>(['']);
@@ -983,6 +1002,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                if (task && editContentEditableRef.current) {
                    setEditTaskTitle(task.title || '');
                    setEditCover(task.coverUrl || null);
+                   setEditColor(task.color || 'white');
                    
                    const html = markdownToHtml(task.content);
                    // Directly setting innerHTML can be risky if React re-renders, 
@@ -1037,11 +1057,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
           column: 'todo',
           createdAt: Date.now(),
           spheres: activeSphereFilter ? [activeSphereFilter] : [],
-          coverUrl: creationCover || undefined
+          coverUrl: creationCover || undefined,
+          color: creationColor
       };
       addTask(newTask);
       setNewTaskTitle('');
       setCreationCover(null);
+      setCreationColor('white');
       if(creationContentRef.current) creationContentRef.current.innerHTML = '';
       setCreationHistory(['']);
       setCreationHistoryIndex(0);
@@ -1051,6 +1073,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const cancelCreateTask = () => {
       setNewTaskTitle('');
       setCreationCover(null);
+      setCreationColor('white');
       if(creationContentRef.current) creationContentRef.current.innerHTML = '';
       setCreationHistory(['']);
       setCreationHistoryIndex(0);
@@ -1065,12 +1088,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const content = htmlToMarkdown(rawHtml);
 
       // Check if title or content changed before updating
-      if (content !== task.content || editTaskTitle.trim() !== task.title || editCover !== task.coverUrl) {
+      if (content !== task.content || editTaskTitle.trim() !== task.title || editCover !== task.coverUrl || editColor !== task.color) {
           updateTask({ 
               ...task, 
               title: applyTypography(editTaskTitle.trim()), 
               content: applyTypography(content),
-              coverUrl: editCover || undefined
+              coverUrl: editCover || undefined,
+              color: editColor
           });
       }
       setIsEditingTask(false);
@@ -1538,7 +1562,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
                                 <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
                                 <Tooltip content="Очистить"><button onMouseDown={handleClearCreationStyle} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
-                                <div className="relative">
+                                <div className="relative flex gap-1">
                                     <Tooltip content="Обложка">
                                         <button 
                                             ref={creationPickerTriggerRef}
@@ -1549,6 +1573,21 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         </button>
                                     </Tooltip>
                                     {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationPickerTriggerRef} />}
+                                    
+                                    <div className="relative">
+                                        <Tooltip content="Цвет">
+                                            <button onMouseDown={(e) => { e.preventDefault(); setShowCreationColorPicker(!showCreationColorPicker); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-400 dark:text-slate-500">
+                                                <Palette size={16} />
+                                            </button>
+                                        </Tooltip>
+                                        {showCreationColorPicker && (
+                                            <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-1 z-50">
+                                                {TASK_COLORS.map(c => (
+                                                    <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowCreationColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-200 dark:border-slate-600 ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <button onClick={handleCreateTask} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors">
@@ -1602,7 +1641,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         onDrop={(e) => handleTaskDrop(e as any, task.id)} 
                         onDragOver={handleDragOver} 
                         onClick={() => match && setActiveModal({taskId: task.id, type: 'details'})} 
-                        className={`bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group active:scale-[1.02] active:shadow-lg overflow-hidden ${dimStyle} ${match ? 'cursor-grab' : ''}`}
+                        className={`${getTaskColorClass(task.color)} backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group active:scale-[1.02] active:shadow-lg overflow-hidden ${dimStyle} ${match ? 'cursor-grab' : ''}`}
                     >
                         
                         {task.coverUrl && (
@@ -1968,7 +2007,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('italic'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button></Tooltip>
                                                 <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
                                                 <Tooltip content="Очистить"><button onMouseDown={handleClearEditStyle} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
-                                                <div className="relative">
+                                                <div className="relative flex gap-1">
                                                     <Tooltip content="Обложка">
                                                         <button 
                                                             ref={editPickerTriggerRef}
@@ -1979,6 +2018,25 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                         </button>
                                                     </Tooltip>
                                                     {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editPickerTriggerRef} />}
+                                                    
+                                                    <div className="relative">
+                                                        <Tooltip content="Цвет">
+                                                            <button 
+                                                                ref={editColorPickerTriggerRef}
+                                                                onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} 
+                                                                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-500 dark:text-slate-400"
+                                                            >
+                                                                <Palette size={16} />
+                                                            </button>
+                                                        </Tooltip>
+                                                        {showEditColorPicker && (
+                                                            <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-1 z-50">
+                                                                {TASK_COLORS.map(c => (
+                                                                    <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setEditColor(c.id); setShowEditColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-200 dark:border-slate-600 ${editColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} />
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
