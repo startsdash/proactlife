@@ -118,32 +118,37 @@ const CoverPicker: React.FC<{
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS);
     const [loading, setLoading] = useState(false);
-    const [position, setPosition] = useState<{top: number, left: number} | null>(null);
+    const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
     
-    // Calculate position on mount to ensure it fits on screen
     useEffect(() => {
         if (triggerRef.current) {
             const rect = triggerRef.current.getBoundingClientRect();
-            const width = 320; // 20rem (w-80)
+            const viewportH = window.innerHeight;
+            const viewportW = window.innerWidth;
+            const pickerHeight = 320; 
             
-            // Align right edge of popup with right edge of trigger, or keep left aligned if space allows
-            // Prefer left alignment if possible
-            let left = rect.left;
-            let top = rect.bottom + 8; // margin
+            const style: React.CSSProperties = {};
+            
+            // Vertical Logic
+            const spaceBelow = viewportH - rect.bottom;
+            if (spaceBelow < pickerHeight && rect.top > spaceBelow) {
+                // Flip Up
+                style.bottom = viewportH - rect.top + 8;
+                style.maxHeight = rect.top - 20;
+            } else {
+                // Normal Down
+                style.top = rect.bottom + 8;
+                style.maxHeight = spaceBelow - 20;
+            }
 
-            // Check right edge
-            if (left + width > window.innerWidth) {
-                // Align right edge to window right edge with padding
-                left = window.innerWidth - width - 16; 
+            // Horizontal Logic
+            if (rect.left + 320 > viewportW) {
+                style.right = 16;
+            } else {
+                style.left = rect.left;
             }
             
-            // Check left edge (not usually an issue unless on very small screen)
-            if (left < 16) left = 16;
-
-            // Check bottom edge - if it goes off screen, flip up?
-            // For now, let it be tall, but maybe limit max-height
-            
-            setPosition({ top, left });
+            setPickerStyle(style);
         }
     }, [triggerRef]);
 
@@ -205,19 +210,17 @@ const CoverPicker: React.FC<{
         }
     };
 
-    if (!position) return null;
-
     return createPortal(
         <>
             <div className="fixed inset-0 z-[9998]" onClick={onClose} />
             <div 
-                className="fixed bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] w-80 flex flex-col gap-3" 
-                style={{ top: position.top, left: position.left }}
+                className="fixed bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] w-80 flex flex-col gap-3 overflow-hidden" 
+                style={pickerStyle}
                 onMouseDown={e => e.stopPropagation()}
             >
-                <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
+                <div className="flex justify-between items-center shrink-0"><span className="text-[10px] font-bold text-slate-400 uppercase">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
                 
-                <div className="relative">
+                <div className="relative shrink-0">
                     <input 
                         type="text" 
                         placeholder="Поиск Unsplash..." 
@@ -236,7 +239,7 @@ const CoverPicker: React.FC<{
                     </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
+                <div className="grid grid-cols-3 gap-2 overflow-y-auto custom-scrollbar-light min-h-[60px] flex-1">
                     {loading ? (
                         <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
                             <RefreshCw size={16} className="animate-spin" />
@@ -250,7 +253,7 @@ const CoverPicker: React.FC<{
                     )}
                 </div>
 
-                <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700 shrink-0">
                     <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
                         <Upload size={12} /> Своя 
                         <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
@@ -1599,205 +1602,208 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         onDrop={(e) => handleTaskDrop(e as any, task.id)} 
                         onDragOver={handleDragOver} 
                         onClick={() => match && setActiveModal({taskId: task.id, type: 'details'})} 
-                        className={`bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-md p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group active:scale-[1.02] active:shadow-lg overflow-hidden ${dimStyle} ${match ? 'cursor-grab' : ''}`}
+                        className={`bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group active:scale-[1.02] active:shadow-lg overflow-hidden ${dimStyle} ${match ? 'cursor-grab' : ''}`}
                     >
                         
                         {task.coverUrl && (
-                            <div className="h-32 w-full shrink-0 relative mb-4 -mx-5 -mt-5 w-[calc(100%_+_2.5rem)] overflow-hidden">
+                            <div className="h-32 w-full shrink-0 relative overflow-hidden">
                                 <img src={task.coverUrl} alt="Cover" className="w-full h-full object-cover" />
                             </div>
                         )}
 
-                        {/* HEADER: Title + Control */}
-                        <div className="flex justify-between items-start gap-2 mb-2">
-                             <div className="flex-1 pt-0.5 min-w-0">
-                                {task.title ? (
-                                    <h4 className="font-sans text-sm font-medium text-[#2F3437] dark:text-slate-200 leading-snug break-words group-hover:text-black dark:group-hover:text-white transition-colors tracking-tight">
-                                        <HighlightedText text={applyTypography(task.title)} highlight={searchQuery} />
-                                    </h4>
-                                ) : null}
-                             </div>
-                             
-                             <div className="shrink-0 z-20 -mr-2 -mt-2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <CardSphereSelector task={task} updateTask={updateTask} />
-                             </div>
-                        </div>
-
-                        {/* CONTENT */}
-                        <div className="mb-3">
-                            <div className={`text-[#2F3437] dark:text-slate-400 font-sans text-sm leading-relaxed line-clamp-3 ${!task.title ? 'text-base' : ''}`}>
-                                 <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.content))}</ReactMarkdown>
+                        {/* Content Wrapper - Padded */}
+                        <div className="p-5 flex flex-col gap-0 h-full">
+                            {/* HEADER: Title + Control */}
+                            <div className="flex justify-between items-start gap-2 mb-2">
+                                 <div className="flex-1 pt-0.5 min-w-0">
+                                    {task.title ? (
+                                        <h4 className="font-sans text-sm font-medium text-[#2F3437] dark:text-slate-200 leading-snug break-words group-hover:text-black dark:group-hover:text-white transition-colors tracking-tight">
+                                            <HighlightedText text={applyTypography(task.title)} highlight={searchQuery} />
+                                        </h4>
+                                    ) : null}
+                                 </div>
+                                 
+                                 <div className="shrink-0 z-20 -mr-2 -mt-2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <CardSphereSelector task={task} updateTask={updateTask} />
+                                 </div>
                             </div>
-                        </div>
 
-                        {/* TODO SPECIFIC MODULES */}
-                        {col.id === 'todo' && (
-                            <>
-                                {renderCardChecklist(task)}
-                            </>
-                        )}
+                            {/* CONTENT */}
+                            <div className="mb-3">
+                                <div className={`text-[#2F3437] dark:text-slate-400 font-sans text-sm leading-relaxed line-clamp-3 ${!task.title ? 'text-base' : ''}`}>
+                                     <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.content))}</ReactMarkdown>
+                                </div>
+                            </div>
 
-                        {/* DOING SPECIFIC MODULES */}
-                        {col.id === 'doing' && (
-                            <>
-                                {renderCardChecklist(task)}
+                            {/* TODO SPECIFIC MODULES */}
+                            {col.id === 'todo' && (
+                                <>
+                                    {renderCardChecklist(task)}
+                                </>
+                            )}
 
-                                {task.activeChallenge && !task.isChallengeCompleted && !draftChallenge && (
-                                    <div className="mt-2 mb-2">
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); setActiveModal({taskId: task.id, type: 'details'}); }}
-                                            className="w-full text-left group/challenge"
-                                        >
-                                            <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-xl p-3 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-900 transition-all relative overflow-hidden">
-                                                <div className="flex justify-between items-center">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Активный челлендж</span>
-                                                    </div>
-                                                    <div className="text-slate-300 dark:text-slate-600 group-hover/challenge:text-indigo-400 transition-colors">
-                                                        <Maximize2 size={12} />
+                            {/* DOING SPECIFIC MODULES */}
+                            {col.id === 'doing' && (
+                                <>
+                                    {renderCardChecklist(task)}
+
+                                    {task.activeChallenge && !task.isChallengeCompleted && !draftChallenge && (
+                                        <div className="mt-2 mb-2">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); setActiveModal({taskId: task.id, type: 'details'}); }}
+                                                className="w-full text-left group/challenge"
+                                            >
+                                                <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-xl p-3 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-900 transition-all relative overflow-hidden">
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+                                                            <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Активный челлендж</span>
+                                                        </div>
+                                                        <div className="text-slate-300 dark:text-slate-600 group-hover/challenge:text-indigo-400 transition-colors">
+                                                            <Maximize2 size={12} />
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
+                            )}
 
-                        {/* DONE COLUMN SPECIFIC RENDER ORDER */}
-                        {col.id === 'done' && (
-                            <>
-                                {renderCardChecklist(task)}
-                            </>
-                        )}
+                            {/* DONE COLUMN SPECIFIC RENDER ORDER */}
+                            {col.id === 'done' && (
+                                <>
+                                    {renderCardChecklist(task)}
+                                </>
+                            )}
 
-                        <div className="mt-auto pt-3 flex items-end justify-between gap-2">
-                            {/* Left: Actions (Napkins Style) */}
-                            <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                               {col.id === 'todo' && (
-                                    <Tooltip content="В работу">
-                                        <button 
-                                            onClick={(e) => moveToDoing(e, task)} 
-                                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
-                                        >
-                                            <Play size={16} className="fill-current" />
-                                        </button>
-                                    </Tooltip>
-                               )}
+                            <div className="mt-auto pt-3 flex items-end justify-between gap-2">
+                                {/* Left: Actions (Napkins Style) */}
+                                <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                   {col.id === 'todo' && (
+                                        <Tooltip content="В работу">
+                                            <button 
+                                                onClick={(e) => moveToDoing(e, task)} 
+                                                className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
+                                            >
+                                                <Play size={16} className="fill-current" />
+                                            </button>
+                                        </Tooltip>
+                                   )}
 
-                               {col.id === 'doing' && (
-                                   <>
-                                       <Tooltip content={hasJournalEntry ? "В Дневнике" : "В Дневник"}>
-                                           <button 
-                                                onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }}
-                                                className={`p-2 rounded-full transition-all opacity-60 hover:opacity-100 ${
-                                                    hasJournalEntry 
-                                                    ? 'text-cyan-500 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100' 
-                                                    : 'text-slate-400 dark:text-slate-500 hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/20'
-                                                }`}
-                                           >
-                                                <Book size={16} />
-                                           </button>
-                                       </Tooltip>
-
-                                       {!draftChallenge && hasChallengeAuthors && (
-                                           <Tooltip 
-                                                content={generatingChallengeFor === task.id ? "Остановить" : "Челлендж (ИИ)"}
-                                                disabled={generatingChallengeFor === task.id}
-                                           >
+                                   {col.id === 'doing' && (
+                                       <>
+                                           <Tooltip content={hasJournalEntry ? "В Дневнике" : "В Дневник"}>
                                                <button 
-                                                    disabled={hasActiveChallenge}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (generatingChallengeFor === task.id) {
-                                                            stopGeneration(e);
-                                                            return;
-                                                        }
-                                                        if (hasActiveChallenge) return;
-                                                        if (window.confirm("Создать челлендж?")) {
-                                                            generateChallenge(e, task.id, task.content);
-                                                        }
-                                                    }} 
-                                                    className={`p-2 rounded-full transition-all opacity-60 hover:opacity-100
-                                                        ${hasActiveChallenge 
-                                                            ? 'text-slate-200 dark:text-slate-700 cursor-not-allowed' 
-                                                            : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
-                                                        }`}
+                                                    onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }}
+                                                    className={`p-2 rounded-full transition-all opacity-60 hover:opacity-100 ${
+                                                        hasJournalEntry 
+                                                        ? 'text-cyan-500 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100' 
+                                                        : 'text-slate-400 dark:text-slate-500 hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/20'
+                                                    }`}
                                                >
-                                                    {generatingChallengeFor === task.id ? (
-                                                        <div className="relative w-4 h-4 flex items-center justify-center">
-                                                            <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                                        </div>
-                                                    ) : (
-                                                        <Zap size={16} />
-                                                    )}
-                                                </button>
-                                           </Tooltip>
-                                       )}
-
-                                       {hasKanbanTherapist && (
-                                           <Tooltip 
-                                                content={generatingTherapyFor === task.id ? "Остановить" : "Консультант (ИИ)"}
-                                                disabled={generatingTherapyFor === task.id}
-                                           >
-                                               <button 
-                                                    onClick={(e) => openTherapy(e, task)} 
-                                                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
-                                               >
-                                                   {generatingTherapyFor === task.id ? (
-                                                        <div className="relative w-4 h-4 flex items-center justify-center">
-                                                            <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                                        </div>
-                                                   ) : (
-                                                       <Bot size={16} /> 
-                                                   )}
+                                                    <Book size={16} />
                                                </button>
                                            </Tooltip>
-                                       )}
-                                       <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-                                       <Tooltip content="Завершить">
-                                            <button 
-                                                onClick={(e) => handleQuickComplete(e, task)} 
-                                                className="p-2 rounded-full text-slate-400 dark:text-slate-500 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all opacity-60 hover:opacity-100"
-                                            >
-                                                <Check size={16} strokeWidth={3} />
-                                            </button>
-                                        </Tooltip>
-                                   </>
-                               )}
-                               
-                               {col.id === 'done' && (
-                                    <>
-                                        <Tooltip content="В Зал славы">
-                                            <button 
-                                                onClick={(e) => { 
-                                                    e.stopPropagation(); 
-                                                    if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
-                                                }} 
-                                                className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
-                                            >
-                                                <Trophy size={16} /> 
-                                            </button>
-                                        </Tooltip>
-                                        <Tooltip content="Вернуть в работу">
-                                            <button 
-                                                onClick={(e) => { 
-                                                    e.stopPropagation(); 
-                                                    updateTask({ ...task, column: 'doing' }); 
-                                                }} 
-                                                className="p-2 rounded-full text-slate-400 dark:text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all opacity-60 hover:opacity-100"
-                                            >
-                                                <RotateCcw size={16} strokeWidth={2} />
-                                            </button>
-                                        </Tooltip>
-                                    </>
-                               )}
-                            </div>
 
-                            {/* Right: Meta Data */}
-                            <div className="text-[10px] font-mono text-[#6B6E70] dark:text-slate-500 flex gap-2 select-none pointer-events-none">
-                                <span>[ID: {task.id.slice(-4)}]</span>
+                                           {!draftChallenge && hasChallengeAuthors && (
+                                               <Tooltip 
+                                                    content={generatingChallengeFor === task.id ? "Остановить" : "Челлендж (ИИ)"}
+                                                    disabled={generatingChallengeFor === task.id}
+                                               >
+                                                   <button 
+                                                        disabled={hasActiveChallenge}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (generatingChallengeFor === task.id) {
+                                                                stopGeneration(e);
+                                                                return;
+                                                            }
+                                                            if (hasActiveChallenge) return;
+                                                            if (window.confirm("Создать челлендж?")) {
+                                                                generateChallenge(e, task.id, task.content);
+                                                            }
+                                                        }} 
+                                                        className={`p-2 rounded-full transition-all opacity-60 hover:opacity-100
+                                                            ${hasActiveChallenge 
+                                                                ? 'text-slate-200 dark:text-slate-700 cursor-not-allowed' 
+                                                                : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
+                                                            }`}
+                                                   >
+                                                        {generatingChallengeFor === task.id ? (
+                                                            <div className="relative w-4 h-4 flex items-center justify-center">
+                                                                <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                            </div>
+                                                        ) : (
+                                                            <Zap size={16} />
+                                                        )}
+                                                    </button>
+                                               </Tooltip>
+                                           )}
+
+                                           {hasKanbanTherapist && (
+                                               <Tooltip 
+                                                    content={generatingTherapyFor === task.id ? "Остановить" : "Консультант (ИИ)"}
+                                                    disabled={generatingTherapyFor === task.id}
+                                               >
+                                                   <button 
+                                                        onClick={(e) => openTherapy(e, task)} 
+                                                        className="p-2 text-slate-400 dark:text-slate-500 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
+                                                   >
+                                                       {generatingTherapyFor === task.id ? (
+                                                            <div className="relative w-4 h-4 flex items-center justify-center">
+                                                                <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                            </div>
+                                                       ) : (
+                                                           <Bot size={16} /> 
+                                                       )}
+                                                   </button>
+                                               </Tooltip>
+                                           )}
+                                           <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                                           <Tooltip content="Завершить">
+                                                <button 
+                                                    onClick={(e) => handleQuickComplete(e, task)} 
+                                                    className="p-2 rounded-full text-slate-400 dark:text-slate-500 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all opacity-60 hover:opacity-100"
+                                                >
+                                                    <Check size={16} strokeWidth={3} />
+                                                </button>
+                                            </Tooltip>
+                                       </>
+                                   )}
+                                   
+                                   {col.id === 'done' && (
+                                        <>
+                                            <Tooltip content="В Зал славы">
+                                                <button 
+                                                    onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
+                                                    }} 
+                                                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
+                                                >
+                                                    <Trophy size={16} /> 
+                                                </button>
+                                            </Tooltip>
+                                            <Tooltip content="Вернуть в работу">
+                                                <button 
+                                                    onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        updateTask({ ...task, column: 'doing' }); 
+                                                    }} 
+                                                    className="p-2 rounded-full text-slate-400 dark:text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all opacity-60 hover:opacity-100"
+                                                >
+                                                    <RotateCcw size={16} strokeWidth={2} />
+                                                </button>
+                                            </Tooltip>
+                                        </>
+                                   )}
+                                </div>
+
+                                {/* Right: Meta Data */}
+                                <div className="text-[10px] font-mono text-[#6B6E70] dark:text-slate-500 flex gap-2 select-none pointer-events-none">
+                                    <span>[ID: {task.id.slice(-4)}]</span>
+                                </div>
                             </div>
                         </div>
                     </motion.div>
