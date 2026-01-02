@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -1557,17 +1558,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             <Palette size={16} />
                                         </button>
                                     </Tooltip>
-                                    {showCreationColorPicker && <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50">
-                                        {colors.map(c => (
-                                            <button 
-                                                key={c.id} 
-                                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setCreationColor(c.id); setShowCreationColorPicker(false); }} 
-                                                className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} 
-                                                style={{ backgroundColor: c.hex }} 
-                                                title={c.id} 
-                                            />
-                                        ))}
-                                    </div>}
+                                    {showCreationColorPicker && <div className="absolute bottom-full mb-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowCreationColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}
                                 </div>
                             </div>
                             <button onClick={handleCreateTask} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors">
@@ -1978,18 +1969,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             <div className="space-y-6">
                                 {isEditingTask ? (
                                     <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
-                                        {/* Content Editable FIRST */}
-                                        <div 
-                                            key={activeModal.taskId}
-                                            ref={editContentEditableRef} 
-                                            contentEditable 
-                                            suppressContentEditableWarning={true}
-                                            onInput={handleEditInput} 
-                                            className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 mb-2"
-                                            data-placeholder="Описание задачи..." 
-                                        />
-
-                                        {/* Toolbar SECOND (Bottom) */}
                                         <div className="flex items-center justify-between mb-2 gap-2">
                                             <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
                                                 <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
@@ -2017,12 +1996,21 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                             <Palette size={16} />
                                                         </button>
                                                     </Tooltip>
-                                                    {showEditColorPicker && <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setEditColor(c.id); setShowEditColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${editColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}
+                                                    {showEditColorPicker && <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setEditColor(c.id); setShowEditColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${editColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}
                                                 </div>
                                             </div>
                                         </div>
-                                        
-                                        <div className="mt-2 pt-4 border-t border-slate-100 dark:border-slate-700">
+                                        {/* ... (Edit Content Editable) ... */}
+                                        <div 
+                                            key={activeModal.taskId}
+                                            ref={editContentEditableRef} 
+                                            contentEditable 
+                                            suppressContentEditableWarning={true}
+                                            onInput={handleEditInput} 
+                                            className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1"
+                                            data-placeholder="Описание задачи..." 
+                                        />
+                                        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
                                             <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
                                             <SphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
                                         </div>
