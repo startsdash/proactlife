@@ -1764,7 +1764,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 className="text-2xl font-sans font-bold text-slate-900 dark:text-white leading-tight bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full p-0 m-0" 
                             />
                         ) : (
-                            <h3 className="text-2xl font-serif font-bold text-slate-900 dark:text-white leading-tight">
+                            <h3 className="text-2xl font-sans font-bold text-slate-900 dark:text-white leading-tight">
                                 {activeModal.type === 'stuck' && <span className="flex items-center gap-2"><Bot size={24} className="text-violet-500"/> Личный консультант</span>}
                                 {activeModal.type === 'challenge' && <span className="flex items-center gap-2"><Zap size={24} className="text-indigo-500"/> Новый вызов</span>}
                             </h3>
@@ -1804,7 +1804,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             {aiResponse ? (
                                 <div className="space-y-4">
                                     <div className="bg-violet-50/30 dark:bg-violet-900/10 p-6 rounded-2xl border border-violet-100/50 dark:border-violet-800/30">
-                                        <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 font-bold text-xs uppercase tracking-widest mb-3">Совет</div>
+                                        <div className="flex items-center gap-2 text-indigo-500 dark:text-indigo-400 font-bold text-xs tracking-widest mb-3">Совет</div>
                                         <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{formatForDisplay(aiResponse)}</ReactMarkdown></div>
                                     </div>
                                 </div>
@@ -1819,7 +1819,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
                     {activeModal.type === 'challenge' && draftChallenge && (
                         <div className="flex flex-col h-full">
-                            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-800 relative overflow-hidden">
+                            <div className="bg-violet-50/30 dark:bg-violet-900/10 p-6 rounded-2xl border border-violet-100/50 dark:border-violet-800/30 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-3 opacity-30">
                                     <div className="w-16 h-16 bg-indigo-500 rounded-full blur-2xl" />
                                 </div>
@@ -2039,7 +2039,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     })()}
                 </div>
                 {activeModal.type === 'stuck' && aiResponse && (
-                    <div className="mt-6 flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+                    <div className="mt-6 flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-700/50 pr-1">
                         <button 
                             onClick={saveTherapyResponse} 
                             className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"
@@ -2049,7 +2049,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     </div>
                 )}
                 {activeModal.type === 'challenge' && draftChallenge && (
-                    <div className="mt-6 flex justify-end gap-2 shrink-0 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+                    <div className="mt-6 flex justify-end gap-2 shrink-0 pt-4 border-t border-slate-100 dark:border-slate-700/50 pr-1">
                         <button 
                             onClick={acceptDraftChallenge} 
                             className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"
