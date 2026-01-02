@@ -1,6 +1,6 @@
 
-
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
@@ -110,11 +110,43 @@ const processImage = (file: File | Blob): Promise<string> => {
 };
 
 // --- Cover Picker Component ---
-const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => void }> = ({ onSelect, onClose }) => {
+const CoverPicker: React.FC<{ 
+    onSelect: (url: string) => void, 
+    onClose: () => void, 
+    triggerRef: React.RefObject<HTMLElement> 
+}> = ({ onSelect, onClose, triggerRef }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS);
     const [loading, setLoading] = useState(false);
+    const [position, setPosition] = useState<{top: number, left: number} | null>(null);
     
+    // Calculate position on mount to ensure it fits on screen
+    useEffect(() => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const width = 320; // 20rem (w-80)
+            
+            // Align right edge of popup with right edge of trigger, or keep left aligned if space allows
+            // Prefer left alignment if possible
+            let left = rect.left;
+            let top = rect.bottom + 8; // margin
+
+            // Check right edge
+            if (left + width > window.innerWidth) {
+                // Align right edge to window right edge with padding
+                left = window.innerWidth - width - 16; 
+            }
+            
+            // Check left edge (not usually an issue unless on very small screen)
+            if (left < 16) left = 16;
+
+            // Check bottom edge - if it goes off screen, flip up?
+            // For now, let it be tall, but maybe limit max-height
+            
+            setPosition({ top, left });
+        }
+    }, [triggerRef]);
+
     // Robust Env Getter for the API Key inside the component or file scope
     const getUnsplashKey = () => {
         const keys = [
@@ -173,53 +205,63 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
         }
     };
 
-    return (
-        <div className="absolute top-full mt-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 w-80 flex flex-col gap-3" onMouseDown={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
-            
-            <div className="relative">
-                <input 
-                    type="text" 
-                    placeholder="Поиск Unsplash..." 
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
-                />
-                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                <button 
-                    onClick={() => searchUnsplash(query)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
-                    title="Найти"
-                >
-                    <ArrowRight size={12} />
-                </button>
-            </div>
+    if (!position) return null;
 
-            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
-                {loading ? (
-                    <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
-                        <RefreshCw size={16} className="animate-spin" />
-                    </div>
-                ) : (
-                    results.map((url, i) => (
-                        <button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded-lg overflow-hidden border border-slate-100 dark:border-slate-700 hover:ring-2 hover:ring-indigo-500 relative group bg-slate-100">
-                            <img src={url} className="w-full h-full object-cover" loading="lazy" />
-                        </button>
-                    ))
-                )}
-            </div>
+    return createPortal(
+        <>
+            <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+            <div 
+                className="fixed bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] w-80 flex flex-col gap-3" 
+                style={{ top: position.top, left: position.left }}
+                onMouseDown={e => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
+                
+                <div className="relative">
+                    <input 
+                        type="text" 
+                        placeholder="Поиск Unsplash..." 
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
+                    />
+                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <button 
+                        onClick={() => searchUnsplash(query)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
+                        title="Найти"
+                    >
+                        <ArrowRight size={12} />
+                    </button>
+                </div>
 
-            <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-                <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
-                    <Upload size={12} /> Своя 
-                    <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-                </label>
-                <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium transition-colors text-slate-600 dark:text-slate-300">
-                    <Shuffle size={12} /> Случайные
-                </button>
+                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
+                    {loading ? (
+                        <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
+                            <RefreshCw size={16} className="animate-spin" />
+                        </div>
+                    ) : (
+                        results.map((url, i) => (
+                            <button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded-lg overflow-hidden border border-slate-100 dark:border-slate-700 hover:ring-2 hover:ring-indigo-500 relative group bg-slate-100">
+                                <img src={url} className="w-full h-full object-cover" loading="lazy" />
+                            </button>
+                        ))
+                    )}
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
+                        <Upload size={12} /> Своя 
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                    </label>
+                    <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium transition-colors text-slate-600 dark:text-slate-300">
+                        <Shuffle size={12} /> Случайные
+                    </button>
+                </div>
             </div>
-        </div>
+        </>,
+        document.body
     );
 };
 
@@ -705,6 +747,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [creationCover, setCreationCover] = useState<string | null>(null);
   const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
+  const creationPickerTriggerRef = useRef<HTMLButtonElement>(null); // NEW REF
   
   // Creation Editor State
   const [creationHistory, setCreationHistory] = useState<string[]>(['']);
@@ -717,6 +760,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const [editTaskTitle, setEditTaskTitle] = useState('');
   const [editCover, setEditCover] = useState<string | null>(null);
   const [showEditCoverPicker, setShowEditCoverPicker] = useState(false);
+  const editPickerTriggerRef = useRef<HTMLButtonElement>(null); // NEW REF
   
   // New Rich Text State for Edit Mode
   const [editHistory, setEditHistory] = useState<string[]>(['']);
@@ -1453,7 +1497,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 ) : (
                     <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg animate-in slide-in-from-top-2 relative z-20">
                         {creationCover && (
-                            <div className="relative w-full h-32 group rounded-t-xl overflow-hidden mb-2 -mt-4 -mx-4 w-[calc(100%+2rem)]">
+                            <div className="relative w-full h-32 group rounded-t-xl overflow-hidden mb-2 -mt-4 -mx-4 w-[calc(100%_+_2rem)]">
                                 <img src={creationCover} alt="Cover" className="w-full h-full object-cover" />
                                 <button onClick={() => setCreationCover(null)} className="absolute top-2 right-2 bg-black/50 hover:bg-red-500 text-white p-1.5 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={14} /></button>
                             </div>
@@ -1494,13 +1538,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 <div className="relative">
                                     <Tooltip content="Обложка">
                                         <button 
+                                            ref={creationPickerTriggerRef}
                                             onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} 
                                             className={`p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
                                         >
                                             <Layout size={16} />
                                         </button>
                                     </Tooltip>
-                                    {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} />}
+                                    {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationPickerTriggerRef} />}
                                 </div>
                             </div>
                             <button onClick={handleCreateTask} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors">
@@ -1558,7 +1603,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     >
                         
                         {task.coverUrl && (
-                            <div className="h-32 w-full shrink-0 relative mb-4 -mx-5 -mt-5 w-[calc(100%+2.5rem)] overflow-hidden">
+                            <div className="h-32 w-full shrink-0 relative mb-4 -mx-5 -mt-5 w-[calc(100%_+_2.5rem)] overflow-hidden">
                                 <img src={task.coverUrl} alt="Cover" className="w-full h-full object-cover" />
                             </div>
                         )}
@@ -1764,10 +1809,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     );
   };
 
+  // ... (Main render logic with activeModal)
+
   return (
     <div ref={scrollContainerRef} className="flex flex-col h-full relative overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
-      
-      {/* 1. Title Section (Scrolls away) */}
+      {/* ... (Titles and Search bar - same) ... */}
       <div className="w-full px-4 md:px-8 pt-4 md:pt-8 mb-6">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
@@ -1777,113 +1823,37 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
         </header>
       </div>
 
-      {/* 2. Sticky Header (Hides on scroll down) */}
-      <motion.div 
-            className="sticky top-0 z-40 w-full mb-[-20px]"
-            animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-      >
-            {/* Extended Blur/Gradient Backdrop */}
+      <motion.div className="sticky top-0 z-40 w-full mb-[-20px]" animate={{ y: isHeaderHidden ? '-100%' : '0%' }} transition={{ duration: 0.3, ease: 'easeInOut' }}>
+            {/* ... Search Bar Content ... */}
             <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
-                <div 
-                    className="absolute inset-0 backdrop-blur-xl"
-                    style={{
-                        maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)',
-                        WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)'
-                    }}
-                />
+                <div className="absolute inset-0 backdrop-blur-xl" style={{ maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)' }} />
                 <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
             </div>
-
             <div className="relative z-10 w-full px-4 md:px-8 pb-2">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
-                        <input 
-                            ref={searchInputRef}
-                            type="text" 
-                            placeholder="Поиск задач..." 
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400"
-                        />
+                        <input ref={searchInputRef} type="text" placeholder="Поиск задач..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400" />
                         {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
                     </div>
-                    
-                    <Tooltip content="Сферы" side="bottom">
-                        <button 
-                            onClick={() => setShowSphereSelector(!showSphereSelector)} 
-                            className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showSphereSelector || activeSphereFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
-                        >
-                            <Layout size={20} />
-                        </button>
-                    </Tooltip>
-
-                    <Tooltip content="Сортировка" side="bottom">
-                        <button 
-                            onClick={toggleSortOrder} 
-                            className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                        >
-                            {sortOrder === 'asc' ? <ArrowUp size={20} /> : <ArrowDown size={20} />}
-                        </button>
-                    </Tooltip>
+                    <Tooltip content="Сферы" side="bottom"><button onClick={() => setShowSphereSelector(!showSphereSelector)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showSphereSelector || activeSphereFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Layout size={20} /></button></Tooltip>
+                    <Tooltip content="Сортировка" side="bottom"><button onClick={toggleSortOrder} className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">{sortOrder === 'asc' ? <ArrowUp size={20} /> : <ArrowDown size={20} />}</button></Tooltip>
                 </div>
-
-                {/* Sphere Selector Expansion */}
                 {(showSphereSelector || activeSphereFilter) && (
                     <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200 scrollbar-none">
-                        <button 
-                            onClick={() => setActiveSphereFilter(null)} 
-                            className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${!activeSphereFilter ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}
-                        >
-                            Все
-                        </button>
-                        {SPHERES.map(s => {
-                             const isActive = activeSphereFilter === s.id;
-                             return (
-                                 <button
-                                    key={s.id}
-                                    onClick={() => setActiveSphereFilter(isActive ? null : s.id)}
-                                    className={`px-3 py-1.5 text-xs font-mono font-bold rounded-full transition-all flex items-center gap-1.5 border uppercase tracking-wider whitespace-nowrap
-                                        ${isActive 
-                                            ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400`
-                                            : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'
-                                        }
-                                    `}
-                                 >
-                                     {isActive ? `[ ${s.label} ]` : s.label}
-                                 </button>
-                             );
-                        })}
+                        <button onClick={() => setActiveSphereFilter(null)} className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${!activeSphereFilter ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}>Все</button>
+                        {SPHERES.map(s => { const isActive = activeSphereFilter === s.id; return (<button key={s.id} onClick={() => setActiveSphereFilter(isActive ? null : s.id)} className={`px-3 py-1.5 text-xs font-mono font-bold rounded-full transition-all flex items-center gap-1.5 border uppercase tracking-wider whitespace-nowrap ${isActive ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400` : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'}`}>{isActive ? `[ ${s.label} ]` : s.label}</button>); })}
                     </div>
                 )}
             </div>
       </motion.div>
 
-      {/* 3. Content Area */}
       <div className="w-full px-4 md:px-8 pt-10 pb-8 flex-1 min-h-0">
-         {/* Mobile Tabs */}
          <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 shrink-0 z-10 mb-4 bg-transparent">
-            {columns.map(col => (
-                <button
-                    key={col.id}
-                    onClick={() => setActiveMobileTab(col.id as any)}
-                    className={getTabClass(col.id, activeMobileTab === col.id)}
-                >
-                    {col.title} <span className="opacity-60 text-[10px] font-mono">({baseActiveTasks.filter(t => t.column === col.id).length})</span>
-                </button>
-            ))}
+            {columns.map(col => (<button key={col.id} onClick={() => setActiveMobileTab(col.id as any)} className={getTabClass(col.id, activeMobileTab === col.id)}>{col.title} <span className="opacity-60 text-[10px] font-mono">({baseActiveTasks.filter(t => t.column === col.id).length})</span></button>))}
          </div>
-
          <div className="flex flex-col md:flex-row gap-8 h-full md:items-start">
-            {columns.map(col => {
-               const isHiddenOnMobile = activeMobileTab !== col.id;
-               return (
-                   <div key={col.id} className={`flex-1 min-w-[300px] flex-col h-full ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}>
-                       {renderColumn(col)}
-                   </div>
-               );
-            })}
+            {columns.map(col => { const isHiddenOnMobile = activeMobileTab !== col.id; return (<div key={col.id} className={`flex-1 min-w-[300px] flex-col h-full ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}>{renderColumn(col)}</div>); })}
          </div>
       </div>
 
@@ -1892,7 +1862,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             <div className="bg-white/90 dark:bg-[#0f172a]/90 w-full max-w-lg rounded-3xl shadow-2xl p-6 md:p-8 border border-white/20 dark:border-slate-700/50 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col relative backdrop-filter" onClick={(e) => e.stopPropagation()}>
                 
                 {(isEditingTask ? editCover : getTaskForModal()?.coverUrl) && (
-                    <div className="h-40 w-full shrink-0 relative mb-6 -mx-8 -mt-8 w-[calc(100%+4rem)] group overflow-hidden">
+                    <div className="h-40 w-full shrink-0 relative mb-6 -mx-8 -mt-8 w-[calc(100%_+_4rem)] group overflow-hidden">
                         <img src={isEditingTask ? editCover! : getTaskForModal()!.coverUrl!} alt="Cover" className="w-full h-full object-cover" />
                         {isEditingTask && (
                             <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100">
@@ -1932,16 +1902,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 if (task && task.column !== 'done') {
                                     return (
                                         <>
-                                            <Tooltip content="Редактировать">
-                                                <button onClick={() => setIsEditingTask(true)} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-800/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-colors">
-                                                    <Edit3 size={18} />
-                                                </button>
-                                            </Tooltip>
-                                            <Tooltip content="Удалить">
-                                                <button onClick={() => { if(window.confirm('Удалить задачу?')) { deleteTask(task.id); handleCloseModal(); } }} className="p-2 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-slate-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </Tooltip>
+                                            <Tooltip content="Редактировать"><button onClick={() => setIsEditingTask(true)} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-800/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-colors"><Edit3 size={18} /></button></Tooltip>
+                                            <Tooltip content="Удалить"><button onClick={() => { if(window.confirm('Удалить задачу?')) { deleteTask(task.id); handleCloseModal(); } }} className="p-2 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-slate-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"><Trash2 size={18} /></button></Tooltip>
                                             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                                         </>
                                     );
@@ -1954,6 +1916,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar-light min-h-0 pr-1">
+                    {/* ... (Stuck / Challenge content blocks - same) ... */}
                     {activeModal.type === 'stuck' && (
                         <div className="space-y-4">
                             {aiResponse ? (
@@ -1965,23 +1928,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-center text-slate-400 py-10 flex flex-col items-center gap-2">
-                                    <Bot size={32} className="opacity-20" />
-                                    <span>Не удалось получить ответ.</span>
-                                </div>
+                                <div className="text-center text-slate-400 py-10 flex flex-col items-center gap-2"><Bot size={32} className="opacity-20" /><span>Не удалось получить ответ.</span></div>
                             )}
                         </div>
                     )}
-
                     {activeModal.type === 'challenge' && draftChallenge && (
                         <div className="flex flex-col h-full">
                             <div className="bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
-                                <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed">
-                                    <StaticChallengeRenderer 
-                                        content={draftChallenge} 
-                                        mode="draft" 
-                                    />
-                                </div>
+                                <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><StaticChallengeRenderer content={draftChallenge} mode="draft" /></div>
                             </div>
                         </div>
                     )}
@@ -1989,7 +1943,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     {activeModal.type === 'details' && (() => {
                         const task = getTaskForModal();
                         if (!task) return null;
-                        
                         const isDone = task.column === 'done';
                         const subtasksTotal = task.subtasks?.length || 0;
                         const subtasksDone = task.subtasks?.filter(s => s.isCompleted).length || 0;
@@ -1998,11 +1951,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
                         return (
                             <div className="space-y-6">
-                                {/* TEXT EDITING */}
                                 {isEditingTask ? (
                                     <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
-                                        
-                                        {/* Editor Toolbar */}
                                         <div className="flex items-center justify-between mb-2 gap-2">
                                             <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
                                                 <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
@@ -2015,19 +1965,19 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 <div className="relative">
                                                     <Tooltip content="Обложка">
                                                         <button 
+                                                            ref={editPickerTriggerRef}
                                                             onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} 
                                                             className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors ${editCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}
                                                         >
                                                             <Layout size={16} />
                                                         </button>
                                                     </Tooltip>
-                                                    {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} />}
+                                                    {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editPickerTriggerRef} />}
                                                 </div>
                                             </div>
                                         </div>
-
+                                        {/* ... (Edit Content Editable) ... */}
                                         <div 
-                                            // KEY FIX: Use key to force DOM re-mount when switching tasks to avoid content leak
                                             key={activeModal.taskId}
                                             ref={editContentEditableRef} 
                                             contentEditable 
@@ -2036,13 +1986,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1"
                                             data-placeholder="Описание задачи..." 
                                         />
-
-                                        {/* SPHERES IN EDIT MODE ONLY */}
                                         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
                                             <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
                                             <SphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
                                         </div>
-
                                         <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-6 border-t border-slate-100 dark:border-slate-700 mt-4">
                                             <button onClick={() => setIsEditingTask(false)} className="px-5 py-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 w-full md:w-auto text-center font-medium">Отмена</button>
                                             <button onClick={handleSaveTaskContent} className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"><Check size={18} /> Сохранить</button>
@@ -2050,152 +1997,39 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     </div>
                                 ) : (
                                     <div className="group relative pr-1">
-                                        {/* 1. Context (Description) */}
-                                        {task.description && (
-                                            <CollapsibleSection title="Контекст" icon={<FileText size={12}/>}>
-                                                <div className="text-xs text-[#6B6E70] dark:text-slate-400 leading-relaxed font-sans">
-                                                    <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.description))}</ReactMarkdown>
-                                                </div>
-                                            </CollapsibleSection>
-                                        )}
-
-                                        {/* Main Content */}
-                                        <div className="text-[#2F3437] dark:text-slate-300 text-sm font-normal leading-relaxed font-sans mb-4">
-                                            <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.content))}</ReactMarkdown>
-                                        </div>
-
-                                        {/* 2. Checklist */}
+                                        {/* ... (Read mode content: Description, Content, Checklist, Challenge, History) ... */}
+                                        {task.description && (<CollapsibleSection title="Контекст" icon={<FileText size={12}/>}><div className="text-xs text-[#6B6E70] dark:text-slate-400 leading-relaxed font-sans"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.description))}</ReactMarkdown></div></CollapsibleSection>)}
+                                        <div className="text-[#2F3437] dark:text-slate-300 text-sm font-normal leading-relaxed font-sans mb-4"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.content))}</ReactMarkdown></div>
+                                        
                                         {(task.subtasks && task.subtasks.length > 0 || !isDone) && (
-                                            <CollapsibleSection
-                                                title="Чек-лист"
-                                                icon={<ListTodo size={14}/>}
-                                            >
-                                                {/* SEGMENTED PROGRESS BAR */}
-                                                {subtasksTotal > 0 && (
-                                                    <SegmentedProgressBar total={subtasksTotal} current={subtasksDone} color={sphereColorClass} />
-                                                )}
-
+                                            <CollapsibleSection title="Чек-лист" icon={<ListTodo size={14}/>}>
+                                                {subtasksTotal > 0 && <SegmentedProgressBar total={subtasksTotal} current={subtasksDone} color={sphereColorClass} />}
                                                 <div className="space-y-1">
                                                     {task.subtasks?.map(s => (
-                                                        <div 
-                                                            key={s.id} 
-                                                            className="group flex items-start gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-all duration-200 hover:translate-x-0.5 cursor-pointer relative"
-                                                            draggable={!isDone}
-                                                            onDragStart={!isDone ? (e) => handleSubtaskDragStart(e, s.id, task.id) : undefined}
-                                                            onDragOver={handleDragOver}
-                                                            onDrop={!isDone ? (e) => handleSubtaskDrop(e, s.id, task) : undefined}
-                                                            onClick={() => !isDone && handleToggleSubtask(s.id)}
-                                                        >
-                                                            {/* Custom Checkbox */}
-                                                            <div className={`
-                                                                w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-all duration-300 mt-0.5
-                                                                ${s.isCompleted 
-                                                                    ? 'bg-indigo-500 border-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' 
-                                                                    : 'border-slate-300 dark:border-slate-600 group-hover:border-indigo-400 bg-white dark:bg-transparent'
-                                                                }
-                                                            `}>
-                                                                {s.isCompleted && <Check size={12} className="text-white" strokeWidth={3} />}
-                                                            </div>
-                                                            
+                                                        <div key={s.id} className="group flex items-start gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-all duration-200 hover:translate-x-0.5 cursor-pointer relative" draggable={!isDone} onDragStart={!isDone ? (e) => handleSubtaskDragStart(e, s.id, task.id) : undefined} onDragOver={handleDragOver} onDrop={!isDone ? (e) => handleSubtaskDrop(e, s.id, task) : undefined} onClick={() => !isDone && handleToggleSubtask(s.id)}>
+                                                            <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-all duration-300 mt-0.5 ${s.isCompleted ? 'bg-indigo-500 border-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'border-slate-300 dark:border-slate-600 group-hover:border-indigo-400 bg-white dark:bg-transparent'}`}>{s.isCompleted && <Check size={12} className="text-white" strokeWidth={3} />}</div>
                                                             <span className={`text-sm flex-1 break-words leading-relaxed transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-[#2F3437] dark:text-slate-200"}`}>{s.text}</span>
-                                                            
-                                                            {!isDone && (
-                                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(s.id); }} className="text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"><X size={14}/></button>
-                                                            )}
+                                                            {!isDone && <button onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(s.id); }} className="text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"><X size={14}/></button>}
                                                         </div>
                                                     ))}
-                                                    {!isDone && (
-                                                        <div className="flex gap-2 mt-3 pl-2">
-                                                            <input 
-                                                                type="text" 
-                                                                className="flex-1 bg-transparent border-b border-slate-200 dark:border-slate-700 py-1 text-sm outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:border-indigo-400 transition-colors"
-                                                                placeholder="Новый пункт..."
-                                                                value={newSubtaskText}
-                                                                onChange={(e) => setNewSubtaskText(e.target.value)}
-                                                                onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
-                                                            />
-                                                            <button onClick={handleAddSubtask} disabled={!newSubtaskText.trim()} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors"><Plus size={18}/></button>
-                                                        </div>
-                                                    )}
+                                                    {!isDone && (<div className="flex gap-2 mt-3 pl-2"><input type="text" className="flex-1 bg-transparent border-b border-slate-200 dark:border-slate-700 py-1 text-sm outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:border-indigo-400 transition-colors" placeholder="Новый пункт..." value={newSubtaskText} onChange={(e) => setNewSubtaskText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()} /><button onClick={handleAddSubtask} disabled={!newSubtaskText.trim()} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors"><Plus size={18}/></button></div>)}
                                                 </div>
                                             </CollapsibleSection>
                                         )}
 
-                                        {/* 3. Challenge */}
                                         {task.activeChallenge && (
-                                            <CollapsibleSection
-                                                title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"}
-                                                icon={
-                                                    task.isChallengeCompleted 
-                                                    ? <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" /> 
-                                                    : <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-                                                }
-                                                actions={!isDone ? (
-                                                    <div className="flex items-center gap-3">
-                                                        <Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}>
-                                                            <button 
-                                                                onClick={(e) => { e.stopPropagation(); toggleChallengeComplete(); }}
-                                                                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:text-emerald-500 text-transparent'}`}
-                                                            >
-                                                                <Check size={12} strokeWidth={3} />
-                                                            </button>
-                                                        </Tooltip>
-                                                        
-                                                        <div className="w-px h-3 bg-slate-300 dark:bg-slate-600"></div>
-
-                                                        <Tooltip content="Удалить челлендж">
-                                                            <button onClick={(e) => deleteActiveChallenge(e)} className="text-slate-300 hover:text-red-500 transition-colors">
-                                                                <Trash2 size={14} />
-                                                            </button>
-                                                        </Tooltip>
-                                                    </div>
-                                                ) : null}
-                                            >
+                                            <CollapsibleSection title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} icon={task.isChallengeCompleted ? <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" /> : <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />} actions={!isDone ? (<div className="flex items-center gap-3"><Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}><button onClick={(e) => { e.stopPropagation(); toggleChallengeComplete(); }} className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:text-emerald-500 text-transparent'}`}><Check size={12} strokeWidth={3} /></button></Tooltip><div className="w-px h-3 bg-slate-300 dark:bg-slate-600"></div><Tooltip content="Удалить челлендж"><button onClick={(e) => deleteActiveChallenge(e)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button></Tooltip></div>) : null}>
                                                 <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed pl-1 pt-1">
-                                                    {task.isChallengeCompleted ? (
-                                                        <StaticChallengeRenderer content={task.activeChallenge} mode="history" />
-                                                    ) : (
-                                                        <InteractiveChallenge 
-                                                            content={task.activeChallenge} 
-                                                            onToggle={(i) => !isDone && toggleChallengeCheckbox(i, task)} 
-                                                            onPin={!isDone ? (i) => handleToggleChallengeStepPin(i) : undefined}
-                                                            pinnedIndices={task.pinnedChallengeIndices}
-                                                        />
-                                                    )}
+                                                    {task.isChallengeCompleted ? <StaticChallengeRenderer content={task.activeChallenge} mode="history" /> : <InteractiveChallenge content={task.activeChallenge} onToggle={(i) => !isDone && toggleChallengeCheckbox(i, task)} onPin={!isDone ? (i) => handleToggleChallengeStepPin(i) : undefined} pinnedIndices={task.pinnedChallengeIndices} />}
                                                 </div>
                                             </CollapsibleSection>
                                         )}
 
-                                        {/* 4. History (Collapsible) */}
                                         {((task.challengeHistory && task.challengeHistory.length > 0) || (task.consultationHistory && task.consultationHistory.length > 0)) && (
                                             <CollapsibleSection title="История" icon={<History size={14}/>}>
                                                 <div className="space-y-4">
-                                                    {task.challengeHistory?.map((h, i) => (
-                                                        <div key={`ch-${i}`} className="text-sm bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50 relative group">
-                                                            <div className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Zap size={10}/> Архивный челлендж</div>
-                                                            <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><StaticChallengeRenderer content={h} mode="history" /></div>
-                                                            {!isDone && (
-                                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <Tooltip content="Удалить">
-                                                                        <button onClick={() => deleteChallengeFromHistory(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button>
-                                                                    </Tooltip>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                    {task.consultationHistory?.map((h, i) => (
-                                                        <div key={`cons-${i}`} className="text-sm bg-violet-50/30 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-800/30 relative group">
-                                                            <div className="text-[9px] font-bold text-violet-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Bot size={10}/> Консультация</div>
-                                                            <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(h))}</ReactMarkdown></div>
-                                                            {!isDone && (
-                                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <Tooltip content="Удалить">
-                                                                        <button onClick={() => deleteConsultation(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button>
-                                                                    </Tooltip>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
+                                                    {task.challengeHistory?.map((h, i) => (<div key={`ch-${i}`} className="text-sm bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50 relative group"><div className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Zap size={10}/> Архивный челлендж</div><div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><StaticChallengeRenderer content={h} mode="history" /></div>{!isDone && <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"><Tooltip content="Удалить"><button onClick={() => deleteChallengeFromHistory(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button></Tooltip></div>}</div>))}
+                                                    {task.consultationHistory?.map((h, i) => (<div key={`cons-${i}`} className="text-sm bg-violet-50/30 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-800/30 relative group"><div className="text-[9px] font-bold text-violet-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Bot size={10}/> Консультация</div><div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(h))}</ReactMarkdown></div>{!isDone && <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"><Tooltip content="Удалить"><button onClick={() => deleteConsultation(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button></Tooltip></div>}</div>))}
                                                 </div>
                                             </CollapsibleSection>
                                         )}
@@ -2205,26 +2039,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         );
                     })()}
                 </div>
-                {activeModal.type === 'stuck' && aiResponse && (
-                    <div className="mt-6 flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-700/50 pr-1">
-                        <button 
-                            onClick={saveTherapyResponse} 
-                            className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"
-                        >
-                            <Save size={16} /> Сохранить в историю
-                        </button>
-                    </div>
-                )}
-                {activeModal.type === 'challenge' && draftChallenge && (
-                    <div className="mt-6 flex justify-end gap-2 shrink-0 pt-4 border-t border-slate-100 dark:border-slate-700/50 pr-1">
-                        <button 
-                            onClick={acceptDraftChallenge} 
-                            className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"
-                        >
-                            <Rocket size={18} /> Принять вызов
-                        </button>
-                    </div>
-                )}
+                {/* ... (Footer actions for modals - same) ... */}
+                {activeModal.type === 'stuck' && aiResponse && (<div className="mt-6 flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-700/50 pr-1"><button onClick={saveTherapyResponse} className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"><Save size={16} /> Сохранить в историю</button></div>)}
+                {activeModal.type === 'challenge' && draftChallenge && (<div className="mt-6 flex justify-end gap-2 shrink-0 pt-4 border-t border-slate-100 dark:border-slate-700/50 pr-1"><button onClick={acceptDraftChallenge} className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"><Rocket size={18} /> Принять вызов</button></div>)}
             </div>
         </div>
       )}
