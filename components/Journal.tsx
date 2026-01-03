@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
@@ -584,10 +583,10 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       {/* LEFT PANEL: INPUT (Glass Refinement) */}
       <div className="w-full md:w-1/3 flex flex-col p-4 md:p-8 md:border-r border-b md:border-b-0 border-slate-100 dark:border-slate-800/50 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 overflow-y-auto">
         <header className="mb-6 md:mb-8">
-          <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-serif">
+          <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">
             Дневник
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-serif italic">Факты, эмоции, гипотезы</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Факты, эмоции, гипотезы</p>
         </header>
         
         <div className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-sm p-5 flex flex-col gap-5 relative z-10">
