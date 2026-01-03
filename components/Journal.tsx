@@ -5,6 +5,7 @@ import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
 import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 
@@ -254,25 +255,25 @@ const JournalEntrySphereSelector: React.FC<{
         <div className="relative">
             <button 
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="flex items-center gap-2 text-[10px] font-bold text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50 px-2 py-1.5 rounded-lg transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
+                className="flex items-center gap-1.5 font-mono text-[9px] font-bold text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent px-2 py-1 rounded transition-colors uppercase tracking-widest"
             >
                 {entry.spheres && entry.spheres.length > 0 ? (
-                    <div className="flex -space-x-1.5 opacity-80">
+                    <div className="flex -space-x-1">
                         {entry.spheres.map(s => {
                             const sp = SPHERES.find(x => x.id === s);
                             return sp ? (
                                 <div 
                                     key={s} 
-                                    className={`w-2.5 h-2.5 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
+                                    className={`w-2 h-2 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
                                     style={{ borderWidth: '1px' }}
                                 />
                             ) : null;
                         })}
                     </div>
                 ) : (
-                    <Target size={12} strokeWidth={1} />
+                    <Target size={10} strokeWidth={1.5} />
                 )}
-                <span className="uppercase tracking-wider">Сфера</span>
+                <span>Сфера</span>
             </button>
             
             {isOpen && (
@@ -994,82 +995,97 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
       {selectedEntry && (
         <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseModal}>
-            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-between items-start mb-6">
-                    <div className="flex flex-col gap-1">
-                        <h3 className="text-2xl font-sans font-bold text-slate-900 dark:text-white leading-tight mb-1">Детали записи</h3>
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                            <Calendar size={12} strokeWidth={1} /> {formatDate(selectedEntry.date)}
-                        </div>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full max-w-lg bg-white/75 dark:bg-[#1e293b]/75 backdrop-blur-[35px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* AETHER HEADER */}
+                <div className="flex justify-between items-center mb-8 shrink-0">
+                    <div className="font-mono text-[10px] text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                        {formatDate(selectedEntry.date)}
                     </div>
-                    <div className="flex items-center shrink-0">
-                        {editingId !== selectedEntry.id && (
-                            <>
-                                <Tooltip content="Редактировать">
-                                    <button onClick={() => startEditing(selectedEntry)} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                        <Edit3 size={20} strokeWidth={1} />
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content="Удалить">
-                                    <button onClick={() => { if(window.confirm('Удалить запись?')) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
-                                        <Trash2 size={20} strokeWidth={1} />
-                                    </button>
-                                </Tooltip>
-                                <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-2"></div>
-                            </>
-                        )}
-                        <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1"><X size={24} strokeWidth={1} /></button>
+                    <div className="flex items-center gap-4">
+                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="right" direction="down" />
+                        <button onClick={handleCloseModal} className="text-slate-300 hover:text-slate-600 dark:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                            <X size={20} strokeWidth={1} />
+                        </button>
                     </div>
                 </div>
 
-                <div className="space-y-4">
+                {/* AETHER BODY */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-2 -mr-2">
                     {editingId === selectedEntry.id ? (
                       <div className="mb-4">
-                          <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-40 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
-                          <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
-                              <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
-                              <button onClick={() => saveEdit(selectedEntry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
+                          <textarea 
+                            value={editContent} 
+                            onChange={(e) => setEditContent(e.target.value)} 
+                            className="w-full h-40 p-0 bg-transparent border-none text-[1.1rem] leading-[1.8] font-serif text-[#2F3437] dark:text-slate-200 outline-none resize-none placeholder:text-slate-300" 
+                            placeholder="Напиши что-нибудь..." 
+                            autoFocus
+                          />
+                          <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5">
+                              <button onClick={cancelEditing} className="font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Отмена</button>
+                              <button onClick={() => saveEdit(selectedEntry)} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 transition-colors">Сохранить</button>
                           </div>
                       </div>
                     ) : (
-                      <div className="font-serif text-slate-800 dark:text-slate-200 text-base leading-relaxed font-normal">
+                      <div className="font-serif text-[1.1rem] leading-[1.8] text-[#2F3437] dark:text-slate-200">
                           <ReactMarkdown components={markdownComponents}>{selectedEntry.content}</ReactMarkdown>
                       </div>
                     )}
 
                     {selectedEntry.aiFeedback && (
-                        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 relative mt-4 border border-slate-100 dark:border-slate-700">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1 rounded bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 shadow-sm text-slate-500"><Sparkles size={12} /></div>
-                                <span className="text-xs font-bold text-slate-500">Ментор</span>
-                            </div>
-                            <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown></div>
+                        <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/5">
+                             <div className="flex items-center gap-2 mb-3">
+                                <Sparkles size={12} className="text-indigo-400" />
+                                <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400">Ментор</span>
+                             </div>
+                             <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed font-serif">
+                                <ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown>
+                             </div>
                         </div>
                     )}
-                    
-                    {selectedLinkedTask && (
-                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                </div>
+
+                {/* AETHER FOOTER */}
+                <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/5 flex flex-col gap-4 shrink-0">
+                    {selectedLinkedTask && editingId !== selectedEntry.id && (
+                        <div className="font-mono text-[10px] text-slate-400 flex items-center gap-2 group/ctx">
+                            <span className="opacity-50">[ CONTEXT: </span>
                             <button 
                                 onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(selectedLinkedTask.id); }}
-                                className="font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                                className="hover:text-indigo-500 underline decoration-dotted underline-offset-4 truncate max-w-[200px] transition-colors"
                             >
-                                <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                                    [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{selectedLinkedTask.content}</span> ]
-                                </span>
+                                {selectedLinkedTask.content}
                             </button>
+                            <span className="opacity-50"> ]</span>
                         </div>
                     )}
 
-                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end items-center gap-1">
-                        <Tooltip content={selectedEntry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
-                            <button onClick={() => toggleInsight(selectedEntry)} className={`p-2 rounded-lg transition-all ${selectedEntry.isInsight ? 'text-violet-600 dark:text-violet-300 bg-gradient-to-tr from-violet-100 via-fuchsia-50 to-cyan-50 dark:from-violet-900/30 dark:via-fuchsia-900/20 dark:to-cyan-900/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-                                <Gem size={16} strokeWidth={1} className={selectedEntry.isInsight ? "fill-violet-200/50 shadow-[0_0_12px_rgba(139,92,246,0.3)]" : "text-[#2F3437] dark:text-slate-400"} />
+                    <div className="flex justify-between items-center">
+                        {!editingId && (
+                            <button 
+                                onClick={() => toggleInsight(selectedEntry)} 
+                                className={`font-mono text-[10px] uppercase tracking-widest transition-colors flex items-center gap-2 ${selectedEntry.isInsight ? 'text-violet-500' : 'text-slate-300 hover:text-slate-500'}`}
+                            >
+                                <Gem size={12} className={selectedEntry.isInsight ? "fill-current" : ""} />
+                                {selectedEntry.isInsight ? "Insight" : "Mark Insight"}
                             </button>
-                        </Tooltip>
-                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="right" direction="up" />
+                        )}
+                        
+                        {!editingId && (
+                            <div className="flex gap-6">
+                                <button onClick={() => startEditing(selectedEntry)} className="font-mono text-[10px] uppercase tracking-widest text-slate-300 hover:text-indigo-500 transition-colors">Edit</button>
+                                <button onClick={() => { if(confirm("Удалить запись?")) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="font-mono text-[10px] uppercase tracking-widest text-slate-300 hover:text-red-500 transition-colors">Delete</button>
+                            </div>
+                        )}
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </div>
       )}
 
