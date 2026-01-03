@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem, ExternalLink } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 
@@ -584,10 +584,10 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       {/* LEFT PANEL: INPUT (Glass Refinement) */}
       <div className="w-full md:w-1/3 flex flex-col p-4 md:p-8 md:border-r border-b md:border-b-0 border-slate-100 dark:border-slate-800/50 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 overflow-y-auto">
         <header className="mb-6 md:mb-8">
-          <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-serif">
+          <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">
             Дневник
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-serif italic">Факты, эмоции, гипотезы</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Факты, эмоции, гипотезы</p>
         </header>
         
         <div className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-sm p-5 flex flex-col gap-5 relative z-10">
@@ -644,7 +644,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
                 <div className="pt-6 pb-2 max-w-4xl mx-auto w-full">
                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xs font-light text-slate-800 dark:text-slate-200 uppercase tracking-widest font-sans">Хроника</h3>
+                        <h3 className="font-sans font-semibold text-[0.85rem] uppercase tracking-[0.15em] text-[#2F3437] dark:text-slate-200">Хроника</h3>
                         <div className="flex items-center gap-2">
                             {hasMentorTool && (
                                 <>
@@ -668,7 +668,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     </Tooltip>
 
                                     <Tooltip content="История диалогов" side="left">
-                                        <button onClick={() => setShowHistory(true)} className="px-3 py-2 rounded-lg border transition-all flex items-center justify-center gap-2 bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm">
+                                        <button onClick={() => setShowHistory(true)} className="px-3 py-2 rounded-lg border transition-all flex items-center justify-center gap-2 bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm">
                                             <History size={16} strokeWidth={1} />
                                             <span className="text-xs font-medium">История</span>
                                         </button>
@@ -833,16 +833,18 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
                             {/* Context Link */}
                             {linkedTask && !isEditing && (
-                                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
-                                        className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
-                                    >
-                                        <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                                            [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{linkedTask.content}</span> ]
-                                        </span>
-                                    </button>
-                                </div>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
+                                    className="block mt-4 w-full bg-white/50 dark:bg-slate-800/50 hover:bg-white/80 dark:hover:bg-slate-800 transition-all rounded-2xl border border-black/5 dark:border-white/5 shadow-sm p-4 text-left group/link relative overflow-hidden"
+                                >
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <ExternalLink size={12} className="text-slate-400 group-hover/link:text-indigo-500 transition-colors" />
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Задача</span>
+                                    </div>
+                                    <h4 className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover/link:text-slate-900 dark:group-hover/link:text-slate-200 transition-colors line-clamp-1 font-sans">
+                                        {linkedTask.content}
+                                    </h4>
+                                </button>
                             )}
 
                             {entry.aiFeedback && (
@@ -957,16 +959,18 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     )}
                     
                     {selectedLinkedTask && (
-                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(selectedLinkedTask.id); }}
-                                className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
-                            >
-                                <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                                    [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{selectedLinkedTask.content}</span> ]
-                                </span>
-                            </button>
-                        </div>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(selectedLinkedTask.id); }}
+                            className="block mt-4 w-full bg-white/50 dark:bg-slate-800/50 hover:bg-white/80 dark:hover:bg-slate-800 transition-all rounded-2xl border border-black/5 dark:border-white/5 shadow-sm p-4 text-left group/link relative overflow-hidden"
+                        >
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <ExternalLink size={12} className="text-slate-400 group-hover/link:text-indigo-500 transition-colors" />
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Задача</span>
+                            </div>
+                            <h4 className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover/link:text-slate-900 dark:group-hover/link:text-slate-200 transition-colors line-clamp-1 font-sans">
+                                {selectedLinkedTask.content}
+                            </h4>
+                        </button>
                     )}
 
                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end items-center gap-1">
