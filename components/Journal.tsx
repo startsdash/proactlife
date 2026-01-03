@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 
@@ -757,9 +757,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     const nodeColorClass = sphereConfig 
                         ? sphereConfig.text.replace('text-', 'border-') 
                         : 'border-slate-300 dark:border-slate-600';
-                    const iconColorClass = sphereConfig
-                        ? sphereConfig.text
-                        : 'text-slate-400 dark:text-slate-500';
+                    const iconColorClass = 'text-violet-500';
 
                     return (
                         <div key={entry.id} className="relative pl-20 md:pl-28 group">
@@ -776,7 +774,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                             {/* Node Marker */}
                             <div className="absolute left-[3rem] md:left-[4rem] top-[2.25rem] -translate-x-1/2 -translate-y-1/2 z-10 bg-[#f8fafc] dark:bg-[#0f172a] p-1.5 transition-colors duration-300">
                                 {entry.isInsight ? (
-                                    <Sparkles size={10} strokeWidth={2} className={iconColorClass} />
+                                    <Gem size={10} strokeWidth={2} className={iconColorClass} />
                                 ) : (
                                     <div className={`w-1.5 h-1.5 rounded-full bg-transparent border-[1.5px] ${nodeColorClass}`} />
                                 )}
@@ -787,7 +785,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 onClick={() => setSelectedEntryId(entry.id)} 
                                 className={`relative p-6 md:p-8 rounded-2xl border transition-all duration-300 group cursor-pointer
                                     ${entry.isInsight 
-                                        ? 'bg-gradient-to-br from-amber-50/80 to-white dark:from-amber-900/10 dark:to-[#1e293b] border-amber-200/50 dark:border-amber-800/30 shadow-sm' 
+                                        ? 'bg-gradient-to-br from-violet-50/80 via-fuchsia-50/50 to-white dark:from-violet-900/20 dark:via-fuchsia-900/10 dark:to-[#1e293b] border-violet-200/50 dark:border-violet-800/30 shadow-sm' 
                                         : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md'
                                     }
                                 `}
@@ -805,14 +803,14 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             onClick={() => toggleInsight(entry)} 
                                             className={`p-1.5 rounded-lg transition-all ${
                                                 entry.isInsight 
-                                                ? "text-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-[0_0_10px_rgba(251,191,36,0.3)]" 
+                                                ? "text-violet-600 dark:text-violet-300 bg-gradient-to-tr from-violet-100 via-fuchsia-50 to-cyan-50 dark:from-violet-900/30 dark:via-fuchsia-900/20 dark:to-cyan-900/20 shadow-[0_0_12px_rgba(139,92,246,0.3)]" 
                                                 : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                                             }`}
                                         >
-                                            <Sparkle 
+                                            <Gem 
                                                 size={16} 
                                                 strokeWidth={1.5} 
-                                                className={entry.isInsight ? "fill-amber-500" : "fill-transparent"} 
+                                                className={entry.isInsight ? "fill-violet-200/50" : "fill-transparent"} 
                                             />
                                         </button>
                                     )}
@@ -973,8 +971,8 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end items-center gap-1">
                         <Tooltip content={selectedEntry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
-                            <button onClick={() => toggleInsight(selectedEntry)} className={`p-2 rounded-lg transition-all ${selectedEntry.isInsight ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
-                                <Sparkle size={16} strokeWidth={1} className={selectedEntry.isInsight ? "fill-transparent text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]" : "text-[#2F3437] dark:text-slate-400"} />
+                            <button onClick={() => toggleInsight(selectedEntry)} className={`p-2 rounded-lg transition-all ${selectedEntry.isInsight ? 'text-violet-600 dark:text-violet-300 bg-gradient-to-tr from-violet-100 via-fuchsia-50 to-cyan-50 dark:from-violet-900/30 dark:via-fuchsia-900/20 dark:to-cyan-900/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                                <Gem size={16} strokeWidth={1} className={selectedEntry.isInsight ? "fill-violet-200/50 shadow-[0_0_12px_rgba(139,92,246,0.3)]" : "text-[#2F3437] dark:text-slate-400"} />
                             </button>
                         </Tooltip>
                         <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="right" direction="up" />
