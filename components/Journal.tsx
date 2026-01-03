@@ -39,7 +39,7 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     return children;
 };
 
-// --- LITERARY TYPOGRAPHY COMPONENTS ---
+// --- LITERARY TYPOGRAPHY COMPONENTS (DEFAULT) ---
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-3 last:mb-0 text-base text-[#2F3437] dark:text-slate-300 leading-relaxed font-serif" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2 decoration-1" target="_blank" rel="noopener noreferrer" {...props} />,
@@ -55,6 +55,31 @@ const markdownComponents = {
             ? <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase tracking-wide" {...props}>{children}</code>
             : <code className="block bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 p-3 rounded-lg text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     }
+};
+
+// --- HOLOGRAM MARKDOWN COMPONENTS (FOR ANALYSIS MODAL) ---
+const HologramMarkdown = {
+    p: ({node, ...props}: any) => <p className="mb-6 last:mb-0 text-[17px] text-slate-600 dark:text-slate-300 leading-8 font-serif" {...props} />,
+    h1: ({node, ...props}: any) => <h1 className="font-mono text-[10px] uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mb-8 mt-10 text-center select-none" {...props} />,
+    h2: ({node, ...props}: any) => <h2 className="font-mono text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-4 mt-8 pl-4 border-l border-indigo-500/30" {...props} />,
+    h3: ({node, ...props}: any) => <h3 className="font-sans text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3 mt-6" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="space-y-4 my-6" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="space-y-4 my-6 list-none counter-reset-items" {...props} />,
+    li: ({node, ...props}: any) => (
+        <li className="relative pl-6 group">
+             <div className="absolute left-0 top-[0.6em] w-px h-[1em] bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-500 transition-colors" />
+             <div className="text-slate-700 dark:text-slate-300 font-serif leading-7">{props.children}</div>
+        </li>
+    ),
+    blockquote: ({node, ...props}: any) => (
+        <blockquote className="my-12 px-8 py-6 relative text-center">
+            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
+            <div className="font-serif text-xl italic text-slate-800 dark:text-slate-100 leading-relaxed tracking-wide" {...props} />
+            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
+        </blockquote>
+    ),
+    strong: ({node, ...props}: any) => <span className="font-sans font-bold text-slate-900 dark:text-slate-50 text-xs uppercase tracking-wide" {...props} />,
+    em: ({node, ...props}: any) => <em className="font-serif italic text-indigo-600 dark:text-indigo-400" {...props} />,
 };
 
 const TaskSelect: React.FC<{
@@ -865,14 +890,39 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       </div>
 
       {analysisResult && (
-          <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setAnalysisResult(null)}>
-              <div className="bg-white dark:bg-[#1e293b] w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><Sparkles size={20} strokeWidth={1} className="text-indigo-600 dark:text-indigo-400" /> Анализ Пути (Наставник)</h3><button onClick={() => setAnalysisResult(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
-                  <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 leading-relaxed text-sm"><ReactMarkdown components={markdownComponents}>{analysisResult}</ReactMarkdown></div>
-                  <div className="mt-8 flex justify-end gap-2">
-                      <Tooltip content="Сохранить в историю">
-                          <button onClick={handleSaveAnalysis} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"><Save size={20} strokeWidth={1} /></button>
-                      </Tooltip>
+          <div className="fixed inset-0 z-[120] bg-slate-200/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setAnalysisResult(null)}>
+              <div className="relative w-full max-w-2xl max-h-[85vh] rounded-[32px] overflow-hidden flex flex-col shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] animate-in zoom-in-95 duration-500 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-[40px] saturate-150 border border-white/40 dark:border-white/10" onClick={(e) => e.stopPropagation()}>
+                  
+                  {/* HOLOGRAM HEADER */}
+                  <div className="flex justify-between items-center p-8 pb-0 shrink-0">
+                      <div className="flex items-center gap-4">
+                          <Sparkles size={18} strokeWidth={1.5} className="text-indigo-500 animate-pulse duration-[3000ms] opacity-50" />
+                          <h3 className="font-sans text-xs font-bold tracking-[0.2em] uppercase text-slate-900/80 dark:text-slate-100/90">Анализ Пути</h3>
+                      </div>
+                      <button 
+                        onClick={() => setAnalysisResult(null)} 
+                        className="text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5"
+                      >
+                          <X size={20} strokeWidth={1} />
+                      </button>
+                  </div>
+
+                  {/* HOLOGRAM CONTENT */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar-ghost p-8 pt-6">
+                      <ReactMarkdown components={HologramMarkdown}>
+                          {analysisResult}
+                      </ReactMarkdown>
+                  </div>
+
+                  {/* HOLOGRAM FOOTER */}
+                  <div className="p-8 pt-0 flex justify-center shrink-0">
+                      <button 
+                        onClick={handleSaveAnalysis} 
+                        className="group flex items-center gap-3 px-8 py-3 rounded-full border border-slate-200/50 dark:border-slate-700/50 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-all duration-300"
+                      >
+                          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Принять в историю</span>
+                          <Save size={16} strokeWidth={1} className="group-hover:scale-110 transition-transform" />
+                      </button>
                   </div>
               </div>
           </div>
