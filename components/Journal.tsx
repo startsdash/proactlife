@@ -644,7 +644,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
                 <div className="pt-6 pb-2 max-w-4xl mx-auto w-full">
                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-mono">Хроника</h3>
+                        <h3 className="text-xs font-light text-slate-800 dark:text-slate-200 uppercase tracking-widest font-sans">Хроника</h3>
                         <div className="flex items-center gap-2">
                             {hasMentorTool && (
                                 <>
@@ -906,7 +906,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex flex-col gap-1">
-                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">Детали записи</h3>
+                        <h3 className="text-lg font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans mb-1">Детали записи</h3>
                         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
                             <Calendar size={12} strokeWidth={1} /> {formatDate(selectedEntry.date)}
                         </div>
