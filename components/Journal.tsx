@@ -575,6 +575,10 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
           .toUpperCase();
   };
 
+  const formatTimelineDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' }).toUpperCase().replace('.', '');
+  };
+
   return (
     <div className="flex flex-col md:flex-row h-full overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]">
       {/* LEFT PANEL: INPUT (Glass Refinement) */}
@@ -638,7 +642,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     />
                 </div>
 
-                <div className="pt-6 pb-2 max-w-3xl mx-auto w-full">
+                <div className="pt-6 pb-2 max-w-4xl mx-auto w-full">
                      <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-mono">Хроника</h3>
                         <div className="flex items-center gap-2">
@@ -738,90 +742,125 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 />
             </div>
             ) : (
-            <div className="max-w-3xl mx-auto w-full space-y-6">
-                {displayedEntries.map(entry => {
-                const mentor = config.mentors.find(m => m.id === entry.mentorId);
-                const isEditing = editingId === entry.id;
-                const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
+            <div className="max-w-4xl mx-auto w-full relative">
+                {/* The Ghost Line */}
+                <div className="absolute left-[3rem] md:left-[4rem] top-8 bottom-8 border-l border-slate-900/5 dark:border-white/5 width-px" />
 
-                return (
-                    <div 
-                        key={entry.id} 
-                        onClick={() => setSelectedEntryId(entry.id)} 
-                        className={`relative p-6 md:p-8 rounded-2xl border transition-all duration-300 group cursor-pointer
-                            ${entry.isInsight 
-                                ? 'bg-gradient-to-br from-amber-50/80 to-white dark:from-amber-900/10 dark:to-[#1e293b] border-amber-200/50 dark:border-amber-800/30 shadow-sm' 
-                                : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md'
-                            }
-                        `}
-                    >
+                <div className="space-y-8">
+                    {displayedEntries.map(entry => {
+                    const mentor = config.mentors.find(m => m.id === entry.mentorId);
+                    const isEditing = editingId === entry.id;
+                    const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
                     
-                    {/* CARD HEADER - ALIGNED */}
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
-                            <span>{formatDate(entry.date)}</span>
-                        </div>
+                    const primarySphereId = entry.spheres?.[0];
+                    const sphereConfig = SPHERES.find(s => s.id === primarySphereId);
+                    const nodeColorClass = sphereConfig 
+                        ? sphereConfig.text.replace('text-', 'border-') 
+                        : 'border-slate-300 dark:border-slate-600';
+                    const iconColorClass = sphereConfig
+                        ? sphereConfig.text
+                        : 'text-slate-400 dark:text-slate-500';
 
-                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                            {!isEditing && (
-                                <button 
-                                    onClick={() => toggleInsight(entry)} 
-                                    className={`p-1.5 rounded-lg transition-all ${
-                                        entry.isInsight 
-                                        ? "text-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-[0_0_10px_rgba(251,191,36,0.3)]" 
-                                        : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                                    }`}
-                                >
-                                    <Sparkle 
-                                        size={16} 
-                                        strokeWidth={1.5} 
-                                        className={entry.isInsight ? "fill-amber-500" : "fill-transparent"} 
-                                    />
-                                </button>
+                    return (
+                        <div key={entry.id} className="relative pl-20 md:pl-28 group">
+                            {/* Time Label */}
+                            <div className="absolute left-0 top-[2.25rem] w-[2.5rem] md:w-[3.5rem] text-right pr-2 select-none">
+                                <span className="font-mono text-[9px] text-slate-300 dark:text-slate-600 font-bold tracking-tighter block leading-none">
+                                    {formatTimelineDate(entry.date).split(' ')[0]}
+                                </span>
+                                <span className="font-mono text-slate-300 dark:text-slate-600 font-bold tracking-tighter block leading-none text-[8px] uppercase">
+                                    {formatTimelineDate(entry.date).split(' ')[1]}
+                                </span>
+                            </div>
+
+                            {/* Node Marker */}
+                            <div className="absolute left-[3rem] md:left-[4rem] top-[2.25rem] -translate-x-1/2 -translate-y-1/2 z-10 bg-[#f8fafc] dark:bg-[#0f172a] p-1.5 transition-colors duration-300">
+                                {entry.isInsight ? (
+                                    <Sparkles size={10} strokeWidth={2} className={iconColorClass} />
+                                ) : (
+                                    <div className={`w-1.5 h-1.5 rounded-full bg-transparent border-[1.5px] ${nodeColorClass}`} />
+                                )}
+                            </div>
+
+                            {/* Entry Card */}
+                            <div 
+                                onClick={() => setSelectedEntryId(entry.id)} 
+                                className={`relative p-6 md:p-8 rounded-2xl border transition-all duration-300 group cursor-pointer
+                                    ${entry.isInsight 
+                                        ? 'bg-gradient-to-br from-amber-50/80 to-white dark:from-amber-900/10 dark:to-[#1e293b] border-amber-200/50 dark:border-amber-800/30 shadow-sm' 
+                                        : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md'
+                                    }
+                                `}
+                            >
+                            
+                            {/* CARD HEADER - ALIGNED */}
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
+                                    <span>{formatDate(entry.date)}</span>
+                                </div>
+
+                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                    {!isEditing && (
+                                        <button 
+                                            onClick={() => toggleInsight(entry)} 
+                                            className={`p-1.5 rounded-lg transition-all ${
+                                                entry.isInsight 
+                                                ? "text-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-[0_0_10px_rgba(251,191,36,0.3)]" 
+                                                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                            }`}
+                                        >
+                                            <Sparkle 
+                                                size={16} 
+                                                strokeWidth={1.5} 
+                                                className={entry.isInsight ? "fill-amber-500" : "fill-transparent"} 
+                                            />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {isEditing ? (
+                                <div className="mb-4" onClick={(e) => e.stopPropagation()}>
+                                    <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
+                                    <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
+                                        <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
+                                        <button onClick={() => saveEdit(entry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
+                                    <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
+                                </div>
                             )}
-                        </div>
-                    </div>
 
-                    {isEditing ? (
-                        <div className="mb-4" onClick={(e) => e.stopPropagation()}>
-                            <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
-                            <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
-                                <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
-                                <button onClick={() => saveEdit(entry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
+                            {/* Context Link */}
+                            {linkedTask && !isEditing && (
+                                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
+                                        className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                                    >
+                                        <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                                            [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{linkedTask.content}</span> ]
+                                        </span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {entry.aiFeedback && (
+                                <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
+                                    <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
+                                </div>
+                                <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
+                                </div>
+                            )}
                             </div>
                         </div>
-                    ) : (
-                        <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
-                            <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
-                        </div>
-                    )}
-
-                    {/* Context Link */}
-                    {linkedTask && !isEditing && (
-                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
-                                className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
-                            >
-                                <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                                    [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{linkedTask.content}</span> ]
-                                </span>
-                            </button>
-                        </div>
-                    )}
-
-                    {entry.aiFeedback && (
-                        <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
-                            <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
-                        </div>
-                        <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
-                        </div>
-                    )}
-                    </div>
-                );
-                })}
+                    );
+                    })}
+                </div>
             </div>
             )}
         </div>
