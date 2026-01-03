@@ -644,7 +644,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
                 <div className="pt-6 pb-2 max-w-4xl mx-auto w-full">
                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xs font-light text-slate-800 dark:text-slate-200 uppercase tracking-widest font-sans">Хроника</h3>
+                        <h3 className="font-sans font-semibold text-[0.85rem] uppercase tracking-[0.15em] text-[#2F3437] dark:text-slate-200">Хроника</h3>
                         <div className="flex items-center gap-2">
                             {hasMentorTool && (
                                 <>
