@@ -59,7 +59,7 @@ const markdownComponents = {
 
 // --- HOLOGRAM MARKDOWN COMPONENTS (FOR ANALYSIS MODAL) ---
 const HologramMarkdown = {
-    p: ({node, ...props}: any) => <p className="mb-6 last:mb-0 text-[17px] text-slate-600 dark:text-slate-300 leading-8 font-serif" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-6 last:mb-0 text-[15px] md:text-[17px] text-slate-600 dark:text-slate-300 leading-7 md:leading-8 font-serif" {...props} />,
     h1: ({node, ...props}: any) => <h1 className="font-mono text-[10px] uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mb-8 mt-10 text-center select-none" {...props} />,
     h2: ({node, ...props}: any) => <h2 className="font-mono text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-4 mt-8 pl-4 border-l border-indigo-500/30" {...props} />,
     h3: ({node, ...props}: any) => <h3 className="font-sans text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3 mt-6" {...props} />,
@@ -74,7 +74,7 @@ const HologramMarkdown = {
     blockquote: ({node, ...props}: any) => (
         <blockquote className="my-12 px-8 py-6 relative text-center">
             <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
-            <div className="font-serif text-xl italic text-slate-800 dark:text-slate-100 leading-relaxed tracking-wide" {...props} />
+            <div className="font-serif text-lg md:text-xl italic text-slate-800 dark:text-slate-100 leading-relaxed tracking-wide" {...props} />
             <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
         </blockquote>
     ),
@@ -929,20 +929,61 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       )}
 
       {showHistory && (
-          <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
-              <div className="bg-white dark:bg-[#1e293b] w-full max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex justify-between items-center mb-6 shrink-0"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><History size={20} strokeWidth={1} className="text-indigo-600 dark:text-indigo-400" /> История Наставника</h3><button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button></div>
-                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar-light space-y-4">
-                      {mentorAnalyses.length === 0 ? (<div className="py-10"><EmptyState icon={Sparkles} title="Пусто" description="Посоветуйся с Наставником, чтобы начать историю" color="indigo" /></div>) : (
+          <div className="fixed inset-0 z-[120] bg-slate-200/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
+              <div className="relative w-full max-w-2xl max-h-[85vh] rounded-[32px] overflow-hidden flex flex-col shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] animate-in zoom-in-95 duration-500 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-[40px] saturate-150 border border-white/40 dark:border-white/10" onClick={(e) => e.stopPropagation()}>
+                  {/* Header */}
+                  <div className="flex justify-between items-center p-8 pb-0 shrink-0">
+                      <div className="flex items-center gap-4">
+                          <History size={18} strokeWidth={1.5} className="text-indigo-500 opacity-80" />
+                          <h3 className="font-sans text-xs font-bold tracking-[0.2em] uppercase text-slate-900/80 dark:text-slate-100/90">Архив Наставника</h3>
+                      </div>
+                      <button 
+                          onClick={() => setShowHistory(false)} 
+                          className="text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5"
+                      >
+                          <X size={20} strokeWidth={1} />
+                      </button>
+                  </div>
+
+                  {/* List */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar-ghost p-8 space-y-8">
+                      {mentorAnalyses.length === 0 ? (
+                          <div className="h-full flex flex-col items-center justify-center opacity-50">
+                              <Sparkles size={32} className="mb-4 text-slate-400" strokeWidth={1} />
+                              <p className="text-sm font-serif text-slate-500">История пуста</p>
+                          </div>
+                      ) : (
                           mentorAnalyses.sort((a,b) => b.date - a.date).map(analysis => (
-                              <div key={analysis.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-100 dark:border-slate-700 group">
-                                  <div className="flex justify-between items-start mb-3">
-                                      <div className="flex flex-col"><span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">{analysis.mentorName}</span><span className="text-[10px] text-slate-400 flex items-center gap-1 mt-1"><Calendar size={10} /> {new Date(analysis.date).toLocaleString()}</span></div>
-                                      <Tooltip content="Удалить">
-                                        <button onClick={() => { if (confirm("Удалить этот анализ?")) deleteMentorAnalysis(analysis.id); }} className="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={16} /></button>
-                                      </Tooltip>
+                              <div key={analysis.id} className="group relative">
+                                  {/* Timeline Node */}
+                                  <div className="absolute -left-3 top-0 bottom-0 border-l border-indigo-500/10 dark:border-indigo-400/10"></div>
+                                  <div className="absolute -left-[17px] top-0 w-2 h-2 rounded-full bg-indigo-500/20 ring-1 ring-indigo-500/50"></div>
+
+                                  <div className="pl-6 pb-8">
+                                      <div className="flex justify-between items-baseline mb-4">
+                                          <div className="flex items-center gap-3">
+                                              <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                                                  {new Date(analysis.date).toLocaleDateString()}
+                                              </span>
+                                              <span className="h-px w-8 bg-indigo-500/20"></span>
+                                              <span className="font-sans text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                                                  {analysis.mentorName}
+                                              </span>
+                                          </div>
+                                          <button 
+                                              onClick={() => { if (confirm("Удалить этот анализ?")) deleteMentorAnalysis(analysis.id); }} 
+                                              className="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                          >
+                                              <Trash2 size={14} />
+                                          </button>
+                                      </div>
+                                      
+                                      <div className="bg-white/40 dark:bg-white/5 border border-white/50 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm">
+                                          <ReactMarkdown components={HologramMarkdown}>
+                                              {analysis.content}
+                                          </ReactMarkdown>
+                                      </div>
                                   </div>
-                                  <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-serif"><ReactMarkdown components={markdownComponents}>{analysis.content}</ReactMarkdown></div>
                               </div>
                           ))
                       )}
