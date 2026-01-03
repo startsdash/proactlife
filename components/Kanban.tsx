@@ -1,10 +1,11 @@
 
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, BrainCircuit, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette, Bold, Italic, Eraser, Image as ImageIcon, Upload, RefreshCw, Shuffle, ArrowRight } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette, Bold, Italic, Eraser, Image as ImageIcon, Upload, RefreshCw, Shuffle, ArrowRight } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
@@ -495,7 +496,6 @@ const SegmentedProgressBar = ({ total, current, color = 'text-indigo-500', class
     );
 };
 
-// --- AURA RING SPHERE SELECTOR ---
 const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -529,17 +529,10 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                 <div className="flex items-center gap-2 overflow-hidden">
                     {selected.length > 0 ? (
                         <>
-                            <div className="flex -space-x-1.5 shrink-0">
+                            <div className="flex -space-x-1 shrink-0">
                                 {selected.map(s => {
                                     const sp = SPHERES.find(x => x.id === s);
-                                    // Aura Ring Style
-                                    return sp ? (
-                                        <div 
-                                            key={s} 
-                                            className={`w-3.5 h-3.5 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
-                                            style={{ borderWidth: '1.5px' }}
-                                        /> 
-                                    ) : null;
+                                    return sp ? <div key={s} className={`w-3 h-3 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
                                 })}
                             </div>
                             <span className="text-sm font-medium text-[#2F3437] dark:text-slate-200 truncate">
@@ -564,9 +557,9 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
                                 onClick={() => toggleSphere(s.id)}
                                 className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                             >
-                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-[#6B6E70]'} strokeWidth={1} />}
+                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-[#6B6E70]'} />}
                                 <span className="flex-1">{s.label}</span>
-                                {isSelected && <Check size={14} className="text-indigo-500" strokeWidth={1} />}
+                                {isSelected && <Check size={14} className="text-indigo-500" />}
                             </button>
                         );
                     })}
@@ -610,9 +603,9 @@ const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }
                                     onClick={() => toggleSphere(s.id)}
                                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-[#2F3437] dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                                 >
-                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-[#6B6E70]'} strokeWidth={1} />}
+                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-[#6B6E70]'} />}
                                     <span className="flex-1">{s.label}</span>
-                                    {isSelected && <Check size={12} className="text-indigo-500" strokeWidth={1} />}
+                                    {isSelected && <Check size={12} className="text-indigo-500" />}
                                 </button>
                             );
                         })}
@@ -710,7 +703,7 @@ const InteractiveChallenge: React.FC<{
                         className="flex-1 flex items-start gap-2 text-left py-1 hover:bg-black/5 dark:hover:bg-white/5 rounded"
                     >
                         <div className={`mt-0.5 shrink-0 ${isChecked ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-400'}`}>
-                            {isChecked ? <CheckCircle2 size={16} strokeWidth={1} /> : <Circle size={16} strokeWidth={1} />}
+                            {isChecked ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                         </div>
                         <span className={`text-sm font-sans ${isChecked ? 'text-[#6B6E70] dark:text-slate-500 line-through' : 'text-[#2F3437] dark:text-slate-300'}`}>
                             <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{formatForDisplay(applyTypography(label))}</ReactMarkdown>
@@ -791,7 +784,7 @@ const StaticChallengeRenderer: React.FC<{
                     style={{ marginLeft: `${indent}px` }}
                 >
                     <div className={`mt-0.5 shrink-0 ${iconClass}`}>
-                        <Icon size={16} strokeWidth={1} />
+                        <Icon size={16} />
                     </div>
                     <span className={`text-sm text-[#2F3437] dark:text-slate-300 font-sans`}>
                         <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{formatForDisplay(applyTypography(label))}</ReactMarkdown>
@@ -1737,7 +1730,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 onClick={(e) => moveToDoing(e, task)} 
                                                 className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
                                             >
-                                                <Play size={16} className="fill-current" strokeWidth={1} />
+                                                <Play size={16} className="fill-current" />
                                             </button>
                                         </Tooltip>
                                    )}
@@ -1753,7 +1746,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                         : 'text-slate-400 dark:text-slate-500 hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/20'
                                                     }`}
                                                >
-                                                    <Book size={16} strokeWidth={1} />
+                                                    <Book size={16} />
                                                </button>
                                            </Tooltip>
 
@@ -1786,7 +1779,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                                 <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                                                             </div>
                                                         ) : (
-                                                            <Zap size={16} strokeWidth={1} />
+                                                            <Zap size={16} />
                                                         )}
                                                     </button>
                                                </Tooltip>
@@ -1806,7 +1799,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                                 <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                                                             </div>
                                                        ) : (
-                                                           <BrainCircuit size={16} strokeWidth={1} /> 
+                                                           <Bot size={16} /> 
                                                        )}
                                                    </button>
                                                </Tooltip>
@@ -1833,7 +1826,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                     }} 
                                                     className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
                                                 >
-                                                    <Trophy size={16} strokeWidth={1} /> 
+                                                    <Trophy size={16} /> 
                                                 </button>
                                             </Tooltip>
                                             <Tooltip content="Вернуть в работу">
@@ -1844,7 +1837,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                     }} 
                                                     className="p-2 rounded-full text-slate-400 dark:text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all opacity-60 hover:opacity-100"
                                                 >
-                                                    <RotateCcw size={16} strokeWidth={1} />
+                                                    <RotateCcw size={16} strokeWidth={2} />
                                                 </button>
                                             </Tooltip>
                                         </>
@@ -1884,32 +1877,17 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             <div className="relative z-10 w-full px-4 md:px-8 pb-2">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
-                        <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} strokeWidth={1} />
+                        <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
                         <input ref={searchInputRef} type="text" placeholder="Поиск задач..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400" />
                         {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
                     </div>
-                    <Tooltip content="Сферы" side="bottom"><button onClick={() => setShowSphereSelector(!showSphereSelector)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showSphereSelector || activeSphereFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Layout size={20} strokeWidth={1} /></button></Tooltip>
-                    <Tooltip content="Сортировка" side="bottom"><button onClick={toggleSortOrder} className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">{sortOrder === 'asc' ? <ArrowUp size={20} strokeWidth={1} /> : <ArrowDown size={20} strokeWidth={1} />}</button></Tooltip>
+                    <Tooltip content="Сферы" side="bottom"><button onClick={() => setShowSphereSelector(!showSphereSelector)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showSphereSelector || activeSphereFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Layout size={20} /></button></Tooltip>
+                    <Tooltip content="Сортировка" side="bottom"><button onClick={toggleSortOrder} className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">{sortOrder === 'asc' ? <ArrowUp size={20} /> : <ArrowDown size={20} />}</button></Tooltip>
                 </div>
                 {(showSphereSelector || activeSphereFilter) && (
                     <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200 scrollbar-none">
                         <button onClick={() => setActiveSphereFilter(null)} className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${!activeSphereFilter ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}>Все</button>
-                        {SPHERES.map(s => { 
-                            const isActive = activeSphereFilter === s.id; 
-                            return (
-                                <button 
-                                    key={s.id} 
-                                    onClick={() => setActiveSphereFilter(isActive ? null : s.id)} 
-                                    className={`px-3 py-1.5 text-xs font-mono font-bold rounded-full transition-all flex items-center gap-1.5 border uppercase tracking-wider whitespace-nowrap ${
-                                        isActive 
-                                        ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400` 
-                                        : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'
-                                    }`}
-                                >
-                                    {isActive ? `[ ${s.label} ]` : s.label}
-                                </button>
-                            ); 
-                        })}
+                        {SPHERES.map(s => { const isActive = activeSphereFilter === s.id; return (<button key={s.id} onClick={() => setActiveSphereFilter(isActive ? null : s.id)} className={`px-3 py-1.5 text-xs font-mono font-bold rounded-full transition-all flex items-center gap-1.5 border uppercase tracking-wider whitespace-nowrap ${isActive ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400` : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'}`}>{isActive ? `[ ${s.label} ]` : s.label}</button>); })}
                     </div>
                 )}
             </div>
@@ -1957,7 +1935,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             />
                         ) : (
                             <h3 className="text-2xl font-sans font-bold text-slate-900 dark:text-white leading-tight">
-                                {activeModal.type === 'stuck' && <span className="flex items-center gap-2"><BrainCircuit size={24} className="text-violet-500"/> Личный консультант</span>}
+                                {activeModal.type === 'stuck' && <span className="flex items-center gap-2"><Bot size={24} className="text-violet-500"/> Личный консультант</span>}
                                 {activeModal.type === 'challenge' && <span className="flex items-center gap-2"><Zap size={24} className="text-indigo-500"/> Новый вызов</span>}
                             </h3>
                         )}
@@ -1994,7 +1972,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-center text-slate-400 py-10 flex flex-col items-center gap-2"><BrainCircuit size={32} className="opacity-20" /><span>Не удалось получить ответ.</span></div>
+                                <div className="text-center text-slate-400 py-10 flex flex-col items-center gap-2"><Bot size={32} className="opacity-20" /><span>Не удалось получить ответ.</span></div>
                             )}
                         </div>
                     )}
@@ -2106,7 +2084,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             <CollapsibleSection title="История" icon={<History size={14}/>}>
                                                 <div className="space-y-4">
                                                     {task.challengeHistory?.map((h, i) => (<div key={`ch-${i}`} className="text-sm bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50 relative group"><div className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Zap size={10}/> Архивный челлендж</div><div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><StaticChallengeRenderer content={h} mode="history" /></div>{!isDone && <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"><Tooltip content="Удалить"><button onClick={() => deleteChallengeFromHistory(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button></Tooltip></div>}</div>))}
-                                                    {task.consultationHistory?.map((h, i) => (<div key={`cons-${i}`} className="text-sm bg-violet-50/30 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-800/30 relative group"><div className="text-[9px] font-bold text-violet-400 mb-2 uppercase tracking-wider flex items-center gap-1"><BrainCircuit size={10}/> Консультация</div><div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(h))}</ReactMarkdown></div>{!isDone && <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"><Tooltip content="Удалить"><button onClick={() => deleteConsultation(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button></Tooltip></div>}</div>))}
+                                                    {task.consultationHistory?.map((h, i) => (<div key={`cons-${i}`} className="text-sm bg-violet-50/30 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-800/30 relative group"><div className="text-[9px] font-bold text-violet-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Bot size={10}/> Консультация</div><div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(h))}</ReactMarkdown></div>{!isDone && <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"><Tooltip content="Удалить"><button onClick={() => deleteConsultation(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button></Tooltip></div>}</div>))}
                                                 </div>
                                             </CollapsibleSection>
                                         )}

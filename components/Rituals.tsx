@@ -24,7 +24,7 @@ const getLocalDateKey = (date: Date) => {
     return `${year}-${month}-${day}`;
 };
 
-// Reusable Sphere Selector (Local Definition - Filter/Create)
+// Reusable Sphere Selector (Local Definition)
 const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
     const toggleSphere = (id: string) => {
         if (selected.includes(id)) {
@@ -438,18 +438,12 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                           </div>
 
                           <div className="flex justify-between items-end relative z-10">
-                              <div className="flex -space-x-1">
+                              <div className="flex gap-1">
                                   {habit.spheres?.map(sid => {
                                       const s = SPHERES.find(x => x.id === sid);
                                       if (!s) return null;
-                                      // Aura Ring Style for Habit Cards
                                       return (
-                                          <div 
-                                            key={sid} 
-                                            className={`w-3.5 h-3.5 rounded-full border bg-transparent ${s.text.replace('text-', 'border-')}`} 
-                                            style={{ borderWidth: '1.5px' }}
-                                            title={s.label}
-                                          />
+                                          <div key={sid} className={`w-2 h-2 rounded-full ${s.bg.replace('50', '400').replace('/30', '')}`} title={s.label} />
                                       );
                                   })}
                               </div>
