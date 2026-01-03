@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Note, Task, Habit, JournalEntry, Module } from '../types';
 import { motion } from 'framer-motion';
-import { Activity, Flame, Zap, Target, BookOpen, Clock, BrainCircuit, Calendar, ArrowUpRight, TrendingUp, Trophy, Medal, RotateCcw, Lightbulb } from 'lucide-react';
+import { Activity, Flame, Zap, Target, BookOpen, Clock, BrainCircuit, Calendar, ArrowUpRight, TrendingUp, Trophy, Medal, RotateCcw, Sparkles } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
 interface Props {
@@ -696,7 +696,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
             transition={{ type: "spring", stiffness: 300 }}
         >
             <div className="w-full flex items-center gap-2 mb-2">
-                <Activity size={16} className="text-slate-400" />
+                <Activity size={16} className="text-slate-400" strokeWidth={1} />
                 <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Энергия дня</span>
             </div>
             
@@ -716,7 +716,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         >
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-2">
-                    <Flame size={16} className="text-orange-500" />
+                    <Flame size={16} className="text-orange-500" strokeWidth={1} />
                     <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Ритм привычек (Неделя)</span>
                 </div>
             </div>
@@ -732,7 +732,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
             whileHover={{ y: -2 }}
         >
              <div className="flex items-center gap-2">
-                 <BrainCircuit size={16} className="text-indigo-500" />
+                 <BrainCircuit size={16} className="text-indigo-500" strokeWidth={1} />
                  <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Мысли</span>
              </div>
              <div className="mt-2">
@@ -748,7 +748,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         <motion.div className="md:col-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <Clock size={16} className="text-slate-400" />
+                    <Clock size={16} className="text-slate-400" strokeWidth={1} />
                     <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Хронотип активности</span>
                 </div>
                 <Tooltip content="Сбросить показания">
@@ -756,7 +756,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
                         onClick={handleResetChronotype} 
                         className="text-slate-400 hover:text-indigo-500 transition-colors p-1 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
                     >
-                        <RotateCcw size={14} />
+                        <RotateCcw size={14} strokeWidth={1} />
                     </button>
                 </Tooltip>
             </div>
@@ -780,7 +780,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
             className="md:col-span-1 md:row-span-2 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col relative overflow-hidden cursor-pointer group"
         >
              <div className="flex items-center gap-2 mb-6">
-                 <Zap size={16} className="text-indigo-500" />
+                 <Zap size={16} className="text-indigo-500" strokeWidth={1} />
                  <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Вызовы</span>
              </div>
              
@@ -798,7 +798,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
                 ) : (
                     <div className="text-center opacity-40 py-10 flex flex-col items-center">
                         <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-full mb-3 text-slate-300 dark:text-slate-600">
-                            <Medal size={24} />
+                            <Medal size={24} strokeWidth={1} />
                         </div>
                         <div className="text-xs text-slate-400">Нет активных вызовов</div>
                     </div>
@@ -819,7 +819,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         {/* 6. BALANCE (Bar Chart - Bottom Left) */}
         <motion.div className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
              <div className="flex items-center gap-2 mb-4">
-                 <Target size={16} className="text-emerald-500" />
+                 <Target size={16} className="text-emerald-500" strokeWidth={1} />
                  <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Баланс сфер (7 дн)</span>
              </div>
              <div className="flex-1 flex items-end">
@@ -839,7 +839,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
              
              <div className="flex items-center gap-2 relative z-10">
-                 <Lightbulb size={16} className="text-indigo-200" />
+                 <Sparkles size={16} className="text-indigo-200" strokeWidth={1} />
                  <span className="text-xs font-bold uppercase text-indigo-200 tracking-wider">Инсайты</span>
              </div>
              
@@ -854,7 +854,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         <motion.div className="md:col-span-1 bg-white dark:bg-[#1e293b] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
              <div className="flex items-center justify-between mb-4">
                  <div className="flex items-center gap-2">
-                     <Calendar size={16} className="text-slate-400" />
+                     <Calendar size={16} className="text-slate-400" strokeWidth={1} />
                      <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Общая активность</span>
                  </div>
                  {/* Toggle Switch */}
