@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
@@ -835,9 +836,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
-                                        className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                                        className="font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
                                     >
-                                        <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                                        <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
                                             [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{linkedTask.content}</span> ]
                                         </span>
                                     </button>
@@ -959,9 +960,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                         <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
                             <button 
                                 onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(selectedLinkedTask.id); }}
-                                className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                                className="font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
                             >
-                                <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                                <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
                                     [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{selectedLinkedTask.content}</span> ]
                                 </span>
                             </button>
