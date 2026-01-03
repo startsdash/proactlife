@@ -595,7 +595,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
           </div>
           <div>
              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
-               <Zap size={10} strokeWidth={1} /> Сферы
+               <Target size={10} strokeWidth={1} /> Сферы
              </label>
              <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
           </div>
@@ -760,38 +760,24 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     <div className="flex justify-between items-center mb-4">
                         <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
                             <span>{formatDate(entry.date)}</span>
-                            {/* Sphere Aura Rings */}
-                            {entry.spheres && entry.spheres.length > 0 && (
-                                <div className="flex -space-x-1.5 opacity-80">
-                                    {entry.spheres.map(s => {
-                                        const sp = SPHERES.find(x => x.id === s);
-                                        // Aura Ring Style
-                                        return sp ? (
-                                            <div 
-                                                key={s} 
-                                                className={`w-3.5 h-3.5 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
-                                                style={{ borderWidth: '1.5px' }}
-                                            /> 
-                                        ) : null;
-                                    })}
-                                </div>
-                            )}
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            {entry.isInsight && (
-                                <div className="text-amber-400 p-1 rounded-full bg-amber-50 dark:bg-amber-900/20 shadow-[0_0_10px_rgba(251,191,36,0.3)]">
-                                    <Sparkle size={14} fill="currentColor" strokeWidth={1} className="fill-amber-400" />
-                                </div>
-                            )}
-                            
-                            {/* Quick Actions on Hover */}
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                             {!isEditing && (
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                        <button onClick={() => toggleInsight(entry)} className="p-1.5 text-slate-300 hover:text-amber-500 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
-                                            <Sparkle size={14} strokeWidth={1} className={entry.isInsight ? "fill-transparent text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]" : "text-[#2F3437] dark:text-slate-400"} />
-                                        </button>
-                                </div>
+                                <button 
+                                    onClick={() => toggleInsight(entry)} 
+                                    className={`p-1.5 rounded-lg transition-all ${
+                                        entry.isInsight 
+                                        ? "text-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-[0_0_10px_rgba(251,191,36,0.3)]" 
+                                        : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                    }`}
+                                >
+                                    <Sparkle 
+                                        size={16} 
+                                        strokeWidth={1.5} 
+                                        className={entry.isInsight ? "fill-amber-500" : "fill-transparent"} 
+                                    />
+                                </button>
                             )}
                         </div>
                     </div>
@@ -937,9 +923,11 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                         <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
                             <button 
                                 onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(selectedLinkedTask.id); }}
-                                className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx"
+                                className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
                             >
-                                <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity">[ CONTEXT: {selectedLinkedTask.content.substring(0, 40)}{selectedLinkedTask.content.length > 40 ? '...' : ''} ]</span>
+                                <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                                    [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{selectedLinkedTask.content}</span> ]
+                                </span>
                             </button>
                         </div>
                     )}
