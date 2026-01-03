@@ -57,6 +57,30 @@ const markdownComponents = {
     }
 };
 
+// Helper: Get node color class
+const getTimelineNodeClass = (spheres?: string[]) => {
+    if (!spheres || spheres.length === 0) return 'border-slate-300 dark:border-slate-600';
+    const first = spheres[0];
+    const sphere = SPHERES.find(s => s.id === first);
+    if (!sphere) return 'border-slate-300 dark:border-slate-600';
+    
+    // Hardcoded map for safety, assuming standard spheres
+    switch(sphere.color) {
+        case 'indigo': return 'border-indigo-500';
+        case 'emerald': return 'border-emerald-500';
+        case 'rose': return 'border-rose-500';
+        default: return 'border-slate-300 dark:border-slate-600';
+    }
+};
+
+// Date Formatter for Timeline
+const getTimelineDate = (ts: number) => {
+    const d = new Date(ts);
+    const day = d.getDate();
+    const month = d.toLocaleString('ru-RU', { month: 'short' }).toUpperCase().replace('.', '');
+    return { day, month };
+};
+
 const TaskSelect: React.FC<{
   tasks: Task[];
   selectedId: string;
@@ -619,7 +643,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         </div>
       </div>
 
-      {/* RIGHT PANEL: CHRONICLE (Glass Horizon) */}
+      {/* RIGHT PANEL: CHRONICLE (Ghost Timeline) */}
       <div 
         className="flex-1 flex flex-col relative bg-slate-50/30 dark:bg-slate-900/30 min-h-0"
         ref={scrollContainerRef}
@@ -639,7 +663,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 </div>
 
                 <div className="pt-6 pb-2 max-w-3xl mx-auto w-full">
-                     <div className="flex justify-between items-center mb-4">
+                     <div className="flex justify-between items-center mb-4 pl-4 md:pl-20">
                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-mono">Хроника</h3>
                         <div className="flex items-center gap-2">
                             {hasMentorTool && (
@@ -674,7 +698,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                         </div>
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 pl-4 md:pl-20">
                         <div className="relative flex-1 group">
                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" strokeWidth={1} />
                             <input 
@@ -738,101 +762,124 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 />
             </div>
             ) : (
-            <div className="max-w-3xl mx-auto w-full space-y-6">
+            <div className="relative pl-4 md:pl-20 max-w-3xl mx-auto w-full space-y-8">
+                {/* The Thread */}
+                <div className="absolute left-2 md:left-[3.5rem] top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-800/50" />
+
                 {displayedEntries.map(entry => {
                 const mentor = config.mentors.find(m => m.id === entry.mentorId);
                 const isEditing = editingId === entry.id;
                 const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
+                const { day, month } = getTimelineDate(entry.date);
+                const colorClass = getTimelineNodeClass(entry.spheres || []);
 
                 return (
                     <div 
                         key={entry.id} 
-                        onClick={() => setSelectedEntryId(entry.id)} 
-                        className={`relative p-6 md:p-8 rounded-2xl border transition-all duration-300 group cursor-pointer
-                            ${entry.isInsight 
-                                ? 'bg-gradient-to-br from-amber-50/80 to-white dark:from-amber-900/10 dark:to-[#1e293b] border-amber-200/50 dark:border-amber-800/30 shadow-sm' 
-                                : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md'
-                            }
-                        `}
+                        className="relative group"
                     >
+                        {/* Desktop Timeline Date */}
+                        <div className="hidden md:flex flex-col items-end absolute right-full mr-8 top-8 w-12 text-[9px] font-mono text-slate-300 dark:text-slate-600 leading-tight select-none">
+                            <span className="font-bold">{day}</span>
+                            <span>{month}</span>
+                        </div>
+
+                        {/* Node */}
+                        <div className={`absolute left-2 md:left-[3.5rem] top-8 -translate-x-1/2 z-10 bg-[#f8fafc] dark:bg-[#0f172a] p-1`}>
+                            {entry.isInsight ? (
+                                <Sparkle size={10} className="text-amber-400 fill-amber-400 drop-shadow-sm" />
+                            ) : (
+                                <div className={`w-1.5 h-1.5 rounded-full border-[1.5px] bg-white dark:bg-slate-900 ${colorClass}`} />
+                            )}
+                        </div>
+
+                        <div
+                            onClick={() => setSelectedEntryId(entry.id)} 
+                            className={`relative p-6 md:p-8 rounded-2xl border transition-all duration-300 cursor-pointer
+                                ${entry.isInsight 
+                                    ? 'bg-gradient-to-br from-amber-50/80 to-white dark:from-amber-900/10 dark:to-[#1e293b] border-amber-200/50 dark:border-amber-800/30 shadow-sm' 
+                                    : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md'
+                                }
+                            `}
+                        >
                     
-                    {/* CARD HEADER - ALIGNED */}
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
-                            <span>{formatDate(entry.date)}</span>
-                            {/* Sphere Aura Rings */}
-                            {entry.spheres && entry.spheres.length > 0 && (
-                                <div className="flex -space-x-1.5 opacity-80">
-                                    {entry.spheres.map(s => {
-                                        const sp = SPHERES.find(x => x.id === s);
-                                        // Aura Ring Style
-                                        return sp ? (
-                                            <div 
-                                                key={s} 
-                                                className={`w-3.5 h-3.5 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
-                                                style={{ borderWidth: '1.5px' }}
-                                            /> 
-                                        ) : null;
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            {entry.isInsight && (
-                                <div className="text-amber-400 p-1 rounded-full bg-amber-50 dark:bg-amber-900/20 shadow-[0_0_10px_rgba(251,191,36,0.3)]">
-                                    <Sparkle size={14} fill="currentColor" strokeWidth={1} className="fill-amber-400" />
-                                </div>
-                            )}
+                        {/* CARD HEADER - ALIGNED */}
+                        <div className="flex justify-between items-center mb-4">
+                            {/* Mobile Date - only show if md:hidden */}
+                            <div className="md:hidden font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
+                                <span>{formatDate(entry.date)}</span>
+                            </div>
                             
-                            {/* Quick Actions on Hover */}
-                            {!isEditing && (
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                        <button onClick={() => toggleInsight(entry)} className="p-1.5 text-slate-300 hover:text-amber-500 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
-                                            <Sparkle size={14} strokeWidth={1} className={entry.isInsight ? "fill-transparent text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]" : "text-[#2F3437] dark:text-slate-400"} />
-                                        </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                            {/* Desktop Sphere Rings (kept for visual even if timeline has nodes, to show multi-spheres) */}
+                            <div className="hidden md:flex flex -space-x-1.5 opacity-80">
+                                {entry.spheres && entry.spheres.map(s => {
+                                    const sp = SPHERES.find(x => x.id === s);
+                                    return sp ? (
+                                        <div 
+                                            key={s} 
+                                            className={`w-3.5 h-3.5 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
+                                            style={{ borderWidth: '1.5px' }}
+                                        /> 
+                                    ) : null;
+                                })}
+                            </div>
 
-                    {isEditing ? (
-                        <div className="mb-4" onClick={(e) => e.stopPropagation()}>
-                            <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
-                            <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
-                                <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
-                                <button onClick={() => saveEdit(entry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
+                            <div className="flex items-center gap-2 ml-auto">
+                                {entry.isInsight && (
+                                    <div className="text-amber-400 p-1 rounded-full bg-amber-50 dark:bg-amber-900/20 shadow-[0_0_10px_rgba(251,191,36,0.3)]">
+                                        <Sparkle size={14} fill="currentColor" strokeWidth={1} className="fill-amber-400" />
+                                    </div>
+                                )}
+                                
+                                {/* Quick Actions on Hover */}
+                                {!isEditing && (
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                            <button onClick={() => toggleInsight(entry)} className="p-1.5 text-slate-300 hover:text-amber-500 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
+                                                <Sparkle size={14} strokeWidth={1} className={entry.isInsight ? "fill-transparent text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]" : "text-[#2F3437] dark:text-slate-400"} />
+                                            </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    ) : (
-                        <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
-                            <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
-                        </div>
-                    )}
 
-                    {/* Context Link */}
-                    {linkedTask && !isEditing && (
-                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
-                                className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
-                            >
-                                <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                                    [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{linkedTask.content}</span> ]
-                                </span>
-                            </button>
-                        </div>
-                    )}
+                        {isEditing ? (
+                            <div className="mb-4" onClick={(e) => e.stopPropagation()}>
+                                <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
+                                <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
+                                    <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
+                                    <button onClick={() => saveEdit(entry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
+                                <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
+                            </div>
+                        )}
 
-                    {entry.aiFeedback && (
-                        <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
-                            <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
+                        {/* Context Link */}
+                        {linkedTask && !isEditing && (
+                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
+                                    className="font-mono text-[10px] text-slate-400 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                                >
+                                    <span className="opacity-50 group-hover/ctx:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                                        [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{linkedTask.content}</span> ]
+                                    </span>
+                                </button>
+                            </div>
+                        )}
+
+                        {entry.aiFeedback && (
+                            <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
+                            <div className="flex items-center gap-2 mb-1">
+                                <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
+                                <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
+                            </div>
+                            <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
+                            </div>
+                        )}
                         </div>
-                        <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
-                        </div>
-                    )}
                     </div>
                 );
                 })}
