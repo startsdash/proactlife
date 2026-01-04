@@ -45,7 +45,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
 
   const navItems = [
     { id: Module.NAPKINS, icon: StickyNote, label: 'Заметки' },
-    { id: Module.SKETCHPAD, icon: Palette, label: 'Sketchpad' },
+    // Sketchpad is now a tab inside Napkins
     { id: Module.SANDBOX, icon: Box, label: 'Хаб' },
     { id: Module.KANBAN, icon: KanbanIcon, label: 'Спринты' },
     { id: Module.RITUALS, icon: Flame, label: 'Трекер' },

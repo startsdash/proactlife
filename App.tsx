@@ -414,8 +414,15 @@ const App: React.FC = () => {
       <Onboarding onClose={() => setShowOnboarding(false)} />
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
       {module === Module.DASHBOARD && <Dashboard notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} onNavigate={handleNavigate} />}
-      {module === Module.NAPKINS && <Napkins notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} />}
-      {module === Module.SKETCHPAD && <Sketchpad items={data.sketchpad || []} addItem={addSketchItem} deleteItem={deleteSketchItem} updateItem={updateSketchItem} />}
+      {/* Updated Napkins with Sketchpad props */}
+      {(module === Module.NAPKINS || module === Module.SKETCHPAD) && (
+          <Napkins 
+            notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} 
+            sketchItems={data.sketchpad || []} addSketchItem={addSketchItem} deleteSketchItem={deleteSketchItem} updateSketchItem={updateSketchItem}
+            defaultTab={module === Module.SKETCHPAD ? 'sketchpad' : undefined}
+          />
+      )}
+      {/* REMOVED STANDALONE SKETCHPAD */}
       {module === Module.SANDBOX && <Sandbox notes={data.notes} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
