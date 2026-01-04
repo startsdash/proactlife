@@ -43,8 +43,6 @@ export interface SketchItem {
   color?: string;
   rotation: number;
   widthClass?: string;
-  x?: number; // Canvas X position
-  y?: number; // Canvas Y position
 }
 
 export interface Subtask {
