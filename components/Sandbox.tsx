@@ -45,13 +45,18 @@ const DotGridBackground = () => (
 
 interface AuraRingProps {
     sphere: typeof SPHERES[0];
-    activeCount: number;
+    stats: { active: number, done: number };
     colorClass: string;
 }
 
-const AuraRing: React.FC<AuraRingProps> = ({ sphere, activeCount, colorClass }) => {
+const AuraRing: React.FC<AuraRingProps> = ({ sphere, stats, colorClass }) => {
     // Pulse animation intensity based on count
-    const pulseScale = 1 + Math.min(0.2, activeCount * 0.02);
+    const pulseScale = 1 + Math.min(0.2, stats.active * 0.02);
+    const totalActivity = stats.active + stats.done;
+    
+    // Scale bars visually (max 10 units for width calculation)
+    const solidWidth = Math.min(100, stats.done * 5);
+    const dottedWidth = Math.min(100, stats.active * 5);
     
     return (
         <div className="flex flex-col items-center gap-3 relative group cursor-default">
@@ -68,7 +73,7 @@ const AuraRing: React.FC<AuraRingProps> = ({ sphere, activeCount, colorClass }) 
                     <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-200 dark:text-slate-800" />
                     <motion.circle 
                         initial={{ pathLength: 0 }}
-                        animate={{ pathLength: Math.min(1, activeCount / 10) }} // 10 tasks = full ring
+                        animate={{ pathLength: Math.min(1, stats.active / 10) }} // 10 tasks = full ring
                         transition={{ duration: 1.5, ease: "easeOut" }}
                         cx="32" cy="32" r="30" 
                         fill="none" stroke="currentColor" strokeWidth="1.5" 
@@ -83,9 +88,20 @@ const AuraRing: React.FC<AuraRingProps> = ({ sphere, activeCount, colorClass }) 
                 </div>
             </div>
             
-            <div className="text-center">
+            <div className="text-center flex flex-col items-center">
                 <div className="font-sans text-[10px] font-bold uppercase tracking-widest text-slate-400">{sphere.label}</div>
-                <div className="font-mono text-[10px] text-slate-300 dark:text-slate-600 mt-0.5">{String(activeCount).padStart(2, '0')} ACT</div>
+                
+                {/* Energy Bar: Solid (Done) + Dotted (Active) */}
+                <div className="flex items-center justify-center gap-0.5 mt-1.5 h-[2px] w-10 overflow-hidden opacity-60">
+                     <div 
+                        className={`h-full ${sphere.bg.replace('50', '400').replace('dark:bg-', 'dark:bg-').replace('/30', '')}`} 
+                        style={{ width: `${solidWidth}%`, minWidth: stats.done > 0 ? '4px' : '0' }} 
+                     />
+                     <div 
+                        className={`h-full border-t-[2px] border-dotted ${sphere.text.replace('text-', 'border-')}`} 
+                        style={{ width: `${dottedWidth}%`, minWidth: stats.active > 0 ? '4px' : '0' }} 
+                     />
+                </div>
             </div>
         </div>
     );
@@ -113,18 +129,23 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
   const incomingNotes = useMemo(() => notes.filter(n => n.status === 'sandbox'), [notes]);
   const activeNote = useMemo(() => notes.find(n => n.id === selectedNoteId), [notes, selectedNoteId]);
 
-  // Sphere Stats Calculation
+  // Sphere Stats Calculation (Active vs Completed)
   const sphereStats = useMemo(() => {
-      const stats = { productivity: 0, growth: 0, relationships: 0 };
-      // Count active tasks per sphere
+      const stats = { 
+          productivity: { active: 0, done: 0 }, 
+          growth: { active: 0, done: 0 }, 
+          relationships: { active: 0, done: 0 } 
+      };
+      
       tasks.forEach(t => {
-          if (!t.isArchived && t.column !== 'done') {
-              t.spheres?.forEach(s => {
-                  if (stats[s as keyof typeof stats] !== undefined) {
-                      stats[s as keyof typeof stats]++;
-                  }
-              });
-          }
+          const isDone = t.column === 'done' || t.isArchived;
+          t.spheres?.forEach(s => {
+              const key = s as keyof typeof stats;
+              if (stats[key] !== undefined) {
+                  if (isDone) stats[key].done++;
+                  else stats[key].active++;
+              }
+          });
       });
       return stats;
   }, [tasks]);
@@ -132,9 +153,7 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
   // Transformation Flow Data (Mock for now, or derived)
   const flowData = useMemo(() => {
       // Simple logic: Tasks created last 7 days from Sandbox notes?
-      // Just visually represent "Recent Creations"
       const recentTasks = tasks.filter(t => t.createdAt > Date.now() - 7 * 86400000).length;
-      const recentSkills = flashcards.length; // Simplified
       return [2, 4, 3, 5, recentTasks, 4, 6]; // Mock curve
   }, [tasks, flashcards]);
 
@@ -159,7 +178,6 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
       column: 'todo',
       createdAt: Date.now()
     });
-    // Archive note after processing? Optional. Keeping in Sandbox for now or user manually archives.
     if(confirm("Задача создана. Архивировать мысль?")) {
         onProcessNote(activeNote.id);
         setSelectedNoteId(null);
@@ -183,6 +201,14 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
     <div className="flex h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden relative">
         <DotGridBackground />
         
+        {/* XYZ TRACKER (Subjectivity Counter) */}
+        <div className="absolute top-6 right-6 z-30 flex flex-col items-end pointer-events-none select-none">
+            <span className="font-mono text-[10px] text-slate-400 uppercase tracking-widest mb-1 opacity-70">Transformation Ratio</span>
+            <div className="font-mono text-xl text-slate-700 dark:text-slate-300">
+                {String(notes.length).padStart(2,'0')} <span className="text-slate-300 dark:text-slate-600">/</span> {String(flashcards.length).padStart(2,'0')}
+            </div>
+        </div>
+
         {/* LEFT PANEL: KNOWLEDGE INCUBATOR (Vertical Timeline) */}
         <div className="w-80 flex flex-col border-r border-slate-200/50 dark:border-white/5 bg-white/30 dark:bg-[#0f172a]/30 backdrop-blur-sm z-10">
             <div className="p-6 pb-2 border-b border-slate-100 dark:border-white/5">
@@ -238,7 +264,7 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                         <AuraRing 
                             key={sphere.id} 
                             sphere={sphere} 
-                            activeCount={sphereStats[sphere.id as keyof typeof sphereStats]} 
+                            stats={sphereStats[sphere.id as keyof typeof sphereStats]} 
                             colorClass={sphere.text}
                         />
                     ))}
@@ -328,7 +354,6 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                                                 className={`group relative p-1 rounded-full transition-all duration-300 ${mentorId === m.id ? 'scale-110 ring-1 ring-indigo-200 dark:ring-indigo-800' : 'opacity-50 hover:opacity-100 hover:scale-105'}`}
                                             >
                                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm ${mentorId === m.id ? 'shadow-indigo-500/20' : ''}`}>
-                                                    {/* Ideally abstract shape, using Icon for now but styled cleanly */}
                                                     {React.createElement(ICON_MAP[m.icon] || ICON_MAP['User'], { 
                                                         size: 18, 
                                                         className: m.color,
@@ -346,7 +371,9 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                                         onClick={handleAnalyze}
                                         className="group flex items-center gap-3 px-8 py-3 rounded-full bg-slate-900 dark:bg-white text-white dark:text-black shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
                                     >
-                                        <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
+                                        <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 3, repeat: Infinity }}>
+                                            <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
+                                        </motion.div>
                                         <span className="text-xs font-bold uppercase tracking-[0.2em]">Синтез</span>
                                     </button>
                                 </div>
@@ -391,23 +418,29 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                                     {/* Artifacts */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {/* Task Artifact */}
-                                        <div className="group bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-emerald-400/50 transition-colors relative overflow-hidden">
+                                        <motion.div 
+                                            whileHover={{ y: -4, scale: 1.01 }}
+                                            className="group bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-emerald-400/50 transition-all shadow-sm hover:shadow-lg relative overflow-hidden cursor-default"
+                                        >
                                             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                                 <Zap size={80} />
                                             </div>
                                             <div className="relative z-10">
                                                 <div className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-3">Action Protocol</div>
-                                                <div className="font-sans text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-6 line-clamp-4">
+                                                <div className="font-serif italic text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6 line-clamp-4">
                                                     <ReactMarkdown components={markdownComponents}>{analysis.suggestedTask}</ReactMarkdown>
                                                 </div>
                                                 <button onClick={handleAcceptTask} className="w-full py-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold uppercase tracking-wider hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-200 transition-all flex items-center justify-center gap-2">
                                                     Принять задачу <ArrowRight size={14} />
                                                 </button>
                                             </div>
-                                        </div>
+                                        </motion.div>
 
                                         {/* Skill Artifact */}
-                                        <div className="group bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-indigo-400/50 transition-colors relative overflow-hidden">
+                                        <motion.div 
+                                            whileHover={{ y: -4, scale: 1.01 }}
+                                            className="group bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-indigo-400/50 transition-all shadow-sm hover:shadow-lg relative overflow-hidden cursor-default"
+                                        >
                                             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                                 <Diamond size={80} />
                                             </div>
@@ -415,13 +448,13 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                                                 <div className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mb-3">Neural Node</div>
                                                 <div className="font-serif text-lg text-slate-800 dark:text-slate-100 mb-2">{analysis.suggestedFlashcardFront}</div>
                                                 <div className="h-px w-full bg-slate-100 dark:bg-white/5 my-3" />
-                                                <div className="font-serif text-sm text-slate-500 italic mb-6 line-clamp-3">{analysis.suggestedFlashcardBack}</div>
+                                                <div className="font-serif italic text-sm text-slate-500 dark:text-slate-400 mb-6 line-clamp-3">{analysis.suggestedFlashcardBack}</div>
                                                 
                                                 <button onClick={handleAcceptCard} className="w-full py-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold uppercase tracking-wider hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 transition-all flex items-center justify-center gap-2">
                                                     Кристаллизовать <ArrowRight size={14} />
                                                 </button>
                                             </div>
-                                        </div>
+                                        </motion.div>
                                     </div>
                                 </motion.div>
                             )}
