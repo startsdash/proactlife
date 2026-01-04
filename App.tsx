@@ -413,7 +413,7 @@ const App: React.FC = () => {
     >
       <Onboarding onClose={() => setShowOnboarding(false)} />
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
-      {module === Module.DASHBOARD && <Dashboard notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} onNavigate={handleNavigate} />}
+      {module === Module.DASHBOARD && <Dashboard notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} onNavigate={handleNavigate} flashcards={data.flashcards} />}
       {/* Updated Napkins with Sketchpad props */}
       {(module === Module.NAPKINS || module === Module.SKETCHPAD) && (
           <Napkins 
