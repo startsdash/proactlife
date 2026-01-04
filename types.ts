@@ -42,9 +42,7 @@ export interface SketchItem {
   createdAt: number;
   color?: string;
   rotation: number;
-  widthClass?: string; // Legacy grid sizing, keep for backward compatibility or repurpose
-  x?: number; // Canvas X coordinate
-  y?: number; // Canvas Y coordinate
+  widthClass?: string;
 }
 
 export interface Subtask {
