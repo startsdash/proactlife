@@ -10,8 +10,15 @@ interface Props {
   habits: Habit[];
   journal: JournalEntry[];
   onNavigate: (module: Module) => void;
+  // Assuming flashcards might be passed in future updates or accessed via context, 
+  // but for now we'll stick to the existing props unless we change App.tsx.
+  // Wait, I need flashcards for "Neural Connection". 
+  // Checking App.tsx, Dashboard props are: notes, tasks, habits, journal.
+  // I will assume flashcards are NOT available in props currently based on previous file content.
+  // I will modify App.tsx to pass flashcards to Dashboard as well.
 }
 
+// Extension to props to include flashcards
 interface ExtendedProps extends Props {
     flashcards?: Flashcard[];
 }
@@ -26,73 +33,44 @@ const GLASS_PANEL = "bg-white/60 dark:bg-[#0f172a]/60 backdrop-blur-[35px] borde
 
 // --- WIDGETS ---
 
-const PhaseIndicator = ({ tasks, journal }: { tasks: Task[], journal: JournalEntry[] }) => {
-    // Logic
-    const activeTasks = tasks.filter(t => !t.isArchived);
-    const total = activeTasks.length;
-    const done = activeTasks.filter(t => t.column === 'done').length;
-    const doing = activeTasks.filter(t => t.column === 'doing').length;
+const CurrentPulse = ({ tasks }: { tasks: Task[] }) => {
+    // Calculate weekly progress
+    const today = new Date();
+    const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1));
+    startOfWeek.setHours(0,0,0,0);
     
-    // Insights logic: Count unique tasks in journal that are insights
-    const insightTaskIds = new Set(journal.filter(j => j.isInsight && j.linkedTaskId).map(j => j.linkedTaskId));
-    const crystallizedCount = activeTasks.filter(t => insightTaskIds.has(t.id)).length;
+    const activeTasks = tasks.filter(t => !t.isArchived && t.column !== 'done');
+    const doneTasks = tasks.filter(t => t.column === 'done' && t.createdAt >= startOfWeek.getTime());
+    const total = activeTasks.length + doneTasks.length;
+    const progress = total === 0 ? 0 : Math.round((doneTasks.length / total) * 100);
     
-    const progressPercent = total === 0 ? 0 : (done / total) * 100;
-    const densityPercent = total === 0 ? 0 : (crystallizedCount / total) * 100;
-
-    let phaseName = "STANDBY";
-    if (total > 0) {
-        if (done === total && total > 0) phaseName = "COMPLETION";
-        else if (doing > 0) phaseName = "DEEP_WORK";
-        else phaseName = "PLANNING";
-    }
+    const radius = 80;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (progress / 100) * circumference;
 
     return (
-        <div className="flex flex-col justify-between w-full p-6 rounded-xl border border-slate-300/50 dark:border-slate-700/50 bg-white/5 backdrop-blur-md relative overflow-hidden group min-h-[140px]">
-            {/* Header */}
-            <div className="flex justify-between items-start z-10">
-                <div>
-                    <div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest mb-1 opacity-70">PHASE //</div>
-                    <div className="font-sans font-bold text-sm text-slate-800 dark:text-slate-200 tracking-[0.15em] uppercase">
-                        {phaseName}
-                    </div>
-                </div>
-                <div className="font-mono text-[9px] text-slate-400 opacity-60">
-                    [ {String(done).padStart(2,'0')} / {String(total).padStart(2,'0')} ]
-                </div>
-            </div>
-
-            {/* Visual Work */}
-            <div className="z-10 mt-auto">
-                <div className="flex justify-between items-end mb-2">
-                    <div className="font-mono text-[8px] text-slate-400 uppercase tracking-wider opacity-70">Transformation Density</div>
-                    <div className="font-mono text-[8px] text-indigo-500 dark:text-indigo-400">{Math.round(densityPercent)}%</div>
-                </div>
-                
-                {total === 0 ? (
-                    <div className="w-full flex justify-start py-2">
-                        <div className="w-1 h-1 bg-slate-400/50 rounded-full animate-pulse" />
-                    </div>
-                ) : (
-                    <div className="relative w-full h-[1px] bg-slate-200 dark:bg-slate-800 overflow-visible">
-                        {/* Solid Progress */}
-                        <div 
-                            className="absolute top-0 left-0 h-full bg-slate-400 dark:bg-slate-500 transition-all duration-1000"
-                            style={{ width: `${progressPercent}%` }}
-                        />
-                        {/* Glow (Crystallized) */}
-                        <div 
-                            className="absolute top-[-1px] left-0 h-[3px] bg-indigo-500 shadow-[0_0_8px_#6366f1] transition-all duration-1000 mix-blend-normal opacity-80"
-                            style={{ width: `${densityPercent}%` }}
-                        />
-                    </div>
-                )}
-            </div>
+        <div className={`relative w-full h-full flex flex-col items-center justify-center ${GLASS_PANEL} rounded-full aspect-square max-w-[300px] mx-auto`}>
+            <svg className="absolute inset-0 w-full h-full transform -rotate-90 p-4">
+                <circle cx="50%" cy="50%" r={radius} fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-200 dark:text-slate-800" />
+                <motion.circle 
+                    initial={{ strokeDashoffset: circumference }}
+                    animate={{ strokeDashoffset: offset }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
+                    cx="50%" cy="50%" r={radius} 
+                    fill="none" stroke="currentColor" strokeWidth="2" 
+                    className="text-indigo-500 dark:text-indigo-400"
+                    strokeDasharray={circumference}
+                    strokeLinecap="round"
+                />
+            </svg>
             
-            {/* Background Ambience */}
-            {phaseName !== 'STANDBY' && (
-                <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-indigo-500/5 dark:bg-indigo-500/10 blur-[50px] rounded-full pointer-events-none" />
-            )}
+            <div className="z-10 text-center flex flex-col items-center">
+                <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400 mb-2">Current Pulse</div>
+                <h2 className="text-2xl font-bold font-sans text-slate-900 dark:text-white tracking-tight">КРИСТАЛЛИЗАЦИЯ</h2>
+                <div className="mt-2 font-mono text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded">
+                    [ PRG: {progress}% ]
+                </div>
+            </div>
         </div>
     );
 };
@@ -117,8 +95,8 @@ const RecentInsights = ({ journal, onClick }: { journal: JournalEntry[], onClick
                         <div key={entry.id} className="group cursor-pointer" onClick={onClick}>
                             <div className="flex items-start gap-3">
                                 <Gem size={12} className="mt-1.5 text-violet-400 shrink-0 group-hover:text-violet-500 transition-colors" />
-                                <p className="font-serif italic text-sm text-slate-600 dark:text-slate-300 leading-relaxed group-hover:text-slate-900 dark:group-hover:text-white transition-colors line-clamp-2">
-                                    "{entry.content}"
+                                <p className="font-serif italic text-sm text-slate-600 dark:text-slate-300 leading-relaxed group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                                    "{entry.content.split(' ').slice(0, 10).join(' ')}..."
                                 </p>
                             </div>
                             <div className="pl-6 mt-1 text-[8px] font-mono text-slate-300 dark:text-slate-600 uppercase tracking-wider">
@@ -263,9 +241,9 @@ const Dashboard: React.FC<ExtendedProps> = ({ notes, tasks, habits, journal, onN
                 {/* MAIN GRID */}
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 flex-1 content-start">
                     
-                    {/* COL 1: Phase Indicator (Replaces Pulse) */}
-                    <div className="md:col-span-1 lg:col-span-1 flex flex-col justify-start">
-                        <PhaseIndicator tasks={tasks} journal={journal} />
+                    {/* COL 1: The Pulse (Large) */}
+                    <div className="md:col-span-1 lg:col-span-1 flex items-center justify-center py-8 md:py-0">
+                        <CurrentPulse tasks={tasks} />
                     </div>
 
                     {/* COL 2: Central Command */}
@@ -280,7 +258,7 @@ const Dashboard: React.FC<ExtendedProps> = ({ notes, tasks, habits, journal, onN
                         </div>
                     </div>
 
-                    {/* COL 3: Quick Stats / Meta */}
+                    {/* COL 3: Quick Stats / Meta (Optional 4th col or right sidebar feel) */}
                     <div className="md:col-span-3 lg:col-span-1 flex flex-col gap-6">
                         <div className={`flex-1 p-6 rounded-3xl ${GLASS_PANEL} flex flex-col justify-center items-center text-center`}>
                             <div className="font-mono text-4xl text-slate-800 dark:text-white mb-2">{tasks.filter(t => t.column === 'done').length}</div>
