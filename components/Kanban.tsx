@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette, Bold, Italic, Eraser, Image as ImageIcon, Upload, RefreshCw, Shuffle, ArrowRight } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette, Bold, Italic, Eraser, Image as ImageIcon, Upload, RefreshCw, Shuffle, ArrowRight, Map, Gem } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
@@ -874,6 +874,94 @@ const StaticChallengeRenderer: React.FC<{
     return <>{renderedParts}</>;
 };
 
+// --- JOURNEY MODAL ---
+const JourneyModal = ({ task, journalEntries, onClose }: { task: Task, journalEntries: JournalEntry[], onClose: () => void }) => {
+    // Check for insight
+    const hasInsight = journalEntries.some(j => j.linkedTaskId === task.id && j.isInsight);
+    const sphere = task.spheres?.[0];
+    const sphereColor = sphere && NEON_COLORS[sphere] ? NEON_COLORS[sphere] : '#6366f1'; 
+
+    const stages = [
+        { id: 1, label: 'ХАОС', desc: 'Мысль зафиксирована в Дневнике/Заметках', active: true },
+        { id: 2, label: 'ЛОГОС', desc: 'Сформирован контекст и план действий', active: true },
+        { id: 3, label: 'ЭНЕРГИЯ', desc: 'Задача реализована в материальном мире', active: true },
+        { id: 4, label: 'СИНТЕЗ', desc: 'Опыт интегрирован в структуру личности', active: hasInsight }
+    ];
+
+    return (
+        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-[50px] flex items-center justify-center p-8" onClick={onClose}>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full max-w-4xl relative"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Close Button */}
+                <button onClick={onClose} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors">
+                    <X size={24} />
+                </button>
+
+                {/* Central Map */}
+                <div className="flex flex-col md:flex-row items-center justify-between relative py-20 px-10">
+                    
+                    {/* The Thread */}
+                    <div className="absolute left-10 right-10 top-1/2 h-[1px] bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 hidden md:block" />
+                    <div className="absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-slate-700 via-slate-500 to-slate-700 md:hidden" />
+                    
+                    {/* Pulse Animation */}
+                    <motion.div 
+                        className="absolute h-[3px] w-[20px] bg-white blur-[2px] rounded-full hidden md:block top-1/2 -mt-[1.5px]"
+                        animate={{ 
+                            left: ['0%', hasInsight ? '100%' : '75%'], 
+                            opacity: [0, 1, 0] 
+                        }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                    />
+
+                    {stages.map((stage, i) => (
+                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-6 group mb-8 md:mb-0">
+                            {/* Node */}
+                            <div className={`
+                                w-4 h-4 transition-all duration-500
+                                ${stage.id === 1 ? 'rounded-full border border-slate-400 bg-black' : ''}
+                                ${stage.id === 2 ? 'w-3 h-3 bg-slate-300 transform rotate-45' : ''}
+                                ${stage.id === 3 ? 'rounded-full' : ''}
+                                ${stage.id === 4 ? 'transform rotate-45' : ''}
+                            `}
+                            style={{ 
+                                backgroundColor: stage.id === 3 ? sphereColor : undefined,
+                                boxShadow: stage.id === 3 ? `0 0 15px ${sphereColor}` : undefined
+                            }}
+                            >
+                                {stage.id === 4 && (
+                                    <div className={`w-4 h-4 border border-indigo-500 transition-all duration-1000 ${stage.active ? 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.8)]' : 'bg-black'}`} />
+                                )}
+                            </div>
+
+                            {/* Label */}
+                            <div className="text-center">
+                                <div className="font-mono text-[10px] text-slate-300 uppercase tracking-[0.3em] mb-2">{stage.label}</div>
+                                <div className={`font-serif text-sm italic text-slate-400 max-w-[150px] leading-tight transition-opacity duration-500 ${stage.active ? 'opacity-100' : 'opacity-30'}`}>
+                                    {stage.desc}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                
+                {/* Footer Quote */}
+                <div className="text-center mt-8">
+                    <p className="font-mono text-[9px] text-slate-600 uppercase tracking-widest">
+                        Task ID: {task.id.slice(-4)}
+                    </p>
+                </div>
+
+            </motion.div>
+        </div>
+    )
+}
+
 const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
   const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details' | 'challenge'} | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<'todo' | 'doing' | 'done'>('todo');
@@ -926,6 +1014,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+
+  // JOURNEY MODAL STATE
+  const [journeyTask, setJourneyTask] = useState<Task | null>(null);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
       const previous = scrollY.getPrevious() || 0;
@@ -1708,6 +1799,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     const hasJournalEntry = journalEntries.some(e => e.linkedTaskId === task.id);
                     const hasActiveChallenge = task.activeChallenge && !task.isChallengeCompleted;
                     const glow = getTechGlow(task.spheres, activeSphereFilter);
+                    const hasInsight = journalEntries.some(j => j.linkedTaskId === task.id && j.isInsight);
+                    const sphere = task.spheres?.[0];
+                    const sphereColor = sphere && NEON_COLORS[sphere] ? NEON_COLORS[sphere] : '#6366f1';
 
                     return (
                     <motion.div 
@@ -1794,6 +1888,20 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             {col.id === 'done' && (
                                 <>
                                     {renderCardChecklist(task)}
+                                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between opacity-50 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-1 h-1 rounded-full border border-slate-400 dark:border-slate-500" /> {/* Idea */}
+                                            <div className="w-3 h-px bg-slate-200 dark:bg-slate-700" />
+                                            <div className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-[1px]" /> {/* Structure */}
+                                            <div className="w-3 h-px bg-slate-200 dark:bg-slate-700" />
+                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sphereColor }} /> {/* Action */}
+                                            <div className="w-3 h-px bg-slate-200 dark:bg-slate-700" />
+                                            <Gem size={8} className={hasInsight ? "text-indigo-500 animate-pulse" : "text-slate-300 dark:text-slate-700"} strokeWidth={hasInsight ? 0 : 1.5} fill={hasInsight ? "currentColor" : "none"} /> {/* Synthesis */}
+                                        </div>
+                                        <button onClick={e => { e.stopPropagation(); setJourneyTask(task); }} className="text-[9px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 transition-colors">
+                                           <Map size={10} /> Путь
+                                        </button>
+                                    </div>
                                 </>
                             )}
 
@@ -1932,6 +2040,94 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     </div>
     );
   };
+
+  // --- JOURNEY MODAL COMPONENT ---
+  const JourneyModal = ({ task, journalEntries, onClose }: { task: Task, journalEntries: JournalEntry[], onClose: () => void }) => {
+    // Check for insight
+    const hasInsight = journalEntries.some(j => j.linkedTaskId === task.id && j.isInsight);
+    const sphere = task.spheres?.[0];
+    const sphereColor = sphere && NEON_COLORS[sphere] ? NEON_COLORS[sphere] : '#6366f1'; 
+
+    const stages = [
+        { id: 1, label: 'ХАОС', desc: 'Мысль зафиксирована в Дневнике/Заметках', active: true },
+        { id: 2, label: 'ЛОГОС', desc: 'Сформирован контекст и план действий', active: true },
+        { id: 3, label: 'ЭНЕРГИЯ', desc: 'Задача реализована в материальном мире', active: true },
+        { id: 4, label: 'СИНТЕЗ', desc: 'Опыт интегрирован в структуру личности', active: hasInsight }
+    ];
+
+    return (
+        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-[50px] flex items-center justify-center p-8" onClick={onClose}>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full max-w-4xl relative"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Close Button */}
+                <button onClick={onClose} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors">
+                    <X size={24} />
+                </button>
+
+                {/* Central Map */}
+                <div className="flex flex-col md:flex-row items-center justify-between relative py-20 px-10">
+                    
+                    {/* The Thread */}
+                    <div className="absolute left-10 right-10 top-1/2 h-[1px] bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 hidden md:block" />
+                    <div className="absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-slate-700 via-slate-500 to-slate-700 md:hidden" />
+                    
+                    {/* Pulse Animation */}
+                    <motion.div 
+                        className="absolute h-[3px] w-[20px] bg-white blur-[2px] rounded-full hidden md:block top-1/2 -mt-[1.5px]"
+                        animate={{ 
+                            left: ['0%', hasInsight ? '100%' : '75%'], 
+                            opacity: [0, 1, 0] 
+                        }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                    />
+
+                    {stages.map((stage, i) => (
+                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-6 group mb-8 md:mb-0">
+                            {/* Node */}
+                            <div className={`
+                                w-4 h-4 transition-all duration-500
+                                ${stage.id === 1 ? 'rounded-full border border-slate-400 bg-black' : ''}
+                                ${stage.id === 2 ? 'w-3 h-3 bg-slate-300 transform rotate-45' : ''}
+                                ${stage.id === 3 ? 'rounded-full' : ''}
+                                ${stage.id === 4 ? 'transform rotate-45' : ''}
+                            `}
+                            style={{ 
+                                backgroundColor: stage.id === 3 ? sphereColor : undefined,
+                                boxShadow: stage.id === 3 ? `0 0 15px ${sphereColor}` : undefined
+                            }}
+                            >
+                                {stage.id === 4 && (
+                                    <div className={`w-4 h-4 border border-indigo-500 transition-all duration-1000 ${stage.active ? 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.8)]' : 'bg-black'}`} />
+                                )}
+                            </div>
+
+                            {/* Label */}
+                            <div className="text-center">
+                                <div className="font-mono text-[10px] text-slate-300 uppercase tracking-[0.3em] mb-2">{stage.label}</div>
+                                <div className={`font-serif text-sm italic text-slate-400 max-w-[150px] leading-tight transition-opacity duration-500 ${stage.active ? 'opacity-100' : 'opacity-30'}`}>
+                                    {stage.desc}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                
+                {/* Footer Quote */}
+                <div className="text-center mt-8">
+                    <p className="font-mono text-[9px] text-slate-600 uppercase tracking-widest">
+                        Task ID: {task.id.slice(-4)}
+                    </p>
+                </div>
+
+            </motion.div>
+        </div>
+    )
+  }
 
   return (
     <div ref={scrollContainerRef} className="flex flex-col h-full relative overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
@@ -2202,6 +2398,13 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             </div>
         </AnimatePresence>
       )}
+
+      {/* JOURNEY MODAL */}
+      <AnimatePresence>
+          {journeyTask && (
+              <JourneyModal task={journeyTask} journalEntries={journalEntries} onClose={() => setJourneyTask(null)} />
+          )}
+      </AnimatePresence>
     </div>
   );
 };
