@@ -423,7 +423,7 @@ const App: React.FC = () => {
           />
       )}
       {/* REMOVED STANDALONE SKETCHPAD */}
-      {module === Module.SANDBOX && <Sandbox notes={data.notes} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
+      {module === Module.SANDBOX && <Sandbox notes={data.notes} tasks={data.tasks} flashcards={data.flashcards} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
       {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} />}
