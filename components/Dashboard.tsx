@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Note, Task, Habit, JournalEntry, Module, Flashcard } from '../types';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Gem, Activity, Diamond, ArrowRight, Zap, Target, BrainCircuit, GripVertical } from 'lucide-react';
 import { SPHERES } from '../constants';
 
@@ -13,7 +13,6 @@ interface Props {
   onNavigate: (module: Module) => void;
 }
 
-// Extension to props to include flashcards
 interface ExtendedProps extends Props {
     flashcards?: Flashcard[];
 }
@@ -28,31 +27,43 @@ const GLASS_PANEL = "bg-white/60 dark:bg-[#0f172a]/60 backdrop-blur-[35px] borde
 
 // --- WIDGETS ---
 
-const CrystallizationPillar = ({ tasks, journal }: { tasks: Task[], journal: JournalEntry[] }) => {
+const CrystallizationPillar = ({ 
+    tasks, 
+    journal, 
+    impact, 
+    scale 
+}: { 
+    tasks: Task[], 
+    journal: JournalEntry[], 
+    impact: { active: boolean, color: string, label: string } | null,
+    scale: number 
+}) => {
     // Logic: Tasks entering (Top) -> Crystallization (Process) -> Insights emerging (Bottom)
     
-    // 1. Calculate Metrics
     const activeTasks = tasks.filter(t => !t.isArchived && t.column !== 'done');
-    const doneTasks = tasks.filter(t => t.column === 'done'); // Simplified for "Total Tasks" context
+    const doneTasks = tasks.filter(t => t.column === 'done'); 
     const totalTasks = activeTasks.length + doneTasks.length;
-    
-    // Insights (Total accumulated knowledge)
     const insightsCount = journal.filter(j => j.isInsight).length;
-    
-    // Progress for the fill level (Completion rate of current active batch)
-    // If no tasks, fill is 0.
     const fillPercent = totalTasks === 0 ? 0 : Math.round((doneTasks.length / totalTasks) * 100);
     const isIdle = totalTasks === 0;
 
     return (
-        <div className={`
-            relative w-16 h-[280px] md:h-[320px] rounded-full 
-            ${GLASS_PANEL} 
-            flex flex-col items-center justify-between 
-            overflow-hidden border-2 border-white/20 dark:border-white/5
-            transition-all duration-700 z-10
-            ${!isIdle ? 'shadow-[0_0_30px_-5px_rgba(99,102,241,0.3)]' : ''}
-        `}>
+        <motion.div 
+            animate={{ scale: scale }}
+            transition={{ type: "spring", stiffness: 300, damping: 10 }}
+            className={`
+                relative w-16 h-[280px] md:h-[320px] rounded-full 
+                ${GLASS_PANEL} 
+                flex flex-col items-center justify-between 
+                overflow-hidden border-2 
+                transition-colors duration-300 z-10
+                ${!isIdle ? 'shadow-[0_0_30px_-5px_rgba(99,102,241,0.3)]' : ''}
+            `}
+            style={{
+                borderColor: impact?.active ? impact.color : undefined,
+                boxShadow: impact?.active ? `0 0 30px ${impact.color}80` : undefined
+            }}
+        >
             
             {/* 1. The Core (Vertical Axis) */}
             <div className="absolute top-4 bottom-4 left-1/2 -translate-x-1/2 w-px bg-gradient-to-b from-slate-300/50 via-indigo-500/50 to-slate-300/50 dark:from-slate-700 dark:via-indigo-400/50 dark:to-slate-700 z-10" />
@@ -62,7 +73,7 @@ const CrystallizationPillar = ({ tasks, journal }: { tasks: Task[], journal: Jou
                 className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-indigo-500/20 via-indigo-400/10 to-transparent backdrop-blur-sm z-0"
                 initial={{ height: '0%' }}
                 animate={{ height: `${fillPercent}%` }}
-                transition={{ duration: 1.5, ease: "easeInOut" }}
+                transition={{ type: "spring", stiffness: 50, damping: 20 }}
             />
             
             {/* Active Glow Pulse */}
@@ -95,8 +106,52 @@ const CrystallizationPillar = ({ tasks, journal }: { tasks: Task[], journal: Jou
                 <span className="text-[8px] font-mono uppercase tracking-widest text-slate-400">OUTPUT</span>
             </div>
 
+            {/* Impact Micro-Copy */}
+            <AnimatePresence>
+                {impact?.active && (
+                    <motion.div
+                        initial={{ opacity: 1, y: 0 }}
+                        animate={{ opacity: 0, y: -20 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 1.2, ease: "easeOut" }}
+                        className="absolute top-1/3 left-1/2 -translate-x-1/2 z-30 pointer-events-none whitespace-nowrap"
+                    >
+                        <span className="font-mono text-[7px] font-bold uppercase tracking-widest bg-white dark:bg-black px-1 py-0.5 rounded shadow-sm" style={{ color: impact.color }}>
+                            {impact.label}
+                        </span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Glass Reflections */}
             <div className="absolute top-4 left-4 right-8 h-[40%] bg-gradient-to-b from-white/20 to-transparent rounded-full opacity-50 pointer-events-none z-30" />
+        </motion.div>
+    );
+};
+
+const NeuralBridge = ({ sparks }: { sparks: { id: number, lane: number, color: string }[] }) => {
+    const paths = Array.from({ length: 7 });
+    
+    return (
+        <div className="relative w-24 md:w-32 h-[180px] flex flex-col justify-between py-8 px-0 z-0">
+            {paths.map((_, i) => (
+                <div key={i} className="relative w-full h-px bg-slate-400/10 dark:bg-white/5 overflow-visible">
+                    {/* Render sparks on this lane */}
+                    <AnimatePresence>
+                        {sparks.filter(s => s.lane === i).map(spark => (
+                            <motion.div
+                                key={spark.id}
+                                initial={{ left: '100%', opacity: 0, scale: 0 }}
+                                animate={{ left: '0%', opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0 }}
+                                transition={{ duration: 0.8, ease: [0.65, 0, 0.35, 1] }} // Custom cubic-bezier
+                                className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full shadow-[0_0_8px_currentColor] z-20"
+                                style={{ backgroundColor: spark.color, color: spark.color }}
+                            />
+                        ))}
+                    </AnimatePresence>
+                </div>
+            ))}
         </div>
     );
 };
@@ -170,7 +225,7 @@ const SpectralBalanceFiller = ({ tasks, habits }: { tasks: Task[], habits: Habit
                 {/* Vertical Label */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 rotate-[-90deg] whitespace-nowrap pointer-events-none mix-blend-difference">
                     <span className="font-mono text-[8px] uppercase tracking-[0.3em] font-bold text-white/80">
-                        ENERGY_DISTRIBUTION
+                        ENERGY_SOURCE
                     </span>
                 </div>
                 
@@ -195,6 +250,60 @@ const SpectralBalanceFiller = ({ tasks, habits }: { tasks: Task[], habits: Habit
                     </div>
                 ))}
             </div>
+        </div>
+    );
+};
+
+const DualCoreReactor = ({ tasks, journal, habits }: { tasks: Task[], journal: JournalEntry[], habits: Habit[] }) => {
+    const [sparks, setSparks] = useState<{ id: number, lane: number, color: string }[]>([]);
+    const [impact, setImpact] = useState<{ active: boolean, color: string, label: string } | null>(null);
+    const [pillarScale, setPillarScale] = useState(1);
+
+    // Synthesis Simulation Loop
+    useEffect(() => {
+        // Only run if there is actual data to synthesize
+        if (tasks.length === 0 && journal.length === 0) return;
+
+        const spawnSpark = () => {
+            const randomSphere = SPHERES[Math.floor(Math.random() * SPHERES.length)];
+            const color = randomSphere.color === 'indigo' ? '#6366f1' : randomSphere.color === 'emerald' ? '#10b981' : '#f43f5e';
+            const lane = Math.floor(Math.random() * 7);
+            const id = Date.now() + Math.random();
+
+            setSparks(prev => [...prev, { id, lane, color }]);
+
+            // Schedule impact (0.8s travel time)
+            setTimeout(() => {
+                triggerImpact(color);
+                setSparks(prev => prev.filter(s => s.id !== id));
+            }, 800);
+        };
+
+        // Determine frequency based on "Activity" level
+        const activityLevel = (tasks.filter(t => t.column === 'done').length + journal.length) / 5;
+        const intervalTime = Math.max(2000, 8000 - (activityLevel * 1000)); // Faster if more activity
+
+        const interval = setInterval(spawnSpark, intervalTime);
+        return () => clearInterval(interval);
+    }, [tasks.length, journal.length]);
+
+    const triggerImpact = (color: string) => {
+        // Impact Effect
+        setImpact({ active: true, color, label: '[ +SYNTHESIS ]' });
+        setPillarScale(1.02);
+
+        // Reset
+        setTimeout(() => {
+            setImpact(null);
+            setPillarScale(1);
+        }, 1200); // 1.2s fade out
+    };
+
+    return (
+        <div className="flex items-center relative">
+             <CrystallizationPillar tasks={tasks} journal={journal} impact={impact} scale={pillarScale} />
+             <NeuralBridge sparks={sparks} />
+             <SpectralBalanceFiller tasks={tasks} habits={habits} />
         </div>
     );
 };
@@ -367,17 +476,7 @@ const Dashboard: React.FC<ExtendedProps> = ({ notes, tasks, habits, journal, onN
                     
                     {/* COL 1: The Dual Core Reactor */}
                     <div className="md:col-span-1 lg:col-span-1 flex items-center justify-center py-8 md:py-0 order-first md:order-none">
-                        <div className="flex gap-4 items-center relative">
-                            {/* Connecting Engine */}
-                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-30 gap-3">
-                                <div className="w-8 h-[0.5px] bg-slate-400 dark:bg-slate-500" />
-                                <div className="w-8 h-[0.5px] bg-slate-400 dark:bg-slate-500" />
-                                <div className="w-8 h-[0.5px] bg-slate-400 dark:bg-slate-500" />
-                            </div>
-                            
-                            <CrystallizationPillar tasks={tasks} journal={journal} />
-                            <SpectralBalanceFiller tasks={tasks} habits={habits} />
-                        </div>
+                        <DualCoreReactor tasks={tasks} journal={journal} habits={habits} />
                     </div>
 
                     {/* COL 2: Central Command */}
