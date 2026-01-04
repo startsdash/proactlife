@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -10,7 +9,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -155,7 +154,7 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
             target="_blank" 
             rel="noopener noreferrer" 
             onClick={(e) => e.stopPropagation()} 
-            className="block mt-4 bg-white/50 dark:bg-slate-800/50 hover:bg-white/80 dark:hover:bg-slate-800 transition-all rounded-2xl overflow-hidden group/link relative no-underline break-inside-avoid border border-black/5 dark:border-white/5 shadow-sm"
+            className="block mt-4 bg-white/50 dark:bg-slate-800/50 hover:bg-white/80 dark:hover:bg-slate-800 transition-all rounded-xl overflow-hidden group/link relative no-underline break-inside-avoid border border-black/5 dark:border-white/5 shadow-sm"
         >
             {data.image?.url && (
                 <div className="h-32 w-full overflow-hidden relative">
@@ -167,14 +166,14 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
                     />
                 </div>
             )}
-            <div className="p-4">
-                <h4 className="font-serif font-bold text-sm text-slate-900 dark:text-slate-100 line-clamp-1 mb-2 leading-snug">{data.title}</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 leading-relaxed font-sans">{data.description}</p>
-                <div className="flex items-center gap-2 text-[10px] text-slate-400 uppercase tracking-wider font-bold">
+            <div className="p-3">
+                <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-1 mb-1 leading-snug">{data.title}</h4>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-2 leading-relaxed font-sans">{data.description}</p>
+                <div className="flex items-center gap-2 text-[9px] text-slate-400 uppercase tracking-wider font-bold">
                     {data.logo?.url ? (
-                        <img src={data.logo.url} className="w-4 h-4 rounded-full" alt="" />
+                        <img src={data.logo.url} className="w-3 h-3 rounded-full" alt="" />
                     ) : (
-                        <Globe size={12} />
+                        <Globe size={10} />
                     )}
                     <span className="truncate">{data.publisher || new URL(url).hostname}</span>
                 </div>
@@ -190,16 +189,16 @@ const markdownComponents = {
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
-    h1: ({node, ...props}: any) => <h1 className="font-serif text-xl font-bold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-    h2: ({node, ...props}: any) => <h2 className="font-serif text-lg font-bold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-    h3: ({node, ...props}: any) => <h3 className="font-serif text-base font-bold mt-2 mb-1 text-slate-900 dark:text-slate-100" {...props} />,
+    h1: ({node, ...props}: any) => <h1 className="font-bold text-xl mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+    h2: ({node, ...props}: any) => <h2 className="font-bold text-lg mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+    h3: ({node, ...props}: any) => <h3 className="font-bold text-base mt-2 mb-1 text-slate-900 dark:text-slate-100" {...props} />,
     blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 dark:border-slate-600 pl-4 italic text-slate-500 dark:text-slate-400 my-3 font-serif" {...props} />,
     code: ({node, inline, className, children, ...props}: any) => {
          return inline 
-            ? <code className="bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
+            ? <code className="bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
             : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-3 rounded-xl text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     },
-    img: ({node, ...props}: any) => <img className="rounded-2xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
+    img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
     u: ({node, ...props}: any) => <u {...props} /> 
 };
 
@@ -270,7 +269,7 @@ const htmlToMarkdown = (html: string) => {
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 // Tag Selector
-const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[]) => void, existingTags: string[], placeholder?: string }> = ({ selectedTags, onChange, existingTags, placeholder = "Добавить теги..." }) => {
+const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[]) => void, existingTags: string[], placeholder?: string, variant?: 'default' | 'ghost' }> = ({ selectedTags, onChange, existingTags, placeholder = "Добавить теги...", variant = 'default' }) => {
     const [input, setInput] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
@@ -295,21 +294,29 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
 
     return (
         <div className="relative" ref={wrapperRef}>
-            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-transparent min-h-[36px]">
+            <div className={`flex flex-wrap items-center gap-1.5 min-h-[36px] ${variant === 'ghost' ? 'px-0 py-2' : 'p-2'}`}>
                 {selectedTags.map(tag => (
-                    <span key={tag} className="flex items-center gap-1 text-[10px] font-medium text-slate-600 dark:text-slate-300 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-md">
+                    <span key={tag} className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded transition-colors ${variant === 'ghost' ? 'text-slate-500 bg-black/5 dark:bg-white/10 dark:text-slate-400' : 'text-slate-600 dark:text-slate-300 bg-black/5 dark:bg-white/10'}`}>
                         <TagIcon size={10} /> {tag} <button onClick={() => onChange(selectedTags.filter(t => t !== tag))} className="hover:text-red-500 ml-1"><X size={12} /></button>
                     </span>
                 ))}
-                <input type="text" value={input} onChange={(e) => { setInput(e.target.value); setIsOpen(true); }} onFocus={() => setIsOpen(true)} onKeyDown={(e) => e.key === 'Enter' && addTag(input)} placeholder={selectedTags.length === 0 ? placeholder : ''} className="flex-1 min-w-[80px] bg-transparent text-xs outline-none text-slate-600 dark:text-slate-300 placeholder:text-slate-400" />
+                <input 
+                    type="text" 
+                    value={input} 
+                    onChange={(e) => { setInput(e.target.value); setIsOpen(true); }} 
+                    onFocus={() => setIsOpen(true)} 
+                    onKeyDown={(e) => e.key === 'Enter' && addTag(input)} 
+                    placeholder={selectedTags.length === 0 ? placeholder : ''} 
+                    className={`flex-1 min-w-[80px] bg-transparent text-xs outline-none ${variant === 'ghost' ? 'text-slate-600 dark:text-slate-300 placeholder:text-slate-300' : 'text-slate-600 dark:text-slate-300 placeholder:text-slate-400'}`} 
+                />
             </div>
             {isOpen && (input.length > 0 || filteredSuggestions.length > 0) && (
-                <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto">
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto">
                     {input.length > 0 && !filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase()) && (
-                        <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2"><Plus size={14} /> Создать «{input}»</button>
+                        <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-xs text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-bold"><Plus size={12} /> Создать «{input}»</button>
                     )}
                     {filteredSuggestions.map(tag => (
-                        <button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2"><TagIcon size={14} className="text-slate-400" /> {tag}</button>
+                        <button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-medium"><TagIcon size={12} className="text-slate-400" /> {tag}</button>
                     ))}
                 </div>
             )}
@@ -489,13 +496,13 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
 
                 <div className="block w-full mb-2">
                     {note.title && <h3 className={`font-serif text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
-                    <div className={`text-slate-700 dark:text-slate-300 font-sans text-sm leading-relaxed overflow-hidden break-words line-clamp-[6]`}>
+                    <div className={`text-slate-700 dark:text-slate-300 font-serif text-sm leading-relaxed overflow-hidden break-words line-clamp-[6]`}>
                         <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                     </div>
                     {linkUrl && <LinkPreview url={linkUrl} />}
                     {note.tags && note.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-4">
-                            {note.tags.map(tag => <span key={tag} className="text-[10px] text-slate-500 dark:text-slate-400 font-medium opacity-70">{tag}</span>)}
+                            {note.tags.map(tag => <span key={tag} className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider opacity-70 bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded">{tag.replace(/^#/, '')}</span>)}
                         </div>
                     )}
                 </div>
@@ -1064,7 +1071,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         onBlur={saveSelection} 
                                         onMouseUp={saveSelection} 
                                         onKeyUp={saveSelection} 
-                                        className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                        className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-serif [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
                                         style={{ whiteSpace: 'pre-wrap' }} 
                                         data-placeholder="О чём ты думаешь?" 
                                     />
@@ -1088,7 +1095,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         <div className="flex items-center gap-2 shrink-0">
                                             <div className="relative"><Tooltip content="Обложка"><button onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button></Tooltip>{showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} />}</div>
                                             <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>{showColorPicker && <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
-                                            <button onClick={handleDump} disabled={isProcessing} className="text-xs font-bold uppercase tracking-wider px-5 py-2.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50">Закрыть</button>
+                                            <button onClick={handleDump} disabled={isProcessing} className="text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50">Закрыть</button>
                                         </div>
                                     </div>
                                 </div>
@@ -1152,7 +1159,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                       <div className="m-auto w-full py-2">
                                           {oracleNote.title && <h3 className="font-serif text-xl font-bold text-slate-900 dark:text-slate-100 text-center mb-3">{oracleNote.title}</h3>}
                                           <div className="text-base text-slate-800 dark:text-slate-200 font-normal leading-relaxed relative py-4 text-center">
-                                              <div className="relative z-10 px-3 font-sans">
+                                              <div className="relative z-10 px-3 font-serif">
                                                 <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{oracleNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                                               </div>
                                           </div>
@@ -1172,53 +1179,72 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       )}
 
       {selectedNote && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
-            <div className={`${getNoteColorClass(selectedNote.color)} w-full max-w-lg rounded-3xl shadow-2xl transition-colors duration-300 max-h-[90vh] overflow-y-auto overflow-x-hidden flex flex-col`} onClick={(e) => e.stopPropagation()} onScroll={() => setActiveImage(null)}>
-                {(isEditing ? editCover : selectedNote.coverUrl) && <div className="h-48 w-full shrink-0 relative group"><img src={isEditing ? editCover! : selectedNote.coverUrl!} alt="Cover" className="w-full h-full object-cover" />{isEditing && <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button>}</div>}
-                <div className="p-8 flex-1">
-                    <div className="flex justify-between items-start mb-4 gap-4">
-                        <div className="flex-1 pt-1 min-w-0">
-                            {isEditing ? (
-                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Редактирование</h3>
-                            ) : (
-                                <div className="flex flex-col gap-2">
-                                    {selectedNote.title ? <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white leading-tight break-words">{selectedNote.title}</h2> : <input type="text" placeholder="Название" className="font-serif text-2xl font-bold text-slate-900 dark:text-white bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} onBlur={() => { if (editTitle.trim() !== (selectedNote.title || '')) { const updated = { ...selectedNote, title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined }; updateNote(updated); setSelectedNote(updated); }}} />}
-                                    {selectedNote.isPinned && <div className="flex"><Tooltip content="Открепить"><button onClick={(e) => togglePin(e, selectedNote)} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-wider hover:bg-indigo-100 transition-colors"><Pin size={12} fill="currentColor" /> Закреплено</button></Tooltip></div>}
-                                </div>
-                            )}
+        <AnimatePresence>
+            <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="w-full max-w-lg bg-white/75 dark:bg-[#1e293b]/75 backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                    onScroll={() => setActiveImage(null)}
+                >
+                    {(isEditing ? editCover : selectedNote.coverUrl) && <div className="h-40 w-full shrink-0 relative group -mx-10 -mt-10 mb-6 w-[calc(100%_+_5rem)] overflow-hidden"><img src={isEditing ? editCover! : selectedNote.coverUrl!} alt="Cover" className="w-full h-full object-cover" />{isEditing && <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button>}</div>}
+                    
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <div className="flex justify-between items-start mb-4 gap-4 shrink-0">
+                            <div className="flex-1 pt-1 min-w-0">
+                                {isEditing ? (
+                                    <div className="flex flex-col gap-2">
+                                        <input 
+                                            value={editTitle} 
+                                            onChange={(e) => setEditTitle(e.target.value)} 
+                                            className="w-full bg-transparent p-0 text-xl font-serif font-bold text-slate-900 dark:text-slate-100 border-none outline-none placeholder:text-slate-300" 
+                                            placeholder="Название" 
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-1">
+                                        <div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1 opacity-50">
+                                            <span>{new Date(selectedNote.createdAt).toLocaleDateString()}</span>
+                                            {selectedNote.isPinned && <Pin size={10} className="fill-current" />}
+                                        </div>
+                                        {selectedNote.title ? <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-slate-200 leading-tight break-words">{selectedNote.title}</h2> : null}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0 -mt-1">
+                                {!isEditing && (
+                                    <>
+                                        <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить"}><button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-lg transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5'}`}><Pin size={16} className={selectedNote.isPinned ? "fill-current" : ""} /></button></Tooltip>
+                                        <Tooltip content="Редактировать"><button onClick={() => setIsEditing(true)} className="p-2 text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={16} /></button></Tooltip>
+                                        <Tooltip content="Удалить"><button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors"><Trash2 size={16} /></button></Tooltip>
+                                    </>
+                                )}
+                                <button onClick={() => setSelectedNote(null)} className="p-2 text-slate-300 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg ml-2"><X size={20}/></button>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0 -mt-1 -mr-2 bg-white/50 dark:bg-white/5 p-1 rounded-xl backdrop-blur-sm border border-slate-100 dark:border-white/5">
-                            {!isEditing && (
-                                <><Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить"}><button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-lg transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Pin size={18} className={selectedNote.isPinned ? "fill-current" : ""} /></button></Tooltip><Tooltip content="Редактировать"><button onClick={() => setIsEditing(true)} className="p-2 text-slate-400 hover:text-indigo-600 dark:text-slate-500 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors"><Edit3 size={18} /></button></Tooltip><Tooltip content="Удалить"><button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors"><Trash2 size={18} /></button></Tooltip><div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-1"></div></>
-                            )}
-                            <button onClick={() => setSelectedNote(null)} className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/10 rounded-lg"><X size={20}/></button>
-                        </div>
-                    </div>
-                    {isEditing ? (
-                        <div className="mb-6 space-y-4">
-                            <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Название</label><input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 rounded-xl p-3 text-xl font-serif font-bold text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none placeholder:text-slate-300" placeholder="Название" /></div>
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Содержание</label>
-                                <div className="relative">
-                                    <div className="flex items-center justify-between mb-2 gap-2">
+
+                        {isEditing ? (
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                <div className="relative flex-1 overflow-hidden flex flex-col">
+                                    <div className="flex items-center justify-between mb-2 gap-2 shrink-0">
                                         <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
-                                            <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
-                                            <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
-                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                            <Tooltip content="Заголовок 1"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={16} /></button></Tooltip>
-                                            <Tooltip content="Заголовок 2"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={16} /></button></Tooltip>
-                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Bold size={16} /></button></Tooltip>
-                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Italic size={16} /></button></Tooltip>
-                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                            <Tooltip content="Очистить форматирование"><button onMouseDown={handleClearStyle} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
-                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                            <Tooltip content="Вставить картинку"><label className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
-                                            {activeImage && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500 transition-colors"><Trash2 size={16} /></button></Tooltip>}
+                                            <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
+                                            <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
+                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Очистить"><button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
+                                            {activeImage && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
                                         </div>
                                         <div className="shrink-0 relative flex gap-1">
-                                            <div className="relative"><Tooltip content="Обложка"><button onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors ${editCover ? 'text-indigo-500' : ''}`}><Layout size={16} /></button></Tooltip>{showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} />}</div>
-                                            <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Palette size={16} /></button></Tooltip>{showModalColorPicker && <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
+                                            <div className="relative"><Tooltip content="Обложка"><button onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 ${editCover ? 'text-indigo-500' : ''}`}><Layout size={16} /></button></Tooltip>{showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} />}</div>
+                                            <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Palette size={16} /></button></Tooltip>{showModalColorPicker && <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
                                         </div>
                                     </div>
                                     <div 
@@ -1230,34 +1256,35 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         onMouseUp={saveSelection} 
                                         onKeyUp={saveSelection} 
                                         onScroll={() => setActiveImage(null)} 
-                                        className="w-full h-64 bg-slate-50 dark:bg-black/20 rounded-xl p-4 text-base text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 focus:border-indigo-300 dark:focus:border-indigo-500 outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                        className="w-full flex-1 bg-transparent p-1 text-lg leading-relaxed text-slate-800 dark:text-slate-200 outline-none overflow-y-auto font-serif custom-scrollbar-ghost [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
                                     />
                                 </div>
+                                <div className="pt-4 border-t border-black/5 dark:border-white/5 mt-2">
+                                    <TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} placeholder="Добавить теги..." variant="ghost" />
+                                </div>
                             </div>
-                            <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Теги</label><TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} /></div>
-                        </div>
-                    ) : (
-                        <div className="mb-6">
-                            <div className={`text-slate-800 dark:text-slate-200 leading-relaxed text-base font-normal min-h-[4rem] mb-6 overflow-x-hidden font-sans ${!selectedNote.title ? 'mt-1' : ''}`}>
-                                <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                        ) : (
+                            <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-1">
+                                <div className={`text-slate-800 dark:text-slate-200 text-lg leading-relaxed font-serif font-normal min-h-[4rem] mb-6 ${!selectedNote.title ? 'mt-1' : ''}`}>
+                                    <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                                </div>
+                                {selectedNote.tags && selectedNote.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 pt-4 border-t border-black/5 dark:border-white/5">{selectedNote.tags.map(tag => <span key={tag} className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-transparent border border-slate-200 dark:border-slate-700 px-2 py-1 rounded flex items-center gap-1"><TagIcon size={10} /> {tag.replace(/^#/, '')}</span>)}</div>
+                                )}
+                                {(() => { const url = findFirstUrl(selectedNote.content); return url ? <div className="mt-6"><LinkPreview url={url} /></div> : null; })()}
                             </div>
-                            {selectedNote.tags && selectedNote.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">{selectedNote.tags.map(tag => <span key={tag} className="text-xs text-slate-500 dark:text-slate-400 bg-black/5 dark:bg-white/10 px-2 py-1 rounded-md flex items-center gap-1 font-medium"><TagIcon size={10} /> {tag.replace(/^#/, '')}</span>)}</div>
-                            )}
-                            {(() => { const url = findFirstUrl(selectedNote.content); return url ? <div className="mt-6"><LinkPreview url={url} /></div> : null; })()}
-                        </div>
-                    )}
-                    {isEditing && (
-                        <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-6 border-t border-slate-900/5 dark:border-white/5">
-                            <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                                <button onClick={() => setIsEditing(false)} className="px-5 py-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 w-full md:w-auto text-center font-medium">Отмена</button>
-                                <button onClick={handleSaveEdit} className="px-8 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 font-bold text-sm flex items-center justify-center gap-2 w-full md:w-auto shadow-lg shadow-indigo-500/20"><Check size={18} /> Сохранить</button>
+                        )}
+                        
+                        {isEditing && (
+                            <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5 shrink-0">
+                                <button onClick={() => setIsEditing(false)} className="font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">Отмена</button>
+                                <button onClick={handleSaveEdit} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold">Сохранить</button>
                             </div>
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                </motion.div>
             </div>
-        </div>
+        </AnimatePresence>
       )}
     </div>
   );
