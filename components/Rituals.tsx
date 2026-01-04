@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Habit, HabitFrequency } from '../types';
 import { notificationService } from '../services/notificationService';
-import { Flame, Check, Plus, Trash2, X, Zap, Calendar, Repeat, Bell, GripVertical, CheckCircle2, Circle, Edit2, Clock, Sparkles, Diamond, Activity, MoreHorizontal, TrendingUp } from 'lucide-react';
+import { Flame, Check, Plus, Trash2, X, Zap, Calendar, Repeat, Bell, GripVertical, CheckCircle2, Circle, Edit2, Clock, Sparkles, Diamond, Activity, MoreHorizontal, TrendingUp, Link2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
@@ -98,30 +98,7 @@ const RhythmRow = ({ habit, dates, onToggle, color, todayStr }: { habit: Habit, 
                         </feMerge>
                     </filter>
                 </defs>
-                {dates.map((date, i) => {
-                    if (i === 0) return null;
-                    const prevDate = dates[i-1];
-                    const dateKey = getLocalDateKey(date);
-                    const prevKey = getLocalDateKey(prevDate);
-                    
-                    const isDone = !!habit.history[dateKey];
-                    const isPrevDone = !!habit.history[prevKey];
-
-                    if (isDone && isPrevDone) {
-                        // Assuming uniform distribution in flex container
-                        const step = 100 / (dates.length - 1); 
-                        const startX = (i - 1) * step; 
-                        const endX = i * step; 
-                        
-                        // Using percentages for x1/x2 to match flex distribution roughly
-                        // Note: SVG lines in flex container might be tricky without fixed width.
-                        // Ideally we use fixed width cells. Let's use simple logic:
-                        // Since we can't easily get exact pixel centers without ref, we skip lines or
-                        // rely on the visual "dots" which is cleaner for this aesthetic.
-                        // SKIPPING LINE RENDER FOR CLEANER LOOK & PERFORMANCE IN FLEX LAYOUT
-                    }
-                    return null;
-                })}
+                {/* Lines skipped for cleaner look */}
             </svg>
 
             {dates.map(date => {
@@ -151,39 +128,6 @@ const RhythmRow = ({ habit, dates, onToggle, color, todayStr }: { habit: Habit, 
                             <div className={`absolute inset-0 rounded-full bg-slate-400/10 scale-0 group-hover:scale-50 transition-transform duration-200`} />
                         </button>
                     </div>
-                );
-            })}
-        </div>
-    );
-};
-
-const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
-    const toggleSphere = (id: string) => {
-        if (selected.includes(id)) {
-            onChange(selected.filter(s => s !== id));
-        } else {
-            onChange([...selected, id]);
-        }
-    };
-
-    return (
-        <div className="flex gap-2">
-            {SPHERES.map(s => {
-                const isSelected = selected.includes(s.id);
-                const Icon = ICON_MAP[s.icon];
-                return (
-                    <button
-                        key={s.id}
-                        onClick={() => toggleSphere(s.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all border ${
-                            isSelected 
-                            ? `${s.bg} ${s.text} ${s.border}` 
-                            : 'bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                        }`}
-                    >
-                        {Icon && <Icon size={12} />}
-                        {s.label}
-                    </button>
                 );
             })}
         </div>
@@ -246,7 +190,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
           title: newTitle,
           description,
           frequency,
-          targetCount: frequency === 'times_per_day' ? targetCount : undefined,
+          targetCount: frequency === 'times_per_week' ? targetCount : undefined,
           spheres: selectedSpheres,
           color: 'indigo', 
           icon: 'Zap'
@@ -287,9 +231,20 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
       setNewTitle(h.title);
       setDescription(h.description || '');
       setFrequency(h.frequency);
-      setTargetCount(h.targetCount || 1);
+      setTargetCount(h.targetCount || 3);
       setSelectedSpheres(h.spheres || []);
       setIsFormOpen(true);
+  };
+
+  const toggleSphere = (sphereId: string) => {
+      // Single select for habits usually, but array in type. Let's act as radio for simplicity or multi?
+      // Type is array. Let's allow multi but visually radio-like behavior is cleaner for primary color logic.
+      // Let's stick to toggle.
+      if (selectedSpheres.includes(sphereId)) {
+          setSelectedSpheres(selectedSpheres.filter(s => s !== sphereId));
+      } else {
+          setSelectedSpheres([sphereId]); // Enforce single sphere for primary color logic simplicity
+      }
   };
 
   return (
@@ -404,89 +359,160 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
             )}
         </div>
 
-        {/* MODAL FORM */}
+        {/* CALIBRATION PANEL (MODAL) */}
         <AnimatePresence>
             {(isFormOpen || selectedHabitId) && (
-                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-[4px] flex items-center justify-center p-4" onClick={() => { closeForm(); setSelectedHabitId(null); }}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm" onClick={() => { closeForm(); setSelectedHabitId(null); }}>
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/50 dark:border-white/10 w-full max-w-md relative"
+                        className="w-full max-w-md bg-white/70 dark:bg-[#1e293b]/70 backdrop-blur-[45px] saturate-150 border border-slate-900/10 dark:border-white/10 rounded-[32px] p-8 shadow-2xl relative overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {isFormOpen ? (
                             <>
-                                <h3 className="text-xl font-light text-slate-800 dark:text-white mb-6">{editingHabit ? 'Настройка ритма' : 'Новый ритуал'}</h3>
-                                <div className="space-y-5">
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Название</label>
-                                        <input className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all" placeholder="Читать 20 страниц..." value={newTitle} onChange={e => setNewTitle(e.target.value)} autoFocus />
+                                <div className="flex justify-between items-center mb-8">
+                                    <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
+                                        {editingHabit ? 'КАЛИБРОВКА' : 'НАСТРОЙКА РИТМА'}
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Контекст (Зачем?)</label>
-                                        <input className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all font-serif italic" placeholder="Развитие когнитивных способностей" value={description} onChange={e => setDescription(e.target.value)} />
+                                    <button onClick={closeForm} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                                        <X size={20} strokeWidth={1} />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-8">
+                                    {/* TITLE & DESCRIPTION */}
+                                    <div className="space-y-3">
+                                        <input 
+                                            className="text-xl md:text-2xl font-sans font-light bg-transparent border-b border-slate-300 dark:border-slate-600 focus:border-indigo-500 outline-none w-full py-2 text-slate-800 dark:text-slate-100 placeholder:text-slate-300 dark:placeholder:text-slate-600 transition-colors"
+                                            placeholder="Название нового ритма..."
+                                            value={newTitle}
+                                            onChange={e => setNewTitle(e.target.value)}
+                                            autoFocus
+                                        />
+                                        <input 
+                                            className="font-serif italic text-sm text-slate-500 dark:text-slate-400 bg-transparent border-none outline-none w-full placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                                            placeholder="Зачем тебе этот ритуал? (Контекст)"
+                                            value={description}
+                                            onChange={e => setDescription(e.target.value)}
+                                        />
                                     </div>
+
+                                    {/* SPHERES (Aura Rings) */}
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Сфера влияния</label>
-                                        <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
+                                        <div className="text-[9px] font-mono uppercase tracking-widest text-slate-400 mb-3">Сфера Влияния</div>
+                                        <div className="flex gap-4">
+                                            {SPHERES.map(s => {
+                                                const isSelected = selectedSpheres.includes(s.id);
+                                                return (
+                                                    <Tooltip key={s.id} content={s.label}>
+                                                        <button 
+                                                            onClick={() => toggleSphere(s.id)}
+                                                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isSelected ? `bg-${s.color}-500 border-${s.color}-500 shadow-[0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-300 dark:border-slate-600 hover:border-slate-400'}`}
+                                                        >
+                                                            {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                                                        </button>
+                                                    </Tooltip>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Частота</label>
-                                            <select className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm outline-none" value={frequency} onChange={e => setFrequency(e.target.value as any)}>
-                                                <option value="daily">Ежедневно</option>
-                                                <option value="times_per_week">В неделю</option>
-                                            </select>
+
+                                    {/* FREQUENCY (Monospace Toggles) */}
+                                    <div>
+                                        <div className="text-[9px] font-mono uppercase tracking-widest text-slate-400 mb-3">Частота</div>
+                                        <div className="flex gap-3">
+                                            <button 
+                                                onClick={() => setFrequency('daily')}
+                                                className={`px-3 py-2 rounded text-[10px] font-mono uppercase tracking-widest border transition-all ${frequency === 'daily' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300'}`}
+                                            >
+                                                [ DAILY ]
+                                            </button>
+                                            <button 
+                                                onClick={() => setFrequency('times_per_week')}
+                                                className={`px-3 py-2 rounded text-[10px] font-mono uppercase tracking-widest border transition-all ${frequency === 'times_per_week' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300'}`}
+                                            >
+                                                [ WEEKLY ]
+                                            </button>
                                         </div>
                                         {frequency === 'times_per_week' && (
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Цель</label>
-                                                <input type="number" min="1" max="7" className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm outline-none" value={targetCount} onChange={e => setTargetCount(parseInt(e.target.value))} />
+                                            <div className="mt-3 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                                                <span className="text-xs text-slate-500">Цель:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="1" max="7" 
+                                                    className="w-12 bg-transparent border-b border-slate-300 text-center font-mono text-sm outline-none"
+                                                    value={targetCount}
+                                                    onChange={e => setTargetCount(parseInt(e.target.value))}
+                                                />
+                                                <span className="text-xs text-slate-500">раз в неделю</span>
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex gap-3 pt-4">
-                                        <button onClick={closeForm} className="flex-1 py-3 text-xs font-bold uppercase tracking-wider text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">Отмена</button>
-                                        <button onClick={handleSave} className="flex-1 py-3 text-xs font-bold uppercase tracking-wider bg-slate-900 dark:bg-indigo-600 text-white rounded-xl shadow-lg hover:opacity-90 transition-opacity">Сохранить</button>
+
+                                    {/* SKILL LINK (Mock Visual) */}
+                                    <div className="pt-2">
+                                        <button className="flex items-center gap-2 text-xs text-slate-400 hover:text-indigo-500 transition-colors group">
+                                            <div className="p-1 rounded border border-slate-300 group-hover:border-indigo-400 text-slate-300 group-hover:text-indigo-500 transition-colors">
+                                                <Diamond size={10} />
+                                            </div>
+                                            <span>Привязать к Скиллу...</span>
+                                        </button>
+                                    </div>
+
+                                    {/* PULSE PREVIEW & ACTION */}
+                                    <div className="pt-6 mt-4 border-t border-slate-900/5 dark:border-white/5">
+                                        {/* Pulse Line Visual */}
+                                        <div className="w-full h-8 mb-6 flex items-center justify-center opacity-30">
+                                            <svg width="100%" height="100%" viewBox="0 0 300 30" preserveAspectRatio="none">
+                                                <path d="M0,15 L100,15 L110,5 L120,25 L130,15 L300,15" fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-900 dark:text-white" />
+                                            </svg>
+                                        </div>
+
+                                        <button 
+                                            onClick={handleSave}
+                                            className="w-full py-3 rounded-full border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-white font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all active:scale-[0.98]"
+                                        >
+                                            {editingHabit ? 'ОБНОВИТЬ РИТМ' : 'ИНИЦИИРОВАТЬ РИТМ'}
+                                        </button>
                                     </div>
                                 </div>
                             </>
                         ) : (
-                            // DETAIL VIEW
+                            // DETAIL VIEW (Minimalist)
                             (() => {
                                 const h = habits.find(habit => habit.id === selectedHabitId);
                                 if (!h) return null;
                                 return (
-                                    <div className="text-center">
-                                        <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 shadow-inner`}>
-                                            <Flame size={32} className={h.streak > 3 ? "text-orange-500 animate-pulse" : "text-slate-400"} />
-                                        </div>
-                                        <h3 className="text-2xl font-serif font-bold text-slate-800 dark:text-white mb-2">{h.title}</h3>
-                                        <p className="text-sm text-slate-500 italic mb-8">{h.description || "Постоянство — ключ к мастерству."}</p>
+                                    <div className="text-center relative">
+                                        <button onClick={() => setSelectedHabitId(null)} className="absolute top-0 right-0 text-slate-400 hover:text-slate-600"><X size={20} strokeWidth={1} /></button>
                                         
-                                        <div className="grid grid-cols-3 gap-4 mb-8">
-                                            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
-                                                <div className="text-2xl font-bold text-indigo-500">{h.streak}</div>
-                                                <div className="text-[9px] uppercase font-bold text-slate-400">Стрик</div>
+                                        <div className={`w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm`}>
+                                            <Flame size={24} className={h.streak > 3 ? "text-orange-500 animate-pulse" : "text-slate-400"} strokeWidth={1} />
+                                        </div>
+                                        
+                                        <h3 className="text-2xl font-light text-slate-800 dark:text-white mb-2 tracking-tight">{h.title}</h3>
+                                        <p className="text-sm text-slate-500 font-serif italic mb-8">{h.description}</p>
+                                        
+                                        <div className="flex justify-center gap-8 mb-8">
+                                            <div className="text-center">
+                                                <div className="text-3xl font-light text-indigo-500">{h.streak}</div>
+                                                <div className="text-[9px] uppercase font-mono tracking-widest text-slate-400 mt-1">Стрик</div>
                                             </div>
-                                            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
-                                                <div className="text-2xl font-bold text-emerald-500">{h.bestStreak || 0}</div>
-                                                <div className="text-[9px] uppercase font-bold text-slate-400">Рекорд</div>
-                                            </div>
-                                            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
-                                                <div className="text-2xl font-bold text-rose-500">{Object.keys(h.history).length}</div>
-                                                <div className="text-[9px] uppercase font-bold text-slate-400">Всего</div>
+                                            <div className="text-center">
+                                                <div className="text-3xl font-light text-emerald-500">{Object.keys(h.history).length}</div>
+                                                <div className="text-[9px] uppercase font-mono tracking-widest text-slate-400 mt-1">Всего</div>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-center gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-6">
-                                            <button onClick={() => { setSelectedHabitId(null); openEdit(h); }} className="text-xs font-bold text-slate-400 hover:text-indigo-500 uppercase tracking-wider flex items-center gap-2 transition-colors">
-                                                <Edit2 size={14} /> Изменить
+                                        <div className="flex items-center justify-center gap-4 pt-6 border-t border-slate-100 dark:border-white/5">
+                                            <button onClick={() => { setSelectedHabitId(null); openEdit(h); }} className="text-[10px] font-bold text-slate-400 hover:text-indigo-500 uppercase tracking-wider flex items-center gap-2 transition-colors">
+                                                <Edit2 size={12} /> Изменить
                                             </button>
-                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
-                                            <button onClick={() => { if(confirm("Удалить?")) { deleteHabit(h.id); setSelectedHabitId(null); } }} className="text-xs font-bold text-slate-400 hover:text-red-500 uppercase tracking-wider flex items-center gap-2 transition-colors">
-                                                <Trash2 size={14} /> Удалить
+                                            <div className="w-px h-3 bg-slate-200 dark:bg-slate-700" />
+                                            <button onClick={() => { if(confirm("Удалить?")) { deleteHabit(h.id); setSelectedHabitId(null); } }} className="text-[10px] font-bold text-slate-400 hover:text-red-500 uppercase tracking-wider flex items-center gap-2 transition-colors">
+                                                <Trash2 size={12} /> Удалить
                                             </button>
                                         </div>
                                     </div>
