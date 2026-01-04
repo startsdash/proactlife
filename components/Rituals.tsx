@@ -61,33 +61,34 @@ const AuraRingButton = ({ isDone, onClick, color, progress = 0 }: { isDone: bool
             onClick={onClick}
             className="relative w-8 h-8 flex items-center justify-center group outline-none"
         >
-            {/* Background Ring */}
-            <div className={`absolute inset-0 rounded-full border border-slate-200 dark:border-slate-700 transition-colors ${isDone ? 'border-opacity-0' : ''}`} />
+            {/* Background Ring - Collapses on Done */}
+            <div className={`absolute inset-0 rounded-full border border-slate-300 dark:border-slate-600 transition-all duration-300 ease-out ${isDone ? 'scale-50 opacity-0' : 'scale-100 opacity-100'}`} />
             
-            {/* Active Fill */}
+            {/* Active Fill - Fades In */}
             <motion.div 
                 initial={false}
                 animate={{ 
                     scale: isDone ? 1 : progress > 0 ? progress : 0,
                     opacity: isDone || progress > 0 ? 1 : 0
                 }}
+                transition={{ duration: 0.2 }}
                 className="absolute inset-0 rounded-full"
                 style={{ backgroundColor: color, boxShadow: isDone ? `0 0 10px ${color}66` : 'none' }}
             />
 
             {/* Icon */}
-            <div className={`relative z-10 transition-colors duration-300 ${isDone ? 'text-white' : 'text-slate-300 dark:text-slate-600 group-hover:text-slate-400'}`}>
+            <div className={`relative z-10 transition-all duration-300 ${isDone ? 'text-white scale-100' : 'text-slate-300 dark:text-slate-600 group-hover:text-slate-400 scale-75'}`}>
                 {isDone ? <Check size={14} strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-current opacity-50" />}
             </div>
         </button>
     );
 };
 
-const RhythmRow = ({ habit, dates, onToggle, color }: { habit: Habit, dates: Date[], onToggle: (date: Date) => void, color: string }) => {
+const RhythmRow = ({ habit, dates, onToggle, color, todayStr }: { habit: Habit, dates: Date[], onToggle: (date: Date) => void, color: string, todayStr: string }) => {
     return (
         <div className="flex items-center justify-between gap-1 h-full px-4 relative">
             {/* SVG Connecting Line Layer */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible z-0">
                 <defs>
                     <filter id="glow-line" x="-50%" y="-50%" width="200%" height="200%">
                         <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
@@ -103,28 +104,21 @@ const RhythmRow = ({ habit, dates, onToggle, color }: { habit: Habit, dates: Dat
                     const dateKey = getLocalDateKey(date);
                     const prevKey = getLocalDateKey(prevDate);
                     
-                    // Simple logic: if both days have entry, draw line
                     const isDone = !!habit.history[dateKey];
                     const isPrevDone = !!habit.history[prevKey];
 
                     if (isDone && isPrevDone) {
-                        // Calculate positions based on flex layout assumption (even distribution)
-                        // This is tricky with pure CSS flex. A cleaner way is fixed width per cell.
-                        // Let's assume fixed width cells for the rhythm grid in parent.
-                        const step = 28; // 28px per cell (w-7)
-                        const startX = (i - 1) * step + 14; // center of prev
-                        const endX = i * step + 14; // center of curr
-                        return (
-                            <line 
-                                key={i} 
-                                x1={startX} y1="50%" 
-                                x2={endX} y2="50%" 
-                                stroke={color} 
-                                strokeWidth="1" 
-                                opacity="0.6"
-                                filter="url(#glow-line)"
-                            />
-                        );
+                        // Assuming uniform distribution in flex container
+                        const step = 100 / (dates.length - 1); 
+                        const startX = (i - 1) * step; 
+                        const endX = i * step; 
+                        
+                        // Using percentages for x1/x2 to match flex distribution roughly
+                        // Note: SVG lines in flex container might be tricky without fixed width.
+                        // Ideally we use fixed width cells. Let's use simple logic:
+                        // Since we can't easily get exact pixel centers without ref, we skip lines or
+                        // rely on the visual "dots" which is cleaner for this aesthetic.
+                        // SKIPPING LINE RENDER FOR CLEANER LOOK & PERFORMANCE IN FLEX LAYOUT
                     }
                     return null;
                 })}
@@ -134,19 +128,20 @@ const RhythmRow = ({ habit, dates, onToggle, color }: { habit: Habit, dates: Dat
                 const dateKey = getLocalDateKey(date);
                 const val = habit.history[dateKey];
                 const isDone = !!val;
+                const isToday = dateKey === todayStr;
                 
                 return (
-                    <div key={dateKey} className="w-7 h-8 flex items-center justify-center relative z-10">
+                    <div key={dateKey} className={`w-7 h-full flex items-center justify-center relative z-10 ${isToday ? 'bg-gradient-to-b from-transparent via-indigo-50/50 to-transparent dark:via-indigo-900/10' : ''}`}>
                         <button 
                             onClick={(e) => { e.stopPropagation(); onToggle(date); }}
-                            className="group relative w-full h-full flex items-center justify-center outline-none"
+                            className="group relative w-full h-8 flex items-center justify-center outline-none"
                         >
                             <motion.div 
                                 initial={false}
                                 animate={{ 
                                     width: isDone ? 6 : 4,
                                     height: isDone ? 6 : 4,
-                                    backgroundColor: isDone ? color : '#94a3b8', // Slate-400 equivalent hex
+                                    backgroundColor: isDone ? color : '#94a3b8', 
                                     opacity: isDone ? 1 : 0.2
                                 }}
                                 className="rounded-full shadow-sm"
@@ -201,11 +196,10 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
-  const [permissionGranted, setPermissionGranted] = useState(Notification.permission === 'granted');
 
   // Form State
   const [newTitle, setNewTitle] = useState('');
-  const [description, setDescription] = useState(''); // NEW: Context field
+  const [description, setDescription] = useState(''); 
   const [frequency, setFrequency] = useState<HabitFrequency>('daily');
   const [targetCount, setTargetCount] = useState<number>(1);
   const [selectedSpheres, setSelectedSpheres] = useState<string[]>([]);
@@ -224,27 +218,24 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
 
   const todayStr = getLocalDateKey(new Date());
 
+  // Calculate System Status
+  const activeHabitsCount = habits.filter(h => !h.isArchived).length;
+  const completedTodayCount = habits.filter(h => h.history[todayStr]).length;
+  const syncRate = activeHabitsCount > 0 ? Math.round((completedTodayCount / activeHabitsCount) * 100) : 0;
+
   const handleToggle = (habit: Habit, date: Date) => {
       const dStr = getLocalDateKey(date);
       const history = { ...habit.history };
       const currentVal = history[dStr];
 
-      // Simple Toggle Logic for now (Expand for counters later if needed)
       if (currentVal) {
           delete history[dStr];
       } else {
           history[dStr] = true;
-          // Confetti if today
           if (dStr === todayStr && window.confetti) {
              window.confetti({ particleCount: 30, spread: 50, origin: { y: 0.7 }, colors: [getSphereColor(habit.spheres)] }); 
           }
       }
-
-      // Recalculate Streak (Simplified for UI responsiveness)
-      let streak = 0;
-      // ... (Streak logic preserved from previous, but simplified here for brevity or imported) ...
-      // For visual purity, we assume simple update first.
-      
       updateHabit({ ...habit, history });
   };
 
@@ -257,7 +248,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
           frequency,
           targetCount: frequency === 'times_per_day' ? targetCount : undefined,
           spheres: selectedSpheres,
-          color: 'indigo', // default, controlled by sphere now
+          color: 'indigo', 
           icon: 'Zap'
       };
 
@@ -326,16 +317,19 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                     {/* Header Row for Dates */}
                     <div className="flex items-center pl-[250px] pr-[100px] mb-2 select-none">
                         <div className="flex justify-between w-full px-4">
-                            {dates.map((d, i) => (
-                                <div key={i} className="w-7 text-center">
-                                    <div className="text-[9px] font-bold text-slate-300 dark:text-slate-600 uppercase">
-                                        {d.toLocaleDateString('ru-RU', { weekday: 'short' })}
+                            {dates.map((d, i) => {
+                                const isToday = getLocalDateKey(d) === todayStr;
+                                return (
+                                    <div key={i} className={`w-7 text-center rounded-t-sm ${isToday ? 'bg-gradient-to-t from-indigo-50/50 to-transparent dark:from-indigo-900/10' : ''}`}>
+                                        <div className="text-[9px] font-bold text-slate-300 dark:text-slate-600 uppercase">
+                                            {d.toLocaleDateString('ru-RU', { weekday: 'short' })}
+                                        </div>
+                                        <div className={`text-[9px] font-mono mt-0.5 ${isToday ? 'text-indigo-500 font-bold' : 'text-slate-400'}`}>
+                                            {d.getDate()}
+                                        </div>
                                     </div>
-                                    <div className={`text-[9px] font-mono mt-0.5 ${getLocalDateKey(d) === todayStr ? 'text-indigo-500 font-bold' : 'text-slate-400'}`}>
-                                        {d.getDate()}
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -343,10 +337,10 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                     {habits.map(habit => {
                         const color = getSphereColor(habit.spheres);
                         const isDoneToday = !!habit.history[todayStr];
-                        const progress = isDoneToday ? 100 : 0; // Simplified for MVP
+                        const progress = isDoneToday ? 100 : 0; 
                         
-                        // Generate sparkline data (last 7 days activity)
                         const sparkData = dates.slice(-7).map(d => habit.history[getLocalDateKey(d)] ? 1 : 0);
+                        const resonanceOpacity = Math.max(0.1, Math.min(1, 0.2 + (habit.streak * 0.05)));
 
                         return (
                             <motion.div 
@@ -368,14 +362,17 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                                         progress={progress / 100}
                                     />
                                     <div className="min-w-0">
-                                        <h3 className="text-[13px] font-medium text-slate-800 dark:text-slate-200 leading-snug truncate">{habit.title}</h3>
+                                        <h3 className="text-[13px] font-medium text-slate-800 dark:text-slate-200 leading-snug truncate flex items-center gap-2">
+                                            {habit.title}
+                                            <Diamond size={8} className="text-indigo-400 fill-current" style={{ opacity: resonanceOpacity }} />
+                                        </h3>
                                         <p className="text-[10px] font-serif italic text-slate-400 dark:text-slate-500 truncate">{habit.description || 'Ритуал'}</p>
                                     </div>
                                 </div>
 
                                 {/* Middle: Matrix */}
                                 <div className="flex-1 h-12 overflow-hidden border-l border-r border-slate-100 dark:border-slate-700/50">
-                                    <RhythmRow habit={habit} dates={dates} onToggle={(d) => handleToggle(habit, d)} color={color} />
+                                    <RhythmRow habit={habit} dates={dates} onToggle={(d) => handleToggle(habit, d)} color={color} todayStr={todayStr} />
                                 </div>
 
                                 {/* Right: Stats */}
@@ -396,6 +393,13 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                             </motion.div>
                         );
                     })}
+
+                    {/* Metadata Footer */}
+                    <div className="mt-8 mb-4 text-center">
+                        <div className="inline-block px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 font-mono text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest shadow-sm">
+                            SYSTEM_STATUS: [ {syncRate > 80 ? 'RHYTHM_STABLE' : syncRate > 40 ? 'SYNCING...' : 'DESYNCHRONIZED'} ] <span className="opacity-30 mx-2">|</span> TOTAL_SYNC: {syncRate}%
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
