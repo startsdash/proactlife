@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { SketchItem } from '../types';
-import { Shuffle, Image as ImageIcon, Type, Trash2, X, Plus, Maximize2, Sparkles, AlertCircle } from 'lucide-react';
+import { Shuffle, Image as ImageIcon, Type, Trash2, X, Plus, Sparkles, Move } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
 interface Props {
@@ -12,256 +12,306 @@ interface Props {
   updateItem: (item: SketchItem) => void;
 }
 
-const COLORS = [
-    'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-100',
-    'bg-pink-100 dark:bg-pink-900/30 text-pink-900 dark:text-pink-100',
-    'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100',
-    'bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-100',
-    'bg-purple-100 dark:bg-purple-900/30 text-purple-900 dark:text-purple-100',
-];
-
-const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) => {
-  const [textInput, setTextInput] = useState('');
-  const [isShuffling, setIsShuffling] = useState(false);
-  const [focusItem, setFocusItem] = useState<SketchItem | null>(null);
+const QuantumSketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [activeCollision, setActiveCollision] = useState<{ ids: string[], cx: number, cy: number } | null>(null);
+  
+  // Mouse position for Parallax
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
 
-  // --- PASTE LISTENER ---
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-        // Prevent default if focusing on text input to allow normal pasting there
-        if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+  // Background Parallax Transforms (Subtle movement opposite to mouse)
+  const gridX = useTransform(mouseX, [-500, 500], [15, -15]);
+  const gridY = useTransform(mouseY, [-500, 500], [15, -15]);
 
-        const clipboardItems = e.clipboardData?.items;
-        if (!clipboardItems) return;
-
-        for (let i = 0; i < clipboardItems.length; i++) {
-            if (clipboardItems[i].type.indexOf('image') !== -1) {
-                const blob = clipboardItems[i].getAsFile();
-                if (blob) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const base64 = event.target?.result as string;
-                        handleAddImage(base64);
-                    };
-                    reader.readAsDataURL(blob);
-                }
-            }
-        }
-    };
-
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, []);
-
-  const handleAddImage = (base64: string) => {
-      const newItem: SketchItem = {
-          id: Date.now().toString(),
-          type: 'image',
-          content: base64,
-          createdAt: Date.now(),
-          rotation: Math.random() * 6 - 3, // Random tilt -3 to 3 deg
-          widthClass: Math.random() > 0.7 ? 'md:col-span-2' : 'md:col-span-1'
-      };
-      addItem(newItem);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const { clientX, clientY } = e;
+    const { innerWidth, innerHeight } = window;
+    mouseX.set(clientX - innerWidth / 2);
+    mouseY.set(clientY - innerHeight / 2);
   };
 
-  const handleAddText = () => {
-      if (!textInput.trim()) return;
-      const newItem: SketchItem = {
-          id: Date.now().toString(),
-          type: 'text',
-          content: textInput,
-          createdAt: Date.now(),
-          color: COLORS[Math.floor(Math.random() * COLORS.length)],
-          rotation: Math.random() * 4 - 2,
-          widthClass: 'md:col-span-1'
-      };
-      addItem(newItem);
-      setTextInput('');
+  // --- COLLISION LOGIC ---
+  const handleDrag = useCallback((id: string, info: any) => {
+      // Very basic collision detection based on positions
+      // In a real app, we'd use bounding client rects, but here we estimate based on x/y state
+      const currentItem = items.find(i => i.id === id);
+      if (!currentItem) return;
+
+      // Approximate center of dragged item (assuming default width ~200px)
+      const cx = (currentItem.x || 0) + info.offset.x + 100; 
+      const cy = (currentItem.y || 0) + info.offset.y + 100;
+
+      const threshold = 120; // Distance to trigger collision
+      let collisionFound = false;
+
+      for (const other of items) {
+          if (other.id === id) continue;
+          // Approximate center of other items
+          const ocx = (other.x || 0) + 100;
+          const ocy = (other.y || 0) + 100;
+          
+          const dist = Math.sqrt(Math.pow(cx - ocx, 2) + Math.pow(cy - ocy, 2));
+          
+          if (dist < threshold) {
+              setActiveCollision({ 
+                  ids: [id, other.id], 
+                  cx: (cx + ocx) / 2, 
+                  cy: (cy + ocy) / 2 
+              });
+              collisionFound = true;
+              break;
+          }
+      }
+
+      if (!collisionFound) setActiveCollision(null);
+  }, [items]);
+
+  const handleDragEnd = (id: string, info: any) => {
+      const item = items.find(i => i.id === id);
+      if (item) {
+          updateItem({
+              ...item,
+              x: (item.x || 0) + info.offset.x,
+              y: (item.y || 0) + info.offset.y
+          });
+      }
+      setActiveCollision(null);
   };
 
-  // --- SHUFFLE LOGIC ---
-  const handleShuffle = () => {
-      setIsShuffling(true);
-      
-      // We simulate a shuffle by updating rotations and "widthClass" (layout)
-      // Actual array order shuffle in state is better done by parent or here if we pass a reorder function
-      // For this prototype, we'll just update properties to force re-render/layout shift
+  // --- ACTIONS ---
+  const recombine = () => {
+      if (!containerRef.current) return;
+      const { clientWidth, clientHeight } = containerRef.current;
       
       items.forEach(item => {
           updateItem({
               ...item,
-              rotation: Math.random() * 10 - 5, // More chaotic tilt
-              widthClass: Math.random() > 0.8 ? 'md:col-span-2' : 'md:col-span-1'
+              x: Math.random() * (clientWidth - 250),
+              y: Math.random() * (clientHeight - 250),
+              rotation: Math.random() * 10 - 5
           });
       });
+  };
 
-      // Simple timeout to reset visual state
-      setTimeout(() => setIsShuffling(false), 600);
+  const addTextNote = () => {
+      if (!containerRef.current) return;
+      const { clientWidth, clientHeight } = containerRef.current;
+      const newItem: SketchItem = {
+          id: Date.now().toString(),
+          type: 'text',
+          content: 'Новая мысль...',
+          createdAt: Date.now(),
+          x: clientWidth / 2 - 100 + (Math.random() * 40 - 20),
+          y: clientHeight / 2 - 100 + (Math.random() * 40 - 20),
+          rotation: Math.random() * 4 - 2,
+      };
+      addItem(newItem);
+  };
+
+  const handleImagePaste = (e: React.ClipboardEvent) => {
+      const clipboardItems = e.clipboardData.items;
+      for (let i = 0; i < clipboardItems.length; i++) {
+          if (clipboardItems[i].type.indexOf('image') !== -1) {
+              const blob = clipboardItems[i].getAsFile();
+              if (blob) {
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                      if (ev.target?.result && containerRef.current) {
+                          const { clientWidth, clientHeight } = containerRef.current;
+                          addItem({
+                              id: Date.now().toString(),
+                              type: 'image',
+                              content: ev.target.result as string,
+                              createdAt: Date.now(),
+                              x: clientWidth / 2 - 100,
+                              y: clientHeight / 2 - 100,
+                              rotation: Math.random() * 6 - 3,
+                          });
+                      }
+                  };
+                  reader.readAsDataURL(blob);
+              }
+          }
+      }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-              if (ev.target?.result) handleAddImage(ev.target.result as string);
-          };
-          reader.readAsDataURL(file);
+        const file = e.target.files?.[0];
+        if (file && containerRef.current) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                if (ev.target?.result && containerRef.current) {
+                    const { clientWidth, clientHeight } = containerRef.current;
+                    addItem({
+                        id: Date.now().toString(),
+                        type: 'image',
+                        content: ev.target.result as string,
+                        createdAt: Date.now(),
+                        x: clientWidth / 2 - 100,
+                        y: clientHeight / 2 - 100,
+                        rotation: Math.random() * 6 - 3,
+                    });
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+  };
+
+  const triggerInsight = () => {
+      if (window.confetti && activeCollision) {
+          window.confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { x: activeCollision.cx / window.innerWidth, y: activeCollision.cy / window.innerHeight }
+          });
+          setActiveCollision(null);
+          // Here you could visually merge them or open a modal
+          alert("Инсайт зафиксирован! (Концептуально)");
       }
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden" ref={containerRef}>
-      
-      {/* HEADER */}
-      <header className="p-4 md:p-8 shrink-0 flex justify-between items-center z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
-          <div>
-              <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-2">
-                  Sketchpad <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold uppercase tracking-wider dark:bg-indigo-900 dark:text-indigo-300">Beta</span>
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm hidden md:block">Вставляй картинки (Ctrl+V), пиши мысли, смешивай контексты.</p>
-          </div>
-          <div className="flex items-center gap-2">
-              <Tooltip content="Перемешать (Инсайт)">
-                  <button 
-                    onClick={handleShuffle} 
-                    className={`p-3 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl transition-all active:scale-95 ${isShuffling ? 'animate-spin' : ''}`}
-                  >
-                      <Shuffle size={20} />
-                  </button>
-              </Tooltip>
-          </div>
-      </header>
+    <div 
+        className="relative w-full h-full overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] select-none" 
+        ref={containerRef}
+        onMouseMove={handleMouseMove}
+        onPaste={handleImagePaste}
+        tabIndex={0} // Allow paste focus
+    >
+        {/* PARALLAX DOT GRID */}
+        <motion.div 
+            className="absolute inset-[-100px] pointer-events-none opacity-40 dark:opacity-20 z-0"
+            style={{ 
+                backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)', 
+                backgroundSize: '32px 32px',
+                x: gridX,
+                y: gridY
+            }} 
+        />
 
-      {/* CANVAS AREA */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar-light p-4 md:p-8 relative">
-          
-          {/* BACKGROUND MESH */}
-          <div className="fixed inset-0 pointer-events-none opacity-30 dark:opacity-10 z-0">
-              <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-300 rounded-full blur-[120px]" />
-              <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-300 rounded-full blur-[120px]" />
-              <div className="absolute top-[40%] left-[40%] w-[20%] h-[20%] bg-pink-300 rounded-full blur-[100px]" />
-          </div>
+        {/* CONTROLS (Floating) */}
+        <div className="absolute top-6 left-6 z-50 flex flex-col gap-4">
+            <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight select-none pointer-events-none">
+                Quantum Field
+            </h1>
+            <div className="flex gap-2">
+                <button 
+                    onClick={addTextNote}
+                    className="p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-full shadow-sm hover:scale-110 transition-transform text-slate-600 dark:text-slate-300"
+                    title="Add Text (Type)"
+                >
+                    <Type size={20} />
+                </button>
+                <label className="p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-full shadow-sm hover:scale-110 transition-transform text-slate-600 dark:text-slate-300 cursor-pointer">
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                    <ImageIcon size={20} />
+                </label>
+            </div>
+        </div>
 
-          {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 z-10 relative">
-                  <Sparkles size={48} className="mb-4 text-indigo-300 opacity-50" />
-                  <p className="text-lg font-light text-center max-w-sm leading-relaxed">
-                      Пустота — начало творчества.<br/>
-                      <span className="text-sm opacity-70">Нажми Ctrl+V чтобы вставить картинку из буфера или напиши что-нибудь.</span>
-                  </p>
-              </div>
-          ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 auto-rows-max relative z-10 pb-24">
-                  <AnimatePresence>
-                      {items.map((item) => (
-                          <motion.div
-                              layout
-                              key={item.id}
-                              initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                              animate={{ opacity: 1, scale: 1, y: 0, rotate: item.rotation }}
-                              exit={{ opacity: 0, scale: 0.5 }}
-                              transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-                              className={`
-                                  relative group cursor-pointer
-                                  ${item.type === 'text' ? item.widthClass || 'md:col-span-1' : item.widthClass || 'md:col-span-1'}
-                                  ${item.type === 'image' ? 'row-span-2' : 'row-span-1'}
-                              `}
-                              onClick={() => setFocusItem(item)}
-                          >
-                              {item.type === 'image' ? (
-                                  <div className="bg-white p-2 pb-8 shadow-xl hover:shadow-2xl transition-shadow transform hover:-translate-y-1 duration-300 rounded-sm">
-                                      <img src={item.content} alt="sketch" className="w-full h-full object-cover aspect-[4/5] bg-slate-100" />
-                                  </div>
-                              ) : (
-                                  <div className={`p-4 shadow-lg hover:shadow-xl transition-shadow transform hover:-translate-y-1 duration-300 aspect-square flex items-center justify-center text-center font-medium text-sm md:text-base leading-snug break-words overflow-hidden ${item.color || 'bg-yellow-100 text-yellow-900'} mask-tape`}>
-                                      {item.content}
-                                  </div>
-                              )}
-                              
-                              {/* HOVER DELETE */}
-                              <button 
-                                  onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600 z-20"
-                              >
-                                  <X size={12} />
-                              </button>
-                          </motion.div>
-                      ))}
-                  </AnimatePresence>
-              </div>
-          )}
-      </div>
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50">
+            <button 
+                onClick={recombine}
+                className="group flex items-center gap-3 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+            >
+                <Shuffle size={14} className="group-hover:rotate-180 transition-transform duration-700" />
+                <span className="font-mono text-[9px] uppercase tracking-[0.2em] font-bold">Рекомбинация</span>
+            </button>
+        </div>
 
-      {/* INPUT BAR */}
-      <div className="shrink-0 p-4 md:p-6 z-20 relative">
-          <div className="max-w-3xl mx-auto bg-white dark:bg-[#1e293b] rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-2 flex items-center gap-2">
-              <label className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer text-slate-400 hover:text-indigo-500 transition-colors">
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                  <ImageIcon size={20} />
-              </label>
-              <div className="flex-1 relative">
-                  <input 
-                      type="text" 
-                      className="w-full bg-transparent outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 text-sm md:text-base"
-                      placeholder="Быстрая мысль..."
-                      value={textInput}
-                      onChange={(e) => setTextInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddText()}
-                  />
-              </div>
-              <button 
-                  onClick={handleAddText}
-                  disabled={!textInput.trim()}
-                  className="p-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-slate-700"
-              >
-                  <Plus size={20} />
-              </button>
-          </div>
-      </div>
+        {/* CANVAS ITEMS */}
+        <AnimatePresence>
+            {items.map((item) => {
+                const isColliding = activeCollision?.ids.includes(item.id);
+                
+                return (
+                    <motion.div
+                        key={item.id}
+                        layout // Critical for Recombine animation
+                        drag
+                        dragMomentum={false}
+                        onDrag={(_, info) => handleDrag(item.id, info)}
+                        onDragEnd={(_, info) => handleDragEnd(item.id, info)}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ 
+                            opacity: 1, 
+                            scale: 1, 
+                            x: item.x || 100, 
+                            y: item.y || 100, 
+                            rotate: item.rotation || 0,
+                            boxShadow: isColliding 
+                                ? "0 0 30px rgba(99,102,241,0.6), 0 0 10px rgba(99,102,241,0.8)" 
+                                : "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)"
+                        }}
+                        exit={{ opacity: 0, scale: 0.5 }}
+                        transition={{ 
+                            type: "spring", stiffness: 200, damping: 25, 
+                            layout: { duration: 0.8, ease: [0.2, 0.8, 0.2, 1] } 
+                        }}
+                        className={`absolute cursor-grab active:cursor-grabbing group`}
+                        style={{ width: 220 }}
+                    >
+                        {item.type === 'text' ? (
+                            <div className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-[20px] border border-white/40 dark:border-white/10 p-6 min-h-[140px] flex items-center justify-center text-center relative overflow-hidden rounded-sm">
+                                {/* Paper Texture Hint */}
+                                <div className="absolute inset-0 opacity-50 pointer-events-none mix-blend-multiply bg-slate-50" />
+                                <div 
+                                    contentEditable
+                                    suppressContentEditableWarning
+                                    onBlur={(e) => updateItem({...item, content: e.target.innerText})}
+                                    className="relative z-10 font-serif text-slate-800 dark:text-slate-200 text-lg leading-relaxed outline-none min-w-[100px]"
+                                >
+                                    {item.content}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="p-1 bg-white dark:bg-slate-800 shadow-sm transition-all">
+                                <img 
+                                    src={item.content} 
+                                    alt="fragment" 
+                                    className="w-full h-auto object-cover grayscale opacity-90 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none" 
+                                />
+                            </div>
+                        )}
 
-      {/* FOCUS MODAL */}
-      <AnimatePresence>
-          {focusItem && (
-              <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 md:p-12"
-                  onClick={() => setFocusItem(null)}
-              >
-                  <motion.div 
-                      initial={{ scale: 0.8, y: 20 }}
-                      animate={{ scale: 1, y: 0 }}
-                      exit={{ scale: 0.8, y: 20 }}
-                      className="relative max-w-4xl max-h-full"
-                      onClick={(e) => e.stopPropagation()}
-                  >
-                      {focusItem.type === 'image' ? (
-                          <img src={focusItem.content} alt="Focus" className="rounded-lg shadow-2xl max-h-[80vh] object-contain bg-white p-2" />
-                      ) : (
-                          <div className={`p-12 md:p-20 rounded-lg shadow-2xl text-2xl md:text-4xl font-bold text-center leading-relaxed max-w-2xl ${focusItem.color || 'bg-white'}`}>
-                              {focusItem.content}
-                          </div>
-                      )}
-                      
-                      <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-4">
-                          <button onClick={() => { deleteItem(focusItem.id); setFocusItem(null); }} className="p-3 bg-white/10 hover:bg-red-500/20 text-white rounded-full border border-white/20 transition-colors">
-                              <Trash2 size={24} />
-                          </button>
-                          <button onClick={() => setFocusItem(null)} className="p-3 bg-white text-slate-900 rounded-full shadow-lg hover:scale-105 transition-transform">
-                              <X size={24} />
-                          </button>
-                      </div>
-                  </motion.div>
-              </motion.div>
-          )}
-      </AnimatePresence>
+                        {/* Controls on Hover */}
+                        <div className="absolute -top-3 -right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
+                                className="bg-red-500 text-white p-1.5 rounded-full shadow-md hover:bg-red-600 transition-colors"
+                            >
+                                <X size={12} />
+                            </button>
+                        </div>
+                    </motion.div>
+                );
+            })}
+        </AnimatePresence>
+
+        {/* INSIGHT BUTTON (COLLISION EVENT) */}
+        <AnimatePresence>
+            {activeCollision && (
+                <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1, x: activeCollision.cx, y: activeCollision.cy }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    className="absolute z-[100] -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
+                    style={{ left: 0, top: 0 }} // Position handled by motion animate x/y
+                >
+                    <button 
+                        onClick={triggerInsight}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-full shadow-[0_0_20px_rgba(79,70,229,0.6)] animate-pulse hover:animate-none hover:scale-110 transition-transform"
+                    >
+                        <Sparkles size={16} />
+                        <span className="text-xs font-bold uppercase tracking-wider">Create Insight</span>
+                    </button>
+                </motion.div>
+            )}
+        </AnimatePresence>
 
     </div>
   );
 };
 
-export default Sketchpad;
+export default QuantumSketchpad;

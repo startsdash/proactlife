@@ -43,7 +43,17 @@ export const loadState = (): AppState => {
       }));
     }
 
-    if (!parsed.sketchpad) parsed.sketchpad = [];
+    // Sketchpad Migration: Ensure X/Y coordinates exist
+    if (parsed.sketchpad) {
+        parsed.sketchpad = parsed.sketchpad.map((item: any) => ({
+            ...item,
+            x: typeof item.x === 'number' ? item.x : Math.random() * 800 + 100, // Random pos if missing
+            y: typeof item.y === 'number' ? item.y : Math.random() * 600 + 100, // Random pos if missing
+            rotation: typeof item.rotation === 'number' ? item.rotation : (Math.random() * 6 - 3)
+        }));
+    } else {
+        parsed.sketchpad = [];
+    }
 
     if (parsed.journal) {
         parsed.journal = parsed.journal.map((j: any) => ({
