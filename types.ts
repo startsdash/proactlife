@@ -15,65 +15,65 @@ export enum Module {
   KANBAN = 'kanban',
   RITUALS = 'rituals',
   JOURNAL = 'journal',
-  MOODBAR = 'moodbar', // NEW
+  MOODBAR = 'moodbar',
   ARCHIVE = 'archive',
   SETTINGS = 'settings',
   LEARNING = 'learning',
-  USER_SETTINGS = 'user_settings'
+  USER_SETTINGS = 'user_settings',
+  PROFILE = 'profile' // NEW
 }
 
 export interface Note {
   id: string;
-  title?: string; // NEW: Title field
+  title?: string;
   content: string;
   tags: string[];
   createdAt: number;
   status: 'inbox' | 'sandbox' | 'archived';
   isPinned?: boolean;
   color?: string;
-  coverUrl?: string; // NEW: Cover image URL
+  coverUrl?: string;
 }
 
-// NEW: Sketchpad Types
 export interface SketchItem {
   id: string;
   type: 'text' | 'image';
-  content: string; // Text string or Base64 Image
+  content: string;
   createdAt: number;
-  color?: string; // For text notes (tailwind class)
-  rotation: number; // -3 to 3 degrees for realism
-  widthClass?: string; // col-span-1 or col-span-2
+  color?: string;
+  rotation: number;
+  widthClass?: string;
 }
 
 export interface Subtask {
   id: string;
   text: string;
   isCompleted: boolean;
-  isPinned?: boolean; // NEW: Pin to card
+  isPinned?: boolean;
 }
 
 export interface Task {
   id: string;
-  title?: string; // NEW: Task Title
-  content: string; // Description / Body
-  description?: string; // Context/Source (e.g. original note)
+  title?: string;
+  content: string;
+  description?: string;
   column: 'todo' | 'doing' | 'done';
   createdAt: number;
   reflection?: string;
   blockerAnalysis?: string;
-  coverUrl?: string; // NEW: Task Cover Image
-  color?: string; // NEW: Task Color
+  coverUrl?: string;
+  color?: string;
   
-  subtasks?: Subtask[]; // Checklist items
+  subtasks?: Subtask[];
 
   activeChallenge?: string;
-  pinnedChallengeIndices?: number[]; // NEW: Indices of pinned lines in activeChallenge
+  pinnedChallengeIndices?: number[];
   isChallengeCompleted?: boolean;
   challengeHistory?: string[];
   
   consultationHistory?: string[];
   
-  spheres?: string[]; // Manual sphere selection
+  spheres?: string[];
   isArchived?: boolean;
 }
 
@@ -85,29 +85,26 @@ export interface Flashcard {
   level: number;
 }
 
-// --- HABITS / RITUALS TYPES ---
-
 export type HabitFrequency = 'daily' | 'specific_days' | 'times_per_week' | 'times_per_day';
 
 export interface Habit {
   id: string;
   title: string;
   description?: string;
-  color: string; // Tailwind color class key (e.g. 'indigo')
-  icon: string; // Icon key
+  color: string;
+  icon: string;
   
   frequency: HabitFrequency;
-  targetDays?: number[]; // 0 = Sunday, 1 = Monday, etc. (for 'specific_days')
-  targetCount?: number; // used for 'times_per_week' AND 'times_per_day'
+  targetDays?: number[];
+  targetCount?: number;
   
-  reminders: string[]; // ["09:00", "20:00"]
+  reminders: string[];
   
-  // Updated to support numbers for 'times_per_day' logic (count)
-  history: Record<string, boolean | number>; // "YYYY-MM-DD" -> true OR count
+  history: Record<string, boolean | number>;
   streak: number;
   bestStreak: number;
   
-  spheres?: string[]; // Manual sphere selection
+  spheres?: string[];
   isArchived?: boolean;
   createdAt: number;
 }
@@ -126,12 +123,11 @@ export interface JournalEntry {
   linkedTaskId?: string; 
   aiFeedback?: string;
   mentorId?: string;
-  spheres?: string[]; // Manual sphere selection
-  isInsight?: boolean; // Toggle for dashboard stats
+  spheres?: string[];
+  isInsight?: boolean;
   
-  // NEW: Mood Tracking
-  mood?: number; // 1 (Worst) to 5 (Best)
-  moodTags?: string[]; // e.g. ["Work", "Sleep", "Social"]
+  mood?: number;
+  moodTags?: string[];
 }
 
 export interface MentorAnalysis {
@@ -140,8 +136,6 @@ export interface MentorAnalysis {
   content: string;
   mentorName: string;
 }
-
-// --- CONFIGURATION TYPES ---
 
 export type AccessLevel = 'public' | 'owner_only' | 'restricted';
 
@@ -179,16 +173,16 @@ export interface AIToolConfig extends AccessControl {
 export interface InviteCode {
   code: string;
   createdAt: number;
-  expiresAt: number | null; // null = permanent
+  expiresAt: number | null;
   comment?: string;
   createdBy: string;
 }
 
 export interface AppConfig {
   _version?: number; 
-  ownerEmail?: string; // NEW: Explicit owner definition
-  isGuestModeEnabled?: boolean; // NEW: Controls whether unauthenticated users can access the app
-  inviteCodes?: InviteCode[]; // NEW: List of active invite codes
+  ownerEmail?: string;
+  isGuestModeEnabled?: boolean;
+  inviteCodes?: InviteCode[];
   coreLibrary: string;
   mentors: Mentor[];
   challengeAuthors: ChallengeAuthor[];
@@ -201,9 +195,16 @@ export interface UserProfile {
   picture: string;
 }
 
+export type IdentityRole = 'hero' | 'explorer' | 'architect';
+
+export interface UserProfileConfig {
+    role: IdentityRole;
+    manifesto: string;
+}
+
 export interface AppState {
   notes: Note[];
-  sketchpad: SketchItem[]; // NEW
+  sketchpad: SketchItem[];
   tasks: Task[];
   flashcards: Flashcard[];
   habits: Habit[]; 
@@ -212,6 +213,7 @@ export interface AppState {
   mentorAnalyses: MentorAnalysis[]; 
   config: AppConfig; 
   user?: UserProfile; 
+  profileConfig?: UserProfileConfig; // NEW
 }
 
 export type SyncStatus = 'disconnected' | 'syncing' | 'synced' | 'error';

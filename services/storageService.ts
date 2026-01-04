@@ -1,4 +1,5 @@
 
+
 import { AppState } from "../types";
 import { DEFAULT_CONFIG } from "../constants";
 
@@ -9,14 +10,18 @@ export const loadState = (): AppState => {
     const stored = localStorage.getItem(KEY);
     const emptyState: AppState = {
       notes: [],
-      sketchpad: [], // NEW
+      sketchpad: [],
       tasks: [],
       flashcards: [],
-      habits: [], // NEW
+      habits: [],
       challenges: [],
       journal: [],
       mentorAnalyses: [],
-      config: DEFAULT_CONFIG
+      config: DEFAULT_CONFIG,
+      profileConfig: {
+          role: 'architect',
+          manifesto: 'Строить системы, которые переживут хаос.'
+      }
     };
 
     if (!stored) return emptyState;
@@ -66,6 +71,10 @@ export const loadState = (): AppState => {
         parsed.habits = [];
     }
 
+    if (!parsed.profileConfig) {
+        parsed.profileConfig = emptyState.profileConfig;
+    }
+
     return { ...emptyState, ...parsed };
   } catch (error) {
     console.error("Failed to load state:", error);
@@ -78,7 +87,11 @@ export const loadState = (): AppState => {
       challenges: [],
       journal: [],
       mentorAnalyses: [],
-      config: DEFAULT_CONFIG
+      config: DEFAULT_CONFIG,
+      profileConfig: {
+          role: 'architect',
+          manifesto: 'Строить системы, которые переживут хаос.'
+      }
     };
   }
 };

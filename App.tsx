@@ -1,6 +1,7 @@
 
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem } from './types';
+import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
 import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
@@ -15,10 +16,11 @@ import Rituals from './components/Rituals';
 import Archive from './components/Archive';
 import Settings from './components/Settings';
 import Journal from './components/Journal';
-import Moodbar from './components/Moodbar'; // NEW IMPORT
+import Moodbar from './components/Moodbar';
 import LearningMode from './components/LearningMode';
 import UserSettings from './components/UserSettings';
 import Onboarding from './components/Onboarding';
+import Profile from './components/Profile'; // NEW IMPORT
 import { LogIn, Shield, CloudOff, ArrowRight } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -87,7 +89,8 @@ const App: React.FC = () => {
   // ------------------------
 
   const [data, setData] = useState<AppState>({
-    notes: [], sketchpad: [], tasks: [], flashcards: [], habits: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG
+    notes: [], sketchpad: [], tasks: [], flashcards: [], habits: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG, 
+    profileConfig: { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' }
   });
   
   const [isLoaded, setIsLoaded] = useState(false);
@@ -161,6 +164,7 @@ const App: React.FC = () => {
               if (!driveData.mentorAnalyses) driveData.mentorAnalyses = [];
               if (!driveData.habits) driveData.habits = [];
               if (!driveData.sketchpad) driveData.sketchpad = [];
+              if (!driveData.profileConfig) driveData.profileConfig = { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' };
               
               setData(prev => ({...driveData, user: prev.user})); 
               saveState(driveData);
@@ -302,6 +306,7 @@ const App: React.FC = () => {
   };
 
   const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
+  const updateProfileConfig = (newProfileConfig: UserProfileConfig) => setData(p => ({ ...p, profileConfig: newProfileConfig }));
   
   // Use config owner email
   const isOwner = data.user?.email === data.config.ownerEmail;
@@ -430,6 +435,7 @@ const App: React.FC = () => {
       {module === Module.JOURNAL && <Journal entries={data.journal} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
       {module === Module.MOODBAR && <Moodbar entries={data.journal} onAddEntry={addJournalEntry} />}
       {module === Module.ARCHIVE && <Archive tasks={data.tasks} restoreTask={restoreTask} deleteTask={deleteTask} />}
+      {module === Module.PROFILE && <Profile notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} flashcards={data.flashcards} config={data.profileConfig || { role: 'architect', manifesto: '...' }} onUpdateConfig={updateProfileConfig} />}
       {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
       {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}
     </Layout>
