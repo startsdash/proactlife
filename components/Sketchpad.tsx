@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { SketchItem } from '../types';
-import { Shuffle, Image as ImageIcon, Type, Trash2, X, Plus, Maximize2, Sparkles, AlertCircle } from 'lucide-react';
+import { Shuffle, Image as ImageIcon, Type, Trash2, X, Plus, Sparkles, Upload, Maximize2, Move } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
 interface Props {
@@ -12,29 +12,40 @@ interface Props {
   updateItem: (item: SketchItem) => void;
 }
 
-const COLORS = [
-    'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-100',
-    'bg-pink-100 dark:bg-pink-900/30 text-pink-900 dark:text-pink-100',
-    'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100',
-    'bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-100',
-    'bg-purple-100 dark:bg-purple-900/30 text-purple-900 dark:text-purple-100',
-];
+const DOT_GRID_STYLE = {
+    backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)',
+    backgroundSize: '32px 32px'
+};
 
 const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) => {
   const [textInput, setTextInput] = useState('');
-  const [isShuffling, setIsShuffling] = useState(false);
+  const [isInputOpen, setIsInputOpen] = useState(false);
   const [focusItem, setFocusItem] = useState<SketchItem | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Parallax Mouse Effect
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const springConfig = { damping: 25, stiffness: 150 };
+  const springX = useSpring(mouseX, springConfig);
+  const springY = useSpring(mouseY, springConfig);
+  
+  const bgX = useTransform(springX, [-1000, 1000], [20, -20]);
+  const bgY = useTransform(springY, [-1000, 1000], [20, -20]);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+      const { clientX, clientY } = e;
+      const { innerWidth, innerHeight } = window;
+      mouseX.set(clientX - innerWidth / 2);
+      mouseY.set(clientY - innerHeight / 2);
+  };
 
   // --- PASTE LISTENER ---
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
-        // Prevent default if focusing on text input to allow normal pasting there
         if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
-
         const clipboardItems = e.clipboardData?.items;
         if (!clipboardItems) return;
-
         for (let i = 0; i < clipboardItems.length; i++) {
             if (clipboardItems[i].type.indexOf('image') !== -1) {
                 const blob = clipboardItems[i].getAsFile();
@@ -49,7 +60,6 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
             }
         }
     };
-
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
   }, []);
@@ -60,8 +70,8 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
           type: 'image',
           content: base64,
           createdAt: Date.now(),
-          rotation: Math.random() * 6 - 3, // Random tilt -3 to 3 deg
-          widthClass: Math.random() > 0.7 ? 'md:col-span-2' : 'md:col-span-1'
+          rotation: (Math.random() * 4) - 2,
+          widthClass: 'col-span-1 row-span-2'
       };
       addItem(newItem);
   };
@@ -73,32 +83,23 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
           type: 'text',
           content: textInput,
           createdAt: Date.now(),
-          color: COLORS[Math.floor(Math.random() * COLORS.length)],
-          rotation: Math.random() * 4 - 2,
-          widthClass: 'md:col-span-1'
+          rotation: (Math.random() * 4) - 2,
+          widthClass: 'col-span-1 row-span-1'
       };
       addItem(newItem);
       setTextInput('');
+      setIsInputOpen(false);
   };
 
-  // --- SHUFFLE LOGIC ---
   const handleShuffle = () => {
-      setIsShuffling(true);
-      
-      // We simulate a shuffle by updating rotations and "widthClass" (layout)
-      // Actual array order shuffle in state is better done by parent or here if we pass a reorder function
-      // For this prototype, we'll just update properties to force re-render/layout shift
-      
       items.forEach(item => {
           updateItem({
               ...item,
-              rotation: Math.random() * 10 - 5, // More chaotic tilt
-              widthClass: Math.random() > 0.8 ? 'md:col-span-2' : 'md:col-span-1'
+              rotation: (Math.random() * 10) - 5,
+              // Randomly toggle size for variety
+              widthClass: Math.random() > 0.8 ? 'col-span-2 row-span-1' : 'col-span-1 row-span-1'
           });
       });
-
-      // Simple timeout to reset visual state
-      setTimeout(() => setIsShuffling(false), 600);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,81 +114,113 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden" ref={containerRef}>
+    <div 
+        className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#020617] relative overflow-hidden" 
+        ref={containerRef}
+        onMouseMove={handleMouseMove}
+    >
+      {/* QUANTUM FIELD BACKGROUND */}
+      <motion.div 
+        className="absolute inset-[-50px] pointer-events-none opacity-30 dark:opacity-10 z-0" 
+        style={{ 
+            ...DOT_GRID_STYLE,
+            x: bgX,
+            y: bgY
+        }} 
+      />
       
-      {/* HEADER */}
-      <header className="p-4 md:p-8 shrink-0 flex justify-between items-center z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
-          <div>
-              <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-2">
-                  Sketchpad <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold uppercase tracking-wider dark:bg-indigo-900 dark:text-indigo-300">Beta</span>
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm hidden md:block">Вставляй картинки (Ctrl+V), пиши мысли, смешивай контексты.</p>
+      {/* VIGNETTE */}
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.05)_100%)] dark:bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)] z-0" />
+
+      {/* HEADER CONTROLS */}
+      <div className="absolute top-6 right-6 z-30 flex items-center gap-4">
+          <div className="hidden md:block font-mono text-[9px] text-slate-400 uppercase tracking-widest mr-2 select-none">
+              Quantum Field / Active
           </div>
-          <div className="flex items-center gap-2">
-              <Tooltip content="Перемешать (Инсайт)">
-                  <button 
-                    onClick={handleShuffle} 
-                    className={`p-3 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl transition-all active:scale-95 ${isShuffling ? 'animate-spin' : ''}`}
-                  >
-                      <Shuffle size={20} />
-                  </button>
-              </Tooltip>
-          </div>
-      </header>
+          <button 
+            onClick={handleShuffle}
+            className="group flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-black/50 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-full hover:bg-white dark:hover:bg-white/10 transition-all active:scale-95"
+          >
+              <Shuffle size={14} className="text-slate-600 dark:text-slate-300 group-hover:rotate-180 transition-transform duration-500" />
+              <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600 dark:text-slate-300 font-bold">Рекомбинация</span>
+          </button>
+      </div>
 
       {/* CANVAS AREA */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar-light p-4 md:p-8 relative">
+      <div className="flex-1 overflow-y-auto custom-scrollbar-none p-4 md:p-12 relative z-10">
           
-          {/* BACKGROUND MESH */}
-          <div className="fixed inset-0 pointer-events-none opacity-30 dark:opacity-10 z-0">
-              <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-300 rounded-full blur-[120px]" />
-              <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-300 rounded-full blur-[120px]" />
-              <div className="absolute top-[40%] left-[40%] w-[20%] h-[20%] bg-pink-300 rounded-full blur-[100px]" />
-          </div>
-
           {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 z-10 relative">
-                  <Sparkles size={48} className="mb-4 text-indigo-300 opacity-50" />
-                  <p className="text-lg font-light text-center max-w-sm leading-relaxed">
-                      Пустота — начало творчества.<br/>
-                      <span className="text-sm opacity-70">Нажми Ctrl+V чтобы вставить картинку из буфера или напиши что-нибудь.</span>
-                  </p>
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 select-none">
+                  <div className="relative">
+                      <Sparkles size={64} className="text-indigo-200 dark:text-slate-800 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-150 blur-sm" />
+                      <Sparkles size={48} className="relative z-10 text-slate-300 dark:text-slate-600" strokeWidth={1} />
+                  </div>
+                  <h2 className="mt-6 text-2xl font-serif text-slate-800 dark:text-slate-200 tracking-tight">Чистое Сознание</h2>
+                  <p className="mt-2 text-xs font-mono uppercase tracking-widest text-slate-400">Поле готово для наблюдений</p>
+                  <p className="mt-8 text-xs text-slate-400 opacity-50">Ctrl+V для изображений</p>
               </div>
           ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 auto-rows-max relative z-10 pb-24">
-                  <AnimatePresence>
-                      {items.map((item) => (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8 auto-rows-[minmax(150px,auto)] pb-32 max-w-[1920px] mx-auto">
+                  <AnimatePresence mode='popLayout'>
+                      {items.map((item, i) => (
                           <motion.div
                               layout
+                              drag
+                              dragConstraints={containerRef}
+                              dragElastic={0.1}
+                              dragMomentum={false}
+                              whileDrag={{ scale: 1.05, zIndex: 50, cursor: 'grabbing' }}
                               key={item.id}
-                              initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                              animate={{ opacity: 1, scale: 1, y: 0, rotate: item.rotation }}
-                              exit={{ opacity: 0, scale: 0.5 }}
-                              transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+                              initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                              animate={{ opacity: 1, scale: 1, y: 0, rotate: item.rotation || 0 }}
+                              exit={{ opacity: 0, scale: 0.5, filter: 'blur(10px)' }}
+                              transition={{ 
+                                  layout: { duration: 0.6, ease: [0.2, 0.8, 0.2, 1] },
+                                  opacity: { duration: 0.4 }
+                              }}
                               className={`
-                                  relative group cursor-pointer
-                                  ${item.type === 'text' ? item.widthClass || 'md:col-span-1' : item.widthClass || 'md:col-span-1'}
-                                  ${item.type === 'image' ? 'row-span-2' : 'row-span-1'}
+                                  relative group cursor-grab active:cursor-grabbing
+                                  ${item.widthClass || 'col-span-1'}
+                                  ${item.type === 'image' ? 'row-span-2' : ''}
                               `}
+                              style={{ zIndex: 1 }}
                               onClick={() => setFocusItem(item)}
                           >
                               {item.type === 'image' ? (
-                                  <div className="bg-white p-2 pb-8 shadow-xl hover:shadow-2xl transition-shadow transform hover:-translate-y-1 duration-300 rounded-sm">
-                                      <img src={item.content} alt="sketch" className="w-full h-full object-cover aspect-[4/5] bg-slate-100" />
+                                  <div className="relative h-full w-full bg-white dark:bg-black p-1 shadow-lg group-hover:shadow-2xl transition-all duration-500 rounded-sm border border-slate-200 dark:border-white/10 transform group-hover:-translate-y-1">
+                                      <div className="absolute inset-0 bg-slate-100 dark:bg-slate-900 -z-10" />
+                                      <img 
+                                        src={item.content} 
+                                        alt="sketch" 
+                                        className="w-full h-full object-cover filter grayscale contrast-125 group-hover:grayscale-0 transition-all duration-700 ease-in-out" 
+                                      />
+                                      {/* Minimal Frame Marker */}
+                                      <div className="absolute bottom-2 right-2 w-2 h-2 border-b border-r border-slate-400/50" />
+                                      <div className="absolute top-2 left-2 w-2 h-2 border-t border-l border-slate-400/50" />
                                   </div>
                               ) : (
-                                  <div className={`p-4 shadow-lg hover:shadow-xl transition-shadow transform hover:-translate-y-1 duration-300 aspect-square flex items-center justify-center text-center font-medium text-sm md:text-base leading-snug break-words overflow-hidden ${item.color || 'bg-yellow-100 text-yellow-900'} mask-tape`}>
-                                      {item.content}
+                                  <div className="h-full w-full bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 md:p-8 shadow-sm hover:shadow-xl transition-all duration-500 rounded-sm flex flex-col justify-center items-center text-center group-hover:-translate-y-1 relative overflow-hidden">
+                                      {/* Paper Texture Overlay */}
+                                      <div className="absolute inset-0 opacity-[0.03] bg-noise pointer-events-none" />
+                                      
+                                      <p className="font-serif text-lg md:text-xl text-slate-800 dark:text-slate-200 leading-relaxed select-none">
+                                          {item.content}
+                                      </p>
+                                      
+                                      {/* Hover Glow */}
+                                      <div className="absolute inset-0 border border-indigo-500/0 group-hover:border-indigo-500/20 transition-colors duration-500 pointer-events-none" />
                                   </div>
                               )}
                               
-                              {/* HOVER DELETE */}
-                              <button 
-                                  onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600 z-20"
-                              >
-                                  <X size={12} />
-                              </button>
+                              {/* HOVER ACTIONS */}
+                              <div className="absolute -top-3 -right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 scale-90 group-hover:scale-100 pointer-events-none group-hover:pointer-events-auto">
+                                  <button 
+                                      onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
+                                      className="p-2 bg-white dark:bg-slate-800 text-red-500 rounded-full shadow-md hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors border border-slate-100 dark:border-slate-700"
+                                  >
+                                      <Trash2 size={14} />
+                                  </button>
+                              </div>
                           </motion.div>
                       ))}
                   </AnimatePresence>
@@ -195,66 +228,82 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
           )}
       </div>
 
-      {/* INPUT BAR */}
-      <div className="shrink-0 p-4 md:p-6 z-20 relative">
-          <div className="max-w-3xl mx-auto bg-white dark:bg-[#1e293b] rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-2 flex items-center gap-2">
-              <label className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer text-slate-400 hover:text-indigo-500 transition-colors">
+      {/* INPUT DOCK */}
+      <div className="absolute bottom-8 right-8 z-30 flex flex-col items-end gap-4 pointer-events-none">
+          <AnimatePresence>
+              {isInputOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                    className="bg-white/80 dark:bg-black/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-2xl w-80 pointer-events-auto mb-2 origin-bottom-right"
+                  >
+                      <textarea 
+                          autoFocus
+                          value={textInput}
+                          onChange={(e) => setTextInput(e.target.value)}
+                          onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddText(); } }}
+                          placeholder="Новая мысль..."
+                          className="w-full bg-transparent border-none outline-none text-slate-800 dark:text-slate-200 font-serif text-lg resize-none placeholder:text-slate-400 placeholder:font-sans min-h-[100px]"
+                      />
+                      <div className="flex justify-between items-center mt-2 border-t border-slate-200/50 dark:border-white/10 pt-3">
+                          <span className="text-[9px] font-mono text-slate-400">ENTER TO SAVE</span>
+                          <button onClick={handleAddText} className="p-2 bg-slate-900 dark:bg-white text-white dark:text-black rounded-lg hover:opacity-90 transition-opacity">
+                              <Plus size={16} />
+                          </button>
+                      </div>
+                  </motion.div>
+              )}
+          </AnimatePresence>
+
+          <div className="flex items-center gap-3 pointer-events-auto">
+              <label className="group flex items-center justify-center w-12 h-12 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg cursor-pointer hover:scale-110 transition-all hover:border-indigo-500/50">
                   <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                  <ImageIcon size={20} />
+                  <ImageIcon size={20} className="text-slate-400 group-hover:text-indigo-500 transition-colors" />
               </label>
-              <div className="flex-1 relative">
-                  <input 
-                      type="text" 
-                      className="w-full bg-transparent outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 text-sm md:text-base"
-                      placeholder="Быстрая мысль..."
-                      value={textInput}
-                      onChange={(e) => setTextInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddText()}
-                  />
-              </div>
+              
               <button 
-                  onClick={handleAddText}
-                  disabled={!textInput.trim()}
-                  className="p-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-slate-700"
+                  onClick={() => setIsInputOpen(!isInputOpen)}
+                  className={`flex items-center justify-center w-14 h-14 rounded-full shadow-xl transition-all hover:scale-110 ${isInputOpen ? 'bg-slate-900 dark:bg-white text-white dark:text-black rotate-45' : 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'}`}
               >
-                  <Plus size={20} />
+                  <Plus size={24} strokeWidth={1.5} />
               </button>
           </div>
       </div>
 
-      {/* FOCUS MODAL */}
+      {/* FOCUS MODAL (LIGHTBOX) */}
       <AnimatePresence>
           {focusItem && (
               <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 md:p-12"
+                  className="fixed inset-0 z-50 bg-white/90 dark:bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 md:p-12 cursor-zoom-out"
                   onClick={() => setFocusItem(null)}
               >
                   <motion.div 
-                      initial={{ scale: 0.8, y: 20 }}
+                      initial={{ scale: 0.9, y: 20 }}
                       animate={{ scale: 1, y: 0 }}
-                      exit={{ scale: 0.8, y: 20 }}
-                      className="relative max-w-4xl max-h-full"
+                      exit={{ scale: 0.9, y: 20 }}
+                      className="relative max-w-5xl max-h-full cursor-default"
                       onClick={(e) => e.stopPropagation()}
                   >
                       {focusItem.type === 'image' ? (
-                          <img src={focusItem.content} alt="Focus" className="rounded-lg shadow-2xl max-h-[80vh] object-contain bg-white p-2" />
+                          <div className="relative shadow-2xl rounded-sm overflow-hidden border-8 border-white dark:border-slate-900">
+                              <img src={focusItem.content} alt="Focus" className="max-h-[85vh] object-contain" />
+                          </div>
                       ) : (
-                          <div className={`p-12 md:p-20 rounded-lg shadow-2xl text-2xl md:text-4xl font-bold text-center leading-relaxed max-w-2xl ${focusItem.color || 'bg-white'}`}>
+                          <div className="p-16 md:p-24 bg-white dark:bg-black border border-slate-200 dark:border-slate-800 shadow-2xl text-3xl md:text-5xl font-serif text-center leading-relaxed max-w-4xl text-slate-900 dark:text-slate-100">
                               {focusItem.content}
                           </div>
                       )}
                       
-                      <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-4">
-                          <button onClick={() => { deleteItem(focusItem.id); setFocusItem(null); }} className="p-3 bg-white/10 hover:bg-red-500/20 text-white rounded-full border border-white/20 transition-colors">
-                              <Trash2 size={24} />
-                          </button>
-                          <button onClick={() => setFocusItem(null)} className="p-3 bg-white text-slate-900 rounded-full shadow-lg hover:scale-105 transition-transform">
-                              <X size={24} />
-                          </button>
-                      </div>
+                      <button 
+                        onClick={() => setFocusItem(null)} 
+                        className="absolute -top-12 right-0 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+                      >
+                          <X size={32} strokeWidth={1} />
+                      </button>
                   </motion.div>
               </motion.div>
           )}
