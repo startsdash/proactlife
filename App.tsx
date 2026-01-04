@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
@@ -415,6 +414,7 @@ const App: React.FC = () => {
         currentModule={module} setModule={handleNavigate} syncStatus={syncStatus}
         onConnectDrive={() => handleDriveConnect(false)} isDriveConnected={isDriveConnected}
         isOwner={isOwner}
+        role={data.profileConfig?.role || 'architect'}
     >
       <Onboarding onClose={() => setShowOnboarding(false)} />
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
