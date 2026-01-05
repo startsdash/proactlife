@@ -175,9 +175,9 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
                 </div>
             )}
             <div className="p-3">
-                <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-1 mb-1 leading-snug">{data.title}</h4>
+                <h4 className="font-sans font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-1 mb-1 leading-snug">{data.title}</h4>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-2 leading-relaxed font-sans">{data.description}</p>
-                <div className="flex items-center gap-2 text-[9px] text-slate-400 uppercase tracking-wider font-bold">
+                <div className="flex items-center gap-2 text-[9px] text-slate-400 uppercase tracking-wider font-bold font-sans">
                     {data.logo?.url ? (
                         <img src={data.logo.url} className="w-3 h-3 rounded-full" alt="" />
                     ) : (
@@ -197,9 +197,9 @@ const markdownComponents = {
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
-    h1: ({node, ...props}: any) => <h1 className="font-bold text-xl mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-    h2: ({node, ...props}: any) => <h2 className="font-bold text-lg mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-    h3: ({node, ...props}: any) => <h3 className="font-bold text-base mt-2 mb-1 text-slate-900 dark:text-slate-100" {...props} />,
+    h1: ({node, ...props}: any) => <h1 className="font-sans font-bold text-xl mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+    h2: ({node, ...props}: any) => <h2 className="font-sans font-bold text-lg mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+    h3: ({node, ...props}: any) => <h3 className="font-sans font-bold text-base mt-2 mb-1 text-slate-900 dark:text-slate-100" {...props} />,
     blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 dark:border-slate-600 pl-4 italic text-slate-500 dark:text-slate-400 my-3 font-serif" {...props} />,
     code: ({node, inline, className, children, ...props}: any) => {
          return inline 
@@ -304,7 +304,7 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
         <div className="relative" ref={wrapperRef}>
             <div className={`flex flex-wrap items-center gap-1.5 min-h-[36px] ${variant === 'ghost' ? 'px-0 py-2' : 'p-2'}`}>
                 {selectedTags.map(tag => (
-                    <span key={tag} className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded transition-colors ${variant === 'ghost' ? 'text-slate-500 bg-black/5 dark:bg-white/10 dark:text-slate-400' : 'text-slate-600 dark:text-slate-300 bg-black/5 dark:bg-white/10'}`}>
+                    <span key={tag} className={`flex items-center gap-1 text-[10px] font-sans font-bold uppercase tracking-wider px-2 py-1 rounded transition-colors ${variant === 'ghost' ? 'text-slate-500 bg-transparent dark:text-slate-400' : 'text-slate-600 dark:text-slate-300 bg-transparent'}`}>
                         <TagIcon size={10} /> {tag} <button onClick={() => onChange(selectedTags.filter(t => t !== tag))} className="hover:text-red-500 ml-1"><X size={12} /></button>
                     </span>
                 ))}
@@ -315,16 +315,16 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
                     onFocus={() => setIsOpen(true)} 
                     onKeyDown={(e) => e.key === 'Enter' && addTag(input)} 
                     placeholder={selectedTags.length === 0 ? placeholder : ''} 
-                    className={`flex-1 min-w-[80px] bg-transparent text-xs outline-none ${variant === 'ghost' ? 'text-slate-600 dark:text-slate-300 placeholder:text-slate-300' : 'text-slate-600 dark:text-slate-300 placeholder:text-slate-400'}`} 
+                    className={`flex-1 min-w-[80px] bg-transparent text-xs font-sans outline-none ${variant === 'ghost' ? 'text-slate-600 dark:text-slate-300 placeholder:text-slate-300' : 'text-slate-600 dark:text-slate-300 placeholder:text-slate-400'}`} 
                 />
             </div>
             {isOpen && (input.length > 0 || filteredSuggestions.length > 0) && (
                 <div className="absolute top-full left-0 mt-1 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto">
                     {input.length > 0 && !filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase()) && (
-                        <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-xs text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-bold"><Plus size={12} /> Создать «{input}»</button>
+                        <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-xs font-sans text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-bold"><Plus size={12} /> Создать «{input}»</button>
                     )}
                     {filteredSuggestions.map(tag => (
-                        <button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-medium"><TagIcon size={12} className="text-slate-400" /> {tag}</button>
+                        <button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-xs font-sans text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-medium"><TagIcon size={12} className="text-slate-400" /> {tag}</button>
                     ))}
                 </div>
             )}
@@ -401,7 +401,7 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
 
     return (
         <div className="absolute top-full mt-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 w-80 flex flex-col gap-3" onMouseDown={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
+            <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase font-sans">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
             
             <div className="relative">
                 <input 
@@ -410,7 +410,7 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
+                    className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-sans outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
                 />
                 <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <button 
@@ -437,11 +437,11 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
             </div>
 
             <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-                <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
+                <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium font-sans cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
                     <Upload size={12} /> Своя 
                     <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
                 </label>
-                <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium transition-colors text-slate-600 dark:text-slate-300">
+                <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium font-sans transition-colors text-slate-600 dark:text-slate-300">
                     <Shuffle size={12} /> Случайные
                 </button>
             </div>
@@ -494,23 +494,31 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             {note.coverUrl && (
                 <div className="h-40 w-full shrink-0 relative z-10"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
             )}
-            <div className="p-8 pb-20 w-full flex-1 relative z-10">
-                {/* Inbox Cue */}
-                {!isArchived && !note.isPinned && (
-                    <div className="absolute top-4 right-4">
-                        <div className="w-2 h-2 rounded-full bg-indigo-400/50" title="Готово для работы" />
-                    </div>
-                )}
 
+            {/* PIN BUTTON - Top Right */}
+            <div className="absolute top-4 right-4 z-20">
+                <button 
+                    onClick={(e) => handlers.togglePin(e, note)} 
+                    className={`p-2 rounded-full transition-all ${
+                        note.isPinned 
+                        ? 'text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' 
+                        : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-0 group-hover/card:opacity-100'
+                    }`}
+                >
+                    <Pin size={16} strokeWidth={2} className={note.isPinned ? "fill-current" : ""} />
+                </button>
+            </div>
+
+            <div className="p-8 pb-20 w-full flex-1 relative z-10">
                 <div className="block w-full mb-2">
-                    {note.title && <h3 className={`font-serif text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
+                    {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
                     <div className={`text-slate-700 dark:text-slate-300 font-serif text-sm leading-relaxed overflow-hidden break-words line-clamp-[6]`}>
                         <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                     </div>
                     {linkUrl && <LinkPreview url={linkUrl} />}
                     {note.tags && note.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-4">
-                            {note.tags.map(tag => <span key={tag} className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider opacity-70 bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded">{tag.replace(/^#/, '')}</span>)}
+                            {note.tags.map(tag => <span key={tag} className="text-[10px] text-slate-500 dark:text-slate-400 font-sans font-bold uppercase tracking-wider opacity-70 bg-transparent px-1.5 py-0.5 rounded">{tag.replace(/^#/, '')}</span>)}
                         </div>
                     )}
                 </div>
@@ -526,7 +534,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                             
                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                             <Tooltip content="Переместить в библиотеку">
-                                <button onClick={handleArchive} className="p-2 text-emerald-600 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-full transition-all duration-300 hover:scale-110 shadow-sm"><Library size={16} strokeWidth={2} /></button>
+                                <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
                             </Tooltip>
                         </>
                     ) : (
@@ -536,12 +544,11 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                     )}
                 </div>
                 
-                <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
-                    <button onClick={(e) => handlers.togglePin(e, note)} className={`p-2 rounded-full transition-all ${note.isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 opacity-60 hover:opacity-100'}`}><Pin size={16} strokeWidth={1.5} className={note.isPinned ? "fill-current transform rotate-45" : ""} /></button>
-                </Tooltip>
+                {/* ID Display */}
+                <div className="p-2 font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 select-none opacity-60">
+                    ID: {note.id.slice(-4)}
+                </div>
             </div>
-            
-            {note.isPinned && <div className="absolute top-6 right-6 text-indigo-500 dark:text-indigo-400 opacity-80 pointer-events-none z-20"><Pin size={16} fill="currentColor" className="transform rotate-45" /></div>}
         </div>
     );
 };
@@ -1097,7 +1104,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     ) : (
                                         <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
                                             {creationCover && <div className="relative w-full h-32 md:h-48 group rounded-t-3xl overflow-hidden"><img src={creationCover} alt="Cover" className="w-full h-full object-cover" /><button onClick={() => setCreationCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button></div>}
-                                            <input type="text" placeholder="Название" value={title} onChange={(e) => setTitle(e.target.value)} className="px-6 pt-6 pb-2 bg-transparent text-xl font-serif font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none" />
+                                            <input type="text" placeholder="Название" value={title} onChange={(e) => setTitle(e.target.value)} className="px-6 pt-6 pb-2 bg-transparent text-xl font-sans font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none" />
                                             <div 
                                                 ref={contentEditableRef} 
                                                 contentEditable 
@@ -1285,7 +1292,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         <input 
                                             value={editTitle} 
                                             onChange={(e) => setEditTitle(e.target.value)} 
-                                            className="w-full bg-transparent p-0 text-xl font-serif font-bold text-slate-900 dark:text-slate-100 border-none outline-none placeholder:text-slate-300" 
+                                            className="w-full bg-transparent p-0 text-xl font-sans font-bold text-slate-900 dark:text-slate-100 border-none outline-none placeholder:text-slate-300" 
                                             placeholder="Название" 
                                         />
                                     </div>
@@ -1295,7 +1302,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                             <span>{new Date(selectedNote.createdAt).toLocaleDateString()}</span>
                                             {selectedNote.isPinned && <Pin size={10} className="fill-current" />}
                                         </div>
-                                        {selectedNote.title ? <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-slate-200 leading-tight break-words">{selectedNote.title}</h2> : null}
+                                        {selectedNote.title ? <h2 className="font-sans text-2xl font-bold text-slate-900 dark:text-slate-200 leading-tight break-words">{selectedNote.title}</h2> : null}
                                     </div>
                                 )}
                             </div>
@@ -1354,7 +1361,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                                 </div>
                                 {selectedNote.tags && selectedNote.tags.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 pt-4 border-t border-black/5 dark:border-white/5">{selectedNote.tags.map(tag => <span key={tag} className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-transparent border border-slate-200 dark:border-slate-700 px-2 py-1 rounded flex items-center gap-1"><TagIcon size={10} /> {tag.replace(/^#/, '')}</span>)}</div>
+                                    <div className="flex flex-wrap gap-1.5 pt-4 border-t border-black/5 dark:border-white/5">{selectedNote.tags.map(tag => <span key={tag} className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-transparent px-2 py-1 rounded flex items-center gap-1 font-sans"><TagIcon size={10} /> {tag.replace(/^#/, '')}</span>)}</div>
                                 )}
                                 {(() => { const url = findFirstUrl(selectedNote.content); return url ? <div className="mt-6"><LinkPreview url={url} /></div> : null; })()}
                             </div>
