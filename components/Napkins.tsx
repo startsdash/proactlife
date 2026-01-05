@@ -302,10 +302,13 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
 
     return (
         <div className="relative" ref={wrapperRef}>
-            <div className={`flex flex-wrap items-center gap-1.5 min-h-[36px] ${variant === 'ghost' ? 'px-0 py-2' : 'p-2'}`}>
+            <div className={`flex flex-wrap items-center gap-3 min-h-[36px] ${variant === 'ghost' ? 'px-0 py-2' : 'p-2'}`}>
                 {selectedTags.map(tag => (
-                    <span key={tag} className={`flex items-center gap-1 text-[10px] font-sans font-bold uppercase tracking-wider px-2 py-1 rounded transition-colors ${variant === 'ghost' ? 'text-slate-500 bg-transparent dark:text-slate-400' : 'text-slate-600 dark:text-slate-300 bg-transparent'}`}>
-                        <TagIcon size={10} /> {tag} <button onClick={() => onChange(selectedTags.filter(t => t !== tag))} className="hover:text-red-500 ml-1"><X size={12} /></button>
+                    <span key={tag} className="flex items-center gap-1 text-[9px] font-sans uppercase tracking-[0.1em] text-slate-500 dark:text-slate-400 group cursor-default">
+                        #{tag.replace(/^#/, '')} 
+                        <button onClick={() => onChange(selectedTags.filter(t => t !== tag))} className="text-slate-300 hover:text-red-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <X size={10} strokeWidth={2} />
+                        </button>
                     </span>
                 ))}
                 <input 
@@ -495,32 +498,37 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 <div className="h-40 w-full shrink-0 relative z-10"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
             )}
 
-            {/* PIN BUTTON - Top Right */}
+            {/* PIN BUTTON - Top Right (Ghost Style) */}
             <div className="absolute top-4 right-4 z-20">
                 <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
                     <button 
                         onClick={(e) => handlers.togglePin(e, note)} 
-                        className={`p-2 rounded-full transition-all ${
+                        className={`p-2 rounded-full transition-all duration-300 ${
                             note.isPinned 
-                            ? 'text-indigo-500 dark:text-indigo-400 bg-transparent' 
-                            : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-0 group-hover/card:opacity-100'
+                            ? 'text-[#B0A0FF] opacity-50 hover:opacity-100' 
+                            : 'text-slate-400 dark:text-slate-500 opacity-0 group-hover/card:opacity-60 hover:!opacity-100'
                         }`}
                     >
-                        <Pin size={16} strokeWidth={2} className={note.isPinned ? "fill-current" : ""} />
+                        <Pin size={16} strokeWidth={1} />
                     </button>
                 </Tooltip>
             </div>
 
-            <div className="p-8 pb-20 w-full flex-1 relative z-10">
+            <div className="p-8 pb-16 w-full flex-1 relative z-10">
                 <div className="block w-full mb-2">
                     {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
                     <div className={`text-slate-700 dark:text-slate-300 font-serif text-sm leading-relaxed overflow-hidden break-words line-clamp-[6]`}>
                         <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                     </div>
                     {linkUrl && <LinkPreview url={linkUrl} />}
+                    {/* AIR TAGS */}
                     {note.tags && note.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-4">
-                            {note.tags.map(tag => <span key={tag} className="text-[10px] text-slate-500 dark:text-slate-400 font-sans font-bold uppercase tracking-wider opacity-70 bg-transparent px-1.5 py-0.5 rounded">{tag.replace(/^#/, '')}</span>)}
+                        <div className="flex flex-wrap gap-3 mt-6">
+                            {note.tags.map(tag => (
+                                <span key={tag} className="text-[9px] text-slate-500/80 dark:text-slate-400/80 font-sans uppercase tracking-[0.15em] hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer">
+                                    #{tag.replace(/^#/, '')}
+                                </span>
+                            ))}
                         </div>
                     )}
                 </div>
@@ -547,8 +555,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 </div>
                 
                 {/* ID Display */}
-                <div className="p-2 font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 select-none opacity-60">
-                    [{note.id.slice(-4)}]
+                <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
+                    ID // {note.id.slice(-8).toUpperCase()}
                 </div>
             </div>
         </div>
@@ -1302,6 +1310,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     <div className="flex flex-col gap-1">
                                         <div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1 opacity-50">
                                             <span>{new Date(selectedNote.createdAt).toLocaleDateString()}</span>
+                                            <span className="opacity-50 mx-2">|</span>
+                                            <span>ID // {selectedNote.id.slice(-8).toUpperCase()}</span>
                                             {selectedNote.isPinned && <Pin size={10} className="fill-current" />}
                                         </div>
                                         {selectedNote.title ? <h2 className="font-sans text-2xl font-bold text-slate-900 dark:text-slate-200 leading-tight break-words">{selectedNote.title}</h2> : null}
@@ -1363,7 +1373,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                     <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                                 </div>
                                 {selectedNote.tags && selectedNote.tags.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 pt-4 border-t border-black/5 dark:border-white/5">{selectedNote.tags.map(tag => <span key={tag} className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-transparent px-2 py-1 rounded flex items-center gap-1 font-sans"><TagIcon size={10} /> {tag.replace(/^#/, '')}</span>)}</div>
+                                    <div className="flex flex-wrap gap-3 pt-4 border-t border-black/5 dark:border-white/5">
+                                        {selectedNote.tags.map(tag => <span key={tag} className="text-[9px] text-slate-500/80 dark:text-slate-400/80 font-sans uppercase tracking-[0.15em]">#{tag.replace(/^#/, '')}</span>)}
+                                    </div>
                                 )}
                                 {(() => { const url = findFirstUrl(selectedNote.content); return url ? <div className="mt-6"><LinkPreview url={url} /></div> : null; })()}
                             </div>
