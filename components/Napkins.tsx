@@ -592,7 +592,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 
                 {/* ID Display */}
                 <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
-                    ID // {note.id.slice(-4).toLowerCase()}
+                    ID // {note.id.slice(-5).toLowerCase()}
                 </div>
             </div>
         </div>
@@ -1103,7 +1103,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 ) : (
                                     <>
                                         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input type="text" placeholder="Поиск по ключевым словам..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400" />
+                                        <input type="text" placeholder="Поиск" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400" />
                                         {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
                                     </>
                                 )}
@@ -1301,7 +1301,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                         <div className="mt-12 text-center shrink-0">
                             <div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest mb-6 opacity-40">
-                                {new Date(oracleNote.createdAt).toLocaleDateString()} • ID: {oracleNote.id.slice(-4)}
+                                {new Date(oracleNote.createdAt).toLocaleDateString()} • ID: {oracleNote.id.slice(-5)}
                             </div>
                             
                             <button 
@@ -1349,7 +1349,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         <div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1 opacity-50">
                                             <span>{new Date(selectedNote.createdAt).toLocaleDateString()}</span>
                                             <span className="opacity-50 mx-2">|</span>
-                                            <span>ID // {selectedNote.id.slice(-4).toLowerCase()}</span>
+                                            <span>ID // {selectedNote.id.slice(-5).toLowerCase()}</span>
                                             {selectedNote.isPinned && <Pin size={10} className="fill-current" />}
                                         </div>
                                         {selectedNote.title ? <h2 className="font-sans text-2xl font-bold text-slate-900 dark:text-slate-200 leading-tight break-words">{selectedNote.title}</h2> : null}
