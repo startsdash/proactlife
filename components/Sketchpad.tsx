@@ -1,9 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, PanInfo } from 'framer-motion';
 import { SketchItem } from '../types';
-import { Shuffle, Image as ImageIcon, Type, Trash2, X, Plus, Sparkles, Upload, Maximize2, Move } from 'lucide-react';
-import { Tooltip } from './Tooltip';
+import { Shuffle, Image as ImageIcon, Trash2, X, Plus, Sparkles, Diamond, ArrowUpRight } from 'lucide-react';
 
 interface Props {
   items: SketchItem[];
@@ -21,7 +20,11 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
   const [textInput, setTextInput] = useState('');
   const [isInputOpen, setIsInputOpen] = useState(false);
   const [focusItem, setFocusItem] = useState<SketchItem | null>(null);
+  const [collisionTargetId, setCollisionTargetId] = useState<string | null>(null);
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  
   const containerRef = useRef<HTMLDivElement>(null);
+  const itemsMap = useRef<Map<string, HTMLDivElement>>(new Map());
   
   // Parallax Mouse Effect
   const mouseX = useMotionValue(0);
@@ -38,6 +41,41 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
       const { innerWidth, innerHeight } = window;
       mouseX.set(clientX - innerWidth / 2);
       mouseY.set(clientY - innerHeight / 2);
+  };
+
+  // --- COLLISION LOGIC ---
+  const handleDragStart = (id: string) => {
+      setDraggedItemId(id);
+  };
+
+  const handleDrag = (id: string) => {
+      const draggedEl = itemsMap.current.get(id);
+      if (!draggedEl) return;
+
+      const r1 = draggedEl.getBoundingClientRect();
+      let foundCollision = null;
+
+      for (const [otherId, otherEl] of itemsMap.current) {
+          if (id === otherId) continue;
+          const r2 = otherEl.getBoundingClientRect();
+
+          const xOverlap = Math.max(0, Math.min(r1.right, r2.right) - Math.max(r1.left, r2.left));
+          const yOverlap = Math.max(0, Math.min(r1.bottom, r2.bottom) - Math.max(r1.top, r2.top));
+          const intersectionArea = xOverlap * yOverlap;
+          const minArea = Math.min(r1.width * r1.height, r2.width * r2.height);
+
+          // Overlap threshold > 20%
+          if (intersectionArea > minArea * 0.2) {
+              foundCollision = otherId;
+              break; // Found one
+          }
+      }
+      setCollisionTargetId(foundCollision);
+  };
+
+  const handleDragEnd = () => {
+      setDraggedItemId(null);
+      setCollisionTargetId(null);
   };
 
   // --- PASTE LISTENER ---
@@ -70,7 +108,7 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
           type: 'image',
           content: base64,
           createdAt: Date.now(),
-          rotation: (Math.random() * 4) - 2,
+          rotation: (Math.random() * 3) - 1.5,
           widthClass: 'col-span-1 row-span-2'
       };
       addItem(newItem);
@@ -83,7 +121,7 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
           type: 'text',
           content: textInput,
           createdAt: Date.now(),
-          rotation: (Math.random() * 4) - 2,
+          rotation: (Math.random() * 3) - 1.5,
           widthClass: 'col-span-1 row-span-1'
       };
       addItem(newItem);
@@ -92,11 +130,12 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
   };
 
   const handleShuffle = () => {
+      // Fluid Flow: Modifying dimensions triggers layout animation
       items.forEach(item => {
           updateItem({
               ...item,
-              rotation: (Math.random() * 10) - 5,
-              // Randomly toggle size for variety
+              rotation: (Math.random() * 3) - 1.5,
+              // Randomly toggle size for layout shift
               widthClass: Math.random() > 0.8 ? 'col-span-2 row-span-1' : 'col-span-1 row-span-1'
           });
       });
@@ -162,17 +201,31 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
           ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8 auto-rows-[minmax(150px,auto)] pb-32 max-w-[1920px] mx-auto">
                   <AnimatePresence mode='popLayout'>
-                      {items.map((item, i) => (
+                      {items.map((item, i) => {
+                          const isColliding = collisionTargetId === item.id || draggedItemId === item.id && collisionTargetId !== null;
+                          const isTarget = collisionTargetId === item.id;
+
+                          return (
                           <motion.div
                               layout
+                              ref={el => { if(el) itemsMap.current.set(item.id, el); else itemsMap.current.delete(item.id); }}
                               drag
                               dragConstraints={containerRef}
                               dragElastic={0.1}
                               dragMomentum={false}
-                              whileDrag={{ scale: 1.05, zIndex: 50, cursor: 'grabbing' }}
+                              onDragStart={() => handleDragStart(item.id)}
+                              onDrag={() => handleDrag(item.id)}
+                              onDragEnd={handleDragEnd}
+                              whileDrag={{ scale: 1.05, zIndex: 50, cursor: 'grabbing', boxShadow: "0 20px 40px rgba(0,0,0,0.15)" }}
                               key={item.id}
                               initial={{ opacity: 0, scale: 0.8, y: 50 }}
-                              animate={{ opacity: 1, scale: 1, y: 0, rotate: item.rotation || 0 }}
+                              animate={{ 
+                                  opacity: 1, 
+                                  scale: 1, 
+                                  y: 0, 
+                                  rotate: item.rotation || 0,
+                                  borderColor: isColliding ? 'rgba(99,102,241,0.5)' : 'rgba(0,0,0,0)'
+                              }}
                               exit={{ opacity: 0, scale: 0.5, filter: 'blur(10px)' }}
                               transition={{ 
                                   layout: { duration: 0.6, ease: [0.2, 0.8, 0.2, 1] },
@@ -186,24 +239,55 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
                               style={{ zIndex: 1 }}
                               onClick={() => setFocusItem(item)}
                           >
+                              {/* Collision Bridge UI */}
+                              <AnimatePresence>
+                                  {isTarget && (
+                                      <motion.div 
+                                        initial={{ opacity: 0, scale: 0 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0 }}
+                                        className="absolute -top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 pointer-events-none"
+                                      >
+                                          <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/50">
+                                              <Diamond size={10} className="text-white fill-current" />
+                                          </div>
+                                          <div className="bg-black/80 text-white text-[9px] font-mono uppercase tracking-widest px-2 py-1 rounded-md whitespace-nowrap backdrop-blur-md">
+                                              [ FUSE_INTO_INSIGHT? ]
+                                          </div>
+                                      </motion.div>
+                                  )}
+                              </AnimatePresence>
+
+                              {/* Glow Border for Collision */}
+                              {isTarget && (
+                                  <motion.div 
+                                    layoutId="collisionGlow"
+                                    className="absolute inset-[-4px] rounded-lg border-2 border-indigo-400/50 z-40 pointer-events-none animate-pulse"
+                                  />
+                              )}
+
                               {item.type === 'image' ? (
-                                  <div className="relative h-full w-full bg-white dark:bg-black p-1 shadow-lg group-hover:shadow-2xl transition-all duration-500 rounded-sm border border-slate-200 dark:border-white/10 transform group-hover:-translate-y-1">
+                                  <div className="relative h-full w-full bg-white dark:bg-black p-1 shadow-lg group-hover:shadow-2xl transition-all duration-500 rounded-sm border border-slate-200 dark:border-white/10 transform group-hover:-translate-y-1 overflow-hidden">
                                       <div className="absolute inset-0 bg-slate-100 dark:bg-slate-900 -z-10" />
+                                      {/* Enhanced Image Styling */}
                                       <img 
                                         src={item.content} 
                                         alt="sketch" 
-                                        className="w-full h-full object-cover filter grayscale contrast-125 group-hover:grayscale-0 transition-all duration-700 ease-in-out" 
+                                        className="w-full h-full object-cover brightness-[1.05] contrast-[1.1] transition-all duration-700 ease-in-out" 
                                       />
+                                      {/* Glass Overlay for Thickness */}
+                                      <div className="absolute inset-0 ring-1 ring-white/20 ring-inset pointer-events-none" />
+                                      
                                       {/* Minimal Frame Marker */}
-                                      <div className="absolute bottom-2 right-2 w-2 h-2 border-b border-r border-slate-400/50" />
-                                      <div className="absolute top-2 left-2 w-2 h-2 border-t border-l border-slate-400/50" />
+                                      <div className="absolute bottom-2 right-2 w-2 h-2 border-b border-r border-white/50 drop-shadow-md" />
+                                      <div className="absolute top-2 left-2 w-2 h-2 border-t border-l border-white/50 drop-shadow-md" />
                                   </div>
                               ) : (
                                   <div className="h-full w-full bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 md:p-8 shadow-sm hover:shadow-xl transition-all duration-500 rounded-sm flex flex-col justify-center items-center text-center group-hover:-translate-y-1 relative overflow-hidden">
                                       {/* Paper Texture Overlay */}
                                       <div className="absolute inset-0 opacity-[0.03] bg-noise pointer-events-none" />
                                       
-                                      <p className="font-serif text-lg md:text-xl text-slate-800 dark:text-slate-200 leading-relaxed select-none">
+                                      <p className="font-serif italic text-lg md:text-xl text-slate-800 dark:text-slate-200 leading-relaxed select-none">
                                           {item.content}
                                       </p>
                                       
@@ -213,7 +297,7 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
                               )}
                               
                               {/* HOVER ACTIONS */}
-                              <div className="absolute -top-3 -right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 scale-90 group-hover:scale-100 pointer-events-none group-hover:pointer-events-auto">
+                              <div className="absolute -top-3 -right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 scale-90 group-hover:scale-100 pointer-events-none group-hover:pointer-events-auto z-50">
                                   <button 
                                       onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
                                       className="p-2 bg-white dark:bg-slate-800 text-red-500 rounded-full shadow-md hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors border border-slate-100 dark:border-slate-700"
@@ -222,7 +306,7 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
                                   </button>
                               </div>
                           </motion.div>
-                      ))}
+                      )})}
                   </AnimatePresence>
               </div>
           )}
@@ -244,7 +328,7 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
                           onChange={(e) => setTextInput(e.target.value)}
                           onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddText(); } }}
                           placeholder="Новая мысль..."
-                          className="w-full bg-transparent border-none outline-none text-slate-800 dark:text-slate-200 font-serif text-lg resize-none placeholder:text-slate-400 placeholder:font-sans min-h-[100px]"
+                          className="w-full bg-transparent border-none outline-none text-slate-800 dark:text-slate-200 font-serif italic text-lg resize-none placeholder:text-slate-400 placeholder:font-sans placeholder:not-italic min-h-[100px]"
                       />
                       <div className="flex justify-between items-center mt-2 border-t border-slate-200/50 dark:border-white/10 pt-3">
                           <span className="text-[9px] font-mono text-slate-400">ENTER TO SAVE</span>
@@ -293,7 +377,7 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
                               <img src={focusItem.content} alt="Focus" className="max-h-[85vh] object-contain" />
                           </div>
                       ) : (
-                          <div className="p-16 md:p-24 bg-white dark:bg-black border border-slate-200 dark:border-slate-800 shadow-2xl text-3xl md:text-5xl font-serif text-center leading-relaxed max-w-4xl text-slate-900 dark:text-slate-100">
+                          <div className="p-16 md:p-24 bg-white dark:bg-black border border-slate-200 dark:border-slate-800 shadow-2xl text-3xl md:text-5xl font-serif italic text-center leading-relaxed max-w-4xl text-slate-900 dark:text-slate-100">
                               {focusItem.content}
                           </div>
                       )}
