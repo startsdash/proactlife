@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SketchItem } from '../types';
-import { LayoutGrid, Image as ImageIcon, Type, Trash2, X, Plus, Scan, Scaling, Move, Link2, Zap, Palette, Shuffle, Activity } from 'lucide-react';
+import { LayoutGrid, Image as ImageIcon, Type, Trash2, X, Plus, RotateCw, Palette, Shuffle, Link2 } from 'lucide-react';
 
 interface Props {
   items: SketchItem[];
@@ -11,11 +11,25 @@ interface Props {
   updateItem: (item: SketchItem) => void;
 }
 
+const CARD_COLORS: Record<string, string> = {
+    white: 'bg-white/60 dark:bg-white/10 border-white/40',
+    red: 'bg-rose-500/20 border-rose-500/30 text-rose-900 dark:text-rose-100',
+    blue: 'bg-blue-500/20 border-blue-500/30 text-blue-900 dark:text-blue-100',
+    green: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-900 dark:text-emerald-100',
+    amber: 'bg-amber-500/20 border-amber-500/30 text-amber-900 dark:text-amber-100',
+    purple: 'bg-violet-500/20 border-violet-500/30 text-violet-900 dark:text-violet-100',
+};
+
+const COLOR_KEYS = Object.keys(CARD_COLORS);
+
 const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) => {
   const [textInput, setTextInput] = useState('');
   const [isInputOpen, setIsInputOpen] = useState(false);
   const [focusItem, setFocusItem] = useState<SketchItem | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Drag State Tracker
+  const isDraggingRef = useRef(false);
   
   // Chaos & Visual State
   const [isChaos, setIsChaos] = useState(false);
@@ -28,10 +42,10 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
       const map: Record<string, { rotate: number, x: number, y: number, z: number }> = {};
       items.forEach(item => {
           map[item.id] = {
-              rotate: (Math.random() - 0.5) * 30, // -15 to 15 deg
-              x: (Math.random() - 0.5) * 60, // visual offset
-              y: (Math.random() - 0.5) * 60,
-              z: Math.floor(Math.random() * 20) // z-index variance
+              rotate: (Math.random() - 0.5) * 60, 
+              x: (Math.random() - 0.5) * 100, 
+              y: (Math.random() - 0.5) * 100,
+              z: Math.floor(Math.random() * 50)
           };
       });
       return map;
@@ -39,14 +53,10 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
 
   const toggleChaos = () => {
       if (isChaos) {
-          // Restore Order (Synthesis)
           setIsChaos(false);
           setFlash(true);
           setTimeout(() => setFlash(false), 800);
-          
-          // Re-align grid data if needed (optional, keeping it purely visual for now preserves user layout)
       } else {
-          // Break Order (Entropy)
           setIsChaos(true);
       }
   };
@@ -57,6 +67,27 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
       if (newSet.has(id)) newSet.delete(id);
       else newSet.add(id);
       setActiveColorImages(newSet);
+  };
+
+  const cycleCardColor = (e: React.MouseEvent, item: SketchItem) => {
+      e.stopPropagation();
+      const currentIndex = COLOR_KEYS.indexOf(item.color || 'white');
+      const nextIndex = (currentIndex + 1) % COLOR_KEYS.length;
+      updateItem({ ...item, color: COLOR_KEYS[nextIndex] });
+  };
+
+  const rotateCard = (e: React.MouseEvent, item: SketchItem) => {
+      e.stopPropagation();
+      const currentRotation = item.rotation || 0;
+      updateItem({ ...item, rotation: currentRotation + 15 });
+  };
+
+  const bringToFront = (id: string) => {
+      // Re-order items array: remove item and push to end
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+      // Note: In a real persistent app we would update the order in the parent state.
+      // For visual interaction during drag, framer-motion handles z-index boosting.
   };
   
   // --- PASTE LISTENER ---
@@ -89,8 +120,9 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
           type: 'image',
           content: base64,
           createdAt: Date.now(),
-          rotation: 0,
-          widthClass: 'col-span-1 row-span-2'
+          rotation: (Math.random() - 0.5) * 10,
+          widthClass: 'col-span-1 row-span-2',
+          color: 'white'
       };
       addItem(newItem);
   };
@@ -102,8 +134,9 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
           type: 'text',
           content: textInput,
           createdAt: Date.now(),
-          rotation: 0,
-          widthClass: 'col-span-1 row-span-1'
+          rotation: (Math.random() - 0.5) * 6,
+          widthClass: 'col-span-1 row-span-1',
+          color: 'white'
       };
       addItem(newItem);
       setTextInput('');
@@ -202,20 +235,25 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
                       {items.map((item, i) => {
                           const chaosParams = chaosTransforms[item.id] || { rotate: 0, x: 0, y: 0, z: 0 };
                           const isImageActive = activeColorImages.has(item.id);
+                          const rotation = isChaos ? chaosParams.rotate : (item.rotation || 0);
+                          const colorClass = CARD_COLORS[item.color || 'white'];
 
                           return (
                           <motion.div
-                              layout={!isChaos} // Disable layout animation during chaos so we can control transforms manually
+                              layout={!isChaos} 
                               drag
                               dragConstraints={containerRef}
                               dragElastic={0.2}
+                              dragMomentum={false}
+                              onDragStart={() => { isDraggingRef.current = true; bringToFront(item.id); }}
+                              onDragEnd={() => setTimeout(() => isDraggingRef.current = false, 100)}
                               whileDrag={{ scale: 1.05, zIndex: 100, boxShadow: "0 20px 40px rgba(0,0,0,0.2)", cursor: 'grabbing' }}
                               key={item.id}
                               initial={{ opacity: 0, scale: 0.9 }}
                               animate={{ 
                                   opacity: 1, 
                                   scale: 1, 
-                                  rotate: isChaos ? chaosParams.rotate : 0,
+                                  rotate: rotation,
                                   x: isChaos ? chaosParams.x : 0,
                                   y: isChaos ? chaosParams.y : 0,
                                   zIndex: isChaos ? chaosParams.z : 1
@@ -229,22 +267,19 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
                                   ${item.widthClass || 'col-span-1'}
                                   ${item.type === 'image' ? 'row-span-2' : ''}
                                   backdrop-blur-xl backdrop-saturate-150 rounded-2xl
-                                  border border-white/40 dark:border-white/10
+                                  border
                                   shadow-sm hover:shadow-lg transition-shadow duration-300
+                                  ${colorClass}
                               `}
-                              style={{ 
-                                  background: 'rgba(255, 255, 255, 0.4)', // Glass base
-                                  // Dark mode override via tailwind class if needed, but inline style for rgba specific opacity
-                                  // Let's use tailwind utility for theme awareness of the background color
+                              onClick={(e) => {
+                                  if (!isDraggingRef.current) {
+                                      setFocusItem(item);
+                                  }
                               }}
-                              onClick={() => setFocusItem(item)}
                           >
-                              {/* Dark mode tint override */}
-                              <div className="absolute inset-0 bg-white/40 dark:bg-black/40 rounded-2xl -z-10 pointer-events-none" />
-
                               {item.type === 'image' ? (
                                   <div className="relative h-full w-full p-2 flex flex-col group/image">
-                                      <div className="flex-1 relative overflow-hidden rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-white/20 dark:border-white/5">
+                                      <div className="flex-1 relative overflow-hidden rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-white/20 dark:border-white/5 pointer-events-none">
                                           <img 
                                             src={item.content} 
                                             alt="sketch" 
@@ -253,46 +288,68 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
                                                 ${isImageActive ? 'grayscale-0' : 'grayscale group-hover/image:grayscale-0'}
                                             `} 
                                           />
-                                          
-                                          {/* COLOR FLUX TOGGLE */}
+                                      </div>
+                                      
+                                      {/* IMAGE CONTROLS */}
+                                      <div className="absolute bottom-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-auto">
+                                          <button 
+                                            onClick={(e) => rotateCard(e, item)}
+                                            className="p-1.5 rounded-lg bg-black/40 text-white/70 hover:bg-black/60 hover:text-white backdrop-blur-md border border-white/10"
+                                          >
+                                              <RotateCw size={12} />
+                                          </button>
                                           <button 
                                             onClick={(e) => toggleImageColor(e, item.id)}
                                             className={`
-                                                absolute bottom-2 right-2 p-1.5 rounded-lg backdrop-blur-md border transition-all duration-300
+                                                p-1.5 rounded-lg backdrop-blur-md border transition-all duration-300
                                                 ${isImageActive 
-                                                    ? 'bg-white/80 text-indigo-600 border-indigo-200' 
-                                                    : 'bg-black/40 text-white/70 border-white/10 opacity-0 group-hover/image:opacity-100'}
+                                                    ? 'bg-indigo-500/80 text-white border-indigo-400' 
+                                                    : 'bg-black/40 text-white/70 border-white/10 hover:bg-black/60'}
                                             `}
                                           >
                                               <Palette size={12} />
                                           </button>
                                       </div>
+
                                       <div className="h-6 flex items-center justify-between mt-2 px-1 opacity-50 group-hover:opacity-100 transition-opacity">
-                                          <span className="font-mono text-[8px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">IMG_{item.id.slice(-4)}</span>
+                                          <span className="font-mono text-[8px] uppercase tracking-wider opacity-60">IMG_{item.id.slice(-4)}</span>
                                           <div className={`w-1.5 h-1.5 rounded-full ${isImageActive ? 'bg-indigo-500 shadow-[0_0_5px_currentColor]' : 'bg-slate-300 dark:bg-slate-600'}`} />
                                       </div>
                                   </div>
                               ) : (
                                   <div className="h-full w-full p-6 flex flex-col justify-between relative overflow-hidden">
                                       {/* Content */}
-                                      <p className="font-serif text-base md:text-lg text-slate-800 dark:text-slate-300 leading-relaxed select-none mix-blend-hard-light">
+                                      <p className="font-serif text-base md:text-lg leading-relaxed select-none mix-blend-hard-light break-words whitespace-pre-wrap">
                                           {item.content}
                                       </p>
                                       
                                       {/* Metadata Footer */}
-                                      <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-900/5 dark:border-white/5">
-                                          <span className="font-mono text-[8px] text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                                      <div className="flex items-center justify-between pt-4 mt-2 border-t border-black/5 dark:border-white/5">
+                                          <span className="font-mono text-[8px] opacity-60 uppercase tracking-widest">
                                               NOTE_{item.id.slice(-4)}
                                           </span>
-                                          <Link2 size={12} className="text-slate-300 dark:text-slate-600" />
+                                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto">
+                                              <button 
+                                                onClick={(e) => rotateCard(e, item)}
+                                                className="hover:text-indigo-500 transition-colors"
+                                              >
+                                                  <RotateCw size={12} />
+                                              </button>
+                                              <button 
+                                                onClick={(e) => cycleCardColor(e, item)}
+                                                className="hover:text-indigo-500 transition-colors"
+                                              >
+                                                  <Palette size={12} />
+                                              </button>
+                                          </div>
                                       </div>
                                   </div>
                               )}
                               
-                              {/* HOVER ACTIONS - Minimalist Glass Buttons */}
+                              {/* DELETE ACTION */}
                               <button 
                                   onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
-                                  className="absolute -top-2 -right-2 p-1.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-400 hover:text-red-500 border border-slate-200 dark:border-slate-700 shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 z-20 rounded-full"
+                                  className="absolute -top-2 -right-2 p-1.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-400 hover:text-red-500 border border-slate-200 dark:border-slate-700 shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 z-20 rounded-full pointer-events-auto"
                               >
                                   <X size={12} />
                               </button>
@@ -366,7 +423,7 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
                               <img src={focusItem.content} alt="Focus" className="max-h-[80vh] object-contain rounded-lg" />
                           </div>
                       ) : (
-                          <div className="p-16 md:p-24 bg-white dark:bg-[#151921] border border-slate-200 dark:border-slate-700 text-3xl md:text-5xl font-serif text-center leading-relaxed max-w-4xl text-slate-900 dark:text-slate-100 min-w-[300px] rounded-xl shadow-2xl">
+                          <div className={`p-16 md:p-24 ${CARD_COLORS[focusItem.color || 'white'].replace('/60', '').replace('/20', '/10')} border border-slate-200 dark:border-slate-700 text-3xl md:text-5xl font-serif text-center leading-relaxed max-w-4xl min-w-[300px] rounded-xl shadow-2xl backdrop-blur-xl`}>
                               {focusItem.content}
                           </div>
                       )}
