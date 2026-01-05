@@ -41,8 +41,8 @@ export interface SketchItem {
   content: string;
   createdAt: number;
   color?: string;
-  rotation?: number; // New: For the "messy desk" feel
-  widthClass?: string; // New: For grid spanning
+  rotation: number;
+  widthClass?: string;
 }
 
 export interface Subtask {
