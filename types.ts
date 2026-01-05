@@ -43,8 +43,6 @@ export interface SketchItem {
   color?: string;
   rotation: number;
   widthClass?: string;
-  x?: number; // Visual offset X
-  y?: number; // Visual offset Y
 }
 
 export interface Subtask {
