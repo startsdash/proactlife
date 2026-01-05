@@ -5,12 +5,12 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book } from 'lucide-react';
 import Sketchpad from './Sketchpad';
 
 interface Props {
@@ -24,6 +24,7 @@ interface Props {
   reorderNote: (draggedId: string, targetId: string) => void;
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
+  onAddJournalEntry: (entry: JournalEntry) => void;
   // Sketchpad Props
   sketchItems: SketchItem[];
   addSketchItem: (item: SketchItem) => void;
@@ -465,6 +466,8 @@ interface NoteCardProps {
         moveNoteToSandbox: (id: string) => void;
         archiveNote: (id: string) => void;
         moveNoteToInbox: (id: string) => void;
+        onAddJournalEntry: (entry: JournalEntry) => void;
+        addSketchItem: (item: SketchItem) => void;
     }
 }
 
@@ -479,6 +482,34 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             setTimeout(() => {
                 handlers.archiveNote(note.id);
             }, 400); // Wait for animation
+        }
+    };
+
+    const handleToJournal = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if(window.confirm('В дневник?')) {
+            const entry: JournalEntry = {
+                id: Date.now().toString(),
+                date: Date.now(),
+                content: note.content,
+                isInsight: false
+            };
+            handlers.onAddJournalEntry(entry);
+        }
+    };
+
+    const handleToSketchpad = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if(window.confirm('В скетчпад?')) {
+             const item: SketchItem = {
+                id: Date.now().toString(),
+                type: 'text',
+                content: note.content,
+                createdAt: Date.now(),
+                rotation: 0,
+                widthClass: 'col-span-1 row-span-1'
+            };
+            handlers.addSketchItem(item);
         }
     };
 
@@ -503,13 +534,13 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
                     <button 
                         onClick={(e) => handlers.togglePin(e, note)} 
-                        className={`p-2 rounded-full transition-all duration-300 ${
+                        className={`p-2 rounded-full transition-all duration-300 shadow-sm ${
                             note.isPinned 
-                            ? 'text-[#B0A0FF] opacity-50 hover:opacity-100' 
-                            : 'text-slate-400 dark:text-slate-500 opacity-0 group-hover/card:opacity-60 hover:!opacity-100'
+                            ? 'bg-indigo-500 text-white opacity-100 hover:bg-indigo-600' 
+                            : 'bg-white/50 dark:bg-black/20 text-slate-600 dark:text-slate-400 opacity-0 group-hover/card:opacity-100 hover:bg-white dark:hover:bg-slate-800'
                         }`}
                     >
-                        <Pin size={16} strokeWidth={1} />
+                        <Pin size={16} strokeWidth={1.5} className={note.isPinned ? "fill-current" : ""} />
                     </button>
                 </Tooltip>
             </div>
@@ -539,9 +570,14 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
                         <>
-                            <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
                             <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
                             
+                            <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
+                            
+                            <Tooltip content="В дневник"><button onClick={handleToJournal} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Book size={16} strokeWidth={1.5} /></button></Tooltip>
+                            
+                            <Tooltip content="В скетчпад"><button onClick={handleToSketchpad} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Tablet size={16} strokeWidth={1.5} /></button></Tooltip>
+
                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                             <Tooltip content="Переместить в библиотеку">
                                 <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
@@ -563,7 +599,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, sketchItems, addSketchItem, deleteSketchItem, updateSketchItem, defaultTab }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, sketchItems, addSketchItem, deleteSketchItem, updateSketchItem, defaultTab }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -994,8 +1030,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       onAddTask,
       moveNoteToSandbox,
       archiveNote,
-      moveNoteToInbox
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox]);
+      moveNoteToInbox,
+      onAddJournalEntry,
+      addSketchItem
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem]);
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
@@ -1009,7 +1047,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 </div>
                 <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm">
                     <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
-                    <button onClick={() => { setActiveTab('sketchpad'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'sketchpad' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Palette size={16} /> Sketchpad</button>
+                    <button onClick={() => { setActiveTab('sketchpad'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'sketchpad' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Tablet size={16} /> Скетчпад</button>
                     <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
                 </div>
             </header>

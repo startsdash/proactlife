@@ -423,6 +423,7 @@ const App: React.FC = () => {
       {(module === Module.NAPKINS || module === Module.SKETCHPAD) && (
           <Napkins 
             notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} 
+            onAddJournalEntry={addJournalEntry}
             sketchItems={data.sketchpad || []} addSketchItem={addSketchItem} deleteSketchItem={deleteSketchItem} updateSketchItem={updateSketchItem}
             defaultTab={module === Module.SKETCHPAD ? 'sketchpad' : undefined}
           />
