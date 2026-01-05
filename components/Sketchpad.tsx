@@ -28,7 +28,7 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
   const [focusItem, setFocusItem] = useState<SketchItem | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Drag State Tracker
+  // Drag State Tracker to prevent modal opening on drag release
   const isDraggingRef = useRef(false);
   
   // Chaos & Visual State
@@ -36,16 +36,17 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
   const [flash, setFlash] = useState(false);
   const [activeColorImages, setActiveColorImages] = useState<Set<string>>(new Set());
 
-  // Chaos transforms memoization
+  // Chaos transforms memoization with more variance for collisions
   const chaosTransforms = useMemo(() => {
       if (!isChaos) return {};
-      const map: Record<string, { rotate: number, x: number, y: number, z: number }> = {};
+      const map: Record<string, { rotate: number, x: number, y: number, z: number, scale: number }> = {};
       items.forEach(item => {
           map[item.id] = {
-              rotate: (Math.random() - 0.5) * 60, 
-              x: (Math.random() - 0.5) * 100, 
-              y: (Math.random() - 0.5) * 100,
-              z: Math.floor(Math.random() * 50)
+              rotate: (Math.random() - 0.5) * 90, // More extreme rotation
+              x: (Math.random() - 0.5) * 400, // Wider scatter
+              y: (Math.random() - 0.5) * 400,
+              z: Math.floor(Math.random() * 50),
+              scale: 0.8 + Math.random() * 0.4 // Random scaling for depth effect
           };
       });
       return map;
@@ -78,18 +79,17 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
 
   const rotateCard = (e: React.MouseEvent, item: SketchItem) => {
       e.stopPropagation();
-      const currentRotation = item.rotation || 0;
-      updateItem({ ...item, rotation: currentRotation + 15 });
+      const current = item.rotation || 0;
+      // Cycle: 0 -> 45 -> 90 -> 180 -> 0
+      let next = 0;
+      if (current === 0) next = 45;
+      else if (current === 45) next = 90;
+      else if (current === 90) next = 180;
+      else next = 0;
+      
+      updateItem({ ...item, rotation: next });
   };
 
-  const bringToFront = (id: string) => {
-      // Re-order items array: remove item and push to end
-      const item = items.find(i => i.id === id);
-      if (!item) return;
-      // Note: In a real persistent app we would update the order in the parent state.
-      // For visual interaction during drag, framer-motion handles z-index boosting.
-  };
-  
   // --- PASTE LISTENER ---
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
@@ -120,7 +120,7 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
           type: 'image',
           content: base64,
           createdAt: Date.now(),
-          rotation: (Math.random() - 0.5) * 10,
+          rotation: 0,
           widthClass: 'col-span-1 row-span-2',
           color: 'white'
       };
@@ -134,7 +134,7 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
           type: 'text',
           content: textInput,
           createdAt: Date.now(),
-          rotation: (Math.random() - 0.5) * 6,
+          rotation: 0,
           widthClass: 'col-span-1 row-span-1',
           color: 'white'
       };
@@ -233,7 +233,7 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8 auto-rows-[minmax(150px,auto)] pb-32 max-w-[1920px] mx-auto">
                   <AnimatePresence mode='popLayout'>
                       {items.map((item, i) => {
-                          const chaosParams = chaosTransforms[item.id] || { rotate: 0, x: 0, y: 0, z: 0 };
+                          const chaosParams = chaosTransforms[item.id] || { rotate: 0, x: 0, y: 0, z: 0, scale: 1 };
                           const isImageActive = activeColorImages.has(item.id);
                           const rotation = isChaos ? chaosParams.rotate : (item.rotation || 0);
                           const colorClass = CARD_COLORS[item.color || 'white'];
@@ -245,14 +245,14 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
                               dragConstraints={containerRef}
                               dragElastic={0.2}
                               dragMomentum={false}
-                              onDragStart={() => { isDraggingRef.current = true; bringToFront(item.id); }}
-                              onDragEnd={() => setTimeout(() => isDraggingRef.current = false, 100)}
+                              onDragStart={() => { isDraggingRef.current = true; }}
+                              onDragEnd={() => setTimeout(() => isDraggingRef.current = false, 150)}
                               whileDrag={{ scale: 1.05, zIndex: 100, boxShadow: "0 20px 40px rgba(0,0,0,0.2)", cursor: 'grabbing' }}
                               key={item.id}
                               initial={{ opacity: 0, scale: 0.9 }}
                               animate={{ 
                                   opacity: 1, 
-                                  scale: 1, 
+                                  scale: isChaos ? chaosParams.scale : 1, 
                                   rotate: rotation,
                                   x: isChaos ? chaosParams.x : 0,
                                   y: isChaos ? chaosParams.y : 0,
@@ -260,7 +260,7 @@ const Sketchpad: React.FC<Props> = ({ items, addItem, deleteItem, updateItem }) 
                               }}
                               exit={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
                               transition={{ 
-                                  type: "spring", stiffness: isChaos ? 100 : 300, damping: 20
+                                  type: "spring", stiffness: isChaos ? 60 : 300, damping: 20
                               }}
                               className={`
                                   relative group cursor-grab active:cursor-grabbing
