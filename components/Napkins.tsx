@@ -534,10 +534,10 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
                     <button 
                         onClick={(e) => handlers.togglePin(e, note)} 
-                        className={`p-2 rounded-full transition-all duration-300 shadow-sm ${
+                        className={`p-2 rounded-full transition-all duration-300 ${
                             note.isPinned 
-                            ? 'bg-indigo-500 text-white opacity-100 hover:bg-indigo-600' 
-                            : 'bg-white/50 dark:bg-black/20 text-slate-600 dark:text-slate-400 opacity-0 group-hover/card:opacity-100 hover:bg-white dark:hover:bg-slate-800'
+                            ? 'text-[#B0A0FF] opacity-50 hover:opacity-100 bg-transparent' 
+                            : 'text-slate-400 dark:text-slate-500 opacity-0 group-hover/card:opacity-100 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent'
                         }`}
                     >
                         <Pin size={16} strokeWidth={1.5} className={note.isPinned ? "fill-current" : ""} />
@@ -592,7 +592,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 
                 {/* ID Display */}
                 <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
-                    ID // {note.id.slice(-8).toUpperCase()}
+                    ID // {note.id.slice(-4).toLowerCase()}
                 </div>
             </div>
         </div>
@@ -1349,7 +1349,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         <div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1 opacity-50">
                                             <span>{new Date(selectedNote.createdAt).toLocaleDateString()}</span>
                                             <span className="opacity-50 mx-2">|</span>
-                                            <span>ID // {selectedNote.id.slice(-8).toUpperCase()}</span>
+                                            <span>ID // {selectedNote.id.slice(-4).toLowerCase()}</span>
                                             {selectedNote.isPinned && <Pin size={10} className="fill-current" />}
                                         </div>
                                         {selectedNote.title ? <h2 className="font-sans text-2xl font-bold text-slate-900 dark:text-slate-200 leading-tight break-words">{selectedNote.title}</h2> : null}
