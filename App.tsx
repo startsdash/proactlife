@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig, SynapticLink } from './types';
+import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
 import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
@@ -90,8 +90,7 @@ const App: React.FC = () => {
 
   const [data, setData] = useState<AppState>({
     notes: [], sketchpad: [], tasks: [], flashcards: [], habits: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG, 
-    profileConfig: { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' },
-    synapticLinks: []
+    profileConfig: { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' }
   });
   
   const [isLoaded, setIsLoaded] = useState(false);
@@ -166,7 +165,6 @@ const App: React.FC = () => {
               if (!driveData.habits) driveData.habits = [];
               if (!driveData.sketchpad) driveData.sketchpad = [];
               if (!driveData.profileConfig) driveData.profileConfig = { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' };
-              if (!driveData.synapticLinks) driveData.synapticLinks = [];
               
               setData(prev => ({...driveData, user: prev.user})); 
               saveState(driveData);
@@ -311,10 +309,6 @@ const App: React.FC = () => {
   const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
   const updateProfileConfig = (newProfileConfig: UserProfileConfig) => setData(p => ({ ...p, profileConfig: newProfileConfig }));
   
-  // NEW: Synaptic Link Handlers
-  const addSynapticLink = (link: SynapticLink) => setData(p => ({ ...p, synapticLinks: [...(p.synapticLinks || []), link] }));
-  const removeSynapticLink = (id: string) => setData(p => ({ ...p, synapticLinks: (p.synapticLinks || []).filter(l => l.id !== id) }));
-
   // Use config owner email
   const isOwner = data.user?.email === data.config.ownerEmail;
 
@@ -428,14 +422,13 @@ const App: React.FC = () => {
       <Onboarding onClose={() => setShowOnboarding(false)} />
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
       {module === Module.DASHBOARD && <Dashboard notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} onNavigate={handleNavigate} flashcards={data.flashcards} />}
-      {/* Updated Napkins with Sketchpad props and Synaptic Web props */}
+      {/* Updated Napkins with Sketchpad props */}
       {(module === Module.NAPKINS || module === Module.SKETCHPAD) && (
           <Napkins 
             notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} 
             onAddJournalEntry={addJournalEntry}
             sketchItems={data.sketchpad || []} addSketchItem={addSketchItem} deleteSketchItem={deleteSketchItem} updateSketchItem={updateSketchItem}
             defaultTab={module === Module.SKETCHPAD ? 'sketchpad' : undefined}
-            synapticLinks={data.synapticLinks} addSynapticLink={addSynapticLink} removeSynapticLink={removeSynapticLink}
           />
       )}
       {/* REMOVED STANDALONE SKETCHPAD */}
