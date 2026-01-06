@@ -10,7 +10,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit } from 'lucide-react';
 import Sketchpad from './Sketchpad';
 
 interface Props {
@@ -30,7 +30,7 @@ interface Props {
   addSketchItem: (item: SketchItem) => void;
   deleteSketchItem: (id: string) => void;
   updateSketchItem: (item: SketchItem) => void;
-  defaultTab?: 'inbox' | 'sketchpad' | 'library';
+  defaultTab?: 'inbox' | 'sketchpad' | 'library' | 'ether';
 }
 
 const colors = [
@@ -63,6 +63,192 @@ const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmln
 const breakpointColumnsObj = {
   default: 2,
   767: 1 // 1 column for mobile (<= 767px)
+};
+
+// --- ETHER GRAPH TYPES & COMPONENT ---
+interface VisualNode extends Note {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    phase: number;
+    hexColor: string;
+}
+
+const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => void }> = ({ notes, onNodeClick }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+    const simulationRef = useRef<{ nodes: VisualNode[], links: { source: string, target: string }[], running: boolean }>({ nodes: [], links: [], running: false });
+    const [tick, setTick] = useState(0);
+    const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+    // Init Simulation
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const { clientWidth, clientHeight } = containerRef.current;
+        setDimensions({ width: clientWidth, height: clientHeight });
+
+        const getColorHex = (colorId?: string) => colors.find(c => c.id === colorId)?.hex || '#94a3b8';
+
+        // 1. Create Nodes
+        const visualNodes: VisualNode[] = notes.map(n => ({
+            ...n,
+            x: Math.random() * clientWidth,
+            y: Math.random() * clientHeight,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.5,
+            phase: Math.random() * Math.PI * 2,
+            hexColor: getColorHex(n.color)
+        }));
+
+        // 2. Generate Random "Insight" Links (Suggesting connections)
+        const suggestedLinks: { source: string, target: string }[] = [];
+        if (visualNodes.length > 2) {
+            const linkCount = Math.min(visualNodes.length, 5); // Suggest up to 5 connections
+            const usedIndices = new Set<number>();
+            
+            for (let i = 0; i < linkCount; i++) {
+                let idx1 = Math.floor(Math.random() * visualNodes.length);
+                let idx2 = Math.floor(Math.random() * visualNodes.length);
+                
+                // Try to find unique pair
+                let attempts = 0;
+                while ((idx1 === idx2 || usedIndices.has(idx1)) && attempts < 10) {
+                    idx2 = Math.floor(Math.random() * visualNodes.length);
+                    attempts++;
+                }
+                
+                if (idx1 !== idx2) {
+                    suggestedLinks.push({ 
+                        source: visualNodes[idx1].id, 
+                        target: visualNodes[idx2].id 
+                    });
+                    usedIndices.add(idx1);
+                }
+            }
+        }
+
+        simulationRef.current = { nodes: visualNodes, links: suggestedLinks, running: true };
+
+    }, [notes]);
+
+    // Physics Loop
+    useEffect(() => {
+        if (!simulationRef.current.running) return;
+
+        const loop = () => {
+            const { width, height } = dimensions;
+            const { nodes } = simulationRef.current;
+
+            nodes.forEach(node => {
+                // Gentle floating
+                node.x += node.vx;
+                node.y += node.vy;
+
+                // Wall bounce with damping
+                if (node.x <= 0 || node.x >= width) node.vx *= -1;
+                if (node.y <= 0 || node.y >= height) node.vy *= -1;
+
+                // Central Gravity (Keep them somewhat together)
+                const dx = (width / 2) - node.x;
+                const dy = (height / 2) - node.y;
+                node.vx += dx * 0.00005;
+                node.vy += dy * 0.00005;
+
+                // Mouse interaction could be added here
+            });
+
+            setTick(t => t + 1);
+            requestAnimationFrame(loop);
+        };
+        const frameId = requestAnimationFrame(loop);
+        return () => cancelAnimationFrame(frameId);
+    }, [dimensions]);
+
+    return (
+        <div ref={containerRef} className="absolute inset-0 bg-[#0f172a] overflow-hidden">
+            <div className="absolute top-6 left-8 pointer-events-none z-10">
+                <h2 className="text-white/80 font-serif text-2xl tracking-tight flex items-center gap-3">
+                    <BrainCircuit size={24} className="text-indigo-400" />
+                    ETHER_WEB
+                </h2>
+                <p className="text-white/40 text-[10px] font-mono uppercase tracking-widest mt-1">
+                    Поиск скрытых связей // {notes.length} NODES
+                </p>
+            </div>
+
+            <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                {simulationRef.current.links.map((link, i) => {
+                    const source = simulationRef.current.nodes.find(n => n.id === link.source);
+                    const target = simulationRef.current.nodes.find(n => n.id === link.target);
+                    if (!source || !target) return null;
+
+                    return (
+                        <g key={`link-${i}`}>
+                            <line 
+                                x1={source.x} y1={source.y} 
+                                x2={target.x} y2={target.y} 
+                                stroke="white" 
+                                strokeWidth="1" 
+                                strokeDasharray="4 4" 
+                                strokeOpacity="0.2" 
+                            />
+                            {/* Running Dot/Spark */}
+                            <circle r="2" fill="#fbbf24">
+                                <animateMotion 
+                                    dur={`${3 + (i % 3)}s`}
+                                    repeatCount="indefinite"
+                                    path={`M${source.x},${source.y} L${target.x},${target.y}`}
+                                />
+                            </circle>
+                        </g>
+                    );
+                })}
+            </svg>
+
+            {simulationRef.current.nodes.map(node => (
+                <div
+                    key={node.id}
+                    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+                    style={{ left: node.x, top: node.y }}
+                    onClick={() => onNodeClick(node)}
+                    onMouseEnter={() => setHoveredNodeId(node.id)}
+                    onMouseLeave={() => setHoveredNodeId(null)}
+                >
+                    {/* Glow */}
+                    <div 
+                        className="absolute inset-0 rounded-full blur-md opacity-40 group-hover:opacity-80 transition-opacity duration-300"
+                        style={{ backgroundColor: node.hexColor, width: 24, height: 24, transform: 'translate(-25%, -25%)' }}
+                    />
+                    
+                    {/* Core */}
+                    <div 
+                        className="w-3 h-3 rounded-full border border-white/50 bg-white/20 backdrop-blur-sm relative z-10 group-hover:scale-150 transition-transform duration-300"
+                        style={{ borderColor: node.hexColor }}
+                    />
+
+                    {/* Label on Hover */}
+                    <AnimatePresence>
+                        {hoveredNodeId === node.id && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="absolute top-full mt-3 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md border border-white/10 px-3 py-2 rounded-lg text-white w-48 z-20 pointer-events-none"
+                            >
+                                <div className="text-[10px] font-mono text-indigo-300 mb-1 opacity-70">
+                                    {new Date(node.createdAt).toLocaleDateString()}
+                                </div>
+                                <div className="text-xs font-serif line-clamp-2 leading-relaxed">
+                                    {node.title || node.content.substring(0, 50)}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            ))}
+        </div>
+    );
 };
 
 // --- HELPER: ALLOW DATA URIS ---
@@ -606,7 +792,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [creationCover, setCreationCover] = useState<string | null>(null);
   
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'inbox' | 'sketchpad' | 'library'>(defaultTab || 'inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'sketchpad' | 'library' | 'ether'>(defaultTab || 'inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
@@ -1021,6 +1207,190 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const inboxNotes = filterNotes(notes.filter(n => n.status === 'inbox').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
   const archivedNotes = filterNotes(notes.filter(n => n.status === 'archived').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
 
+  // --- ETHER GRAPH TYPES & COMPONENT ---
+  interface VisualNode extends Note {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      phase: number;
+      hexColor: string;
+  }
+
+  const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => void }> = ({ notes, onNodeClick }) => {
+      const containerRef = useRef<HTMLDivElement>(null);
+      const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+      const simulationRef = useRef<{ nodes: VisualNode[], links: { source: string, target: string }[], running: boolean }>({ nodes: [], links: [], running: false });
+      const [tick, setTick] = useState(0);
+      const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+      // Init Simulation
+      useEffect(() => {
+          if (!containerRef.current) return;
+          const { clientWidth, clientHeight } = containerRef.current;
+          setDimensions({ width: clientWidth, height: clientHeight });
+
+          const getColorHex = (colorId?: string) => colors.find(c => c.id === colorId)?.hex || '#94a3b8';
+
+          // 1. Create Nodes
+          const visualNodes: VisualNode[] = notes.map(n => ({
+              ...n,
+              x: Math.random() * clientWidth,
+              y: Math.random() * clientHeight,
+              vx: (Math.random() - 0.5) * 0.5,
+              vy: (Math.random() - 0.5) * 0.5,
+              phase: Math.random() * Math.PI * 2,
+              hexColor: getColorHex(n.color)
+          }));
+
+          // 2. Generate Random "Insight" Links (Suggesting connections)
+          const suggestedLinks: { source: string, target: string }[] = [];
+          if (visualNodes.length > 2) {
+              const linkCount = Math.min(visualNodes.length, 5); // Suggest up to 5 connections
+              const usedIndices = new Set<number>();
+              
+              for (let i = 0; i < linkCount; i++) {
+                  let idx1 = Math.floor(Math.random() * visualNodes.length);
+                  let idx2 = Math.floor(Math.random() * visualNodes.length);
+                  
+                  // Try to find unique pair
+                  let attempts = 0;
+                  while ((idx1 === idx2 || usedIndices.has(idx1)) && attempts < 10) {
+                      idx2 = Math.floor(Math.random() * visualNodes.length);
+                      attempts++;
+                  }
+                  
+                  if (idx1 !== idx2) {
+                      suggestedLinks.push({ 
+                          source: visualNodes[idx1].id, 
+                          target: visualNodes[idx2].id 
+                      });
+                      usedIndices.add(idx1);
+                  }
+              }
+          }
+
+          simulationRef.current = { nodes: visualNodes, links: suggestedLinks, running: true };
+
+      }, [notes]);
+
+      // Physics Loop
+      useEffect(() => {
+          if (!simulationRef.current.running) return;
+
+          const loop = () => {
+              const { width, height } = dimensions;
+              const { nodes } = simulationRef.current;
+
+              nodes.forEach(node => {
+                  // Gentle floating
+                  node.x += node.vx;
+                  node.y += node.vy;
+
+                  // Wall bounce with damping
+                  if (node.x <= 0 || node.x >= width) node.vx *= -1;
+                  if (node.y <= 0 || node.y >= height) node.vy *= -1;
+
+                  // Central Gravity (Keep them somewhat together)
+                  const dx = (width / 2) - node.x;
+                  const dy = (height / 2) - node.y;
+                  node.vx += dx * 0.00005;
+                  node.vy += dy * 0.00005;
+              });
+
+              setTick(t => t + 1);
+              requestAnimationFrame(loop);
+          };
+          const frameId = requestAnimationFrame(loop);
+          return () => cancelAnimationFrame(frameId);
+      }, [dimensions]);
+
+      return (
+          <div ref={containerRef} className="absolute inset-0 bg-[#0f172a] overflow-hidden">
+              <div className="absolute top-6 left-8 pointer-events-none z-10">
+                  <h2 className="text-white/80 font-serif text-2xl tracking-tight flex items-center gap-3">
+                      <BrainCircuit size={24} className="text-indigo-400" />
+                      ETHER_WEB
+                  </h2>
+                  <p className="text-white/40 text-[10px] font-mono uppercase tracking-widest mt-1">
+                      Поиск скрытых связей // {notes.length} NODES
+                  </p>
+              </div>
+
+              <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                  {simulationRef.current.links.map((link, i) => {
+                      const source = simulationRef.current.nodes.find(n => n.id === link.source);
+                      const target = simulationRef.current.nodes.find(n => n.id === link.target);
+                      if (!source || !target) return null;
+
+                      return (
+                          <g key={`link-${i}`}>
+                              <line 
+                                  x1={source.x} y1={source.y} 
+                                  x2={target.x} y2={target.y} 
+                                  stroke="white" 
+                                  strokeWidth="1" 
+                                  strokeDasharray="4 4" 
+                                  strokeOpacity="0.2" 
+                              />
+                              {/* Running Dot/Spark */}
+                              <circle r="2" fill="#fbbf24">
+                                  <animateMotion 
+                                      dur={`${3 + (i % 3)}s`}
+                                      repeatCount="indefinite"
+                                      path={`M${source.x},${source.y} L${target.x},${target.y}`}
+                                  />
+                              </circle>
+                          </g>
+                      );
+                  })}
+              </svg>
+
+              {simulationRef.current.nodes.map(node => (
+                  <div
+                      key={node.id}
+                      className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+                      style={{ left: node.x, top: node.y }}
+                      onClick={() => onNodeClick(node)}
+                      onMouseEnter={() => setHoveredNodeId(node.id)}
+                      onMouseLeave={() => setHoveredNodeId(null)}
+                  >
+                      {/* Glow */}
+                      <div 
+                          className="absolute inset-0 rounded-full blur-md opacity-40 group-hover:opacity-80 transition-opacity duration-300"
+                          style={{ backgroundColor: node.hexColor, width: 24, height: 24, transform: 'translate(-25%, -25%)' }}
+                      />
+                      
+                      {/* Core */}
+                      <div 
+                          className="w-3 h-3 rounded-full border border-white/50 bg-white/20 backdrop-blur-sm relative z-10 group-hover:scale-150 transition-transform duration-300"
+                          style={{ borderColor: node.hexColor }}
+                      />
+
+                      {/* Label on Hover */}
+                      <AnimatePresence>
+                          {hoveredNodeId === node.id && (
+                              <motion.div
+                                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.9 }}
+                                  className="absolute top-full mt-3 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md border border-white/10 px-3 py-2 rounded-lg text-white w-48 z-20 pointer-events-none"
+                              >
+                                  <div className="text-[10px] font-mono text-indigo-300 mb-1 opacity-70">
+                                      {new Date(node.createdAt).toLocaleDateString()}
+                                  </div>
+                                  <div className="text-xs font-serif line-clamp-2 leading-relaxed">
+                                      {node.title || node.content.substring(0, 50)}
+                                  </div>
+                              </motion.div>
+                          )}
+                      </AnimatePresence>
+                  </div>
+              ))}
+          </div>
+      );
+  };
+
   const cardHandlers = useMemo(() => ({
       handleDragStart,
       handleDragOver,
@@ -1045,10 +1415,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Заметки</h1>
                 <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">На скорости мысли</p>
                 </div>
-                <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm">
-                    <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
-                    <button onClick={() => { setActiveTab('sketchpad'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'sketchpad' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Tablet size={16} /> Скетчпад</button>
-                    <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
+                <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
+                    <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
+                    <button onClick={() => { setActiveTab('sketchpad'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'sketchpad' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Tablet size={16} /> Скетчпад</button>
+                    <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
+                    <button onClick={() => { setActiveTab('ether'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'ether' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><BrainCircuit size={16} /> Ether</button>
                 </div>
             </header>
       </div>
@@ -1056,6 +1427,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       <div className="flex-1 min-h-0 relative">
         {activeTab === 'sketchpad' ? (
             <Sketchpad items={sketchItems} addItem={addSketchItem} deleteItem={deleteSketchItem} updateItem={updateSketchItem} />
+        ) : activeTab === 'ether' ? (
+            <NoteEtherGraph notes={notes} onNodeClick={handleOpenNote} />
         ) : (
             <div 
                 ref={scrollContainerRef}
