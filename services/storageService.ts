@@ -21,7 +21,8 @@ export const loadState = (): AppState => {
       profileConfig: {
           role: 'architect',
           manifesto: 'Строить системы, которые переживут хаос.'
-      }
+      },
+      synapticLinks: []
     };
 
     if (!stored) return emptyState;
@@ -75,6 +76,10 @@ export const loadState = (): AppState => {
         parsed.profileConfig = emptyState.profileConfig;
     }
 
+    if (!parsed.synapticLinks) {
+        parsed.synapticLinks = [];
+    }
+
     return { ...emptyState, ...parsed };
   } catch (error) {
     console.error("Failed to load state:", error);
@@ -91,7 +96,8 @@ export const loadState = (): AppState => {
       profileConfig: {
           role: 'architect',
           manifesto: 'Строить системы, которые переживут хаос.'
-      }
+      },
+      synapticLinks: []
     };
   }
 };
