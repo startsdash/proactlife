@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -70,7 +72,7 @@ interface VisualNode extends Note {
     y: number;
     vx: number;
     vy: number;
-    mass: number; // New: Mass based on connections
+    phase: number;
     hexColor: string;
 }
 
@@ -94,23 +96,21 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
         const currentNodes = simulationRef.current.nodes;
         const visualNodes: VisualNode[] = notes.map(n => {
             const existing = currentNodes.find(en => en.id === n.id);
-            const connectionCount = (n.connectedNoteIds?.length || 0);
             return {
                 ...n,
                 x: existing ? existing.x : Math.random() * clientWidth,
                 y: existing ? existing.y : Math.random() * clientHeight,
-                vx: existing ? existing.vx : (Math.random() - 0.5) * 2, // More initial energy
-                vy: existing ? existing.vy : (Math.random() - 0.5) * 2,
-                mass: 1 + connectionCount * 0.5, // Heavier if connected
+                vx: existing ? existing.vx : (Math.random() - 0.5) * 0.5,
+                vy: existing ? existing.vy : (Math.random() - 0.5) * 0.5,
+                phase: existing ? existing.phase : Math.random() * Math.PI * 2,
                 hexColor: getColorHex(n.color)
             };
         });
 
-        // 2. Generate Random "Suggested" Links
+        // 2. Generate Random "Suggested" Links only if we need more or re-init
         let suggestedLinks = simulationRef.current.suggestedLinks;
-        // Regenerate suggested links occasionally or if nodes change drastically
         if (suggestedLinks.length === 0 && visualNodes.length > 2) {
-            const linkCount = Math.min(visualNodes.length, 5); 
+            const linkCount = Math.min(visualNodes.length, 5); // Suggest up to 5 connections
             const usedIndices = new Set<number>();
             
             for (let i = 0; i < linkCount; i++) {
@@ -146,98 +146,24 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
             const { nodes } = simulationRef.current;
 
             if (!isPaused) {
-                // 1. Repulsion (Collisions)
-                for (let i = 0; i < nodes.length; i++) {
-                    for (let j = i + 1; j < nodes.length; j++) {
-                        const a = nodes[i];
-                        const b = nodes[j];
-                        const dx = a.x - b.x;
-                        const dy = a.y - b.y;
-                        const distSq = dx * dx + dy * dy;
-                        const minDist = 120 + (a.mass + b.mass) * 5; // Radius based on mass
-
-                        if (distSq < minDist * minDist && distSq > 0) {
-                            const dist = Math.sqrt(distSq);
-                            const force = (minDist - dist) / dist * 0.08; // Bounce factor
-                            
-                            const fx = dx * force;
-                            const fy = dy * force;
-
-                            a.vx += fx;
-                            a.vy += fy;
-                            b.vx -= fx;
-                            b.vy -= fy;
-                        }
-                    }
-                }
-
-                // 2. Attraction (Connections)
-                // Nodes attract if they are connected (saved)
-                // Heavy nodes (mass > 1) attract everyone slightly (Gravity)
                 nodes.forEach(node => {
-                    // Saved connections attraction (Spring)
-                    node.connectedNoteIds?.forEach(targetId => {
-                        const target = nodes.find(n => n.id === targetId);
-                        if (target) {
-                            const dx = target.x - node.x;
-                            const dy = target.y - node.y;
-                            const dist = Math.sqrt(dx * dx + dy * dy);
-                            const springLen = 150;
-                            
-                            if (dist > 0) {
-                                const force = (dist - springLen) * 0.002;
-                                const fx = (dx / dist) * force;
-                                const fy = (dy / dist) * force;
-                                node.vx += fx;
-                                node.vy += fy;
-                                target.vx -= fx;
-                                target.vy -= fy;
-                            }
-                        }
-                    });
+                    // Gentle floating
+                    node.x += node.vx;
+                    node.y += node.vy;
 
-                    // General Gravity well towards massive nodes (High connectivity)
-                    // This creates the "magnetic" effect for other nodes
-                    if (node.mass > 1.5) {
-                        nodes.forEach(other => {
-                            if (node === other) return;
-                            const dx = node.x - other.x;
-                            const dy = node.y - other.y;
-                            const distSq = dx * dx + dy * dy;
-                            if (distSq > 10000 && distSq < 900000) { // Range of influence
-                                const force = node.mass * 0.0001;
-                                other.vx += dx * force;
-                                other.vy += dy * force;
-                            }
-                        });
-                    }
-                });
-
-                nodes.forEach(node => {
-                    // Wandering (Organic noise)
-                    node.vx += (Math.random() - 0.5) * 0.1;
-                    node.vy += (Math.random() - 0.5) * 0.1;
+                    // Wall bounce with damping
+                    if (node.x <= 0 || node.x >= width) node.vx *= -1;
+                    if (node.y <= 0 || node.y >= height) node.vy *= -1;
 
                     // Central Gravity (Keep them somewhat together)
                     const dx = (width / 2) - node.x;
                     const dy = (height / 2) - node.y;
-                    node.vx += dx * 0.0001;
-                    node.vy += dy * 0.0001;
-
-                    // Update
-                    node.x += node.vx;
-                    node.y += node.vy;
-
-                    // Damping
-                    node.vx *= 0.95;
-                    node.vy *= 0.95;
-
-                    // Wall bounce
-                    if (node.x < 50) { node.x = 50; node.vx *= -0.5; }
-                    if (node.x > width - 50) { node.x = width - 50; node.vx *= -0.5; }
-                    if (node.y < 50) { node.y = 50; node.vy *= -0.5; }
-                    if (node.y > height - 50) { node.y = height - 50; node.vy *= -0.5; }
+                    node.vx += dx * 0.00005;
+                    node.vy += dy * 0.00005;
                 });
+            } else {
+                // When paused, we might want a tiny pulse or completely static
+                // Let's keep them static for stability as requested ("Nodes stay in place")
             }
 
             setTick(t => t + 1);
@@ -282,7 +208,7 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
         });
 
         return links;
-    }, [tick, notes]);
+    }, [tick, notes]); // Depend on tick to update positions, notes to update starred status
 
     const toggleConnection = (sourceId: string, targetId: string) => {
         const sourceNote = notes.find(n => n.id === sourceId);
@@ -334,18 +260,16 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
                                 stroke={isStarred ? "#fbbf24" : "white"}
                                 strokeWidth={isStarred ? 1.5 : 1} 
                                 strokeDasharray={isStarred ? "none" : "4 4"} 
-                                strokeOpacity={isStarred ? 0.6 : 0.15} 
+                                strokeOpacity={isStarred ? 0.6 : 0.2} 
                             />
-                            {/* Running Dot/Spark for Saved Links */}
-                            {isStarred && (
-                                <circle r="2" fill="#fbbf24">
-                                    <animateMotion 
-                                        dur="4s"
-                                        repeatCount="indefinite"
-                                        path={`M${link.source.x},${link.source.y} L${link.target.x},${link.target.y}`}
-                                    />
-                                </circle>
-                            )}
+                            {/* Running Dot/Spark */}
+                            <circle r="2" fill={isStarred ? "#fbbf24" : "white"}>
+                                <animateMotion 
+                                    dur="4s"
+                                    repeatCount="indefinite"
+                                    path={`M${link.source.x},${link.source.y} L${link.target.x},${link.target.y}`}
+                                />
+                            </circle>
                         </g>
                     );
                 })}
@@ -361,15 +285,14 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
                     return (
                         <div 
                             key={`star-${link.id}`}
-                            className="absolute pointer-events-auto cursor-pointer transform -translate-x-1/2 -translate-y-1/2 p-3 hover:scale-125 transition-all duration-300 group opacity-0 hover:opacity-100"
+                            className="absolute pointer-events-auto cursor-pointer transform -translate-x-1/2 -translate-y-1/2 p-2 hover:scale-125 transition-transform group"
                             style={{ left: mx, top: my }}
                             onClick={() => toggleConnection(link.source.id, link.target.id)}
                         >
-                            <div className={`p-1.5 rounded-full backdrop-blur-sm ${isStarred ? 'bg-yellow-500/20' : 'bg-white/10 hover:bg-white/20'}`}>
+                            <div className={`p-1 rounded-full backdrop-blur-sm ${isStarred ? 'bg-yellow-500/10' : 'bg-white/5 hover:bg-white/10'}`}>
                                 <Star 
-                                    size={14} 
-                                    className={`transition-colors ${isStarred ? 'text-yellow-400 fill-yellow-400' : 'text-white/60 hover:text-white'}`} 
-                                    strokeWidth={isStarred ? 0 : 2}
+                                    size={12} 
+                                    className={`transition-colors ${isStarred ? 'text-yellow-400 fill-yellow-400' : 'text-white/40 hover:text-white'}`} 
                                 />
                             </div>
                         </div>
@@ -387,11 +310,6 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
                     onMouseEnter={() => setHoveredNodeId(node.id)}
                     onMouseLeave={() => setHoveredNodeId(null)}
                 >
-                    {/* Mass Gravity Visualization (for connected nodes) */}
-                    {node.mass > 1 && (
-                        <div className="absolute inset-0 border border-white/5 rounded-full animate-[ping_3s_ease-in-out_infinite]" style={{ width: 40 + node.mass * 10, height: 40 + node.mass * 10, transform: 'translate(-50%, -50%)', left: '50%', top: '50%' }} />
-                    )}
-
                     {/* Glow */}
                     <div 
                         className={`absolute inset-0 rounded-full blur-md opacity-40 group-hover:opacity-80 transition-opacity duration-300 ${isPaused ? 'animate-pulse' : ''}`}
@@ -413,9 +331,8 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 className="absolute top-full mt-3 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md border border-white/10 px-3 py-2 rounded-lg text-white w-48 z-30 pointer-events-none"
                             >
-                                <div className="text-[10px] font-mono text-indigo-300 mb-1 opacity-70 flex justify-between">
-                                    <span>{new Date(node.createdAt).toLocaleDateString()}</span>
-                                    <span>MASS: {node.mass.toFixed(1)}</span>
+                                <div className="text-[10px] font-mono text-indigo-300 mb-1 opacity-70">
+                                    {new Date(node.createdAt).toLocaleDateString()}
                                 </div>
                                 <div className="text-xs font-serif line-clamp-2 leading-relaxed">
                                     {node.title || node.content.substring(0, 50)}
@@ -1384,6 +1301,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const inboxNotes = filterNotes(notes.filter(n => n.status === 'inbox').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
   const archivedNotes = filterNotes(notes.filter(n => n.status === 'archived').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
+
+  // --- ETHER GRAPH TYPES & COMPONENT ---
+  // (NoteEtherGraph definition is above, updated with pause, connection toggling)
 
   const cardHandlers = useMemo(() => ({
       handleDragStart,
