@@ -49,7 +49,9 @@ const ROLE_COLORS: Record<IdentityRole, string> = {
     architect: 'border-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]',
 };
 
-const SidebarAccumulator = ({ habits, expanded }: { habits: Habit[], expanded: boolean }) => {
+const SidebarAccumulator = ({ habits, expanded, onNavigate }: { habits: Habit[], expanded: boolean, onNavigate: (m: Module) => void }) => {
+    const [isGlitching, setIsGlitching] = useState(false);
+    
     const getLocalDateKey = (date: Date) => {
        const year = date.getFullYear();
        const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -75,7 +77,12 @@ const SidebarAccumulator = ({ habits, expanded }: { habits: Habit[], expanded: b
 
     const percent = activeCount > 0 ? (completedCount / activeCount) * 100 : 0;
     
-    // Liquid segments proportional to TOTAL active habits (width represents % of total capacity)
+    // Rhythm Decay Logic
+    const hour = new Date().getHours();
+    // Decay if late in the day with low progress
+    const isDecaying = (hour >= 12 && percent === 0) || (hour >= 18 && percent < 30);
+    
+    // Liquid segments proportional to TOTAL active habits
     const prodPercent = activeCount > 0 ? (sphereStats['productivity'] || 0) / activeCount * 100 : 0;
     const growthPercent = activeCount > 0 ? (sphereStats['growth'] || 0) / activeCount * 100 : 0;
     const relPercent = activeCount > 0 ? (sphereStats['relationships'] || 0) / activeCount * 100 : 0;
@@ -83,16 +90,43 @@ const SidebarAccumulator = ({ habits, expanded }: { habits: Habit[], expanded: b
     
     if (activeCount === 0) return null;
 
+    const handleClick = () => {
+        setIsGlitching(true);
+        setTimeout(() => {
+            setIsGlitching(false);
+            onNavigate(Module.RITUALS);
+        }, 300);
+    };
+
     if (expanded) {
         return (
-            <div className="px-6 py-4 mb-2 animate-in fade-in slide-in-from-left-4 duration-500">
-                <div className="relative w-full h-10 rounded-full bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg overflow-hidden group">
+            <div className="px-6 py-4 mb-2 animate-in fade-in slide-in-from-left-4 duration-500 relative group/acc">
+                <button 
+                    onClick={handleClick}
+                    className={`
+                        relative w-full h-10 rounded-full 
+                        bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl 
+                        border border-white/20 dark:border-white/10 
+                        shadow-lg overflow-hidden group transition-all duration-300
+                        ${isDecaying ? 'opacity-40 hover:opacity-100' : 'opacity-100'}
+                        ${isGlitching ? 'scale-95 brightness-150 shadow-[0_0_20px_rgba(255,255,255,0.8)]' : 'hover:scale-[1.02]'}
+                    `}
+                >
+                    {/* Decay Filament Effect */}
+                    {isDecaying && (
+                        <div className="absolute inset-0 bg-rose-500/10 animate-pulse z-0" />
+                    )}
+
+                    {/* Glitch Scanline */}
+                    {isGlitching && (
+                        <div className="absolute inset-0 z-50 bg-white mix-blend-overlay animate-ping" />
+                    )}
+
                     {/* Inner Atmosphere / Gloss */}
                     <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none z-20 mix-blend-overlay" />
                     
                     {/* PLASMA LIQUID (Horizontal) */}
-                    <div className="absolute inset-0 flex items-center px-1 filter blur-[6px] opacity-90">
-                         {/* Using min-width to ensure visibility if present but small */}
+                    <div className={`absolute inset-0 flex items-center px-1 filter blur-[6px] opacity-90 ${isDecaying ? 'grayscale-[50%]' : ''}`}>
                          <motion.div 
                             className="h-6 bg-indigo-500 rounded-full mix-blend-screen dark:mix-blend-normal shadow-[0_0_10px_#6366f1]" 
                             initial={{ width: 0 }} 
@@ -128,11 +162,18 @@ const SidebarAccumulator = ({ habits, expanded }: { habits: Habit[], expanded: b
                          />
                     </div>
 
-                    {/* Label Overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
-                        <span className="font-mono text-[9px] font-bold text-slate-600 dark:text-slate-300 mix-blend-difference tracking-widest drop-shadow-md">
-                            ENERGY {Math.round(percent)}%
+                    {/* Label Overlay - Hidden on Hover, Ghost Tooltip takes over */}
+                    <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none group-hover/acc:opacity-0 transition-opacity">
+                        <span className={`font-mono text-[9px] font-bold text-slate-600 dark:text-slate-300 mix-blend-difference tracking-widest drop-shadow-md ${isDecaying ? 'animate-pulse text-rose-500' : ''}`}>
+                            {isDecaying ? 'SIGNAL_WEAK' : `ENERGY ${Math.round(percent)}%`}
                         </span>
+                    </div>
+                </button>
+
+                {/* Ghost Tooltip (Hover) */}
+                <div className="absolute left-6 right-6 -bottom-6 opacity-0 group-hover/acc:opacity-100 transition-all duration-300 pointer-events-none text-center transform translate-y-2 group-hover/acc:translate-y-0">
+                    <div className="inline-block px-2 py-1 rounded bg-white/10 backdrop-blur-md border border-white/10 text-[7px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-widest shadow-xl">
+                        [ SYSTEM_SYNC: {Math.round(percent)}% // {isDecaying ? 'DECAY' : 'RHYTHM_ACTIVE'} ]
                     </div>
                 </div>
             </div>
@@ -142,15 +183,25 @@ const SidebarAccumulator = ({ habits, expanded }: { habits: Habit[], expanded: b
     return (
         <div className="flex justify-center py-4 mb-2 w-full animate-in fade-in zoom-in-95 duration-300">
             <Tooltip content={`Заряд: ${Math.round(percent)}%`} side="right">
-                <div className="relative w-3 h-14 rounded-full bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg overflow-hidden flex flex-col-reverse items-center py-0.5">
+                <button 
+                    onClick={handleClick}
+                    className={`
+                        relative w-3 h-14 rounded-full 
+                        bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl 
+                        border border-white/20 dark:border-white/10 
+                        shadow-lg overflow-hidden flex flex-col-reverse items-center py-0.5
+                        hover:scale-110 hover:w-4 transition-all duration-300
+                        ${isGlitching ? 'brightness-150' : ''}
+                    `}
+                >
                      {/* PLASMA LIQUID (Vertical Stack) */}
-                    <div className="absolute bottom-0.5 w-full flex flex-col-reverse items-center filter blur-[3px] opacity-90">
+                    <div className={`absolute bottom-0.5 w-full flex flex-col-reverse items-center filter blur-[3px] opacity-90 ${isDecaying ? 'opacity-40' : ''}`}>
                          <motion.div className="w-1.5 bg-indigo-500 rounded-full shadow-[0_0_5px_#6366f1]" initial={{ height: 0 }} animate={{ height: `${prodPercent}%` }} transition={{ duration: 1 }} />
                          <motion.div className="w-1.5 bg-emerald-500 rounded-full -mb-0.5 shadow-[0_0_5px_#10b981]" initial={{ height: 0 }} animate={{ height: `${growthPercent}%` }} transition={{ duration: 1 }} />
                          <motion.div className="w-1.5 bg-rose-500 rounded-full -mb-0.5 shadow-[0_0_5px_#f43f5e]" initial={{ height: 0 }} animate={{ height: `${relPercent}%` }} transition={{ duration: 1 }} />
                          <motion.div className="w-1.5 bg-slate-400 dark:bg-slate-600 rounded-full -mb-0.5" initial={{ height: 0 }} animate={{ height: `${otherPercent}%` }} transition={{ duration: 1 }} />
                     </div>
-                </div>
+                </button>
             </Tooltip>
         </div>
     );
@@ -260,7 +311,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
         )}
 
         {/* ACCUMULATOR WIDGET (Atmospheric) */}
-        <SidebarAccumulator habits={habits} expanded={isExpanded} />
+        <SidebarAccumulator habits={habits} expanded={isExpanded} onNavigate={setModule} />
 
         {/* NAV GROUPS */}
         <div className="flex-1 overflow-y-auto custom-scrollbar-none px-4 py-2 space-y-8">
