@@ -1,15 +1,16 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, Network, Eye } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book } from 'lucide-react';
 import Sketchpad from './Sketchpad';
 
 interface Props {
@@ -30,7 +31,6 @@ interface Props {
   deleteSketchItem: (id: string) => void;
   updateSketchItem: (item: SketchItem) => void;
   defaultTab?: 'inbox' | 'sketchpad' | 'library';
-  onAddFlashcard?: (card: Flashcard) => void;
 }
 
 const colors = [
@@ -599,245 +599,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     );
 };
 
-// --- SYNAPTIC WEB VISUALIZATION ---
-interface VisualNode extends Note {
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-}
-
-interface SynapticLink {
-    source: string;
-    target: string;
-    strength: number;
-    isSolid: boolean; // True if "Liked" / "Insight"
-}
-
-const SynapticWeb: React.FC<{ 
-    notes: Note[], 
-    onOpenNote: (note: Note) => void,
-    onAddFlashcard?: (card: Flashcard) => void
-}> = ({ notes, onOpenNote, onAddFlashcard }) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [nodes, setNodes] = useState<VisualNode[]>([]);
-    const [links, setLinks] = useState<SynapticLink[]>([]);
-    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-    const requestRef = useRef<number>();
-    
-    // Initialize simulation
-    useEffect(() => {
-        if (!containerRef.current) return;
-        const { width, height } = containerRef.current.getBoundingClientRect();
-        setDimensions({ width, height });
-
-        // Initialize nodes with random positions if not set
-        const initialNodes: VisualNode[] = notes.map(n => ({
-            ...n,
-            x: Math.random() * width,
-            y: Math.random() * height,
-            vx: 0,
-            vy: 0
-        }));
-        setNodes(initialNodes);
-
-        // Generate Hypotheses (Simulated AI)
-        // Create random weak links between some nodes
-        const newLinks: SynapticLink[] = [];
-        // Limit links for performance
-        const maxLinks = Math.min(notes.length * 1.5, 50); 
-        
-        for(let i = 0; i < maxLinks; i++) {
-            const sourceIdx = Math.floor(Math.random() * notes.length);
-            let targetIdx = Math.floor(Math.random() * notes.length);
-            while (sourceIdx === targetIdx && notes.length > 1) targetIdx = Math.floor(Math.random() * notes.length);
-            
-            if (notes[sourceIdx] && notes[targetIdx]) {
-                // Avoid duplicates (A-B is same as B-A)
-                const sId = notes[sourceIdx].id;
-                const tId = notes[targetIdx].id;
-                const exists = newLinks.some(l => (l.source === sId && l.target === tId) || (l.source === tId && l.target === sId));
-                
-                if (!exists) {
-                    newLinks.push({
-                        source: sId,
-                        target: tId,
-                        strength: Math.random() * 0.5 + 0.1, // Random strength
-                        isSolid: false
-                    });
-                }
-            }
-        }
-        setLinks(newLinks);
-
-    }, [notes.length]); // Re-init only on count change for stability
-
-    // Physics Loop
-    const animate = useCallback(() => {
-        setNodes(prevNodes => {
-            const newNodes = prevNodes.map(node => ({ ...node })); // Clone
-            const { width, height } = dimensions;
-            if (width === 0 || height === 0) return prevNodes;
-
-            // Constants
-            const repulsion = 100;
-            const attraction = 0.005;
-            const damping = 0.9;
-            const centerPull = 0.0005;
-
-            // Forces
-            for (let i = 0; i < newNodes.length; i++) {
-                const node = newNodes[i];
-                
-                // Center Gravity
-                const dx = (width / 2) - node.x;
-                const dy = (height / 2) - node.y;
-                node.vx += dx * centerPull;
-                node.vy += dy * centerPull;
-
-                // Repulsion
-                for (let j = 0; j < newNodes.length; j++) {
-                    if (i === j) continue;
-                    const other = newNodes[j];
-                    const rx = node.x - other.x;
-                    const ry = node.y - other.y;
-                    const distSq = rx*rx + ry*ry;
-                    if (distSq > 0 && distSq < 40000) { // Interaction radius
-                        const dist = Math.sqrt(distSq);
-                        const force = repulsion / (distSq + 1); // Inverse square law ish
-                        node.vx += (rx / dist) * force;
-                        node.vy += (ry / dist) * force;
-                    }
-                }
-
-                // Link Attraction
-                links.forEach(link => {
-                    const isSource = link.source === node.id;
-                    const isTarget = link.target === node.id;
-                    
-                    if (isSource || isTarget) {
-                        const otherId = isSource ? link.target : link.source;
-                        const other = newNodes.find(n => n.id === otherId);
-                        if (other) {
-                            const ax = other.x - node.x;
-                            const ay = other.y - node.y;
-                            // Solid links pull harder
-                            const factor = link.isSolid ? attraction * 3 : attraction; 
-                            node.vx += ax * factor;
-                            node.vy += ay * factor;
-                        }
-                    }
-                });
-
-                // Apply Velocity
-                node.vx *= damping;
-                node.vy *= damping;
-                node.x += node.vx;
-                node.y += node.vy;
-
-                // Bounds
-                const margin = 20;
-                if (node.x < margin) { node.x = margin; node.vx *= -1; }
-                if (node.x > width - margin) { node.x = width - margin; node.vx *= -1; }
-                if (node.y < margin) { node.y = margin; node.vy *= -1; }
-                if (node.y > height - margin) { node.y = height - margin; node.vy *= -1; }
-            }
-            return newNodes;
-        });
-        requestRef.current = requestAnimationFrame(animate);
-    }, [dimensions, links]);
-
-    useEffect(() => {
-        requestRef.current = requestAnimationFrame(animate);
-        return () => cancelAnimationFrame(requestRef.current!);
-    }, [animate]);
-
-    const handleSolidify = (sourceId: string, targetId: string) => {
-        setLinks(prev => prev.map(l => {
-            if ((l.source === sourceId && l.target === targetId) || (l.source === targetId && l.target === sourceId)) {
-                // If turning solid for the first time
-                if (!l.isSolid && onAddFlashcard) {
-                    const sourceNote = notes.find(n => n.id === sourceId);
-                    const targetNote = notes.find(n => n.id === targetId);
-                    if (sourceNote && targetNote) {
-                        onAddFlashcard({
-                            id: Date.now().toString(),
-                            front: `Synthesis: ${sourceNote.title || 'Note A'} + ${targetNote.title || 'Note B'}`,
-                            back: `Insight derived from:\n1. ${sourceNote.content.substring(0, 50)}...\n2. ${targetNote.content.substring(0, 50)}...`,
-                            level: 0,
-                            nextReview: Date.now()
-                        });
-                    }
-                }
-                return { ...l, isSolid: true };
-            }
-            return l;
-        }));
-    };
-
-    return (
-        <div ref={containerRef} className="w-full h-full relative overflow-hidden bg-[#f0f2f5] dark:bg-[#050505]" style={{
-            backgroundImage: `
-                linear-gradient(to right, rgba(100,100,100,0.05) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(100,100,100,0.05) 1px, transparent 1px)
-            `,
-            backgroundSize: '20px 20px'
-        }}>
-            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                {links.map((link, i) => {
-                    const source = nodes.find(n => n.id === link.source);
-                    const target = nodes.find(n => n.id === link.target);
-                    if (!source || !target) return null;
-                    
-                    const midX = (source.x + target.x) / 2;
-                    const midY = (source.y + target.y) / 2;
-
-                    return (
-                        <g key={i}>
-                            <line 
-                                x1={source.x} y1={source.y} 
-                                x2={target.x} y2={target.y} 
-                                stroke={link.isSolid ? '#6366f1' : '#94a3b8'} 
-                                strokeWidth={link.isSolid ? 1.5 : 0.5} 
-                                strokeDasharray={link.isSolid ? 'none' : '4 4'}
-                                className="transition-all duration-500"
-                            />
-                            {/* Insight Anchor */}
-                            {!link.isSolid && (
-                                <foreignObject x={midX - 12} y={midY - 12} width={24} height={24} className="overflow-visible pointer-events-auto">
-                                    <button 
-                                        onClick={() => handleSolidify(link.source, link.target)}
-                                        className="w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-500 shadow-sm transition-all hover:scale-125"
-                                        title="Found Insight?"
-                                    >
-                                        <Sparkles size={12} />
-                                    </button>
-                                </foreignObject>
-                            )}
-                        </g>
-                    );
-                })}
-            </svg>
-            
-            {nodes.map(node => (
-                <motion.div
-                    key={node.id}
-                    className="absolute w-4 h-4 rounded-full border-2 border-slate-400 dark:border-slate-500 bg-[#f0f2f5] dark:bg-[#050505] hover:bg-indigo-500 hover:border-indigo-500 cursor-pointer shadow-sm transition-colors z-10"
-                    style={{ left: node.x, top: node.y, x: '-50%', y: '-50%' }}
-                    onClick={() => onOpenNote(node)}
-                    whileHover={{ scale: 1.5 }}
-                >
-                    {/* Tooltip on Hover */}
-                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none bg-black/80 text-white text-[10px] px-2 py-1 rounded">
-                        {node.title || node.content.substring(0, 15)}...
-                    </div>
-                </motion.div>
-            ))}
-        </div>
-    );
-};
-
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, sketchItems, addSketchItem, deleteSketchItem, updateSketchItem, defaultTab, onAddFlashcard }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, sketchItems, addSketchItem, deleteSketchItem, updateSketchItem, defaultTab }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -845,9 +607,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'inbox' | 'sketchpad' | 'library'>(defaultTab || 'inbox');
-  // New View Mode State
-  const [viewMode, setViewMode] = useState<'list' | 'web'>('list');
-  
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
@@ -1351,17 +1110,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             </div>
                             {!showMoodInput && !showTagInput && (
                                 <>
-                                    {/* SYNAPTIC VIEW TOGGLE (Only in Inbox) */}
-                                    {activeTab === 'inbox' && (
-                                        <Tooltip content={viewMode === 'list' ? "Synaptic Web" : "List View"} side="bottom">
-                                            <button 
-                                                onClick={() => setViewMode(viewMode === 'list' ? 'web' : 'list')} 
-                                                className={`p-3 rounded-2xl border-none transition-all shadow-sm ${viewMode === 'web' ? 'bg-indigo-500 text-white' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
-                                            >
-                                                {viewMode === 'list' ? <Network size={20} /> : <LayoutGrid size={20} />}
-                                            </button>
-                                        </Tooltip>
-                                    )}
                                     <Tooltip content="Поиск по тегам" side="bottom"><button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button></Tooltip>
                                     <Tooltip content="Фильтр по цвету" side="bottom"><button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button></Tooltip>
                                     {hasMoodMatcher && <Tooltip content="Подбор по теме (ИИ)" side="bottom"><button onClick={() => setShowMoodInput(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-purple-500 hover:bg-purple-50'}`}><Sparkles size={20} /></button></Tooltip>}
@@ -1391,75 +1139,65 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 </motion.div>
 
                 {/* CONTENT AREA */}
-                <div className={`w-full ${viewMode === 'web' && activeTab === 'inbox' ? 'h-[calc(100vh-140px)]' : 'max-w-5xl mx-auto px-3 md:px-8 pt-6 pb-8'}`}>
+                <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pt-6 pb-8">
                     {activeTab === 'inbox' && (
                         <>
-                            {viewMode === 'list' ? (
-                                <>
-                                    {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
-                                        <div ref={editorRef} className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative mb-8 ${isExpanded ? 'shadow-xl z-30' : 'shadow-sm hover:shadow-md'}`}>
-                                            {/* NOISE TEXTURE */}
-                                            <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0 rounded-3xl"></div>
-                                            
-                                            {!isExpanded ? (
-                                                <div onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }} className="p-5 text-slate-400 dark:text-slate-500 cursor-text text-base font-medium flex items-center justify-between relative z-10"><span>Заметка...</span><div className="flex gap-4 text-slate-300 hover:text-slate-400 transition-colors"><PenTool size={20} /><ImageIcon size={20} /></div></div>
-                                            ) : (
-                                                <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
-                                                    {creationCover && <div className="relative w-full h-32 md:h-48 group rounded-t-3xl overflow-hidden"><img src={creationCover} alt="Cover" className="w-full h-full object-cover" /><button onClick={() => setCreationCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button></div>}
-                                                    <input type="text" placeholder="Название" value={title} onChange={(e) => setTitle(e.target.value)} className="px-6 pt-6 pb-2 bg-transparent text-xl font-sans font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none" />
-                                                    <div 
-                                                        ref={contentEditableRef} 
-                                                        contentEditable 
-                                                        onInput={handleEditorInput} 
-                                                        onClick={handleEditorClick} 
-                                                        onBlur={saveSelection} 
-                                                        onMouseUp={saveSelection} 
-                                                        onKeyUp={saveSelection} 
-                                                        className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-serif [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
-                                                        style={{ whiteSpace: 'pre-wrap' }} 
-                                                        data-placeholder="О чём ты думаешь?" 
-                                                    />
-                                                    <div className="px-6 py-2"><TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} /></div>
-                                                    <div className="flex items-center justify-between px-4 py-3 gap-2 bg-transparent">
-                                                        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
-                                                            <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button></Tooltip>
-                                                            <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={18} /></button></Tooltip>
-                                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                                            <Tooltip content="Заголовок 1"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button></Tooltip>
-                                                            <Tooltip content="Заголовок 2"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={18} /></button></Tooltip>
-                                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button></Tooltip>
-                                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button></Tooltip>
-                                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                                            <Tooltip content="Очистить форматирование"><button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button></Tooltip>
-                                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                                            <Tooltip content="Вставить картинку"><label className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={18} /></label></Tooltip>
-                                                            {activeImage && !isEditing && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors"><Trash2 size={18} /></button></Tooltip>}
-                                                        </div>
-                                                        <div className="flex items-center gap-2 shrink-0">
-                                                            <div className="relative"><Tooltip content="Обложка"><button onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button></Tooltip>{showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} />}</div>
-                                                            <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>{showColorPicker && <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
-                                                            <button onClick={handleDump} disabled={isProcessing} className="text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50">Закрыть</button>
-                                                        </div>
-                                                    </div>
+                            {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
+                                <div ref={editorRef} className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative mb-8 ${isExpanded ? 'shadow-xl z-30' : 'shadow-sm hover:shadow-md'}`}>
+                                    {/* NOISE TEXTURE */}
+                                    <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0 rounded-3xl"></div>
+                                    
+                                    {!isExpanded ? (
+                                        <div onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }} className="p-5 text-slate-400 dark:text-slate-500 cursor-text text-base font-medium flex items-center justify-between relative z-10"><span>Заметка...</span><div className="flex gap-4 text-slate-300 hover:text-slate-400 transition-colors"><PenTool size={20} /><ImageIcon size={20} /></div></div>
+                                    ) : (
+                                        <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
+                                            {creationCover && <div className="relative w-full h-32 md:h-48 group rounded-t-3xl overflow-hidden"><img src={creationCover} alt="Cover" className="w-full h-full object-cover" /><button onClick={() => setCreationCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button></div>}
+                                            <input type="text" placeholder="Название" value={title} onChange={(e) => setTitle(e.target.value)} className="px-6 pt-6 pb-2 bg-transparent text-xl font-sans font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none" />
+                                            <div 
+                                                ref={contentEditableRef} 
+                                                contentEditable 
+                                                onInput={handleEditorInput} 
+                                                onClick={handleEditorClick} 
+                                                onBlur={saveSelection} 
+                                                onMouseUp={saveSelection} 
+                                                onKeyUp={saveSelection} 
+                                                className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-serif [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                                style={{ whiteSpace: 'pre-wrap' }} 
+                                                data-placeholder="О чём ты думаешь?" 
+                                            />
+                                            <div className="px-6 py-2"><TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} /></div>
+                                            <div className="flex items-center justify-between px-4 py-3 gap-2 bg-transparent">
+                                                <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
+                                                    <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button></Tooltip>
+                                                    <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={18} /></button></Tooltip>
+                                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                    <Tooltip content="Заголовок 1"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button></Tooltip>
+                                                    <Tooltip content="Заголовок 2"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={18} /></button></Tooltip>
+                                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                    <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button></Tooltip>
+                                                    <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button></Tooltip>
+                                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                    <Tooltip content="Очистить форматирование"><button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button></Tooltip>
+                                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                    <Tooltip content="Вставить картинку"><label className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={18} /></label></Tooltip>
+                                                    {activeImage && !isEditing && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors"><Trash2 size={18} /></button></Tooltip>}
                                                 </div>
-                                            )}
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <div className="relative"><Tooltip content="Обложка"><button onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button></Tooltip>{showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} />}</div>
+                                                    <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>{showColorPicker && <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
+                                                    <button onClick={handleDump} disabled={isProcessing} className="text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50">Закрыть</button>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
-                                    {inboxNotes.length > 0 ? (
-                                        <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                            {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} />)}
-                                        </Masonry>
-                                    ) : (
-                                        <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
-                                    )}
-                                </>
+                                </div>
+                            )}
+                            {inboxNotes.length > 0 ? (
+                                <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
+                                    {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} />)}
+                                </Masonry>
                             ) : (
-                                <SynapticWeb 
-                                    notes={inboxNotes} 
-                                    onOpenNote={handleOpenNote} 
-                                    onAddFlashcard={onAddFlashcard}
-                                />
+                                <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
                             )}
                         </>
                     )}
