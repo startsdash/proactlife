@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -113,8 +111,9 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
         // Filter out stale links (if nodes deleted)
         suggestedLinks = suggestedLinks.filter(l => visualNodes.some(n => n.id === l.source) && visualNodes.some(n => n.id === l.target));
 
-        // TARGET: More randomness/density (1.5x nodes or min 10)
-        const targetLinkCount = Math.max(Math.floor(visualNodes.length * 1.5), 10);
+        // TARGET: Sparse connections (only some nodes connected)
+        // Reduced to 0.3x to leave many nodes isolated and random
+        const targetLinkCount = Math.floor(visualNodes.length * 0.3);
         
         if (suggestedLinks.length < targetLinkCount && visualNodes.length > 1) {
             const usedPairs = new Set<string>();
@@ -143,6 +142,9 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
                     usedPairs.add(key);
                 }
             }
+        } else if (suggestedLinks.length > targetLinkCount) {
+            // Trim excess to maintain sparsity
+            suggestedLinks = suggestedLinks.slice(0, targetLinkCount);
         }
 
         simulationRef.current = { nodes: visualNodes, suggestedLinks };
@@ -1338,7 +1340,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const archivedNotes = filterNotes(notes.filter(n => n.status === 'archived').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
 
   // --- ETHER GRAPH TYPES & COMPONENT ---
-  // (NoteEtherGraph definition is above, updated with pause, connection toggling)
+  // (NoteEtherGraph definition is above, updated with sparse connection logic)
 
   const cardHandlers = useMemo(() => ({
       handleDragStart,
