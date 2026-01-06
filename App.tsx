@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
@@ -282,6 +283,7 @@ const App: React.FC = () => {
 
   const addFlashcard = (c: Flashcard) => setData(p => ({ ...p, flashcards: [...p.flashcards, c] }));
   const deleteFlashcard = (id: string) => setData(p => ({ ...p, flashcards: p.flashcards.filter(f => f.id !== id) }));
+  const toggleFlashcardStar = (id: string) => setData(p => ({ ...p, flashcards: p.flashcards.map(f => f.id === id ? { ...f, isStarred: !f.isStarred } : f) }));
 
   const addHabit = (h: Habit) => setData(p => ({ ...p, habits: [...p.habits, h] }));
   const updateHabit = (h: Habit) => setData(p => ({ ...p, habits: p.habits.map(x => x.id === h.id ? h : x) }));
@@ -433,7 +435,7 @@ const App: React.FC = () => {
       {module === Module.SANDBOX && <Sandbox notes={data.notes} tasks={data.tasks} flashcards={data.flashcards} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
-      {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} />}
+      {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
       {module === Module.JOURNAL && <Journal entries={data.journal} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
       {module === Module.MOODBAR && <Moodbar entries={data.journal} onAddEntry={addJournalEntry} />}
       {module === Module.ARCHIVE && <Archive tasks={data.tasks} restoreTask={restoreTask} deleteTask={deleteTask} />}

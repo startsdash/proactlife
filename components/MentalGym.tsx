@@ -1,7 +1,8 @@
 
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Flashcard, Task } from '../types';
-import { Gem, X, RotateCw, Trash2, Plus, Minus, Move, Search, Disc, Diamond, BrainCircuit, Activity } from 'lucide-react';
+import { Gem, X, RotateCw, Trash2, Plus, Minus, Move, Search, Disc, Diamond, BrainCircuit, Activity, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { SPHERES } from '../constants';
@@ -10,12 +11,13 @@ interface Props {
   flashcards: Flashcard[];
   tasks: Task[];
   deleteFlashcard: (id: string) => void;
+  toggleFlashcardStar: (id: string) => void;
 }
 
 // --- UTILS ---
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-4 last:mb-0 text-base leading-relaxed" {...props} />,
-    strong: ({node, ...props}: any) => <strong className="font-bold text-indigo-600 dark:text-indigo-400" {...props} />,
+    strong: ({node, ...props}: any) => <strong className="font-bold text-indigo-400" {...props} />,
     em: ({node, ...props}: any) => <em className="italic font-serif" {...props} />,
 };
 
@@ -28,7 +30,14 @@ interface VisualNode extends Flashcard {
     connections: string[]; 
     color: string;
     sphereId?: string;
+    phase: number; // For breathing animation offset
 }
+
+// --- COLORS ---
+const MINT = '#10b981';   // Emerald
+const CORAL = '#f43f5e';  // Rose
+const LAVENDER = '#818cf8'; // Indigo/Violet
+const GRAPHITE = '#94a3b8'; // Slate
 
 // --- CONSTANTS ---
 const SPHERE_CENTERS: Record<string, { x: number, y: number }> = {
@@ -38,7 +47,7 @@ const SPHERE_CENTERS: Record<string, { x: number, y: number }> = {
     default: { x: 0.5, y: 0.5 }         // Center
 };
 
-const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
+const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard, toggleFlashcardStar }) => {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -54,28 +63,39 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
   // Initialize Simulation Data
   useEffect(() => {
       const nodes: VisualNode[] = flashcards.map(card => {
-          // Identify primary sphere from tasks if not on card directly
+          // Identify primary sphere logic is simplified here; ideally derived from tasks or tags
+          // Random assignment for visual distribution if not linked
           const randomSphere = SPHERES[Math.floor(Math.random() * SPHERES.length)];
           const sphereId = randomSphere.id; 
-          const color = randomSphere.color === 'indigo' ? '#6366f1' : randomSphere.color === 'emerald' ? '#10b981' : '#f43f5e';
+          
+          let color = GRAPHITE;
+          if (sphereId === 'productivity') color = LAVENDER;
+          else if (sphereId === 'growth') color = MINT;
+          else if (sphereId === 'relationships') color = CORAL;
+
+          // Preserve existing position if updating data, else random
+          const existing = simulationRef.current.nodes.find(n => n.id === card.id);
 
           return {
               ...card,
-              x: Math.random() * 800 + 100,
-              y: Math.random() * 600 + 100,
-              vx: 0,
-              vy: 0,
+              x: existing ? existing.x : Math.random() * 800 + 100,
+              y: existing ? existing.y : Math.random() * 600 + 100,
+              vx: existing ? existing.vx : 0,
+              vy: existing ? existing.vy : 0,
               connections: [],
               color,
-              sphereId
+              sphereId,
+              phase: Math.random() * Math.PI * 2 // Random pulse start
           };
       });
 
       // Create connections based on shared Sphere
+      // Limit connections to avoid clutter (Ether Web)
       nodes.forEach((node, i) => {
           nodes.forEach((target, j) => {
               if (i !== j && node.sphereId === target.sphereId) {
-                  if (Math.abs(i - j) < 3) {
+                  // Connect if close in array index (simulating chronological or topical proximity)
+                  if (Math.abs(i - j) < 2) {
                       node.connections.push(target.id);
                   }
               }
@@ -86,7 +106,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
       simulationRef.current.running = true;
   }, [flashcards]);
 
-  // Physics Loop
+  // Physics Loop (Liquid Motion)
   useEffect(() => {
       if (!simulationRef.current.running) return;
 
@@ -95,37 +115,44 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
           const { width, height } = containerSize;
           
           nodes.forEach(node => {
-              // 1. Gravity towards Sphere Center
+              // 1. Gravity towards Sphere Center (Gentle Current)
               const center = SPHERE_CENTERS[node.sphereId || 'default'] || SPHERE_CENTERS.default;
               const targetX = center.x * width;
               const targetY = center.y * height;
               
-              node.vx += (targetX - node.x) * 0.005;
-              node.vy += (targetY - node.y) * 0.005;
+              node.vx += (targetX - node.x) * 0.0005; // Very low gravity
+              node.vy += (targetY - node.y) * 0.0005;
 
-              // 2. Repulsion
+              // 2. Repulsion (Soft Buffer)
               nodes.forEach(other => {
                   if (node.id !== other.id) {
                       const dx = node.x - other.x;
                       const dy = node.y - other.y;
                       const dist = Math.sqrt(dx * dx + dy * dy);
-                      if (dist < 100 && dist > 0) {
-                          const force = 50 / dist; // Repulsion strength
+                      const minDist = 120; // Increased spacing
+                      
+                      if (dist < minDist && dist > 0) {
+                          const force = (minDist - dist) * 0.02; // Soft push
                           node.vx += (dx / dist) * force;
                           node.vy += (dy / dist) * force;
                       }
                   }
               });
 
-              // 3. Damping & Update
-              node.vx *= 0.9;
-              node.vy *= 0.9;
+              // 3. Ether Damping (High Viscosity)
+              node.vx *= 0.92; // High friction prevents jitter
+              node.vy *= 0.92;
+              
+              // 4. Update Position
               node.x += node.vx;
               node.y += node.vy;
 
-              // 4. Bounds
-              node.x = Math.max(50, Math.min(width - 50, node.x));
-              node.y = Math.max(50, Math.min(height - 50, node.y));
+              // 5. Bounds (Soft Containment)
+              const margin = 80;
+              if (node.x < margin) node.vx += 0.05;
+              if (node.x > width - margin) node.vx -= 0.05;
+              if (node.y < margin) node.vy += 0.05;
+              if (node.y > height - margin) node.vy -= 0.05;
           });
 
           setSimulationTick(prev => prev + 1);
@@ -157,50 +184,70 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
       const nodes = simulationRef.current.nodes;
       const nodeMap = new Map<string, VisualNode>(nodes.map(n => [n.id, n]));
 
+      // Use a set to avoid duplicate lines (A-B and B-A)
+      const drawnConnections = new Set<string>();
+
       nodes.forEach(node => {
           node.connections.forEach(targetId => {
+              const linkKey = [node.id, targetId].sort().join('-');
+              if (drawnConnections.has(linkKey)) return;
+              drawnConnections.add(linkKey);
+
               const target = nodeMap.get(targetId);
               if (target) {
+                  // Check if either is active (hovered or starred)
+                  const isNodeActive = hoveredNodeId === node.id || node.isStarred;
+                  const isTargetActive = hoveredNodeId === target.id || target.isStarred;
+                  const isActive = isNodeActive || isTargetActive;
+
                   lines.push(
-                      <line 
-                          key={`${node.id}-${target.id}`}
-                          x1={node.x} y1={node.y}
-                          x2={target.x} y2={target.y}
-                          className="stroke-slate-300 dark:stroke-slate-700/50"
-                          strokeWidth="0.5"
-                          strokeDasharray="4 4" 
-                      />
+                      <g key={linkKey}>
+                          {/* Base Line */}
+                          <line 
+                              x1={node.x} y1={node.y}
+                              x2={target.x} y2={target.y}
+                              className="transition-all duration-500"
+                              stroke={isActive ? (node.isStarred || target.isStarred ? '#fbbf24' : '#ffffff') : '#94a3b8'}
+                              strokeWidth={isActive ? 0.5 : 0.5}
+                              strokeOpacity={isActive ? 0.4 : 0.05}
+                              strokeDasharray={isActive ? "2 2" : "none"}
+                          />
+                          {/* Flow Particle (Only if active) */}
+                          {isActive && (
+                              <circle r="1" fill={node.isStarred || target.isStarred ? '#fbbf24' : '#ffffff'}>
+                                  <animateMotion 
+                                      dur="4s" 
+                                      repeatCount="indefinite"
+                                      path={`M${node.x},${node.y} L${target.x},${target.y}`}
+                                  />
+                              </circle>
+                          )}
+                      </g>
                   );
               }
           });
       });
       return lines;
-  }, [simulationTick]);
+  }, [simulationTick, hoveredNodeId]);
 
   return (
-    <div className="h-full w-full relative overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] select-none" ref={containerRef}>
+    <div className="h-full w-full relative overflow-hidden bg-[#020617] select-none" ref={containerRef}>
         
         {/* HUD UI */}
         <div className="absolute top-6 left-6 md:left-8 z-10 pointer-events-none">
-            <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans flex items-center gap-3">
-                <BrainCircuit size={28} className="text-indigo-500" strokeWidth={1} />
-                NEURAL_WEB
+            <h1 className="text-3xl font-light text-slate-200 tracking-tight font-sans flex items-center gap-3">
+                <BrainCircuit size={28} className="text-indigo-400" strokeWidth={1} />
+                <span className="opacity-80">ETHER_WEB</span>
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-[10px] font-mono uppercase tracking-widest pl-1">
-                NODES_DETECTED: {flashcards.length}
+            <p className="text-slate-500 mt-1 text-[10px] font-mono uppercase tracking-widest pl-1">
+                NODES_DETECTED: {flashcards.length} // SYSTEM_STABLE
             </p>
         </div>
 
         {/* SPHERE LABELS (Background Guides) */}
-        <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 text-[80px] font-bold text-slate-100 dark:text-slate-800/30 select-none pointer-events-none">
-            WORK
-        </div>
-        <div className="absolute top-1/4 right-1/4 translate-x-1/2 -translate-y-1/2 text-[80px] font-bold text-slate-100 dark:text-slate-800/30 select-none pointer-events-none">
-            GROWTH
-        </div>
-        <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 text-[80px] font-bold text-slate-100 dark:text-slate-800/30 select-none pointer-events-none">
-            PEOPLE
-        </div>
+        <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 text-[80px] font-bold text-slate-800/20 select-none pointer-events-none blur-sm">WORK</div>
+        <div className="absolute top-1/4 right-1/4 translate-x-1/2 -translate-y-1/2 text-[80px] font-bold text-slate-800/20 select-none pointer-events-none blur-sm">GROWTH</div>
+        <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 text-[80px] font-bold text-slate-800/20 select-none pointer-events-none blur-sm">PEOPLE</div>
 
         {/* CANVAS LAYER */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none">
@@ -222,53 +269,74 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                 onMouseEnter={() => setHoveredNodeId(node.id)}
                 onMouseLeave={() => setHoveredNodeId(null)}
             >
-                {/* Node Body */}
-                <div className={`
-                    w-4 h-4 rounded-full border-2 bg-white dark:bg-[#0f172a] shadow-[0_0_15px_rgba(0,0,0,0.1)]
-                    transition-all duration-300 group-hover:scale-125
-                `}
-                style={{ borderColor: node.color, boxShadow: `0 0 10px ${node.color}40` }}
-                >
-                    <div className="absolute inset-0 m-1 rounded-full bg-current opacity-50" style={{ color: node.color }} />
+                {/* Visual Orb */}
+                <div className="relative">
+                    {/* Breathing Glow */}
+                    <motion.div 
+                        className="absolute inset-0 rounded-full blur-md"
+                        style={{ backgroundColor: node.color }}
+                        animate={{ 
+                            opacity: [0.2, 0.5, 0.2],
+                            scale: [1, 1.5, 1] 
+                        }}
+                        transition={{ 
+                            duration: 3 + Math.random(), 
+                            repeat: Infinity, 
+                            ease: "easeInOut",
+                            delay: node.phase // Async pulsing
+                        }}
+                    />
+                    
+                    {/* Core Node */}
+                    <div 
+                        className={`
+                            relative w-3 h-3 rounded-full border border-white/20 
+                            bg-white/10 backdrop-blur-sm shadow-inner
+                            transition-all duration-300 group-hover:scale-125 group-hover:bg-white/30 group-hover:border-white/50
+                        `}
+                        style={{ boxShadow: node.isStarred ? '0 0 10px #fbbf24' : 'none', borderColor: node.isStarred ? '#fbbf24' : undefined }}
+                    />
+
+                    {/* Star Flash Effect */}
+                    {node.isStarred && (
+                        <motion.div 
+                            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                            animate={{ rotate: 360, scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
+                            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                        >
+                            <Star size={8} className="text-amber-300 fill-amber-300 blur-[1px]" />
+                        </motion.div>
+                    )}
                 </div>
 
-                {/* Pulsing Aura - Subtle & Slow */}
-                {hoveredNodeId === node.id && (
-                    <motion.div 
-                        initial={{ opacity: 0.6, scale: 1 }}
-                        animate={{ opacity: 0, scale: 2 }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-                        className="absolute inset-0 rounded-full border pointer-events-none"
-                        style={{ borderColor: node.color }}
-                    />
-                )}
-
-                {/* Tooltip (Preview) */}
+                {/* Hover Label */}
                 <AnimatePresence>
                     {hoveredNodeId === node.id && (
                         <motion.div
                             initial={{ opacity: 0, y: 10, scale: 0.9 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
-                            className="absolute bottom-full mb-3 px-3 py-2 bg-slate-900/90 text-white text-xs rounded-lg whitespace-nowrap backdrop-blur-md border border-white/10 shadow-xl pointer-events-none"
+                            className="absolute bottom-full mb-4 px-3 py-2 bg-black/80 text-white text-xs rounded border border-white/10 whitespace-nowrap backdrop-blur-md pointer-events-none z-30"
                         >
-                            <span className="font-mono text-[9px] text-indigo-300 mr-2">ID_{node.id.slice(-4)}</span>
-                            <span className="font-sans font-medium">{node.front.substring(0, 30)}...</span>
+                            <span className="font-mono text-[9px] text-indigo-300 mr-2 opacity-70">ID_{node.id.slice(-4)}</span>
+                            <span className="font-serif tracking-wide">{node.front.substring(0, 30)}...</span>
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
         ))}
 
-        {/* NEURAL NODE INTERFACE (MODAL) */}
+        {/* NEURAL NODE INTERFACE (MODAL) - GLASS ETHER STYLE */}
         <AnimatePresence>
             {activeCard && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setSelectedCardId(null)}>
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setSelectedCardId(null)}>
+                    
+                    {/* The Card Container */}
                     <motion.div 
-                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
                         className="relative w-full max-w-md aspect-[3/4] perspective-1000"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -276,62 +344,69 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                             className="w-full h-full relative transform-style-3d transition-transform duration-700"
                             animate={{ rotateY: isFlipped ? 180 : 0 }}
                         >
-                            {/* FRONT SIDE (A) - The Stimulus */}
-                            <div className="absolute inset-0 backface-hidden bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-[40px] border border-white/40 dark:border-white/10 rounded-2xl shadow-2xl p-8 flex flex-col overflow-hidden">
+                            {/* FRONT SIDE (A) - Ultra Glass */}
+                            <div className="absolute inset-0 backface-hidden bg-white/5 backdrop-blur-[40px] border border-white/10 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] p-8 flex flex-col overflow-hidden">
+                                {/* Gradient Tint */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none" />
+                                
                                 {/* Header */}
-                                <div className="flex justify-between items-start mb-12">
-                                    <div className="font-mono text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                        <Activity size={12} className="text-indigo-500 animate-pulse" />
+                                <div className="flex justify-between items-start mb-12 relative z-10">
+                                    <div className="font-mono text-[9px] text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <Activity size={12} className="text-indigo-400 animate-pulse" />
                                         NEURAL_NODE // {activeCard.id.slice(-4)}
                                     </div>
-                                    <button onClick={() => setSelectedCardId(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                                        <X size={20} strokeWidth={1} />
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); toggleFlashcardStar(activeCard.id); }}
+                                            className={`p-2 rounded-full transition-all ${activeCard.isStarred ? 'text-amber-400 bg-amber-400/10' : 'text-slate-600 hover:text-amber-200'}`}
+                                        >
+                                            <Star size={16} fill={activeCard.isStarred ? "currentColor" : "none"} strokeWidth={1.5} />
+                                        </button>
+                                        <button onClick={() => setSelectedCardId(null)} className="p-2 text-slate-500 hover:text-white transition-colors">
+                                            <X size={20} strokeWidth={1} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Content */}
                                 <div className="flex-1 flex flex-col justify-center text-center relative z-10">
-                                    {/* Pulse Visual behind text - Slow Breath */}
-                                    <motion.div 
-                                        className="absolute inset-0 bg-indigo-500/5 rounded-full blur-3xl scale-75" 
-                                        animate={{ opacity: [0.5, 1, 0.5], scale: [0.7, 0.8, 0.7] }}
-                                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                                    />
+                                    {/* Subtle Center Glow */}
+                                    <div className="absolute inset-0 bg-indigo-500/10 blur-[80px] rounded-full pointer-events-none" />
                                     
-                                    <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white leading-tight font-sans relative z-10">
+                                    <h2 className="text-2xl md:text-3xl font-serif text-slate-100 leading-tight drop-shadow-lg relative z-10 selection:bg-indigo-500/30">
                                         {activeCard.front}
                                     </h2>
                                 </div>
 
                                 {/* Footer Trigger */}
-                                <div className="mt-auto pt-8 flex justify-center">
+                                <div className="mt-auto pt-8 flex justify-center relative z-10">
                                     <button 
                                         onClick={() => setIsFlipped(true)}
-                                        className="group px-6 py-3 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-mono uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400 hover:text-indigo-500 hover:border-indigo-500 transition-all flex items-center gap-3"
+                                        className="group px-6 py-3 rounded-full border border-white/10 hover:border-indigo-500/50 bg-white/5 hover:bg-white/10 text-xs font-mono uppercase tracking-[0.15em] text-slate-300 hover:text-indigo-300 transition-all flex items-center gap-3 backdrop-blur-md"
                                     >
-                                        [ ACCESS_INSIGHT ] <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                        [ ACCESS_DATA ] <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                                     </button>
                                 </div>
                             </div>
 
-                            {/* BACK SIDE (B) - The Insight */}
-                            <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900/95 dark:bg-black/95 backdrop-blur-[40px] border border-white/10 rounded-2xl shadow-2xl p-8 flex flex-col text-slate-200 overflow-hidden">
+                            {/* BACK SIDE (B) - Decompressed */}
+                            <div className="absolute inset-0 backface-hidden rotate-y-180 bg-black/80 backdrop-blur-[50px] border border-white/5 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] p-8 flex flex-col text-slate-200 overflow-hidden">
                                 {/* Decor */}
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
-                                <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
-                                    <Diamond size={100} strokeWidth={0.5} />
+                                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-50" />
+                                <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+                                    <Diamond size={120} strokeWidth={0.5} />
                                 </div>
 
                                 {/* Header Actions */}
-                                <div className="flex justify-end mb-6">
+                                <div className="flex justify-end mb-6 relative z-10">
                                     <button onClick={() => { if(confirm("Дефрагментировать (удалить) узел?")) { deleteFlashcard(activeCard.id); setSelectedCardId(null); } }} className="text-slate-600 hover:text-red-500 transition-colors p-2">
                                         <Trash2 size={16} strokeWidth={1.5} />
                                     </button>
                                 </div>
 
                                 {/* Content */}
-                                <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-2">
-                                    <div className="font-serif text-lg md:text-xl leading-relaxed text-slate-300">
+                                <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-2 relative z-10">
+                                    <div className="font-serif text-lg md:text-xl leading-relaxed text-slate-300 drop-shadow-md">
                                         <ReactMarkdown components={markdownComponents}>
                                             {activeCard.back}
                                         </ReactMarkdown>
@@ -339,12 +414,12 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                                 </div>
 
                                 {/* Mastery Footer */}
-                                <div className="mt-8 pt-6 border-t border-white/10">
+                                <div className="mt-8 pt-6 border-t border-white/5 relative z-10">
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-500">Mastery Level</span>
+                                        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">Sync Level</span>
                                         <span className="font-mono text-[9px] text-indigo-400">{activeCard.level * 20}%</span>
                                     </div>
-                                    <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                                    <div className="w-full h-0.5 bg-slate-800 rounded-full overflow-hidden">
                                         <motion.div 
                                             initial={{ width: 0 }}
                                             animate={{ width: `${Math.min(100, activeCard.level * 20)}%` }}
@@ -355,9 +430,9 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                                     <div className="mt-6 flex justify-center">
                                         <button 
                                             onClick={() => setIsFlipped(false)}
-                                            className="text-xs font-mono text-slate-500 hover:text-white uppercase tracking-widest transition-colors flex items-center gap-2"
+                                            className="text-xs font-mono text-slate-600 hover:text-slate-300 uppercase tracking-widest transition-colors flex items-center gap-2"
                                         >
-                                            <RotateCw size={12} /> REBOOT_NODE
+                                            <RotateCw size={12} /> FLIP_BACK
                                         </button>
                                     </div>
                                 </div>

@@ -83,6 +83,7 @@ export interface Flashcard {
   back: string;
   nextReview: number;
   level: number;
+  isStarred?: boolean;
 }
 
 export type HabitFrequency = 'daily' | 'specific_days' | 'times_per_week' | 'times_per_day';
