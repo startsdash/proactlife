@@ -1,9 +1,9 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Flashcard, Task } from '../types';
-import { Gem, X, RotateCw, Trash2, Plus, Minus, Move, Search, Disc, Diamond } from 'lucide-react';
+import { Gem, X, RotateCw, Trash2, Plus, Minus, Move, Search, Disc, Diamond, BrainCircuit, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+import { SPHERES } from '../constants';
 
 interface Props {
   flashcards: Flashcard[];
@@ -13,7 +13,7 @@ interface Props {
 
 // --- UTILS ---
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-4 last:mb-0 text-lg leading-relaxed" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-4 last:mb-0 text-base leading-relaxed" {...props} />,
     strong: ({node, ...props}: any) => <strong className="font-bold text-indigo-600 dark:text-indigo-400" {...props} />,
     em: ({node, ...props}: any) => <em className="italic font-serif" {...props} />,
 };
@@ -22,8 +22,20 @@ const markdownComponents = {
 interface VisualNode extends Flashcard {
     x: number;
     y: number;
-    connections: string[]; // IDs of connected nodes
+    vx: number;
+    vy: number;
+    connections: string[]; 
+    color: string;
+    sphereId?: string;
 }
+
+// --- CONSTANTS ---
+const SPHERE_CENTERS: Record<string, { x: number, y: number }> = {
+    productivity: { x: 0.25, y: 0.25 }, // Top Left
+    growth: { x: 0.75, y: 0.25 },       // Top Right
+    relationships: { x: 0.5, y: 0.75 }, // Bottom Center
+    default: { x: 0.5, y: 0.5 }         // Center
+};
 
 const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -31,277 +43,223 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   
   // Canvas State
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
-  const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const lastMousePos = useRef({ x: 0, y: 0 });
+  const [containerSize, setContainerSize] = useState({ width: 1000, height: 800 });
+  const [simulationTick, setSimulationTick] = useState(0); // Trigger re-render
+  
+  // Simulation Data Ref (Mutable for performance)
+  const simulationRef = useRef<{ nodes: VisualNode[], running: boolean }>({ nodes: [], running: false });
 
-  // Generate Constellation Layout (Memoized)
-  const nodes: VisualNode[] = useMemo(() => {
-      if (flashcards.length === 0) return [];
-      
-      const center = { x: 0, y: 0 };
-      // Spiral Distribution with noise for organic feel
-      const generated = flashcards.map((card, i) => {
-          const angle = i * 2.4; // Golden angle approx
-          const radius = 80 + (i * 60); // Expanding spiral
-          // Add slight jitter
-          const jitterX = (Math.random() - 0.5) * 40;
-          const jitterY = (Math.random() - 0.5) * 40;
-          
+  // Initialize Simulation Data
+  useEffect(() => {
+      const nodes: VisualNode[] = flashcards.map(card => {
+          // Identify primary sphere from tasks if not on card directly (assuming spheres might be on tasks mostly, but let's assume correlation)
+          // For now, assign random sphere if not present, to show clustering
+          const randomSphere = SPHERES[Math.floor(Math.random() * SPHERES.length)];
+          const sphereId = randomSphere.id; 
+          const color = randomSphere.color === 'indigo' ? '#6366f1' : randomSphere.color === 'emerald' ? '#10b981' : '#f43f5e';
+
           return {
               ...card,
-              x: center.x + Math.cos(angle) * radius + jitterX,
-              y: center.y + Math.sin(angle) * radius + jitterY,
-              connections: [] as string[]
+              x: Math.random() * 800 + 100,
+              y: Math.random() * 600 + 100,
+              vx: 0,
+              vy: 0,
+              connections: [],
+              color,
+              sphereId
           };
       });
 
-      // Generate Connections (Nearest Neighbors + Sequential)
-      generated.forEach((node, i) => {
-          // Connect to previous (Sequential Path)
-          if (i > 0) {
-              node.connections.push(generated[i-1].id);
-          }
-          // Random cross-link to create "Constellation" feel
-          if (i > 2 && i % 3 === 0) {
-              node.connections.push(generated[i-3].id);
-          }
+      // Create connections based on shared Sphere
+      nodes.forEach((node, i) => {
+          nodes.forEach((target, j) => {
+              if (i !== j && node.sphereId === target.sphereId) {
+                  // Connect if close in index or just random sparse connection
+                  if (Math.abs(i - j) < 3) {
+                      node.connections.push(target.id);
+                  }
+              }
+          });
       });
 
-      return generated;
+      simulationRef.current.nodes = nodes;
+      simulationRef.current.running = true;
   }, [flashcards]);
 
-  // Center canvas on mount
-  const centerView = () => {
-      if (containerRef.current) {
-          const { width, height } = containerRef.current.getBoundingClientRect();
-          setTransform({ x: width / 2, y: height / 2, scale: 1 });
-      }
-  };
-
+  // Physics Loop
   useEffect(() => {
-      centerView();
+      if (!simulationRef.current.running) return;
+
+      const tick = () => {
+          const { nodes } = simulationRef.current;
+          const { width, height } = containerSize;
+          
+          nodes.forEach(node => {
+              // 1. Gravity towards Sphere Center
+              const center = SPHERE_CENTERS[node.sphereId || 'default'] || SPHERE_CENTERS.default;
+              const targetX = center.x * width;
+              const targetY = center.y * height;
+              
+              node.vx += (targetX - node.x) * 0.005;
+              node.vy += (targetY - node.y) * 0.005;
+
+              // 2. Repulsion (Nodes push each other away)
+              nodes.forEach(other => {
+                  if (node.id !== other.id) {
+                      const dx = node.x - other.x;
+                      const dy = node.y - other.y;
+                      const dist = Math.sqrt(dx * dx + dy * dy);
+                      if (dist < 100 && dist > 0) {
+                          const force = 50 / dist; // Repulsion strength
+                          node.vx += (dx / dist) * force;
+                          node.vy += (dy / dist) * force;
+                      }
+                  }
+              });
+
+              // 3. Damping & Update
+              node.vx *= 0.9;
+              node.vy *= 0.9;
+              node.x += node.vx;
+              node.y += node.vy;
+
+              // 4. Bounds
+              node.x = Math.max(50, Math.min(width - 50, node.x));
+              node.y = Math.max(50, Math.min(height - 50, node.y));
+          });
+
+          setSimulationTick(prev => prev + 1);
+          requestAnimationFrame(tick);
+      };
+
+      const animId = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(animId);
+  }, [containerSize]);
+
+  // Handle Resize
+  useEffect(() => {
+      if (containerRef.current) {
+          const { clientWidth, clientHeight } = containerRef.current;
+          setContainerSize({ width: clientWidth, height: clientHeight });
+      }
   }, []);
-
-  // --- CANVAS INTERACTION HANDLERS ---
-  const handleWheel = (e: React.WheelEvent) => {
-      e.stopPropagation();
-      const scaleSensitivity = 0.001;
-      const newScale = Math.min(Math.max(0.2, transform.scale - e.deltaY * scaleSensitivity), 3);
-      setTransform(p => ({ ...p, scale: newScale }));
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-      if ((e.target as HTMLElement).closest('.interactive-node')) return;
-      setIsDragging(true);
-      lastMousePos.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-      if (!isDragging) return;
-      const dx = e.clientX - lastMousePos.current.x;
-      const dy = e.clientY - lastMousePos.current.y;
-      setTransform(p => ({ ...p, x: p.x + dx, y: p.y + dy }));
-      lastMousePos.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const handleMouseUp = () => setIsDragging(false);
 
   const handleNodeClick = (id: string) => {
       setSelectedCardId(id);
       setIsFlipped(false);
   };
 
-  const activeCard = nodes.find(n => n.id === selectedCardId);
-  const hoveredCard = nodes.find(n => n.id === hoveredNodeId);
+  const activeCard = flashcards.find(c => c.id === selectedCardId);
+  
+  // Calculate Links for SVG
+  const links = useMemo(() => {
+      const lines: React.ReactNode[] = [];
+      const nodes = simulationRef.current.nodes;
+      const nodeMap = new Map<string, VisualNode>(nodes.map(n => [n.id, n]));
 
-  // --- SPARK ANIMATION LOGIC ---
-  // We need a path string for the spark to travel
-  const sparkPath = useMemo(() => {
-      if (nodes.length < 2) return null;
-      // Pick a random connection to animate
-      const startNode = nodes[Math.floor(Math.random() * (nodes.length - 1))];
-      if (startNode.connections.length === 0) return null;
-      const endId = startNode.connections[0];
-      const endNode = nodes.find(n => n.id === endId);
-      
-      if (startNode && endNode) {
-          return `M ${startNode.x} ${startNode.y} L ${endNode.x} ${endNode.y}`;
-      }
-      return null;
-  }, [nodes]); // Recalculates when nodes change, essentially static per session unless we add interval
+      nodes.forEach(node => {
+          node.connections.forEach(targetId => {
+              const target = nodeMap.get(targetId);
+              if (target) {
+                  lines.push(
+                      <line 
+                          key={`${node.id}-${target.id}`}
+                          x1={node.x} y1={node.y}
+                          x2={target.x} y2={target.y}
+                          className="stroke-slate-300 dark:stroke-slate-700/50"
+                          strokeWidth="0.5"
+                          strokeDasharray="4 4" 
+                      />
+                  );
+              }
+          });
+      });
+      return lines;
+  }, [simulationTick]);
 
   return (
-    <div className="h-full w-full relative overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] select-none cursor-grab active:cursor-grabbing"
-         ref={containerRef}
-         onMouseDown={handleMouseDown}
-         onMouseMove={handleMouseMove}
-         onMouseUp={handleMouseUp}
-         onMouseLeave={handleMouseUp}
-         onWheel={handleWheel}
-    >
-        {/* BACKGROUND GRID */}
-        <div 
-            className="absolute inset-0 pointer-events-none" 
-            style={{ 
-                backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', 
-                backgroundSize: '40px 40px',
-                opacity: 0.3
-            }} 
-        />
-
+    <div className="h-full w-full relative overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] select-none" ref={containerRef}>
+        
         {/* HUD UI */}
         <div className="absolute top-6 left-6 md:left-8 z-10 pointer-events-none">
-            <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">
-                Созвездия
+            <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans flex items-center gap-3">
+                <BrainCircuit size={28} className="text-indigo-500" strokeWidth={1} />
+                NEURAL_WEB
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-[10px] font-mono uppercase tracking-widest">
-                Карта Навыков: {nodes.length} узлов
+            <p className="text-slate-500 dark:text-slate-400 mt-1 text-[10px] font-mono uppercase tracking-widest pl-1">
+                NODES_DETECTED: {flashcards.length}
             </p>
         </div>
 
-        <div className="absolute bottom-6 right-6 z-10 flex flex-col gap-2">
-            <button 
-                onClick={() => setTransform(p => ({ ...p, scale: Math.min(3, p.scale + 0.2) }))}
-                className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-indigo-500 transition-colors"
-            >
-                <Plus size={20} strokeWidth={1.5} />
-            </button>
-            <button 
-                onClick={() => setTransform(p => ({ ...p, scale: Math.max(0.2, p.scale - 0.2) }))}
-                className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-indigo-500 transition-colors"
-            >
-                <Minus size={20} strokeWidth={1.5} />
-            </button>
-            <button 
-                onClick={centerView}
-                className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-indigo-500 transition-colors mt-2"
-                title="Reset View"
-            >
-                <Disc size={20} strokeWidth={1.5} />
-            </button>
+        {/* SPHERE LABELS (Background Guides) */}
+        <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 text-[80px] font-bold text-slate-100 dark:text-slate-800/30 select-none pointer-events-none">
+            WORK
+        </div>
+        <div className="absolute top-1/4 right-1/4 translate-x-1/2 -translate-y-1/2 text-[80px] font-bold text-slate-100 dark:text-slate-800/30 select-none pointer-events-none">
+            GROWTH
+        </div>
+        <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 text-[80px] font-bold text-slate-100 dark:text-slate-800/30 select-none pointer-events-none">
+            PEOPLE
         </div>
 
-        {/* CANVAS CONTENT */}
-        <div 
-            className="w-full h-full origin-top-left will-change-transform"
-            style={{ 
-                transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})` 
-            }}
-        >
-            {/* SVG LAYER */}
-            <svg className="absolute top-[-5000px] left-[-5000px] w-[10000px] h-[10000px] pointer-events-none overflow-visible">
-                <g transform="translate(5000, 5000)">
-                    {/* Connections */}
-                    {nodes.map(node => (
-                        node.connections.map(targetId => {
-                            const target = nodes.find(n => n.id === targetId);
-                            if (!target) return null;
-                            const isMastered = node.level > 0 && (target.level > 0);
-                            return (
-                                <line 
-                                    key={`${node.id}-${targetId}`}
-                                    x1={node.x} y1={node.y}
-                                    x2={target.x} y2={target.y}
-                                    className={isMastered ? "stroke-indigo-400 dark:stroke-indigo-500" : "stroke-slate-300 dark:stroke-slate-700"}
-                                    strokeWidth="0.5"
-                                    strokeOpacity={isMastered ? "0.3" : "0.15"}
-                                    strokeDasharray={isMastered ? "none" : "4 4"} 
-                                />
-                            );
-                        })
-                    ))}
+        {/* CANVAS LAYER */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none">
+            {links}
+        </svg>
 
-                    {/* Active Spark (Background Processing) */}
-                    {sparkPath && (
-                        <circle r="1" fill="#6366f1" className="filter drop-shadow-[0_0_2px_#818cf8]">
-                            <animateMotion 
-                                dur="4s" 
-                                repeatCount="indefinite"
-                                path={sparkPath}
-                            />
-                            <animate attributeName="opacity" values="0;1;0" dur="4s" repeatCount="indefinite" />
-                        </circle>
+        {/* NODES LAYER */}
+        {simulationRef.current.nodes.map(node => (
+            <div
+                key={node.id}
+                className="absolute flex items-center justify-center cursor-pointer group"
+                style={{
+                    left: node.x,
+                    top: node.y,
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: hoveredNodeId === node.id ? 20 : 10
+                }}
+                onClick={() => handleNodeClick(node.id)}
+                onMouseEnter={() => setHoveredNodeId(node.id)}
+                onMouseLeave={() => setHoveredNodeId(null)}
+            >
+                {/* Node Body */}
+                <div className={`
+                    w-4 h-4 rounded-full border-2 bg-white dark:bg-[#0f172a] shadow-[0_0_15px_rgba(0,0,0,0.1)]
+                    transition-all duration-300 group-hover:scale-125
+                `}
+                style={{ borderColor: node.color, boxShadow: `0 0 10px ${node.color}40` }}
+                >
+                    <div className="absolute inset-0 m-1 rounded-full bg-current opacity-50" style={{ color: node.color }} />
+                </div>
+
+                {/* Pulsing Aura */}
+                <div 
+                    className="absolute inset-0 -m-2 rounded-full border opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-ping"
+                    style={{ borderColor: node.color }}
+                />
+
+                {/* Tooltip (Preview) */}
+                <AnimatePresence>
+                    {hoveredNodeId === node.id && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="absolute bottom-full mb-3 px-3 py-2 bg-slate-900/90 text-white text-xs rounded-lg whitespace-nowrap backdrop-blur-md border border-white/10 shadow-xl pointer-events-none"
+                        >
+                            <span className="font-mono text-[9px] text-indigo-300 mr-2">ID_{node.id.slice(-4)}</span>
+                            <span className="font-sans font-medium">{node.front.substring(0, 30)}...</span>
+                        </motion.div>
                     )}
-                </g>
-            </svg>
+                </AnimatePresence>
+            </div>
+        ))}
 
-            {/* DOM NODES */}
-            {nodes.map(node => {
-                const lvl = node.level || 0;
-                
-                // --- NODE EVOLUTION LOGIC ---
-                // Level 0 (Seed): Small Diamond
-                // Level 1 (Growth): Medium Diamond + Glow
-                // Level 2 (Mastery): Large Diamond + Glow + Orbit
-                
-                const sizeClass = lvl === 0 ? "w-2 h-2" : (lvl === 1 ? "w-3 h-3" : "w-4 h-4");
-                const colorClass = lvl === 0 ? "bg-slate-300 dark:bg-slate-600" : (lvl === 1 ? "bg-indigo-400" : "bg-indigo-500");
-                const glowClass = lvl > 0 ? "shadow-[0_0_15px_rgba(99,102,241,0.4)]" : "";
-                
-                return (
-                    <div 
-                        key={node.id}
-                        className="absolute interactive-node flex items-center justify-center cursor-pointer group"
-                        style={{ 
-                            left: node.x, 
-                            top: node.y,
-                            transform: 'translate(-50%, -50%)' 
-                        }}
-                        onClick={(e) => { e.stopPropagation(); handleNodeClick(node.id); }}
-                        onMouseEnter={() => setHoveredNodeId(node.id)}
-                        onMouseLeave={() => setHoveredNodeId(null)}
-                    >
-                        {/* ORBIT RING (Level 2+) */}
-                        {lvl >= 2 && (
-                            <div className="absolute inset-0 -m-1.5 rounded-full border-[0.5px] border-indigo-500/30 animate-spin-slow w-[180%] h-[180%] pointer-events-none" />
-                        )}
-
-                        {/* CORE NODE (Diamond Shape) */}
-                        <div className={`
-                            transform rotate-45 transition-all duration-300
-                            ${sizeClass} ${colorClass} ${glowClass}
-                            group-hover:scale-150 group-hover:bg-indigo-400 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.6)]
-                        `} />
-
-                        {/* HOVER GLASS TOOLTIP (Preview) */}
-                        <AnimatePresence>
-                            {hoveredNodeId === node.id && (
-                                <motion.div 
-                                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-48 z-50 pointer-events-none"
-                                >
-                                    <div className="backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border border-white/40 dark:border-white/10 shadow-xl rounded-xl p-3 text-left">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <span className="font-mono text-[8px] uppercase tracking-widest text-indigo-500">LVL.{lvl}</span>
-                                            {lvl > 0 && <Gem size={8} className="text-indigo-400" />}
-                                        </div>
-                                        <h4 className="font-sans font-bold text-xs text-slate-800 dark:text-white leading-tight mb-2 line-clamp-2">
-                                            {node.front}
-                                        </h4>
-                                        <div className="h-px w-full bg-gradient-to-r from-indigo-500/20 to-transparent mb-2" />
-                                        <p className="font-serif text-[9px] text-slate-500 dark:text-slate-400 line-clamp-2 italic leading-relaxed">
-                                            {node.back}
-                                        </p>
-                                    </div>
-                                    {/* Arrow */}
-                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white/80 dark:bg-slate-900/80 border-r border-b border-white/20 dark:border-white/5 transform rotate-45 backdrop-blur-md" />
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                );
-            })}
-        </div>
-
-        {/* OVERLAY MODAL (GLASS) */}
+        {/* NEURAL NODE INTERFACE (MODAL) */}
         <AnimatePresence>
             {activeCard && (
-                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setSelectedCardId(null)}>
+                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setSelectedCardId(null)}>
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -314,48 +272,56 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                             className="w-full h-full relative transform-style-3d transition-transform duration-700"
                             animate={{ rotateY: isFlipped ? 180 : 0 }}
                         >
-                            {/* FRONT SIDE */}
-                            <div className="absolute inset-0 backface-hidden bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-[40px] border border-white/40 dark:border-white/10 rounded-3xl shadow-2xl p-8 flex flex-col overflow-hidden">
-                                <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
-                                    <Diamond size={120} strokeWidth={0.5} />
-                                </div>
-                                
+                            {/* FRONT SIDE (A) - The Stimulus */}
+                            <div className="absolute inset-0 backface-hidden bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-[40px] border border-white/40 dark:border-white/10 rounded-2xl shadow-2xl p-8 flex flex-col overflow-hidden">
+                                {/* Header */}
                                 <div className="flex justify-between items-start mb-12">
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-1">Neural Node</span>
-                                        <span className="text-xs font-bold text-indigo-500 font-mono">LVL.{activeCard.level}</span>
+                                    <div className="font-mono text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                        <Activity size={12} className="text-indigo-500 animate-pulse" />
+                                        NEURAL_NODE // {activeCard.id.slice(-4)}
                                     </div>
-                                    <button onClick={() => setSelectedCardId(null)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors text-slate-400">
-                                        <X size={20} strokeWidth={1.5} />
+                                    <button onClick={() => setSelectedCardId(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                                        <X size={20} strokeWidth={1} />
                                     </button>
                                 </div>
 
-                                <div className="flex-1 flex flex-col justify-center items-center text-center relative z-10">
-                                    <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white leading-tight font-sans">
+                                {/* Content */}
+                                <div className="flex-1 flex flex-col justify-center text-center relative z-10">
+                                    {/* Pulse Visual behind text */}
+                                    <div className="absolute inset-0 bg-indigo-500/5 rounded-full blur-3xl scale-75 animate-pulse" />
+                                    
+                                    <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white leading-tight font-sans relative z-10">
                                         {activeCard.front}
                                     </h2>
                                 </div>
 
+                                {/* Footer Trigger */}
                                 <div className="mt-auto pt-8 flex justify-center">
                                     <button 
                                         onClick={() => setIsFlipped(true)}
-                                        className="group flex items-center gap-2 px-6 py-3 rounded-full bg-slate-900 dark:bg-white text-white dark:text-black font-bold text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-lg"
+                                        className="group px-6 py-3 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-mono uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400 hover:text-indigo-500 hover:border-indigo-500 transition-all flex items-center gap-3"
                                     >
-                                        Открыть Истину <RotateCw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
+                                        [ ACCESS_INSIGHT ] <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                                     </button>
                                 </div>
                             </div>
 
-                            {/* BACK SIDE */}
-                            <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900/95 dark:bg-black/90 backdrop-blur-[40px] border border-white/10 rounded-3xl shadow-2xl p-8 flex flex-col text-slate-200 overflow-hidden">
+                            {/* BACK SIDE (B) - The Insight */}
+                            <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900/95 dark:bg-black/95 backdrop-blur-[40px] border border-white/10 rounded-2xl shadow-2xl p-8 flex flex-col text-slate-200 overflow-hidden">
+                                {/* Decor */}
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
-                                
-                                <div className="flex justify-end mb-8">
-                                    <button onClick={() => { if(confirm("Удалить навык?")) { deleteFlashcard(activeCard.id); setSelectedCardId(null); } }} className="text-slate-600 hover:text-red-500 transition-colors p-2">
-                                        <Trash2 size={18} strokeWidth={1.5} />
+                                <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
+                                    <Diamond size={100} strokeWidth={0.5} />
+                                </div>
+
+                                {/* Header Actions */}
+                                <div className="flex justify-end mb-6">
+                                    <button onClick={() => { if(confirm("Дефрагментировать (удалить) узел?")) { deleteFlashcard(activeCard.id); setSelectedCardId(null); } }} className="text-slate-600 hover:text-red-500 transition-colors p-2">
+                                        <Trash2 size={16} strokeWidth={1.5} />
                                     </button>
                                 </div>
 
+                                {/* Content */}
                                 <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-2">
                                     <div className="font-serif text-lg md:text-xl leading-relaxed text-slate-300">
                                         <ReactMarkdown components={markdownComponents}>
@@ -364,13 +330,28 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                                     </div>
                                 </div>
 
-                                <div className="mt-8 pt-6 border-t border-white/10 flex justify-center">
-                                    <button 
-                                        onClick={() => setIsFlipped(false)}
-                                        className="text-xs font-mono text-slate-500 hover:text-white uppercase tracking-widest transition-colors flex items-center gap-2"
-                                    >
-                                        <RotateCw size={12} /> Назад к вопросу
-                                    </button>
+                                {/* Mastery Footer */}
+                                <div className="mt-8 pt-6 border-t border-white/10">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-500">Mastery Level</span>
+                                        <span className="font-mono text-[9px] text-indigo-400">{activeCard.level * 20}%</span>
+                                    </div>
+                                    <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                                        <motion.div 
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${Math.min(100, activeCard.level * 20)}%` }}
+                                            className="h-full bg-indigo-500 shadow-[0_0_10px_#6366f1]"
+                                        />
+                                    </div>
+                                    
+                                    <div className="mt-6 flex justify-center">
+                                        <button 
+                                            onClick={() => setIsFlipped(false)}
+                                            className="text-xs font-mono text-slate-500 hover:text-white uppercase tracking-widest transition-colors flex items-center gap-2"
+                                        >
+                                            <RotateCw size={12} /> REBOOT_NODE
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
@@ -381,5 +362,26 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
     </div>
   );
 };
+
+// Helper Arrow Icon
+function ArrowRight(props: any) {
+    return (
+        <svg
+          {...props}
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M5 12h14" />
+          <path d="m12 5 7 7-7 7" />
+        </svg>
+    )
+}
 
 export default MentalGym;

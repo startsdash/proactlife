@@ -52,7 +52,6 @@ interface AuraRingProps {
 const AuraRing: React.FC<AuraRingProps> = ({ sphere, stats, colorClass }) => {
     // Pulse animation intensity based on count
     const pulseScale = 1 + Math.min(0.2, stats.active * 0.02);
-    const totalActivity = stats.active + stats.done;
     
     // Scale bars visually (max 10 units for width calculation)
     const solidWidth = Math.min(100, stats.done * 5);
@@ -125,6 +124,9 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
   const [analysis, setAnalysis] = useState<SandboxAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [mentorId, setMentorId] = useState<string>(config.mentors[0]?.id || 'peterson');
+  
+  // Crystallization Animation State
+  const [crystallizationState, setCrystallizationState] = useState<'idle' | 'collapsing' | 'shooting' | 'done'>('idle');
 
   const incomingNotes = useMemo(() => notes.filter(n => n.status === 'sandbox'), [notes]);
   const activeNote = useMemo(() => notes.find(n => n.id === selectedNoteId), [notes, selectedNoteId]);
@@ -150,11 +152,9 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
       return stats;
   }, [tasks]);
 
-  // Transformation Flow Data (Mock for now, or derived)
   const flowData = useMemo(() => {
-      // Simple logic: Tasks created last 7 days from Sandbox notes?
       const recentTasks = tasks.filter(t => t.createdAt > Date.now() - 7 * 86400000).length;
-      return [2, 4, 3, 5, recentTasks, 4, 6]; // Mock curve
+      return [2, 4, 3, 5, recentTasks, 4, 6]; 
   }, [tasks, flashcards]);
 
   const handleAnalyze = async () => {
@@ -187,20 +187,63 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
 
   const handleAcceptCard = () => {
     if (!analysis) return;
-    onAddFlashcard({
-      id: Date.now().toString(),
-      front: analysis.suggestedFlashcardFront,
-      back: analysis.suggestedFlashcardBack,
-      level: 0,
-      nextReview: Date.now()
-    });
-    alert("Навык добавлен в ментальный спортзал.");
+    
+    // Start Animation Sequence
+    setCrystallizationState('collapsing');
+    
+    setTimeout(() => {
+        setCrystallizationState('shooting');
+        
+        // Finalize Logic
+        setTimeout(() => {
+            onAddFlashcard({
+              id: Date.now().toString(),
+              front: analysis.suggestedFlashcardFront,
+              back: analysis.suggestedFlashcardBack,
+              level: 0,
+              nextReview: Date.now()
+            });
+            setCrystallizationState('done');
+            setTimeout(() => {
+                setCrystallizationState('idle');
+                setAnalysis(null); // Reset UI
+            }, 500);
+        }, 800); // Wait for shooting animation
+    }, 1000); // Wait for collapse
   };
 
   return (
     <div className="flex h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden relative">
         <DotGridBackground />
         
+        {/* ANIMATION OVERLAY */}
+        <AnimatePresence>
+            {crystallizationState !== 'idle' && (
+                <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center">
+                    {crystallizationState === 'collapsing' && (
+                        <motion.div
+                            initial={{ scale: 2, opacity: 0 }}
+                            animate={{ scale: 0.1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            transition={{ duration: 0.8, ease: "anticipate" }}
+                            className="w-32 h-32 bg-white dark:bg-white rounded-full shadow-[0_0_50px_rgba(255,255,255,0.8)] blur-md flex items-center justify-center"
+                        >
+                            <div className="w-full h-full bg-indigo-500 rounded-full animate-ping" />
+                        </motion.div>
+                    )}
+                    
+                    {crystallizationState === 'shooting' && (
+                        <motion.div
+                            initial={{ width: 0, opacity: 1, x: 0 }}
+                            animate={{ width: 1000, opacity: 0, x: -500 }} // Shoot left towards sidebar
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                            className="h-1 bg-gradient-to-l from-white via-indigo-400 to-transparent shadow-[0_0_20px_white]"
+                        />
+                    )}
+                </div>
+            )}
+        </AnimatePresence>
+
         {/* XYZ TRACKER (Subjectivity Counter) */}
         <div className="absolute top-6 right-6 z-30 flex flex-col items-end pointer-events-none select-none">
             <span className="font-mono text-[10px] text-slate-400 uppercase tracking-widest mb-1 opacity-70">Transformation Ratio</span>
@@ -393,7 +436,7 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                             )}
 
                             {/* ANALYSIS RESULT */}
-                            {analysis && (
+                            {analysis && crystallizationState === 'idle' && (
                                 <motion.div 
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -451,7 +494,7 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                                                 <div className="font-serif italic text-sm text-slate-500 dark:text-slate-400 mb-6 line-clamp-3">{analysis.suggestedFlashcardBack}</div>
                                                 
                                                 <button onClick={handleAcceptCard} className="w-full py-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold uppercase tracking-wider hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 transition-all flex items-center justify-center gap-2">
-                                                    Кристаллизовать <ArrowRight size={14} />
+                                                    КРИСТАЛЛИЗОВАТЬ <Diamond size={14} />
                                                 </button>
                                             </div>
                                         </motion.div>
