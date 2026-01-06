@@ -10,7 +10,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Play, Pause, Star } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit } from 'lucide-react';
 import Sketchpad from './Sketchpad';
 
 interface Props {
@@ -78,23 +78,9 @@ interface VisualNode extends Note {
 const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => void }> = ({ notes, onNodeClick }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-    const simulationRef = useRef<{ nodes: VisualNode[], links: { id: string, source: string, target: string }[], running: boolean }>({ nodes: [], links: [], running: false });
+    const simulationRef = useRef<{ nodes: VisualNode[], links: { source: string, target: string }[], running: boolean }>({ nodes: [], links: [], running: false });
     const [tick, setTick] = useState(0);
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-    const [isPaused, setIsPaused] = useState(false);
-    const [starredLinks, setStarredLinks] = useState<Set<string>>(new Set());
-
-    const toggleStar = (linkId: string) => {
-        setStarredLinks(prev => {
-            const next = new Set(prev);
-            if (next.has(linkId)) {
-                next.delete(linkId);
-            } else {
-                next.add(linkId);
-            }
-            return next;
-        });
-    };
 
     // Init Simulation
     useEffect(() => {
@@ -116,7 +102,7 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
         }));
 
         // 2. Generate Random "Insight" Links (Suggesting connections)
-        const suggestedLinks: { id: string, source: string, target: string }[] = [];
+        const suggestedLinks: { source: string, target: string }[] = [];
         if (visualNodes.length > 2) {
             const linkCount = Math.min(visualNodes.length, 5); // Suggest up to 5 connections
             const usedIndices = new Set<number>();
@@ -133,10 +119,7 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
                 }
                 
                 if (idx1 !== idx2) {
-                    // Create stable ID for link based on sorted node IDs
-                    const id = [visualNodes[idx1].id, visualNodes[idx2].id].sort().join(':');
                     suggestedLinks.push({ 
-                        id,
                         source: visualNodes[idx1].id, 
                         target: visualNodes[idx2].id 
                     });
@@ -154,33 +137,33 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
         if (!simulationRef.current.running) return;
 
         const loop = () => {
-            if (!isPaused) {
-                const { width, height } = dimensions;
-                const { nodes } = simulationRef.current;
+            const { width, height } = dimensions;
+            const { nodes } = simulationRef.current;
 
-                nodes.forEach(node => {
-                    // Gentle floating
-                    node.x += node.vx;
-                    node.y += node.vy;
+            nodes.forEach(node => {
+                // Gentle floating
+                node.x += node.vx;
+                node.y += node.vy;
 
-                    // Wall bounce with damping
-                    if (node.x <= 0 || node.x >= width) node.vx *= -1;
-                    if (node.y <= 0 || node.y >= height) node.vy *= -1;
+                // Wall bounce with damping
+                if (node.x <= 0 || node.x >= width) node.vx *= -1;
+                if (node.y <= 0 || node.y >= height) node.vy *= -1;
 
-                    // Central Gravity (Keep them somewhat together)
-                    const dx = (width / 2) - node.x;
-                    const dy = (height / 2) - node.y;
-                    node.vx += dx * 0.00005;
-                    node.vy += dy * 0.00005;
-                });
-            }
+                // Central Gravity (Keep them somewhat together)
+                const dx = (width / 2) - node.x;
+                const dy = (height / 2) - node.y;
+                node.vx += dx * 0.00005;
+                node.vy += dy * 0.00005;
+
+                // Mouse interaction could be added here
+            });
 
             setTick(t => t + 1);
             requestAnimationFrame(loop);
         };
         const frameId = requestAnimationFrame(loop);
         return () => cancelAnimationFrame(frameId);
-    }, [dimensions, isPaused]);
+    }, [dimensions]);
 
     return (
         <div ref={containerRef} className="absolute inset-0 bg-[#0f172a] overflow-hidden">
@@ -194,57 +177,30 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
                 </p>
             </div>
 
-            {/* Controls */}
-            <div className="absolute top-6 right-8 z-20 flex gap-2">
-                <Tooltip content={isPaused ? "Возобновить хаос" : "Остановить хаос"}>
-                    <button 
-                        onClick={() => setIsPaused(!isPaused)} 
-                        className={`p-3 rounded-full backdrop-blur-md border transition-all duration-300 ${isPaused ? 'bg-indigo-500/20 border-indigo-500 text-indigo-400' : 'bg-white/10 border-white/20 text-white/60 hover:text-white'}`}
-                    >
-                        {isPaused ? <Play size={20} fill="currentColor" /> : <Pause size={20} fill="currentColor" />}
-                    </button>
-                </Tooltip>
-            </div>
-
             <svg className="absolute inset-0 w-full h-full pointer-events-none">
                 {simulationRef.current.links.map((link, i) => {
                     const source = simulationRef.current.nodes.find(n => n.id === link.source);
                     const target = simulationRef.current.nodes.find(n => n.id === link.target);
                     if (!source || !target) return null;
 
-                    const isStarred = starredLinks.has(link.id);
-                    const strokeColor = isStarred ? "#fbbf24" : "white";
-                    const midX = (source.x + target.x) / 2;
-                    const midY = (source.y + target.y) / 2;
-
                     return (
-                        <g key={`link-${i}`} className="pointer-events-auto">
+                        <g key={`link-${i}`}>
                             <line 
                                 x1={source.x} y1={source.y} 
                                 x2={target.x} y2={target.y} 
-                                stroke={strokeColor} 
-                                strokeWidth={isStarred ? 1.5 : 1} 
-                                strokeDasharray={isStarred ? "none" : "4 4"} 
-                                strokeOpacity={isStarred ? 0.6 : 0.2} 
+                                stroke="white" 
+                                strokeWidth="1" 
+                                strokeDasharray="4 4" 
+                                strokeOpacity="0.2" 
                             />
                             {/* Running Dot/Spark */}
-                            <circle r="2" fill={isStarred ? "#fbbf24" : "#ffffff"}>
+                            <circle r="2" fill="#fbbf24">
                                 <animateMotion 
                                     dur={`${3 + (i % 3)}s`}
                                     repeatCount="indefinite"
                                     path={`M${source.x},${source.y} L${target.x},${target.y}`}
                                 />
                             </circle>
-                            
-                            {/* Star Trigger (HTML Overlay via ForeignObject can be buggy in some browsers for z-index, so we use svg group click or just overlay circle) */}
-                            <foreignObject x={midX - 12} y={midY - 12} width={24} height={24}>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); toggleStar(link.id); }}
-                                    className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${isStarred ? 'bg-amber-500 text-white shadow-[0_0_10px_#fbbf24]' : 'bg-black/40 text-slate-500 hover:text-amber-400 hover:bg-black/60'}`}
-                                >
-                                    <Star size={12} fill={isStarred ? "currentColor" : "none"} />
-                                </button>
-                            </foreignObject>
                         </g>
                     );
                 })}
@@ -260,11 +216,9 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
                     onMouseLeave={() => setHoveredNodeId(null)}
                 >
                     {/* Glow */}
-                    <motion.div 
+                    <div 
                         className="absolute inset-0 rounded-full blur-md opacity-40 group-hover:opacity-80 transition-opacity duration-300"
-                        style={{ backgroundColor: node.hexColor, width: 24, height: 24, x: '-25%', y: '-25%' }}
-                        animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.7, 0.4] }}
-                        transition={{ duration: 3 + Math.random(), repeat: Infinity, ease: "easeInOut" }}
+                        style={{ backgroundColor: node.hexColor, width: 24, height: 24, transform: 'translate(-25%, -25%)' }}
                     />
                     
                     {/* Core */}
@@ -1252,6 +1206,190 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const inboxNotes = filterNotes(notes.filter(n => n.status === 'inbox').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
   const archivedNotes = filterNotes(notes.filter(n => n.status === 'archived').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
+
+  // --- ETHER GRAPH TYPES & COMPONENT ---
+  interface VisualNode extends Note {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      phase: number;
+      hexColor: string;
+  }
+
+  const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => void }> = ({ notes, onNodeClick }) => {
+      const containerRef = useRef<HTMLDivElement>(null);
+      const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+      const simulationRef = useRef<{ nodes: VisualNode[], links: { source: string, target: string }[], running: boolean }>({ nodes: [], links: [], running: false });
+      const [tick, setTick] = useState(0);
+      const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+      // Init Simulation
+      useEffect(() => {
+          if (!containerRef.current) return;
+          const { clientWidth, clientHeight } = containerRef.current;
+          setDimensions({ width: clientWidth, height: clientHeight });
+
+          const getColorHex = (colorId?: string) => colors.find(c => c.id === colorId)?.hex || '#94a3b8';
+
+          // 1. Create Nodes
+          const visualNodes: VisualNode[] = notes.map(n => ({
+              ...n,
+              x: Math.random() * clientWidth,
+              y: Math.random() * clientHeight,
+              vx: (Math.random() - 0.5) * 0.5,
+              vy: (Math.random() - 0.5) * 0.5,
+              phase: Math.random() * Math.PI * 2,
+              hexColor: getColorHex(n.color)
+          }));
+
+          // 2. Generate Random "Insight" Links (Suggesting connections)
+          const suggestedLinks: { source: string, target: string }[] = [];
+          if (visualNodes.length > 2) {
+              const linkCount = Math.min(visualNodes.length, 5); // Suggest up to 5 connections
+              const usedIndices = new Set<number>();
+              
+              for (let i = 0; i < linkCount; i++) {
+                  let idx1 = Math.floor(Math.random() * visualNodes.length);
+                  let idx2 = Math.floor(Math.random() * visualNodes.length);
+                  
+                  // Try to find unique pair
+                  let attempts = 0;
+                  while ((idx1 === idx2 || usedIndices.has(idx1)) && attempts < 10) {
+                      idx2 = Math.floor(Math.random() * visualNodes.length);
+                      attempts++;
+                  }
+                  
+                  if (idx1 !== idx2) {
+                      suggestedLinks.push({ 
+                          source: visualNodes[idx1].id, 
+                          target: visualNodes[idx2].id 
+                      });
+                      usedIndices.add(idx1);
+                  }
+              }
+          }
+
+          simulationRef.current = { nodes: visualNodes, links: suggestedLinks, running: true };
+
+      }, [notes]);
+
+      // Physics Loop
+      useEffect(() => {
+          if (!simulationRef.current.running) return;
+
+          const loop = () => {
+              const { width, height } = dimensions;
+              const { nodes } = simulationRef.current;
+
+              nodes.forEach(node => {
+                  // Gentle floating
+                  node.x += node.vx;
+                  node.y += node.vy;
+
+                  // Wall bounce with damping
+                  if (node.x <= 0 || node.x >= width) node.vx *= -1;
+                  if (node.y <= 0 || node.y >= height) node.vy *= -1;
+
+                  // Central Gravity (Keep them somewhat together)
+                  const dx = (width / 2) - node.x;
+                  const dy = (height / 2) - node.y;
+                  node.vx += dx * 0.00005;
+                  node.vy += dy * 0.00005;
+              });
+
+              setTick(t => t + 1);
+              requestAnimationFrame(loop);
+          };
+          const frameId = requestAnimationFrame(loop);
+          return () => cancelAnimationFrame(frameId);
+      }, [dimensions]);
+
+      return (
+          <div ref={containerRef} className="absolute inset-0 bg-[#0f172a] overflow-hidden">
+              <div className="absolute top-6 left-8 pointer-events-none z-10">
+                  <h2 className="text-white/80 font-serif text-2xl tracking-tight flex items-center gap-3">
+                      <BrainCircuit size={24} className="text-indigo-400" />
+                      ETHER_WEB
+                  </h2>
+                  <p className="text-white/40 text-[10px] font-mono uppercase tracking-widest mt-1">
+                      Поиск скрытых связей // {notes.length} NODES
+                  </p>
+              </div>
+
+              <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                  {simulationRef.current.links.map((link, i) => {
+                      const source = simulationRef.current.nodes.find(n => n.id === link.source);
+                      const target = simulationRef.current.nodes.find(n => n.id === link.target);
+                      if (!source || !target) return null;
+
+                      return (
+                          <g key={`link-${i}`}>
+                              <line 
+                                  x1={source.x} y1={source.y} 
+                                  x2={target.x} y2={target.y} 
+                                  stroke="white" 
+                                  strokeWidth="1" 
+                                  strokeDasharray="4 4" 
+                                  strokeOpacity="0.2" 
+                              />
+                              {/* Running Dot/Spark */}
+                              <circle r="2" fill="#fbbf24">
+                                  <animateMotion 
+                                      dur={`${3 + (i % 3)}s`}
+                                      repeatCount="indefinite"
+                                      path={`M${source.x},${source.y} L${target.x},${target.y}`}
+                                  />
+                              </circle>
+                          </g>
+                      );
+                  })}
+              </svg>
+
+              {simulationRef.current.nodes.map(node => (
+                  <div
+                      key={node.id}
+                      className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+                      style={{ left: node.x, top: node.y }}
+                      onClick={() => onNodeClick(node)}
+                      onMouseEnter={() => setHoveredNodeId(node.id)}
+                      onMouseLeave={() => setHoveredNodeId(null)}
+                  >
+                      {/* Glow */}
+                      <div 
+                          className="absolute inset-0 rounded-full blur-md opacity-40 group-hover:opacity-80 transition-opacity duration-300"
+                          style={{ backgroundColor: node.hexColor, width: 24, height: 24, transform: 'translate(-25%, -25%)' }}
+                      />
+                      
+                      {/* Core */}
+                      <div 
+                          className="w-3 h-3 rounded-full border border-white/50 bg-white/20 backdrop-blur-sm relative z-10 group-hover:scale-150 transition-transform duration-300"
+                          style={{ borderColor: node.hexColor }}
+                      />
+
+                      {/* Label on Hover */}
+                      <AnimatePresence>
+                          {hoveredNodeId === node.id && (
+                              <motion.div
+                                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.9 }}
+                                  className="absolute top-full mt-3 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md border border-white/10 px-3 py-2 rounded-lg text-white w-48 z-20 pointer-events-none"
+                              >
+                                  <div className="text-[10px] font-mono text-indigo-300 mb-1 opacity-70">
+                                      {new Date(node.createdAt).toLocaleDateString()}
+                                  </div>
+                                  <div className="text-xs font-serif line-clamp-2 leading-relaxed">
+                                      {node.title || node.content.substring(0, 50)}
+                                  </div>
+                              </motion.div>
+                          )}
+                      </AnimatePresence>
+                  </div>
+              ))}
+          </div>
+      );
+  };
 
   const cardHandlers = useMemo(() => ({
       handleDragStart,
