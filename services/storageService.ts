@@ -39,7 +39,8 @@ export const loadState = (): AppState => {
       parsed.notes = parsed.notes.map((n: any) => ({
         ...n,
         status: n.status || (n.isProcessed ? 'archived' : 'inbox'),
-        tags: Array.isArray(n.tags) ? n.tags : []
+        tags: Array.isArray(n.tags) ? n.tags : [],
+        connectedNoteIds: Array.isArray(n.connectedNoteIds) ? n.connectedNoteIds : []
       }));
     }
 

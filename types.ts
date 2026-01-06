@@ -33,6 +33,7 @@ export interface Note {
   isPinned?: boolean;
   color?: string;
   coverUrl?: string;
+  connectedNoteIds?: string[];
 }
 
 export interface SketchItem {
