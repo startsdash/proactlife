@@ -49,7 +49,11 @@ const ROLE_COLORS: Record<IdentityRole, string> = {
     architect: 'border-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]',
 };
 
-const SidebarAccumulator = ({ habits, expanded }: { habits: Habit[], expanded: boolean }) => {
+// --- THE MINI-REACTOR (SIDEBAR ACCUMULATOR) ---
+const SidebarAccumulator = ({ habits, expanded, onNavigate }: { habits: Habit[], expanded: boolean, onNavigate: () => void }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const [clicked, setClicked] = useState(false);
+
     const getLocalDateKey = (date: Date) => {
        const year = date.getFullYear();
        const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -61,6 +65,8 @@ const SidebarAccumulator = ({ habits, expanded }: { habits: Habit[], expanded: b
     const activeHabits = habits.filter(h => !h.isArchived);
     const activeCount = activeHabits.length;
     
+    if (activeCount === 0) return null;
+
     // Stats Calculation
     const sphereStats: Record<string, number> = { productivity: 0, growth: 0, relationships: 0, default: 0 };
     let completedCount = 0;
@@ -73,88 +79,89 @@ const SidebarAccumulator = ({ habits, expanded }: { habits: Habit[], expanded: b
         }
     });
 
-    const percent = activeCount > 0 ? (completedCount / activeCount) * 100 : 0;
+    const percent = (completedCount / activeCount) * 100;
     
-    // Liquid segments proportional to TOTAL active habits (width represents % of total capacity)
-    const prodPercent = activeCount > 0 ? (sphereStats['productivity'] || 0) / activeCount * 100 : 0;
-    const growthPercent = activeCount > 0 ? (sphereStats['growth'] || 0) / activeCount * 100 : 0;
-    const relPercent = activeCount > 0 ? (sphereStats['relationships'] || 0) / activeCount * 100 : 0;
-    const otherPercent = activeCount > 0 ? (sphereStats['default'] || 0) / activeCount * 100 : 0;
+    // Determine Dominant Sphere Color
+    let dominantColor = 'bg-slate-400 dark:bg-slate-500 shadow-slate-400/50';
+    let maxVal = 0;
     
-    if (activeCount === 0) return null;
+    if (sphereStats.productivity > maxVal) { maxVal = sphereStats.productivity; dominantColor = 'bg-indigo-500 shadow-indigo-500/50'; }
+    if (sphereStats.growth > maxVal) { maxVal = sphereStats.growth; dominantColor = 'bg-emerald-500 shadow-emerald-500/50'; }
+    if (sphereStats.relationships > maxVal) { maxVal = sphereStats.relationships; dominantColor = 'bg-rose-500 shadow-rose-500/50'; }
+    
+    // Idle State Logic (Visual simulation: if 0% progress, assume idle "decay")
+    const isIdle = percent === 0;
 
-    if (expanded) {
-        return (
-            <div className="px-6 py-4 mb-2 animate-in fade-in slide-in-from-left-4 duration-500">
-                <div className="relative w-full h-10 rounded-full bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg overflow-hidden group">
-                    {/* Inner Atmosphere / Gloss */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none z-20 mix-blend-overlay" />
-                    
-                    {/* PLASMA LIQUID (Horizontal) */}
-                    <div className="absolute inset-0 flex items-center px-1 filter blur-[6px] opacity-90">
-                         {/* Using min-width to ensure visibility if present but small */}
-                         <motion.div 
-                            className="h-6 bg-indigo-500 rounded-full mix-blend-screen dark:mix-blend-normal shadow-[0_0_10px_#6366f1]" 
-                            initial={{ width: 0 }} 
-                            animate={{ width: `${prodPercent}%` }} 
-                            transition={{ type: "spring", stiffness: 40, damping: 15 }} 
-                         />
-                         <motion.div 
-                            className="h-6 bg-emerald-500 rounded-full mix-blend-screen dark:mix-blend-normal -ml-1 shadow-[0_0_10px_#10b981]" 
-                            initial={{ width: 0 }} 
-                            animate={{ width: `${growthPercent}%` }} 
-                            transition={{ type: "spring", stiffness: 40, damping: 15 }} 
-                         />
-                         <motion.div 
-                            className="h-6 bg-rose-500 rounded-full mix-blend-screen dark:mix-blend-normal -ml-1 shadow-[0_0_10px_#f43f5e]" 
-                            initial={{ width: 0 }} 
-                            animate={{ width: `${relPercent}%` }} 
-                            transition={{ type: "spring", stiffness: 40, damping: 15 }} 
-                         />
-                         <motion.div 
-                            className="h-6 bg-slate-400 dark:bg-slate-600 rounded-full mix-blend-screen dark:mix-blend-normal -ml-1" 
-                            initial={{ width: 0 }} 
-                            animate={{ width: `${otherPercent}%` }} 
-                            transition={{ type: "spring", stiffness: 40, damping: 15 }} 
-                         />
-                    </div>
-
-                    {/* Hard Edge Overlay (Definition) */}
-                    <div className="absolute inset-0 flex items-center px-1 opacity-30 z-10">
-                         <motion.div 
-                            className="h-0.5 bg-white rounded-full shadow-[0_0_8px_white]" 
-                            animate={{ width: `${percent}%` }} 
-                            transition={{ type: "spring", stiffness: 50, damping: 20 }} 
-                         />
-                    </div>
-
-                    {/* Label Overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
-                        <span className="font-mono text-[9px] font-bold text-slate-600 dark:text-slate-300 mix-blend-difference tracking-widest drop-shadow-md">
-                            ENERGY {Math.round(percent)}%
-                        </span>
-                    </div>
-                </div>
-            </div>
-        )
-    }
+    const handleClick = () => {
+        setClicked(true);
+        setTimeout(() => setClicked(false), 300);
+        onNavigate();
+    };
 
     return (
-        <div className="flex justify-center py-4 mb-2 w-full animate-in fade-in zoom-in-95 duration-300">
-            <Tooltip content={`Заряд: ${Math.round(percent)}%`} side="right">
-                <div className="relative w-3 h-14 rounded-full bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg overflow-hidden flex flex-col-reverse items-center py-0.5">
-                     {/* PLASMA LIQUID (Vertical Stack) */}
-                    <div className="absolute bottom-0.5 w-full flex flex-col-reverse items-center filter blur-[3px] opacity-90">
-                         <motion.div className="w-1.5 bg-indigo-500 rounded-full shadow-[0_0_5px_#6366f1]" initial={{ height: 0 }} animate={{ height: `${prodPercent}%` }} transition={{ duration: 1 }} />
-                         <motion.div className="w-1.5 bg-emerald-500 rounded-full -mb-0.5 shadow-[0_0_5px_#10b981]" initial={{ height: 0 }} animate={{ height: `${growthPercent}%` }} transition={{ duration: 1 }} />
-                         <motion.div className="w-1.5 bg-rose-500 rounded-full -mb-0.5 shadow-[0_0_5px_#f43f5e]" initial={{ height: 0 }} animate={{ height: `${relPercent}%` }} transition={{ duration: 1 }} />
-                         <motion.div className="w-1.5 bg-slate-400 dark:bg-slate-600 rounded-full -mb-0.5" initial={{ height: 0 }} animate={{ height: `${otherPercent}%` }} transition={{ duration: 1 }} />
-                    </div>
+        <div 
+            className={`w-full px-6 mb-6 transition-all duration-500 ${expanded ? 'py-4 opacity-100' : 'py-4 flex justify-center opacity-100'}`}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onClick={handleClick}
+        >
+            <div className={`relative group cursor-pointer ${expanded ? 'w-full' : 'w-8'}`}>
+                {/* Glass Capsule Container */}
+                <div className={`
+                    h-1.5 rounded-full 
+                    bg-slate-200/50 dark:bg-white/5 
+                    backdrop-blur-sm border border-slate-300/50 dark:border-white/10 
+                    overflow-hidden relative
+                    transition-all duration-300
+                    ${isHovered ? 'border-slate-400/50 dark:border-white/20' : ''}
+                `}>
+                    {/* The Liquid Light Filament */}
+                    <motion.div 
+                        className={`h-full rounded-full ${dominantColor} shadow-[0_0_10px_currentColor]`}
+                        initial={{ width: 0, opacity: 0.5 }}
+                        animate={{ 
+                            width: `${Math.max(percent, isIdle ? 15 : 0)}%`, // Always show a faint spark if idle
+                            opacity: isIdle ? [0.2, 0.5, 0.2] : 1 // Breathing effect if idle
+                        }}
+                        transition={{ 
+                            width: { type: "spring", stiffness: 60, damping: 20 },
+                            opacity: { duration: 3, repeat: Infinity, ease: "easeInOut" }
+                        }}
+                    />
+                    
+                    {/* Scanline Glitch Effect on Click */}
+                    <AnimatePresence>
+                        {clicked && (
+                            <motion.div 
+                                className="absolute inset-0 bg-white/80 dark:bg-white/80 mix-blend-overlay"
+                                initial={{ x: '-100%' }}
+                                animate={{ x: '100%' }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.3, ease: "linear" }}
+                            />
+                        )}
+                    </AnimatePresence>
                 </div>
-            </Tooltip>
+
+                {/* Ghost Tooltip (Only when expanded) */}
+                <AnimatePresence>
+                    {isHovered && expanded && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: 4, filter: 'blur(4px)' }}
+                            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                            exit={{ opacity: 0, y: 4, filter: 'blur(4px)' }}
+                            className="absolute top-3 left-0 right-0 flex justify-center pointer-events-none"
+                        >
+                            <div className="px-2 py-1 bg-white/80 dark:bg-black/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded text-[7px] font-mono text-slate-500 dark:text-slate-300 uppercase tracking-widest whitespace-nowrap shadow-sm">
+                                [ SYSTEM_SYNC: {Math.round(percent)}% // {isIdle ? 'IDLE' : 'ACTIVE'} ]
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
-}
+};
 
 const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatus, onConnectDrive, isDriveConnected, isOwner, role, habits }) => {
   const [isExpanded, setIsExpanded] = useState(() => {
@@ -259,8 +266,8 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
             </div>
         )}
 
-        {/* ACCUMULATOR WIDGET (Atmospheric) */}
-        <SidebarAccumulator habits={habits} expanded={isExpanded} />
+        {/* ACCUMULATOR WIDGET (The Heartbeat) */}
+        <SidebarAccumulator habits={habits} expanded={isExpanded} onNavigate={() => setModule(Module.RITUALS)} />
 
         {/* NAV GROUPS */}
         <div className="flex-1 overflow-y-auto custom-scrollbar-none px-4 py-2 space-y-8">
