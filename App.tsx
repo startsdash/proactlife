@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
@@ -422,13 +420,14 @@ const App: React.FC = () => {
       <Onboarding onClose={() => setShowOnboarding(false)} />
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
       {module === Module.DASHBOARD && <Dashboard notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} onNavigate={handleNavigate} flashcards={data.flashcards} />}
-      {/* Updated Napkins with Sketchpad props */}
+      {/* Updated Napkins with Sketchpad props and onAddFlashcard */}
       {(module === Module.NAPKINS || module === Module.SKETCHPAD) && (
           <Napkins 
             notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} 
             onAddJournalEntry={addJournalEntry}
             sketchItems={data.sketchpad || []} addSketchItem={addSketchItem} deleteSketchItem={deleteSketchItem} updateSketchItem={updateSketchItem}
             defaultTab={module === Module.SKETCHPAD ? 'sketchpad' : undefined}
+            onAddFlashcard={addFlashcard}
           />
       )}
       {/* REMOVED STANDALONE SKETCHPAD */}
