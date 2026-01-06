@@ -415,6 +415,7 @@ const App: React.FC = () => {
         onConnectDrive={() => handleDriveConnect(false)} isDriveConnected={isDriveConnected}
         isOwner={isOwner}
         role={data.profileConfig?.role || 'architect'}
+        habits={data.habits}
     >
       <Onboarding onClose={() => setShowOnboarding(false)} />
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}

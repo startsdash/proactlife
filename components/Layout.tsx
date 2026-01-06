@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Module, SyncStatus, IdentityRole } from '../types';
+import { Module, SyncStatus, IdentityRole, Habit } from '../types';
 import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Fingerprint, Diamond, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip } from './Tooltip';
@@ -14,6 +14,7 @@ interface Props {
   isDriveConnected: boolean;
   isOwner: boolean;
   role: IdentityRole;
+  habits: Habit[];
 }
 
 const NAV_GROUPS = [
@@ -48,7 +49,58 @@ const ROLE_COLORS: Record<IdentityRole, string> = {
     architect: 'border-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]',
 };
 
-const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatus, onConnectDrive, isDriveConnected, isOwner, role }) => {
+const SidebarAccumulator = ({ habits, expanded }: { habits: Habit[], expanded: boolean }) => {
+    const getLocalDateKey = (date: Date) => {
+       const year = date.getFullYear();
+       const month = String(date.getMonth() + 1).padStart(2, '0');
+       const day = String(date.getDate()).padStart(2, '0');
+       return `${year}-${month}-${day}`;
+    };
+    
+    const todayKey = getLocalDateKey(new Date());
+    const active = habits.filter(h => !h.isArchived);
+    const total = active.length;
+    const done = active.filter(h => h.history[todayKey]).length;
+    const percent = total > 0 ? (done / total) * 100 : 0;
+    
+    if (total === 0) return null;
+
+    return (
+        <div className={`transition-all duration-300 mb-2 ${expanded ? 'px-6 py-2' : 'flex justify-center py-4'}`}>
+            {expanded ? (
+                <div className="bg-slate-100/50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200/60 dark:border-slate-700/60 relative overflow-hidden group">
+                    <div className="flex justify-between items-end mb-2 relative z-10">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Энергия</span>
+                        <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-200">{Math.round(percent)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <motion.div 
+                            className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${percent}%` }}
+                            transition={{ duration: 1, ease: "circOut" }}
+                        />
+                    </div>
+                    {/* Glow effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+            ) : (
+                <Tooltip content={`Заряд: ${Math.round(percent)}%`} side="right">
+                    <div className="w-1.5 h-10 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-300 dark:border-slate-700 flex flex-col justify-end">
+                         <motion.div 
+                            className="w-full bg-gradient-to-t from-indigo-500 to-emerald-500"
+                            initial={{ height: 0 }}
+                            animate={{ height: `${percent}%` }}
+                            transition={{ duration: 1, ease: "circOut" }}
+                        />
+                    </div>
+                </Tooltip>
+            )}
+        </div>
+    )
+}
+
+const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatus, onConnectDrive, isDriveConnected, isOwner, role, habits }) => {
   const [isExpanded, setIsExpanded] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth >= 768;
@@ -150,6 +202,9 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                 </button>
             </div>
         )}
+
+        {/* ACCUMULATOR WIDGET */}
+        <SidebarAccumulator habits={habits} expanded={isExpanded} />
 
         {/* NAV GROUPS */}
         <div className="flex-1 overflow-y-auto custom-scrollbar-none px-4 py-2 space-y-8">
