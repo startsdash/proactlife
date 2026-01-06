@@ -37,7 +37,6 @@ const NAV_GROUPS = [
     id: '03_MASTERY',
     items: [
       { id: Module.DASHBOARD, icon: LayoutDashboard, label: 'Обзор' },
-      { id: Module.PROFILE, icon: Fingerprint, label: 'Профиль' },
       { id: Module.ARCHIVE, icon: Trophy, label: 'Архив' },
     ]
   }
