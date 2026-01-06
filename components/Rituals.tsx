@@ -48,18 +48,16 @@ const Accumulator = ({
     activeCount, 
     sphereStats, 
     syncRate,
-    isPulsing 
+    pulseColor 
 }: { 
     activeCount: number;
     sphereStats: Record<string, number>;
     syncRate: number;
-    isPulsing: boolean;
+    pulseColor: string | null;
 }) => {
     // Calculate widths for the liquid segments
-    // We base the width on the TOTAL active habits to show true progress relative to the goal (100% width = 100% sync)
     const totalWidth = activeCount > 0 ? 100 : 0; 
     
-    // Order: Productivity, Growth, Relationships
     const prodPercent = activeCount > 0 ? (sphereStats['productivity'] || 0) / activeCount * 100 : 0;
     const growthPercent = activeCount > 0 ? (sphereStats['growth'] || 0) / activeCount * 100 : 0;
     const relPercent = activeCount > 0 ? (sphereStats['relationships'] || 0) / activeCount * 100 : 0;
@@ -68,14 +66,22 @@ const Accumulator = ({
     return (
         <div className="relative w-full max-w-2xl mx-auto h-16 mb-8 group perspective-1000">
             {/* Glass Container */}
-            <div className={`
-                relative w-full h-full rounded-full 
-                bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl 
-                border border-white/50 dark:border-white/10
-                shadow-lg overflow-hidden
-                transition-all duration-700
-                ${isPulsing ? 'shadow-[0_0_30px_rgba(99,102,241,0.3)] border-indigo-200/50' : ''}
-            `}>
+            <motion.div 
+                animate={{ 
+                    scale: pulseColor ? 1.02 : 1,
+                }}
+                className={`
+                    relative w-full h-full rounded-full 
+                    bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl 
+                    border 
+                    shadow-lg overflow-hidden
+                    transition-colors duration-300
+                `}
+                style={{
+                    borderColor: pulseColor ? pulseColor : 'rgba(255,255,255,0.1)',
+                    boxShadow: pulseColor ? `0 0 40px ${pulseColor}66` : '0 10px 30px -10px rgba(0,0,0,0.1)'
+                }}
+            >
                 {/* Inner Glow / Atmosphere */}
                 <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none z-20 mix-blend-overlay" />
                 
@@ -120,16 +126,17 @@ const Accumulator = ({
                     />
                 </div>
 
-                {/* Ripple Effect Target */}
-                {isPulsing && (
+                {/* Ripple Effect Target on Impact */}
+                {pulseColor && (
                     <motion.div 
-                        className="absolute inset-0 bg-white/20 z-30"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: [0, 0.5, 0] }}
-                        transition={{ duration: 0.6 }}
+                        className="absolute inset-0 z-30"
+                        style={{ backgroundColor: pulseColor }}
+                        initial={{ opacity: 0.4 }}
+                        animate={{ opacity: 0 }}
+                        transition={{ duration: 0.5 }}
                     />
                 )}
-            </div>
+            </motion.div>
 
             {/* Label */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 pointer-events-none mix-blend-difference text-white dark:text-slate-200">
@@ -227,7 +234,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
   
   // Kinetic State
   const [particles, setParticles] = useState<Particle[]>([]);
-  const [accumulatorPulse, setAccumulatorPulse] = useState(false);
+  const [pulseColor, setPulseColor] = useState<string | null>(null);
   const accumulatorRef = useRef<HTMLDivElement>(null);
 
   // Form State
@@ -281,10 +288,11 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
       setTimeout(() => {
           // Remove particle
           setParticles(prev => prev.filter(p => p.id !== id));
-          // Trigger accumulator pulse
-          setAccumulatorPulse(true);
-          setTimeout(() => setAccumulatorPulse(false), 300);
-      }, 700); // Flight time
+          
+          // Trigger accumulator pulse with specific color
+          setPulseColor(color);
+          setTimeout(() => setPulseColor(null), 400); // Flash duration
+      }, 700); // Flight time matches CSS duration
   };
 
   const handleToggle = (habit: Habit, date: Date, e?: React.MouseEvent) => {
@@ -387,7 +395,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                         scale: 0.5 
                     }} 
                     transition={{ duration: 0.7, ease: "easeInOut" }}
-                    className="fixed w-3 h-3 rounded-full z-[100] pointer-events-none shadow-[0_0_10px_currentColor]"
+                    className="fixed w-3 h-3 rounded-full z-[100] pointer-events-none shadow-[0_0_15px_currentColor]"
                     style={{ backgroundColor: p.color, color: p.color }}
                 />
             ))}
@@ -427,7 +435,7 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
                     activeCount={activeHabitsCount} 
                     sphereStats={sphereStats} 
                     syncRate={syncRate}
-                    isPulsing={accumulatorPulse}
+                    pulseColor={pulseColor}
                 />
             </div>
 
