@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
+import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig, SynapticLink } from './types';
 import { loadState, saveState } from './services/storageService';
 import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
@@ -89,7 +88,7 @@ const App: React.FC = () => {
 
   const [data, setData] = useState<AppState>({
     notes: [], sketchpad: [], tasks: [], flashcards: [], habits: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG, 
-    profileConfig: { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' }
+    profileConfig: { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' }, synapticLinks: []
   });
   
   const [isLoaded, setIsLoaded] = useState(false);
@@ -163,6 +162,7 @@ const App: React.FC = () => {
               if (!driveData.mentorAnalyses) driveData.mentorAnalyses = [];
               if (!driveData.habits) driveData.habits = [];
               if (!driveData.sketchpad) driveData.sketchpad = [];
+              if (!driveData.synapticLinks) driveData.synapticLinks = [];
               if (!driveData.profileConfig) driveData.profileConfig = { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' };
               
               setData(prev => ({...driveData, user: prev.user})); 
@@ -294,6 +294,9 @@ const App: React.FC = () => {
   
   const addMentorAnalysis = (analysis: MentorAnalysis) => setData(p => ({ ...p, mentorAnalyses: [analysis, ...p.mentorAnalyses] }));
   const deleteMentorAnalysis = (id: string) => setData(p => ({ ...p, mentorAnalyses: p.mentorAnalyses.filter(a => a.id !== id) }));
+
+  const addSynapticLink = (link: SynapticLink) => setData(p => ({ ...p, synapticLinks: [...p.synapticLinks, link] }));
+  const removeSynapticLink = (id: string) => setData(p => ({ ...p, synapticLinks: p.synapticLinks.filter(l => l.id !== id) }));
 
   const handleReflectInJournal = (taskId: string) => {
     setJournalContextTaskId(taskId);
@@ -429,6 +432,9 @@ const App: React.FC = () => {
             onAddFlashcard={addFlashcard}
             sketchItems={data.sketchpad || []} addSketchItem={addSketchItem} deleteSketchItem={deleteSketchItem} updateSketchItem={updateSketchItem}
             defaultTab={module === Module.SKETCHPAD ? 'sketchpad' : undefined}
+            synapticLinks={data.synapticLinks}
+            onAddSynapticLink={addSynapticLink}
+            onRemoveSynapticLink={removeSynapticLink}
           />
       )}
       {/* REMOVED STANDALONE SKETCHPAD */}

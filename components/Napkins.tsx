@@ -4,7 +4,7 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard, SynapticLink } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
@@ -24,13 +24,15 @@ interface Props {
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
   onAddJournalEntry: (entry: JournalEntry) => void;
-  // Sketchpad Props
   sketchItems: SketchItem[];
   addSketchItem: (item: SketchItem) => void;
   deleteSketchItem: (id: string) => void;
   updateSketchItem: (item: SketchItem) => void;
   defaultTab?: 'inbox' | 'sketchpad' | 'library';
   onAddFlashcard: (card: Flashcard) => void;
+  synapticLinks: SynapticLink[];
+  onAddSynapticLink: (link: SynapticLink) => void;
+  onRemoveSynapticLink: (id: string) => void;
 }
 
 const colors = [
@@ -59,283 +61,15 @@ const UNSPLASH_PRESETS = [
 
 const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E")`;
 
-// --- MASONRY BREAKPOINTS ---
 const breakpointColumnsObj = {
   default: 2,
-  767: 1 // 1 column for mobile (<= 767px)
+  767: 1 
 };
 
-// --- SYNAPTIC WEB SUB-COMPONENT ---
-interface SynapticNode {
-    id: string;
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    note: Note;
-}
+// --- HELPERS ---
 
-interface Link {
-    id: string;
-    source: string;
-    target: string;
-    isConfirmed: boolean;
-}
+const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
-const SynapticWeb: React.FC<{ 
-    notes: Note[], 
-    onOpenNote: (n: Note) => void,
-    onAddFlashcard: (c: Flashcard) => void 
-}> = ({ notes, onOpenNote, onAddFlashcard }) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [nodes, setNodes] = useState<SynapticNode[]>([]);
-    const [links, setLinks] = useState<Link[]>([]);
-    const [isSimulating, setIsSimulating] = useState(true);
-    const [hoveredLink, setHoveredLink] = useState<string | null>(null);
-    const [createFlashcardForLink, setCreateFlashcardForLink] = useState<Link | null>(null);
-    const [flashcardFront, setFlashcardFront] = useState('');
-    const [flashcardBack, setFlashcardBack] = useState('');
-
-    // --- PHYSICS INITIALIZATION ---
-    useEffect(() => {
-        if (!containerRef.current) return;
-        const width = containerRef.current.clientWidth;
-        const height = containerRef.current.clientHeight;
-
-        // Initialize Nodes
-        const initialNodes: SynapticNode[] = notes.map(n => ({
-            id: n.id,
-            x: Math.random() * (width - 100) + 50,
-            y: Math.random() * (height - 100) + 50,
-            vx: 0,
-            vy: 0,
-            note: n
-        }));
-
-        // Generate Mock Links (Hypotheses)
-        const newLinks: Link[] = [];
-        for (let i = 0; i < initialNodes.length; i++) {
-            for (let j = i + 1; j < initialNodes.length; j++) {
-                const n1 = initialNodes[i];
-                const n2 = initialNodes[j];
-                
-                // Mock Similarity: Common tags or just random chance for demo
-                const commonTags = n1.note.tags?.filter(t => n2.note.tags?.includes(t)) || [];
-                // Or random if notes list is small to show functionality
-                const isLinked = commonTags.length > 0 || Math.random() > 0.9; 
-
-                if (isLinked) {
-                    newLinks.push({
-                        id: `${n1.id}-${n2.id}`,
-                        source: n1.id,
-                        target: n2.id,
-                        isConfirmed: false
-                    });
-                }
-            }
-        }
-
-        setNodes(initialNodes);
-        setLinks(newLinks);
-    }, [notes.length]); // Re-run if notes count changes significantly
-
-    // --- PHYSICS LOOP ---
-    useEffect(() => {
-        if (!isSimulating || nodes.length === 0) return;
-        let animationId: number;
-
-        const tick = () => {
-            setNodes(currentNodes => {
-                const width = containerRef.current?.clientWidth || 1000;
-                const height = containerRef.current?.clientHeight || 800;
-                
-                return currentNodes.map((node, i) => {
-                    let fx = 0, fy = 0;
-
-                    // Repulsion (All nodes repel)
-                    currentNodes.forEach((other, j) => {
-                        if (i === j) return;
-                        const dx = node.x - other.x;
-                        const dy = node.y - other.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                        const force = 2000 / (dist * dist); // Strong short-range repulsion
-                        fx += (dx / dist) * force;
-                        fy += (dy / dist) * force;
-                    });
-
-                    // Attraction (Linked nodes attract)
-                    links.forEach(link => {
-                        const isConnected = (link.source === node.id && link.target !== node.id) || (link.target === node.id && link.source !== node.id);
-                        if (isConnected) {
-                            const otherId = link.source === node.id ? link.target : link.source;
-                            const other = currentNodes.find(n => n.id === otherId);
-                            if (other) {
-                                const dx = other.x - node.x;
-                                const dy = other.y - node.y;
-                                const dist = Math.sqrt(dx * dx + dy * dy);
-                                const strength = link.isConfirmed ? 0.05 : 0.01; // Confirmed links are tighter
-                                fx += dx * strength;
-                                fy += dy * strength;
-                            }
-                        }
-                    });
-
-                    // Center Gravity (Keep them on screen)
-                    const cx = width / 2;
-                    const cy = height / 2;
-                    fx += (cx - node.x) * 0.005;
-                    fy += (cy - node.y) * 0.005;
-
-                    // Apply Velocity & Damping
-                    let vx = (node.vx + fx) * 0.9;
-                    let vy = (node.vy + fy) * 0.9;
-
-                    // Bounds
-                    let nx = node.x + vx;
-                    let ny = node.y + vy;
-                    
-                    if (nx < 20 || nx > width - 20) vx *= -1;
-                    if (ny < 20 || ny > height - 20) vy *= -1;
-
-                    return { ...node, x: nx, y: ny, vx, vy };
-                });
-            });
-            animationId = requestAnimationFrame(tick);
-        };
-
-        animationId = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(animationId);
-    }, [isSimulating, links]);
-
-    const handleSolidifyLink = (linkId: string) => {
-        const link = links.find(l => l.id === linkId);
-        if (link) {
-            setCreateFlashcardForLink(link);
-            setFlashcardFront("Новый инсайт");
-            setFlashcardBack("");
-        }
-    };
-
-    const confirmFlashcard = () => {
-        if (!createFlashcardForLink) return;
-        
-        onAddFlashcard({
-            id: Date.now().toString(),
-            front: flashcardFront,
-            back: flashcardBack,
-            level: 0,
-            nextReview: Date.now()
-        });
-
-        // Update link to confirmed
-        setLinks(prev => prev.map(l => l.id === createFlashcardForLink.id ? { ...l, isConfirmed: true } : l));
-        
-        setCreateFlashcardForLink(null);
-    };
-
-    return (
-        <div className="relative w-full h-full overflow-hidden bg-[#f0f4f8] dark:bg-[#0b1120]" ref={containerRef}>
-            {/* Graph Paper Background */}
-            <div 
-                className="absolute inset-0 pointer-events-none opacity-20 dark:opacity-10"
-                style={{
-                    backgroundImage: `linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(90deg, #94a3b8 1px, transparent 1px)`,
-                    backgroundSize: '20px 20px'
-                }}
-            />
-
-            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                {links.map(link => {
-                    const source = nodes.find(n => n.id === link.source);
-                    const target = nodes.find(n => n.id === link.target);
-                    if (!source || !target) return null;
-                    
-                    const isHovered = hoveredLink === link.id;
-
-                    return (
-                        <g key={link.id} className="pointer-events-auto">
-                            <line 
-                                x1={source.x} y1={source.y} x2={target.x} y2={target.y}
-                                stroke={link.isConfirmed ? "#6366f1" : (isHovered ? "#94a3b8" : "#cbd5e1")}
-                                strokeWidth={link.isConfirmed ? 1.5 : 1}
-                                strokeDasharray={link.isConfirmed ? "none" : "4 4"}
-                                className="transition-all duration-300"
-                                onMouseEnter={() => setHoveredLink(link.id)}
-                                onMouseLeave={() => setHoveredLink(null)}
-                            />
-                            {isHovered && !link.isConfirmed && (
-                                <foreignObject x={(source.x + target.x)/2 - 15} y={(source.y + target.y)/2 - 15} width="30" height="30">
-                                    <button 
-                                        onClick={() => handleSolidifyLink(link.id)}
-                                        className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 shadow-md border border-indigo-200 flex items-center justify-center text-indigo-500 hover:scale-110 transition-transform"
-                                        title="Создать инсайт"
-                                    >
-                                        <Sparkles size={14} />
-                                    </button>
-                                </foreignObject>
-                            )}
-                        </g>
-                    );
-                })}
-            </svg>
-
-            {nodes.map(node => (
-                <div 
-                    key={node.id}
-                    className="absolute w-4 h-4 -ml-2 -mt-2 rounded-full border-2 border-slate-400 bg-white dark:bg-slate-900 cursor-pointer hover:border-indigo-500 hover:scale-125 transition-all z-10 shadow-sm group"
-                    style={{ left: node.x, top: node.y }}
-                    onClick={() => onOpenNote(node.note)}
-                >
-                    {/* Hover Label */}
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-white/80 dark:bg-black/80 backdrop-blur text-[9px] rounded border border-slate-200 dark:border-slate-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-                        {node.note.title || node.note.content.substring(0, 15) + '...'}
-                    </div>
-                </div>
-            ))}
-
-            {/* CREATE INSIGHT MODAL */}
-            <AnimatePresence>
-                {createFlashcardForLink && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setCreateFlashcardForLink(null)}>
-                        <motion.div 
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-2xl w-80 border border-indigo-100 dark:border-indigo-900"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <h3 className="text-sm font-bold uppercase tracking-wider mb-4 flex items-center gap-2 text-indigo-600">
-                                <Sparkles size={16} /> Новый Инсайт
-                            </h3>
-                            <input 
-                                className="w-full mb-3 p-2 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 text-sm font-bold"
-                                placeholder="Концепт (Сторона А)"
-                                value={flashcardFront}
-                                onChange={e => setFlashcardFront(e.target.value)}
-                                autoFocus
-                            />
-                            <textarea 
-                                className="w-full mb-4 p-2 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 text-sm h-24 resize-none"
-                                placeholder="Объяснение (Сторона Б)"
-                                value={flashcardBack}
-                                onChange={e => setFlashcardBack(e.target.value)}
-                            />
-                            <div className="flex justify-end gap-2">
-                                <button onClick={() => setCreateFlashcardForLink(null)} className="px-3 py-1.5 text-xs text-slate-500">Отмена</button>
-                                <button onClick={confirmFlashcard} className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-md hover:bg-indigo-700">Создать</button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-};
-
-// --- HELPER: ALLOW DATA URIS ---
-const allowDataUrls = (url: string) => url;
-
-// --- HELPER: IMAGE COMPRESSION ---
 const processImage = (file: File | Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
         if (!file.type.startsWith('image/')) {
@@ -349,7 +83,7 @@ const processImage = (file: File | Blob): Promise<string> => {
             img.src = event.target?.result as string;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800; // Improved quality
+                const MAX_WIDTH = 800;
                 const MAX_HEIGHT = 800;
                 let width = img.width;
                 let height = img.height;
@@ -371,8 +105,7 @@ const processImage = (file: File | Blob): Promise<string> => {
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                     ctx.drawImage(img, 0, 0, width, height);
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                    resolve(dataUrl);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
                 } else {
                     reject(new Error('Canvas context failed'));
                 }
@@ -383,14 +116,79 @@ const processImage = (file: File | Blob): Promise<string> => {
     });
 };
 
-// --- HELPER: EXTRACT URL ---
+const markdownToHtml = (md: string) => {
+    if (!md) return '';
+    let html = md;
+    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
+    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
+    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
+    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
+        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
+    });
+    html = html.replace(/\n/g, '<br>');
+    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
+    return html;
+};
+
+const htmlToMarkdown = (html: string) => {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+
+    const wrap = (text: string, marker: string) => {
+        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
+        if (match && match[2]) {
+            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
+        }
+        return text.trim() ? `${marker}${text}${marker}` : '';
+    };
+
+    const walk = (node: Node): string => {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            const tag = el.tagName.toLowerCase();
+            let content = '';
+            el.childNodes.forEach(child => content += walk(child));
+            
+            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
+            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
+            if (el.style.fontStyle === 'italic') return wrap(content, '*');
+            
+            switch (tag) {
+                case 'b': case 'strong': return wrap(content, '**');
+                case 'i': case 'em': return wrap(content, '*');
+                case 'u': return content.trim() ? `<u>${content}</u>` : '';
+                case 'code': return `\`${content}\``;
+                case 'h1': return `\n# ${content}\n`;
+                case 'h2': return `\n## ${content}\n`;
+                case 'div': case 'p': return `\n${content}\n`;
+                case 'br': return '\n';
+                case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
+                default: return content;
+            }
+        }
+        return '';
+    };
+    let md = walk(temp);
+    md = md.replace(/\n{3,}/g, '\n\n').trim();
+    md = md.replace(/&nbsp;/g, ' ');
+    return applyTypography(md);
+};
+
+const allowDataUrls = (url: string) => url;
+
 const findFirstUrl = (text: string): string | null => {
     const maskedText = text.replace(/!\[.*?\]\(.*?\)/g, '');
     const match = maskedText.match(/(https?:\/\/[^\s\)]+)/);
     return match ? match[0] : null;
 };
 
-// --- COMPONENT: LINK PREVIEW ---
+// --- SUB-COMPONENTS ---
+
 const LinkPreview = React.memo(({ url }: { url: string }) => {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -458,7 +256,6 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
     );
 });
 
-// Markdown Styles
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
     a: ({node, ...props}: any) => <a className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors font-sans" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
@@ -478,73 +275,6 @@ const markdownComponents = {
     u: ({node, ...props}: any) => <u {...props} /> 
 };
 
-// Converters
-const markdownToHtml = (md: string) => {
-    if (!md) return '';
-    let html = md;
-    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
-    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
-    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
-    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
-        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
-    });
-    html = html.replace(/\n/g, '<br>');
-    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
-    return html;
-};
-
-const htmlToMarkdown = (html: string) => {
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-
-    const wrap = (text: string, marker: string) => {
-        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
-        if (match && match[2]) {
-            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
-        }
-        return text.trim() ? `${marker}${text}${marker}` : '';
-    };
-
-    const walk = (node: Node): string => {
-        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
-        if (node.nodeType === Node.ELEMENT_NODE) {
-            const el = node as HTMLElement;
-            const tag = el.tagName.toLowerCase();
-            let content = '';
-            el.childNodes.forEach(child => content += walk(child));
-            
-            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
-            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
-            if (el.style.fontStyle === 'italic') return wrap(content, '*');
-            
-            switch (tag) {
-                case 'b': case 'strong': return wrap(content, '**');
-                case 'i': case 'em': return wrap(content, '*');
-                case 'u': return content.trim() ? `<u>${content}</u>` : '';
-                case 'code': return `\`${content}\``;
-                case 'h1': return `\n# ${content}\n`;
-                case 'h2': return `\n## ${content}\n`;
-                case 'div': case 'p': return `\n${content}\n`;
-                case 'br': return '\n';
-                case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
-                default: return content;
-            }
-        }
-        return '';
-    };
-    let md = walk(temp);
-    md = md.replace(/\n{3,}/g, '\n\n').trim();
-    md = md.replace(/&nbsp;/g, ' ');
-    return applyTypography(md);
-};
-
-const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
-
-// Tag Selector
 const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[]) => void, existingTags: string[], placeholder?: string, variant?: 'default' | 'ghost' }> = ({ selectedTags, onChange, existingTags, placeholder = "Добавить теги...", variant = 'default' }) => {
     const [input, setInput] = useState('');
     const [isOpen, setIsOpen] = useState(false);
@@ -603,15 +333,12 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
     );
 };
 
-// Cover Picker
 const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => void }> = ({ onSelect, onClose }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS);
     const [loading, setLoading] = useState(false);
     
-    // Robust Env Getter for the API Key inside the component or file scope
     const getUnsplashKey = () => {
-        // Try various prefixes just in case, prioritizing the direct one as per screenshot
         const keys = [
             'UNSPLASH_ACCESS_KEY', 
             'VITE_UNSPLASH_ACCESS_KEY', 
@@ -637,7 +364,6 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
         
         setLoading(true);
         try {
-            // Random page for variety on re-search
             const page = Math.floor(Math.random() * 10) + 1;
             const endpoint = q 
                 ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&page=${page}&client_id=${key}`
@@ -720,6 +446,286 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
     );
 };
 
+// --- SYNAPTIC WEB SUB-COMPONENT ---
+interface SynapticNode {
+    id: string;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    note: Note;
+}
+
+interface Link {
+    id: string;
+    source: string;
+    target: string;
+    isConfirmed: boolean;
+}
+
+const SynapticWeb: React.FC<{ 
+    notes: Note[], 
+    synapticLinks: SynapticLink[],
+    onOpenNote: (n: Note) => void,
+    onAddFlashcard: (c: Flashcard) => void,
+    onAddSynapticLink: (l: SynapticLink) => void
+}> = ({ notes, synapticLinks, onOpenNote, onAddFlashcard, onAddSynapticLink }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [nodes, setNodes] = useState<SynapticNode[]>([]);
+    const [links, setLinks] = useState<Link[]>([]);
+    const [isSimulating, setIsSimulating] = useState(true);
+    const [hoveredLink, setHoveredLink] = useState<string | null>(null);
+    const [createFlashcardForLink, setCreateFlashcardForLink] = useState<Link | null>(null);
+    const [flashcardFront, setFlashcardFront] = useState('');
+    const [flashcardBack, setFlashcardBack] = useState('');
+
+    useEffect(() => {
+        if (!containerRef.current || notes.length === 0) return;
+        const width = containerRef.current.clientWidth;
+        const height = containerRef.current.clientHeight;
+
+        const initialNodes: SynapticNode[] = notes.map(n => ({
+            id: n.id,
+            x: Math.random() * (width - 100) + 50,
+            y: Math.random() * (height - 100) + 50,
+            vx: 0,
+            vy: 0,
+            note: n
+        }));
+
+        const persistentLinks: Link[] = synapticLinks
+            .filter(sl => notes.some(n => n.id === sl.source) && notes.some(n => n.id === sl.target))
+            .map(sl => ({
+                id: sl.id,
+                source: sl.source,
+                target: sl.target,
+                isConfirmed: true
+            }));
+
+        const targetTotalLinks = Math.floor(notes.length * 1.2); 
+        const transientLinksCount = Math.max(0, targetTotalLinks - persistentLinks.length);
+        
+        const transientLinks: Link[] = [];
+        const existingPairs = new Set(persistentLinks.map(l => [l.source, l.target].sort().join('-')));
+
+        let attempts = 0;
+        while (transientLinks.length < transientLinksCount && attempts < notes.length * 5) {
+            attempts++;
+            const idx1 = Math.floor(Math.random() * notes.length);
+            const idx2 = Math.floor(Math.random() * notes.length);
+            
+            if (idx1 === idx2) continue;
+            
+            const n1 = notes[idx1];
+            const n2 = notes[idx2];
+            const pairKey = [n1.id, n2.id].sort().join('-');
+            
+            if (!existingPairs.has(pairKey)) {
+                existingPairs.add(pairKey);
+                transientLinks.push({
+                    id: `transient-${pairKey}-${Date.now()}`,
+                    source: n1.id,
+                    target: n2.id,
+                    isConfirmed: false
+                });
+            }
+        }
+
+        setNodes(initialNodes);
+        setLinks([...persistentLinks, ...transientLinks]);
+    }, [notes.length, synapticLinks.length]);
+
+    useEffect(() => {
+        if (!isSimulating || nodes.length === 0) return;
+        let animationId: number;
+
+        const tick = () => {
+            setNodes(currentNodes => {
+                const width = containerRef.current?.clientWidth || 1000;
+                const height = containerRef.current?.clientHeight || 800;
+                
+                return currentNodes.map((node, i) => {
+                    let fx = 0, fy = 0;
+
+                    currentNodes.forEach((other, j) => {
+                        if (i === j) return;
+                        const dx = node.x - other.x;
+                        const dy = node.y - other.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                        const force = 2000 / (dist * dist);
+                        fx += (dx / dist) * force;
+                        fy += (dy / dist) * force;
+                    });
+
+                    links.forEach(link => {
+                        const isConnected = (link.source === node.id && link.target !== node.id) || (link.target === node.id && link.source !== node.id);
+                        if (isConnected) {
+                            const otherId = link.source === node.id ? link.target : link.source;
+                            const other = currentNodes.find(n => n.id === otherId);
+                            if (other) {
+                                const dx = other.x - node.x;
+                                const dy = other.y - node.y;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                const strength = link.isConfirmed ? 0.05 : 0.01;
+                                fx += dx * strength;
+                                fy += dy * strength;
+                            }
+                        }
+                    });
+
+                    const cx = width / 2;
+                    const cy = height / 2;
+                    fx += (cx - node.x) * 0.005;
+                    fy += (cy - node.y) * 0.005;
+
+                    let vx = (node.vx + fx) * 0.9;
+                    let vy = (node.vy + fy) * 0.9;
+
+                    let nx = node.x + vx;
+                    let ny = node.y + vy;
+                    
+                    if (nx < 20 || nx > width - 20) vx *= -1;
+                    if (ny < 20 || ny > height - 20) vy *= -1;
+
+                    return { ...node, x: nx, y: ny, vx, vy };
+                });
+            });
+            animationId = requestAnimationFrame(tick);
+        };
+
+        animationId = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(animationId);
+    }, [isSimulating, links]);
+
+    const handleSolidifyLink = (linkId: string) => {
+        const link = links.find(l => l.id === linkId);
+        if (link) {
+            setCreateFlashcardForLink(link);
+            setFlashcardFront("Новый инсайт");
+            setFlashcardBack("");
+        }
+    };
+
+    const confirmFlashcard = () => {
+        if (!createFlashcardForLink) return;
+        
+        onAddFlashcard({
+            id: Date.now().toString(),
+            front: flashcardFront,
+            back: flashcardBack,
+            level: 0,
+            nextReview: Date.now()
+        });
+
+        const newSynapticLink: SynapticLink = {
+            id: Date.now().toString(),
+            source: createFlashcardForLink.source,
+            target: createFlashcardForLink.target,
+            createdAt: Date.now()
+        };
+        onAddSynapticLink(newSynapticLink);
+
+        setLinks(prev => prev.map(l => l.id === createFlashcardForLink.id ? { ...l, isConfirmed: true, id: newSynapticLink.id } : l));
+        
+        setCreateFlashcardForLink(null);
+    };
+
+    return (
+        <div className="relative w-full h-full overflow-hidden bg-[#f0f4f8] dark:bg-[#0b1120]" ref={containerRef}>
+            <div 
+                className="absolute inset-0 pointer-events-none opacity-20 dark:opacity-10"
+                style={{
+                    backgroundImage: `linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(90deg, #94a3b8 1px, transparent 1px)`,
+                    backgroundSize: '20px 20px'
+                }}
+            />
+
+            <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                {links.map(link => {
+                    const source = nodes.find(n => n.id === link.source);
+                    const target = nodes.find(n => n.id === link.target);
+                    if (!source || !target) return null;
+                    
+                    const isHovered = hoveredLink === link.id;
+
+                    return (
+                        <g key={link.id} className="pointer-events-auto">
+                            <line 
+                                x1={source.x} y1={source.y} x2={target.x} y2={target.y}
+                                stroke={link.isConfirmed ? "#6366f1" : (isHovered ? "#94a3b8" : "#cbd5e1")}
+                                strokeWidth={link.isConfirmed ? 1.5 : 1}
+                                strokeDasharray={link.isConfirmed ? "none" : "4 4"}
+                                className="transition-all duration-300"
+                                onMouseEnter={() => setHoveredLink(link.id)}
+                                onMouseLeave={() => setHoveredLink(null)}
+                            />
+                            {(isHovered || link.isConfirmed) && (
+                                <foreignObject x={(source.x + target.x)/2 - 15} y={(source.y + target.y)/2 - 15} width="30" height="30">
+                                    <button 
+                                        onClick={() => !link.isConfirmed && handleSolidifyLink(link.id)}
+                                        className={`w-8 h-8 rounded-full shadow-md flex items-center justify-center transition-all ${link.isConfirmed ? 'bg-indigo-600 text-white border-indigo-500 scale-75 cursor-default' : 'bg-white dark:bg-slate-800 border border-indigo-200 text-indigo-500 hover:scale-110 cursor-pointer'}`}
+                                        title={link.isConfirmed ? "Закрепленный инсайт" : "Создать инсайт"}
+                                    >
+                                        {link.isConfirmed ? <Diamond size={12} fill="currentColor" /> : <Sparkles size={14} />}
+                                    </button>
+                                </foreignObject>
+                            )}
+                        </g>
+                    );
+                })}
+            </svg>
+
+            {nodes.map(node => (
+                <div 
+                    key={node.id}
+                    className="absolute w-4 h-4 -ml-2 -mt-2 rounded-full border-2 border-slate-400 bg-white dark:bg-slate-900 cursor-pointer hover:border-indigo-500 hover:scale-125 transition-all z-10 shadow-sm group"
+                    style={{ left: node.x, top: node.y }}
+                    onClick={() => onOpenNote(node.note)}
+                >
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-white/80 dark:bg-black/80 backdrop-blur text-[9px] rounded border border-slate-200 dark:border-slate-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+                        {node.note.title || node.note.content.substring(0, 15) + '...'}
+                    </div>
+                </div>
+            ))}
+
+            <AnimatePresence>
+                {createFlashcardForLink && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setCreateFlashcardForLink(null)}>
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-2xl w-80 border border-indigo-100 dark:border-indigo-900"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <h3 className="text-sm font-bold uppercase tracking-wider mb-4 flex items-center gap-2 text-indigo-600">
+                                <Sparkles size={16} /> Новый Инсайт
+                            </h3>
+                            <input 
+                                className="w-full mb-3 p-2 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 text-sm font-bold"
+                                placeholder="Концепт (Сторона А)"
+                                value={flashcardFront}
+                                onChange={e => setFlashcardFront(e.target.value)}
+                                autoFocus
+                            />
+                            <textarea 
+                                className="w-full mb-4 p-2 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 text-sm h-24 resize-none"
+                                placeholder="Объяснение (Сторона Б)"
+                                value={flashcardBack}
+                                onChange={e => setFlashcardBack(e.target.value)}
+                            />
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => setCreateFlashcardForLink(null)} className="px-3 py-1.5 text-xs text-slate-500">Отмена</button>
+                                <button onClick={confirmFlashcard} className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-md hover:bg-indigo-700">Создать</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
 interface NoteCardProps {
     note: Note;
     isArchived: boolean;
@@ -748,7 +754,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             setIsExiting(true);
             setTimeout(() => {
                 handlers.archiveNote(note.id);
-            }, 400); // Wait for animation
+            }, 400);
         }
     };
 
@@ -789,14 +795,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             onClick={() => handlers.handleOpenNote(note)}
             className={`${getNoteColorClass(note.color)} rounded-3xl transition-all duration-500 hover:-translate-y-[4px] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] group/card flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden mb-6 ${isExiting ? 'opacity-0 translate-x-full scale-90' : ''}`}
         >
-            {/* NOISE TEXTURE */}
             <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
             {note.coverUrl && (
                 <div className="h-40 w-full shrink-0 relative z-10"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
             )}
 
-            {/* PIN BUTTON - Top Right (Ghost Style) */}
             <div className="absolute top-4 right-4 z-20">
                 <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
                     <button 
@@ -819,7 +823,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                         <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                     </div>
                     {linkUrl && <LinkPreview url={linkUrl} />}
-                    {/* AIR TAGS */}
                     {note.tags && note.tags.length > 0 && (
                         <div className="flex flex-wrap gap-3 mt-6">
                             {note.tags.map(tag => (
@@ -832,7 +835,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 </div>
             </div>
             
-            {/* MINIMAL CONTROLS */}
             <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
@@ -857,7 +859,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                     )}
                 </div>
                 
-                {/* ID Display */}
                 <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
                     ID // {note.id.slice(-5).toLowerCase()}
                 </div>
@@ -866,7 +867,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, sketchItems, addSketchItem, deleteSketchItem, updateSketchItem, defaultTab, onAddFlashcard }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, sketchItems, addSketchItem, deleteSketchItem, updateSketchItem, defaultTab, onAddFlashcard, synapticLinks, onAddSynapticLink, onRemoveSynapticLink }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -1345,7 +1346,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         ) : (
             <>
                 {viewMode === 'web' && activeTab === 'inbox' ? (
-                    <SynapticWeb notes={inboxNotes} onOpenNote={handleOpenNote} onAddFlashcard={onAddFlashcard} />
+                    <SynapticWeb 
+                        notes={inboxNotes} 
+                        synapticLinks={synapticLinks}
+                        onOpenNote={handleOpenNote} 
+                        onAddFlashcard={onAddFlashcard} 
+                        onAddSynapticLink={onAddSynapticLink}
+                    />
                 ) : (
                     <div 
                         ref={scrollContainerRef}
@@ -1668,8 +1675,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                             <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
                                             <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
                                             <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
-                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
-                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
+                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
+                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
                                             <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
                                             <Tooltip content="Очистить"><button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
                                             <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
