@@ -39,7 +39,6 @@ const NAV_GROUPS = [
       { id: Module.DASHBOARD, icon: LayoutDashboard, label: 'Обзор' },
       { id: Module.PROFILE, icon: Fingerprint, label: 'Профиль' },
       { id: Module.ARCHIVE, icon: Trophy, label: 'Архив' },
-      { id: Module.LEARNING, icon: FlaskConical, label: 'Практикум' },
     ]
   }
 ];
@@ -241,6 +240,16 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                         </div>
                     </div>
                 )}
+
+                {/* LEARNING LINK */}
+                <Tooltip content="Практикум" side="right">
+                    <button 
+                        onClick={() => { setModule(Module.LEARNING); if(isMobile) setIsExpanded(false); }}
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    >
+                        <FlaskConical size={16} strokeWidth={1.5} />
+                    </button>
+                </Tooltip>
 
                 {/* SETTINGS LINK */}
                 <Tooltip content="Настройки" side="right">
