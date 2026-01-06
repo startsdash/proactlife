@@ -58,46 +58,102 @@ const SidebarAccumulator = ({ habits, expanded }: { habits: Habit[], expanded: b
     };
     
     const todayKey = getLocalDateKey(new Date());
-    const active = habits.filter(h => !h.isArchived);
-    const total = active.length;
-    const done = active.filter(h => h.history[todayKey]).length;
-    const percent = total > 0 ? (done / total) * 100 : 0;
+    const activeHabits = habits.filter(h => !h.isArchived);
+    const activeCount = activeHabits.length;
     
-    if (total === 0) return null;
+    // Stats Calculation
+    const sphereStats: Record<string, number> = { productivity: 0, growth: 0, relationships: 0, default: 0 };
+    let completedCount = 0;
+
+    activeHabits.forEach(h => {
+        if (h.history[todayKey]) {
+            completedCount++;
+            const sphere = h.spheres?.[0] || 'default';
+            sphereStats[sphere] = (sphereStats[sphere] || 0) + 1;
+        }
+    });
+
+    const percent = activeCount > 0 ? (completedCount / activeCount) * 100 : 0;
+    
+    // Liquid segments proportional to TOTAL active habits (width represents % of total capacity)
+    const prodPercent = activeCount > 0 ? (sphereStats['productivity'] || 0) / activeCount * 100 : 0;
+    const growthPercent = activeCount > 0 ? (sphereStats['growth'] || 0) / activeCount * 100 : 0;
+    const relPercent = activeCount > 0 ? (sphereStats['relationships'] || 0) / activeCount * 100 : 0;
+    const otherPercent = activeCount > 0 ? (sphereStats['default'] || 0) / activeCount * 100 : 0;
+    
+    if (activeCount === 0) return null;
+
+    if (expanded) {
+        return (
+            <div className="px-6 py-4 mb-2 animate-in fade-in slide-in-from-left-4 duration-500">
+                <div className="relative w-full h-10 rounded-full bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg overflow-hidden group">
+                    {/* Inner Atmosphere / Gloss */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none z-20 mix-blend-overlay" />
+                    
+                    {/* PLASMA LIQUID (Horizontal) */}
+                    <div className="absolute inset-0 flex items-center px-1 filter blur-[6px] opacity-90">
+                         {/* Using min-width to ensure visibility if present but small */}
+                         <motion.div 
+                            className="h-6 bg-indigo-500 rounded-full mix-blend-screen dark:mix-blend-normal shadow-[0_0_10px_#6366f1]" 
+                            initial={{ width: 0 }} 
+                            animate={{ width: `${prodPercent}%` }} 
+                            transition={{ type: "spring", stiffness: 40, damping: 15 }} 
+                         />
+                         <motion.div 
+                            className="h-6 bg-emerald-500 rounded-full mix-blend-screen dark:mix-blend-normal -ml-1 shadow-[0_0_10px_#10b981]" 
+                            initial={{ width: 0 }} 
+                            animate={{ width: `${growthPercent}%` }} 
+                            transition={{ type: "spring", stiffness: 40, damping: 15 }} 
+                         />
+                         <motion.div 
+                            className="h-6 bg-rose-500 rounded-full mix-blend-screen dark:mix-blend-normal -ml-1 shadow-[0_0_10px_#f43f5e]" 
+                            initial={{ width: 0 }} 
+                            animate={{ width: `${relPercent}%` }} 
+                            transition={{ type: "spring", stiffness: 40, damping: 15 }} 
+                         />
+                         <motion.div 
+                            className="h-6 bg-slate-400 dark:bg-slate-600 rounded-full mix-blend-screen dark:mix-blend-normal -ml-1" 
+                            initial={{ width: 0 }} 
+                            animate={{ width: `${otherPercent}%` }} 
+                            transition={{ type: "spring", stiffness: 40, damping: 15 }} 
+                         />
+                    </div>
+
+                    {/* Hard Edge Overlay (Definition) */}
+                    <div className="absolute inset-0 flex items-center px-1 opacity-30 z-10">
+                         <motion.div 
+                            className="h-0.5 bg-white rounded-full shadow-[0_0_8px_white]" 
+                            animate={{ width: `${percent}%` }} 
+                            transition={{ type: "spring", stiffness: 50, damping: 20 }} 
+                         />
+                    </div>
+
+                    {/* Label Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+                        <span className="font-mono text-[9px] font-bold text-slate-600 dark:text-slate-300 mix-blend-difference tracking-widest drop-shadow-md">
+                            ENERGY {Math.round(percent)}%
+                        </span>
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     return (
-        <div className={`transition-all duration-300 mb-2 ${expanded ? 'px-6 py-2' : 'flex justify-center py-4'}`}>
-            {expanded ? (
-                <div className="bg-slate-100/50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200/60 dark:border-slate-700/60 relative overflow-hidden group">
-                    <div className="flex justify-between items-end mb-2 relative z-10">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Энергия</span>
-                        <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-200">{Math.round(percent)}%</span>
+        <div className="flex justify-center py-4 mb-2 w-full animate-in fade-in zoom-in-95 duration-300">
+            <Tooltip content={`Заряд: ${Math.round(percent)}%`} side="right">
+                <div className="relative w-3 h-14 rounded-full bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg overflow-hidden flex flex-col-reverse items-center py-0.5">
+                     {/* PLASMA LIQUID (Vertical Stack) */}
+                    <div className="absolute bottom-0.5 w-full flex flex-col-reverse items-center filter blur-[3px] opacity-90">
+                         <motion.div className="w-1.5 bg-indigo-500 rounded-full shadow-[0_0_5px_#6366f1]" initial={{ height: 0 }} animate={{ height: `${prodPercent}%` }} transition={{ duration: 1 }} />
+                         <motion.div className="w-1.5 bg-emerald-500 rounded-full -mb-0.5 shadow-[0_0_5px_#10b981]" initial={{ height: 0 }} animate={{ height: `${growthPercent}%` }} transition={{ duration: 1 }} />
+                         <motion.div className="w-1.5 bg-rose-500 rounded-full -mb-0.5 shadow-[0_0_5px_#f43f5e]" initial={{ height: 0 }} animate={{ height: `${relPercent}%` }} transition={{ duration: 1 }} />
+                         <motion.div className="w-1.5 bg-slate-400 dark:bg-slate-600 rounded-full -mb-0.5" initial={{ height: 0 }} animate={{ height: `${otherPercent}%` }} transition={{ duration: 1 }} />
                     </div>
-                    <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <motion.div 
-                            className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${percent}%` }}
-                            transition={{ duration: 1, ease: "circOut" }}
-                        />
-                    </div>
-                    {/* Glow effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-            ) : (
-                <Tooltip content={`Заряд: ${Math.round(percent)}%`} side="right">
-                    <div className="w-1.5 h-10 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-300 dark:border-slate-700 flex flex-col justify-end">
-                         <motion.div 
-                            className="w-full bg-gradient-to-t from-indigo-500 to-emerald-500"
-                            initial={{ height: 0 }}
-                            animate={{ height: `${percent}%` }}
-                            transition={{ duration: 1, ease: "circOut" }}
-                        />
-                    </div>
-                </Tooltip>
-            )}
+            </Tooltip>
         </div>
-    )
+    );
 }
 
 const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatus, onConnectDrive, isDriveConnected, isOwner, role, habits }) => {
@@ -203,7 +259,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
             </div>
         )}
 
-        {/* ACCUMULATOR WIDGET */}
+        {/* ACCUMULATOR WIDGET (Atmospheric) */}
         <SidebarAccumulator habits={habits} expanded={isExpanded} />
 
         {/* NAV GROUPS */}
