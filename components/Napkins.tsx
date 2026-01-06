@@ -1117,14 +1117,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <>
                                     <Tooltip content="Поиск по тегам" side="bottom"><button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button></Tooltip>
                                     <Tooltip content="Фильтр по цвету" side="bottom"><button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button></Tooltip>
-                                    {/* SYNAPTIC WEB TOGGLE (ONLY IN INBOX) */}
-                                    {activeTab === 'inbox' && (
-                                        <Tooltip content={inboxViewMode === 'grid' ? "Synaptic Web" : "List View"} side="bottom">
+                                    {/* SYNAPTIC WEB TOGGLE (ONLY IN INBOX) - Hide if in Synaptic Mode (it has its own close button) */}
+                                    {activeTab === 'inbox' && inboxViewMode === 'grid' && (
+                                        <Tooltip content="Synaptic Web" side="bottom">
                                             <button 
-                                                onClick={() => setInboxViewMode(prev => prev === 'grid' ? 'synaptic' : 'grid')}
-                                                className={`p-3 rounded-2xl border-none transition-all shadow-sm ${inboxViewMode === 'synaptic' ? 'bg-indigo-600 text-white shadow-indigo-500/20' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
+                                                onClick={() => setInboxViewMode('synaptic')}
+                                                className={`p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20`}
                                             >
-                                                {inboxViewMode === 'grid' ? <Network size={20} /> : <LayoutGrid size={20} />}
+                                                <Network size={20} />
                                             </button>
                                         </Tooltip>
                                     )}
