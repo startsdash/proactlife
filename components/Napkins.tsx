@@ -1,16 +1,17 @@
 
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry, SynapticLink } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star } from 'lucide-react';
 import Sketchpad from './Sketchpad';
 
 interface Props {
@@ -31,6 +32,10 @@ interface Props {
   deleteSketchItem: (id: string) => void;
   updateSketchItem: (item: SketchItem) => void;
   defaultTab?: 'inbox' | 'sketchpad' | 'library';
+  // Synaptic Web Props
+  synapticLinks?: SynapticLink[];
+  addSynapticLink?: (link: SynapticLink) => void;
+  removeSynapticLink?: (id: string) => void;
 }
 
 const colors = [
@@ -453,6 +458,287 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
     );
 };
 
+// --- SYNAPTIC VIEW COMPONENTS (PHYSICS ENGINE) ---
+
+interface VisualNode {
+    id: string;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    title: string;
+    content: string;
+    color: string;
+    radius: number;
+}
+
+const SynapticView: React.FC<{ 
+    notes: Note[];
+    synapticLinks: SynapticLink[];
+    addSynapticLink: (link: SynapticLink) => void;
+    removeSynapticLink: (id: string) => void;
+    onOpenNote: (note: Note) => void; 
+}> = ({ notes, synapticLinks, addSynapticLink, removeSynapticLink, onOpenNote }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const nodesRef = useRef<VisualNode[]>([]);
+    const requestRef = useRef<number | null>(null);
+    const [randomLinks, setRandomLinks] = useState<SynapticLink[]>([]);
+    const [hoveredLink, setHoveredLink] = useState<{id: string, x: number, y: number, isSaved: boolean} | null>(null);
+    // Force re-render for visual updates
+    const [, setTick] = useState(0); 
+
+    // 1. Initialize Nodes
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const { clientWidth, clientHeight } = containerRef.current;
+        
+        // Map notes to visual nodes, preserving position if re-initialized (optional, simplified here)
+        nodesRef.current = notes.map(note => ({
+            id: note.id,
+            x: Math.random() * (clientWidth - 100) + 50,
+            y: Math.random() * (clientHeight - 100) + 50,
+            vx: (Math.random() - 0.5) * 0.4, // Slow drift
+            vy: (Math.random() - 0.5) * 0.4,
+            title: note.title || 'Untitled',
+            content: note.content,
+            color: colors.find(c => c.id === note.color)?.hex || '#ffffff',
+            radius: 4 // Visual radius
+        }));
+
+        // Generate initial random links
+        generateRandomLinks();
+
+    }, [notes.length]); // Re-init only when count changes
+
+    const generateRandomLinks = () => {
+        const newLinks: SynapticLink[] = [];
+        const count = Math.min(notes.length, 7); // Max 7 random connections
+        if (notes.length < 2) return;
+
+        for(let i=0; i<count; i++) {
+            const source = notes[Math.floor(Math.random() * notes.length)];
+            const target = notes[Math.floor(Math.random() * notes.length)];
+            if (source.id !== target.id && !newLinks.some(l => (l.sourceId === source.id && l.targetId === target.id) || (l.sourceId === target.id && l.targetId === source.id))) {
+                newLinks.push({
+                    id: `temp-${Date.now()}-${i}`,
+                    sourceId: source.id,
+                    targetId: target.id,
+                    createdAt: Date.now()
+                });
+            }
+        }
+        setRandomLinks(newLinks);
+    };
+
+    // 2. Physics Loop
+    const animate = () => {
+        if (!containerRef.current) return;
+        const { clientWidth, clientHeight } = containerRef.current;
+
+        nodesRef.current.forEach(node => {
+            // Update position
+            node.x += node.vx;
+            node.y += node.vy;
+
+            // Boundary bounce
+            if (node.x <= 20 || node.x >= clientWidth - 20) node.vx *= -1;
+            if (node.y <= 20 || node.y >= clientHeight - 20) node.vy *= -1;
+
+            // Soft clamp
+            node.x = Math.max(20, Math.min(clientWidth - 20, node.x));
+            node.y = Math.max(20, Math.min(clientHeight - 20, node.y));
+        });
+
+        // Force react update for SVG rendering
+        setTick(prev => prev + 1);
+        requestRef.current = requestAnimationFrame(animate);
+    };
+
+    useEffect(() => {
+        requestRef.current = requestAnimationFrame(animate);
+        return () => {
+            if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        };
+    }, []);
+
+    const handleNodeHover = (id: string, isHovering: boolean) => {
+        const node = nodesRef.current.find(n => n.id === id);
+        if (node) {
+            // Freeze on hover
+            if (isHovering) {
+                node.vx = 0;
+                node.vy = 0;
+            } else {
+                // Resume drift
+                node.vx = (Math.random() - 0.5) * 0.4;
+                node.vy = (Math.random() - 0.5) * 0.4;
+            }
+        }
+    };
+
+    const handleSaveLink = (link: SynapticLink) => {
+        const permanentLink = { ...link, id: Date.now().toString() };
+        addSynapticLink(permanentLink);
+        // Remove from random pool visual immediate effect
+        setRandomLinks(prev => prev.filter(l => l.id !== link.id));
+    };
+
+    // Prepare lines for SVG
+    const allLinks = [
+        ...synapticLinks.map(l => ({ ...l, isSaved: true })),
+        ...randomLinks.map(l => ({ ...l, isSaved: false }))
+    ].filter(l => 
+        // Filter out if nodes don't exist anymore
+        nodesRef.current.some(n => n.id === l.sourceId) && nodesRef.current.some(n => n.id === l.targetId)
+    );
+
+    return (
+        <div className="absolute inset-0 bg-gradient-to-br from-[#121212] to-[#1A1A1A] overflow-hidden" ref={containerRef}>
+            {/* Grain Overlay */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: NOISE_PATTERN, filter: 'contrast(150%)' }} />
+            
+            {/* Controls */}
+            <div className="absolute top-4 right-4 z-20 flex gap-2">
+                <button 
+                    onClick={generateRandomLinks}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 text-[10px] font-mono uppercase tracking-widest transition-all backdrop-blur-md"
+                >
+                    <Shuffle size={12} /> Re-Shuffle Synapse
+                </button>
+            </div>
+
+            {/* SVG Layer */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                {allLinks.map(link => {
+                    const source = nodesRef.current.find(n => n.id === link.sourceId);
+                    const target = nodesRef.current.find(n => n.id === link.targetId);
+                    if (!source || !target) return null;
+
+                    const isSaved = link.isSaved;
+                    const midX = (source.x + target.x) / 2;
+                    const midY = (source.y + target.y) / 2;
+
+                    return (
+                        <g key={link.id} className="pointer-events-auto group">
+                            {/* Hit Area */}
+                            <line 
+                                x1={source.x} y1={source.y} x2={target.x} y2={target.y} 
+                                stroke="transparent" strokeWidth="20"
+                                onMouseEnter={() => setHoveredLink({ id: link.id, x: midX, y: midY, isSaved })}
+                                onMouseLeave={() => setHoveredLink(null)}
+                            />
+                            {/* Visual Line */}
+                            <line 
+                                x1={source.x} y1={source.y} x2={target.x} y2={target.y} 
+                                stroke={isSaved ? "#fbbf24" : "rgba(255,255,255,0.15)"} 
+                                strokeWidth={isSaved ? 1 : 0.5}
+                                strokeDasharray={isSaved ? "none" : "4 4"}
+                                className="transition-all duration-300"
+                            />
+                            {isSaved && (
+                                <circle cx={midX} cy={midY} r="2" fill="#fbbf24" className="animate-pulse" />
+                            )}
+                        </g>
+                    )
+                })}
+            </svg>
+
+            {/* Interaction Layer (Star Button) */}
+            {hoveredLink && !hoveredLink.isSaved && (
+                <div 
+                    className="absolute z-30 cursor-pointer transform -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: hoveredLink.x, top: hoveredLink.y }}
+                    onMouseEnter={() => {/* keep active */}}
+                >
+                    <button 
+                        onClick={() => {
+                            const link = randomLinks.find(l => l.id === hoveredLink.id);
+                            if (link) handleSaveLink(link);
+                        }}
+                        className="p-1.5 bg-black rounded-full border border-amber-500/50 text-amber-500 hover:bg-amber-500 hover:text-black transition-all shadow-[0_0_15px_rgba(245,158,11,0.5)]"
+                    >
+                        <Star size={12} fill="currentColor" />
+                    </button>
+                </div>
+            )}
+
+            {/* Nodes Layer */}
+            {nodesRef.current.map(node => (
+                <div
+                    key={node.id}
+                    className="absolute cursor-pointer group"
+                    style={{ 
+                        left: node.x, 
+                        top: node.y, 
+                        transform: 'translate(-50%, -50%)',
+                    }}
+                    onMouseEnter={() => handleNodeHover(node.id, true)}
+                    onMouseLeave={() => handleNodeHover(node.id, false)}
+                    onClick={() => {
+                        const originalNote = notes.find(n => n.id === node.id);
+                        if(originalNote) onOpenNote(originalNote);
+                    }}
+                >
+                    {/* Visual Orb */}
+                    <div className="relative transition-transform duration-300 group-hover:scale-125">
+                        <div 
+                            className="w-3 h-3 rounded-full border bg-black/50 backdrop-blur-sm shadow-[0_0_10px_rgba(255,255,255,0.1)] group-hover:shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-all"
+                            style={{ borderColor: node.color !== '#ffffff' ? node.color : 'rgba(255,255,255,0.5)' }}
+                        />
+                    </div>
+                    
+                    {/* Label (On Hover) */}
+                    <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
+                        <div className="px-2 py-1 bg-black/80 border border-white/10 rounded text-[10px] text-white font-mono uppercase tracking-wider backdrop-blur-md">
+                            {node.title || 'Thought Node'}
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+// --- PEEK MODAL (FLOATING GLASS SLIDE) ---
+const PeekModal: React.FC<{ note: Note, onClose: () => void }> = ({ note, onClose }) => {
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full max-w-lg max-h-[80vh] overflow-y-auto custom-scrollbar-ghost p-8 md:p-12 rounded-[2px] border border-white/20 bg-white/5 backdrop-blur-[45px] shadow-2xl relative"
+                onClick={e => e.stopPropagation()}
+            >
+                <button onClick={onClose} className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors">
+                    <X size={20} strokeWidth={1} />
+                </button>
+
+                <div className="font-serif italic text-xl md:text-2xl text-white/90 leading-relaxed drop-shadow-md">
+                    <ReactMarkdown components={{
+                        p: ({node, ...props}: any) => <p className="mb-4 last:mb-0" {...props} />,
+                        strong: ({node, ...props}: any) => <span className="font-sans font-bold not-italic text-white uppercase text-sm tracking-widest" {...props} />,
+                    }}>
+                        {note.content}
+                    </ReactMarkdown>
+                </div>
+
+                <div className="mt-12 pt-6 border-t border-white/10 flex justify-between items-end font-mono text-[7px] text-white/40 uppercase tracking-[0.2em]">
+                    <div>
+                        <div>ID // {note.id.slice(-6)}</div>
+                        <div className="mt-1">{new Date(note.createdAt).toLocaleDateString()}</div>
+                    </div>
+                    {note.tags.length > 0 && (
+                        <div className="flex gap-2">
+                            {note.tags.map(t => <span key={t} className="border border-white/20 px-1 py-0.5 rounded">{t}</span>)}
+                        </div>
+                    )}
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
 interface NoteCardProps {
     note: Note;
     isArchived: boolean;
@@ -599,7 +885,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, sketchItems, addSketchItem, deleteSketchItem, updateSketchItem, defaultTab }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, sketchItems, addSketchItem, deleteSketchItem, updateSketchItem, defaultTab, synapticLinks = [], addSynapticLink, removeSynapticLink }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -607,7 +893,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'inbox' | 'sketchpad' | 'library'>(defaultTab || 'inbox');
+  const [viewMode, setViewMode] = useState<'grid' | 'synapse'>('grid'); // NEW VIEW MODE
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [peekNote, setPeekNote] = useState<Note | null>(null); // For Synaptic View Modal
+
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
   const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
@@ -1057,6 +1346,46 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         {activeTab === 'sketchpad' ? (
             <Sketchpad items={sketchItems} addItem={addSketchItem} deleteItem={deleteSketchItem} updateItem={updateSketchItem} />
         ) : (
+            <>
+            {/* VIEW SWITCHER FOR INBOX */}
+            {activeTab === 'inbox' && (
+                <div className="absolute top-4 right-8 z-30 hidden md:block">
+                    <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-1 rounded-lg flex items-center border border-black/5 dark:border-white/5 shadow-sm">
+                        <Tooltip content="Список">
+                            <button 
+                                onClick={() => setViewMode('grid')}
+                                className={`p-1.5 rounded transition-colors ${viewMode === 'grid' ? 'bg-white dark:bg-slate-700 text-indigo-500 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                            >
+                                <LayoutGrid size={14} />
+                            </button>
+                        </Tooltip>
+                        <Tooltip content="Synaptic Web">
+                            <button 
+                                onClick={() => setViewMode('synapse')}
+                                className={`p-1.5 rounded transition-colors ${viewMode === 'synapse' ? 'bg-white dark:bg-slate-700 text-indigo-500 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                            >
+                                <BrainCircuit size={14} />
+                            </button>
+                        </Tooltip>
+                    </div>
+                </div>
+            )}
+
+            {/* CONTENT LOGIC */}
+            {activeTab === 'inbox' && viewMode === 'synapse' ? (
+                // SYNAPTIC WEB VIEW
+                <div className="h-full w-full relative">
+                    <SynapticView 
+                        notes={inboxNotes} 
+                        synapticLinks={synapticLinks}
+                        addSynapticLink={addSynapticLink!}
+                        removeSynapticLink={removeSynapticLink!}
+                        onOpenNote={setPeekNote}
+                    />
+                    {peekNote && <PeekModal note={peekNote} onClose={() => setPeekNote(null)} />}
+                </div>
+            ) : (
+            // STANDARD GRID VIEW
             <div 
                 ref={scrollContainerRef}
                 className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar-light"
@@ -1214,6 +1543,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     )}
                 </div>
             </div>
+            )}
+            </>
         )}
       </div>
       

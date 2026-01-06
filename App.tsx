@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
+import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig, SynapticLink } from './types';
 import { loadState, saveState } from './services/storageService';
 import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
@@ -89,7 +89,7 @@ const App: React.FC = () => {
   // ------------------------
 
   const [data, setData] = useState<AppState>({
-    notes: [], sketchpad: [], tasks: [], flashcards: [], habits: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG, 
+    notes: [], sketchpad: [], tasks: [], flashcards: [], habits: [], challenges: [], journal: [], mentorAnalyses: [], synapticLinks: [], config: DEFAULT_CONFIG, 
     profileConfig: { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' }
   });
   
@@ -164,6 +164,7 @@ const App: React.FC = () => {
               if (!driveData.mentorAnalyses) driveData.mentorAnalyses = [];
               if (!driveData.habits) driveData.habits = [];
               if (!driveData.sketchpad) driveData.sketchpad = [];
+              if (!driveData.synapticLinks) driveData.synapticLinks = [];
               if (!driveData.profileConfig) driveData.profileConfig = { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' };
               
               setData(prev => ({...driveData, user: prev.user})); 
@@ -264,6 +265,10 @@ const App: React.FC = () => {
   const addSketchItem = (item: SketchItem) => setData(p => ({ ...p, sketchpad: [item, ...p.sketchpad] }));
   const deleteSketchItem = (id: string) => setData(p => ({ ...p, sketchpad: p.sketchpad.filter(i => i.id !== id) }));
   const updateSketchItem = (item: SketchItem) => setData(p => ({ ...p, sketchpad: p.sketchpad.map(i => i.id === item.id ? item : i) }));
+
+  // SYNAPTIC LINKS METHODS
+  const addSynapticLink = (link: SynapticLink) => setData(p => ({ ...p, synapticLinks: [...p.synapticLinks, link] }));
+  const removeSynapticLink = (id: string) => setData(p => ({ ...p, synapticLinks: p.synapticLinks.filter(l => l.id !== id) }));
 
   const addTask = (t: Task) => setData(p => ({ ...p, tasks: [...p.tasks, t] }));
   const updateTask = (t: Task) => setData(p => ({ ...p, tasks: p.tasks.map(x => x.id === t.id ? t : x) }));
@@ -422,16 +427,15 @@ const App: React.FC = () => {
       <Onboarding onClose={() => setShowOnboarding(false)} />
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
       {module === Module.DASHBOARD && <Dashboard notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} onNavigate={handleNavigate} flashcards={data.flashcards} />}
-      {/* Updated Napkins with Sketchpad props */}
       {(module === Module.NAPKINS || module === Module.SKETCHPAD) && (
           <Napkins 
             notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} 
             onAddJournalEntry={addJournalEntry}
             sketchItems={data.sketchpad || []} addSketchItem={addSketchItem} deleteSketchItem={deleteSketchItem} updateSketchItem={updateSketchItem}
             defaultTab={module === Module.SKETCHPAD ? 'sketchpad' : undefined}
+            synapticLinks={data.synapticLinks || []} addSynapticLink={addSynapticLink} removeSynapticLink={removeSynapticLink}
           />
       )}
-      {/* REMOVED STANDALONE SKETCHPAD */}
       {module === Module.SANDBOX && <Sandbox notes={data.notes} tasks={data.tasks} flashcards={data.flashcards} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
