@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -105,46 +107,30 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
             };
         });
 
-        // 2. Generate Random "Suggested" Links
+        // 2. Generate Random "Suggested" Links only if we need more or re-init
         let suggestedLinks = simulationRef.current.suggestedLinks;
-        
-        // Filter out stale links (if nodes deleted)
-        suggestedLinks = suggestedLinks.filter(l => visualNodes.some(n => n.id === l.source) && visualNodes.some(n => n.id === l.target));
-
-        // TARGET: Sparse connections (only some nodes connected)
-        // Reduced to 0.3x to leave many nodes isolated and random
-        const targetLinkCount = Math.floor(visualNodes.length * 0.3);
-        
-        if (suggestedLinks.length < targetLinkCount && visualNodes.length > 1) {
-            const usedPairs = new Set<string>();
-            // Register existing suggested
-            suggestedLinks.forEach(l => usedPairs.add([l.source, l.target].sort().join('-')));
-            // Register existing real
-            visualNodes.forEach(n => {
-                n.connectedNoteIds?.forEach(tid => usedPairs.add([n.id, tid].sort().join('-')));
-            });
+        if (suggestedLinks.length === 0 && visualNodes.length > 2) {
+            const linkCount = Math.min(visualNodes.length, 5); // Suggest up to 5 connections
+            const usedIndices = new Set<number>();
             
-            let attempts = 0;
-            // Generate more links until target reached or too many attempts
-            while (suggestedLinks.length < targetLinkCount && attempts < 200) {
-                attempts++;
-                const idx1 = Math.floor(Math.random() * visualNodes.length);
-                const idx2 = Math.floor(Math.random() * visualNodes.length);
+            for (let i = 0; i < linkCount; i++) {
+                let idx1 = Math.floor(Math.random() * visualNodes.length);
+                let idx2 = Math.floor(Math.random() * visualNodes.length);
                 
-                if (idx1 === idx2) continue;
+                let attempts = 0;
+                while ((idx1 === idx2 || usedIndices.has(idx1)) && attempts < 10) {
+                    idx2 = Math.floor(Math.random() * visualNodes.length);
+                    attempts++;
+                }
                 
-                const id1 = visualNodes[idx1].id;
-                const id2 = visualNodes[idx2].id;
-                const key = [id1, id2].sort().join('-');
-                
-                if (!usedPairs.has(key)) {
-                    suggestedLinks.push({ source: id1, target: id2 });
-                    usedPairs.add(key);
+                if (idx1 !== idx2) {
+                    suggestedLinks.push({ 
+                        source: visualNodes[idx1].id, 
+                        target: visualNodes[idx2].id 
+                    });
+                    usedIndices.add(idx1);
                 }
             }
-        } else if (suggestedLinks.length > targetLinkCount) {
-            // Trim excess to maintain sparsity
-            suggestedLinks = suggestedLinks.slice(0, targetLinkCount);
         }
 
         simulationRef.current = { nodes: visualNodes, suggestedLinks };
@@ -157,10 +143,9 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
 
         const loop = () => {
             const { width, height } = dimensions;
-            const { nodes, suggestedLinks } = simulationRef.current;
+            const { nodes } = simulationRef.current;
 
             if (!isPaused) {
-                // 1. Node Movement
                 nodes.forEach(node => {
                     // Gentle floating
                     node.x += node.vx;
@@ -176,31 +161,9 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
                     node.vx += dx * 0.00005;
                     node.vy += dy * 0.00005;
                 });
-
-                // 2. Magnetic Attraction for Suggested Links
-                suggestedLinks.forEach(link => {
-                    const source = nodes.find(n => n.id === link.source);
-                    const target = nodes.find(n => n.id === link.target);
-                    
-                    if (source && target) {
-                        // Check for marked connections
-                        const sourceMarked = (source.connectedNoteIds || []).length > 0;
-                        const targetMarked = (target.connectedNoteIds || []).length > 0;
-                        
-                        // Force calculation: Stronger if "Marked" (Hub)
-                        // Base force for suggestions is weak
-                        let strength = 0.0002;
-                        if (sourceMarked || targetMarked) strength = 0.002; // 10x pull towards hubs
-
-                        const dx = target.x - source.x;
-                        const dy = target.y - source.y;
-                        
-                        source.vx += dx * strength;
-                        source.vy += dy * strength;
-                        target.vx -= dx * strength;
-                        target.vy -= dy * strength;
-                    }
-                });
+            } else {
+                // When paused, we might want a tiny pulse or completely static
+                // Let's keep them static for stability as requested ("Nodes stay in place")
             }
 
             setTick(t => t + 1);
@@ -326,7 +289,7 @@ const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => voi
                             style={{ left: mx, top: my }}
                             onClick={() => toggleConnection(link.source.id, link.target.id)}
                         >
-                            <div className={`p-1 rounded-full backdrop-blur-sm transition-opacity duration-300 opacity-0 group-hover:opacity-100 ${isStarred ? 'bg-yellow-500/10' : 'bg-white/5 hover:bg-white/10'}`}>
+                            <div className={`p-1 rounded-full backdrop-blur-sm ${isStarred ? 'bg-yellow-500/10' : 'bg-white/5 hover:bg-white/10'}`}>
                                 <Star 
                                     size={12} 
                                     className={`transition-colors ${isStarred ? 'text-yellow-400 fill-yellow-400' : 'text-white/40 hover:text-white'}`} 
@@ -1340,7 +1303,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const archivedNotes = filterNotes(notes.filter(n => n.status === 'archived').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
 
   // --- ETHER GRAPH TYPES & COMPONENT ---
-  // (NoteEtherGraph definition is above, updated with sparse connection logic)
+  // (NoteEtherGraph definition is above, updated with pause, connection toggling)
 
   const cardHandlers = useMemo(() => ({
       handleDragStart,
