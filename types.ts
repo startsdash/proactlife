@@ -33,6 +33,7 @@ export interface Note {
   isPinned?: boolean;
   color?: string;
   coverUrl?: string;
+  linkedNoteIds?: string[]; // NEW: Synaptic Web Links
 }
 
 export interface SketchItem {
