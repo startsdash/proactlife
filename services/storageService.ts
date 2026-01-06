@@ -17,7 +17,6 @@ export const loadState = (): AppState => {
       challenges: [],
       journal: [],
       mentorAnalyses: [],
-      synapticLinks: [],
       config: DEFAULT_CONFIG,
       profileConfig: {
           role: 'architect',
@@ -45,7 +44,6 @@ export const loadState = (): AppState => {
     }
 
     if (!parsed.sketchpad) parsed.sketchpad = [];
-    if (!parsed.synapticLinks) parsed.synapticLinks = [];
 
     if (parsed.journal) {
         parsed.journal = parsed.journal.map((j: any) => ({
@@ -89,7 +87,6 @@ export const loadState = (): AppState => {
       challenges: [],
       journal: [],
       mentorAnalyses: [],
-      synapticLinks: [],
       config: DEFAULT_CONFIG,
       profileConfig: {
           role: 'architect',
