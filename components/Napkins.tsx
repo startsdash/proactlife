@@ -1,15 +1,16 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book } from 'lucide-react';
 import Sketchpad from './Sketchpad';
 
 interface Props {
@@ -24,7 +25,6 @@ interface Props {
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
   onAddJournalEntry: (entry: JournalEntry) => void;
-  onAddFlashcard: (flashcard: Flashcard) => void;
   // Sketchpad Props
   sketchItems: SketchItem[];
   addSketchItem: (item: SketchItem) => void;
@@ -64,15 +64,6 @@ const breakpointColumnsObj = {
   default: 2,
   767: 1 // 1 column for mobile (<= 767px)
 };
-
-// --- SYNAPTIC VIEW CONSTANTS ---
-interface SynapticNode extends Note {
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    connections: string[]; // Hypothesis connections (Note IDs)
-}
 
 // --- HELPER: ALLOW DATA URIS ---
 const allowDataUrls = (url: string) => url;
@@ -608,206 +599,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     );
 };
 
-// --- SYNAPTIC VIEW COMPONENT ---
-const SynapticWeb: React.FC<{ 
-    notes: Note[], 
-    onOpenNote: (note: Note) => void, 
-    onConnect: (sourceId: string, targetId: string) => void 
-}> = ({ notes, onOpenNote, onConnect }) => {
-    const [simTick, setSimTick] = useState(0);
-    const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const nodesRef = useRef<SynapticNode[]>([]);
-    
-    // Initialize Simulation
-    useEffect(() => {
-        // Reuse positions if available, otherwise random
-        const currentMap = new Map<string, SynapticNode>(
-            nodesRef.current.map(n => [n.id, n] as [string, SynapticNode])
-        );
-        
-        nodesRef.current = notes.map(note => {
-            const existing = currentMap.get(note.id);
-            // Simple Hypothesis: Link if share ANY tag
-            const connections: string[] = [];
-            if (note.tags && note.tags.length > 0) {
-                notes.forEach(other => {
-                    if (other.id !== note.id && other.tags?.some(t => note.tags.includes(t))) {
-                        connections.push(other.id);
-                    }
-                });
-            }
-
-            return {
-                ...note,
-                x: existing ? existing.x : Math.random() * 800,
-                y: existing ? existing.y : Math.random() * 600,
-                vx: existing ? existing.vx : 0,
-                vy: existing ? existing.vy : 0,
-                connections // Hypothesis links
-            };
-        });
-    }, [notes]);
-
-    // Physics Loop (Liquid Damping)
-    useEffect(() => {
-        let frameId: number;
-        const tick = () => {
-            const nodes = nodesRef.current;
-            const width = containerRef.current?.clientWidth || 800;
-            const height = containerRef.current?.clientHeight || 600;
-            const centerX = width / 2;
-            const centerY = height / 2;
-
-            nodes.forEach((node, i) => {
-                if (node.id === hoveredNode) return;
-
-                // 1. Center Gravity (Keep in view)
-                node.vx += (centerX - node.x) * 0.0005;
-                node.vy += (centerY - node.y) * 0.0005;
-
-                // 2. Repulsion (Space out)
-                nodes.forEach((other, j) => {
-                    if (i !== j) {
-                        const dx = node.x - other.x;
-                        const dy = node.y - other.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                        // Consolidate Logic: If linked (solidified), weaker repulsion (closer)
-                        const isLinked = node.linkedNoteIds?.includes(other.id) || other.linkedNoteIds?.includes(node.id);
-                        const minDist = isLinked ? 100 : 180;
-                        
-                        if (dist < minDist) {
-                            const force = (minDist - dist) * 0.05;
-                            node.vx += (dx / dist) * force;
-                            node.vy += (dy / dist) * force;
-                        }
-                    }
-                });
-
-                // 3. Damping
-                node.vx *= 0.9;
-                node.vy *= 0.9;
-
-                node.x += node.vx;
-                node.y += node.vy;
-            });
-            setSimTick(t => t + 1);
-            frameId = requestAnimationFrame(tick);
-        };
-        frameId = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(frameId);
-    }, [hoveredNode]);
-
-    // Render Lines
-    const lines = useMemo(() => {
-        const rendered = new Set<string>();
-        const elements: React.ReactElement[] = [];
-
-        nodesRef.current.forEach(node => {
-            // Render solidified links (Permanent)
-            node.linkedNoteIds?.forEach(targetId => {
-                const key = [node.id, targetId].sort().join('-');
-                if (rendered.has(key)) return;
-                const target = nodesRef.current.find(n => n.id === targetId);
-                if (target) {
-                    rendered.add(key);
-                    elements.push(
-                        <line 
-                            key={key} 
-                            x1={node.x} y1={node.y} x2={target.x} y2={target.y} 
-                            stroke="#6366f1" strokeWidth="1.5" strokeOpacity="0.6"
-                        />
-                    );
-                }
-            });
-
-            // Render Hypothesis links (Transient)
-            node.connections.forEach(targetId => {
-                // Don't duplicate solidified links
-                if (node.linkedNoteIds?.includes(targetId)) return;
-                
-                const key = `hypo-${[node.id, targetId].sort().join('-')}`;
-                if (rendered.has(key)) return;
-                const target = nodesRef.current.find(n => n.id === targetId);
-                if (target) {
-                    rendered.add(key);
-                    // Midpoint for interaction
-                    const midX = (node.x + target.x) / 2;
-                    const midY = (node.y + target.y) / 2;
-                    
-                    elements.push(
-                        <g key={key}>
-                            <line 
-                                x1={node.x} y1={node.y} x2={target.x} y2={target.y} 
-                                stroke="#94a3b8" strokeWidth="0.5" strokeDasharray="3 3" strokeOpacity="0.4"
-                                className="animate-pulse"
-                            />
-                            {/* Insight Anchor */}
-                            <foreignObject x={midX - 10} y={midY - 10} width={20} height={20}>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); onConnect(node.id, targetId); }}
-                                    className="w-5 h-5 rounded-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-500 hover:scale-110 transition-all shadow-sm"
-                                    title="Found Insight?"
-                                >
-                                    <Sparkles size={10} />
-                                </button>
-                            </foreignObject>
-                        </g>
-                    );
-                }
-            });
-        });
-        return elements;
-    }, [simTick]);
-
-    return (
-        <div className="w-full h-full relative overflow-hidden bg-[#f0f4f8] dark:bg-[#050b14]" ref={containerRef}>
-            {/* Graph Paper Grid */}
-            <div 
-                className="absolute inset-0 pointer-events-none opacity-20 dark:opacity-10"
-                style={{ 
-                    backgroundImage: `linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(90deg, #94a3b8 1px, transparent 1px)`,
-                    backgroundSize: '20px 20px'
-                }} 
-            />
-            
-            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                {lines}
-            </svg>
-
-            {nodesRef.current.map(node => (
-                <div
-                    key={node.id}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
-                    style={{ left: node.x, top: node.y }}
-                    onClick={() => onOpenNote(node)}
-                    onMouseEnter={() => setHoveredNode(node.id)}
-                    onMouseLeave={() => setHoveredNode(null)}
-                >
-                    {/* Node Visual */}
-                    <div className={`w-4 h-4 rounded-full border-2 bg-[#f0f4f8] dark:bg-[#050b14] transition-all duration-300 ${hoveredNode === node.id ? 'border-indigo-500 scale-125 bg-indigo-50 dark:bg-indigo-900/30' : 'border-slate-400 dark:border-slate-600'}`} />
-                    
-                    {/* Label (Only on Hover) */}
-                    <AnimatePresence>
-                        {hoveredNode === node.id && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl z-50 min-w-[150px] pointer-events-none"
-                            >
-                                <div className="text-[9px] font-mono text-slate-400 uppercase tracking-wider mb-1">ID_{node.id.slice(-4)}</div>
-                                <div className="text-xs font-serif text-slate-800 dark:text-slate-200 line-clamp-2">{node.title || node.content}</div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            ))}
-        </div>
-    );
-};
-
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, onAddFlashcard, sketchItems, addSketchItem, deleteSketchItem, updateSketchItem, defaultTab }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, sketchItems, addSketchItem, deleteSketchItem, updateSketchItem, defaultTab }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -853,9 +645,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
-  
-  // NEW: Synaptic Web State
-  const [isSynapticMode, setIsSynapticMode] = useState(false);
 
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab);
@@ -1212,29 +1001,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       }
   };
 
-  const handleConnectNotes = (sourceId: string, targetId: string) => {
-      // Solidify link logic
-      const source = notes.find(n => n.id === sourceId);
-      const target = notes.find(n => n.id === targetId);
-      if(!source || !target) return;
-
-      if(confirm(`Синтезировать инсайт между "${source.title || source.content.substring(0,20)}" и "${target.title || target.content.substring(0,20)}"?`)) {
-          // 1. Update bidirectional links
-          updateNote({ ...source, linkedNoteIds: [...(source.linkedNoteIds || []), targetId] });
-          updateNote({ ...target, linkedNoteIds: [...(target.linkedNoteIds || []), sourceId] });
-          
-          // 2. Open creation modal for Flashcard (Insight)
-          const synthContent = `## Синтез\n\nИсточник А: ${source.content}\n\nИсточник Б: ${target.content}`;
-          onAddFlashcard({
-              id: Date.now().toString(),
-              front: `Инсайт: ${source.title || 'Note A'} + ${target.title || 'Note B'}`,
-              back: synthContent,
-              nextReview: Date.now(),
-              level: 0
-          });
-      }
-  };
-
   const filterNotes = (list: Note[]) => {
     return list.filter(note => {
       if (showTagInput && tagQuery) {
@@ -1280,7 +1046,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">На скорости мысли</p>
                 </div>
                 <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm">
-                    <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); setIsSynapticMode(false); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
+                    <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
                     <button onClick={() => { setActiveTab('sketchpad'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'sketchpad' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Tablet size={16} /> Скетчпад</button>
                     <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
                 </div>
@@ -1291,22 +1057,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         {activeTab === 'sketchpad' ? (
             <Sketchpad items={sketchItems} addItem={addSketchItem} deleteItem={deleteSketchItem} updateItem={updateSketchItem} />
         ) : (
-            isSynapticMode ? (
-                // SYNAPTIC WEB VIEW (Only available via toggle in Inbox)
-                <div className="h-full relative">
-                    <button 
-                        onClick={() => setIsSynapticMode(false)}
-                        className="absolute top-4 right-4 z-50 p-2 bg-white dark:bg-slate-800 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-indigo-500"
-                    >
-                        <LayoutGrid size={20} />
-                    </button>
-                    <SynapticWeb 
-                        notes={inboxNotes} // Or all notes? Using inbox for now as per spec "Inbox_Web"
-                        onOpenNote={handleOpenNote}
-                        onConnect={handleConnectNotes}
-                    />
-                </div>
-            ) : (
             <div 
                 ref={scrollContainerRef}
                 className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar-light"
@@ -1323,436 +1073,363 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         <div 
                             className="absolute inset-0 backdrop-blur-xl"
                             style={{
-                                maskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)',
-                                WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)'
+                                maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)',
+                                WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)'
                             }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
                     </div>
 
-                    <div className="relative z-10 w-full max-w-5xl mx-auto px-4 md:px-8 pb-4">
+                    <div className="relative z-10 max-w-5xl mx-auto w-full px-3 md:px-8 pb-2">
                         <div className="flex gap-2">
-                            <div className="relative flex-1 group">
-                                <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery || tagQuery ? 'text-indigo-500' : 'text-slate-400 group-focus-within:text-indigo-500'}`} />
-                                <input 
-                                    type="text" 
-                                    placeholder={showTagInput ? "Поиск по тегу..." : "Поиск..."}
-                                    value={showTagInput ? tagQuery : searchQuery}
-                                    onChange={(e) => showTagInput ? setTagQuery(e.target.value) : setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400"
-                                />
-                                {(searchQuery || tagQuery) && (
-                                    <button onClick={() => { setSearchQuery(''); setTagQuery(''); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>
+                            <div className="relative flex-1">
+                                {showMoodInput ? (
+                                    <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                                        <div className="relative flex-1">
+                                            <Sparkles size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500" />
+                                            <input type="text" placeholder="На какую тему подобрать заметки?" value={moodQuery} onChange={(e) => setMoodQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleMoodSearch()} className="w-full pl-10 pr-4 py-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 focus:border-purple-300 transition-all text-purple-900 dark:text-purple-300 placeholder:text-purple-300" autoFocus />
+                                        </div>
+                                        <button onClick={handleMoodSearch} disabled={isMoodAnalyzing || !moodQuery.trim()} className="px-5 py-2 bg-purple-600 text-white rounded-2xl text-xs font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 shadow-sm">{isMoodAnalyzing ? 'Думаю...' : 'Найти'}</button>
+                                        <button onClick={() => setShowMoodInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                                    </div>
+                                ) : showTagInput ? (
+                                    <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                                        <div className="relative flex-1">
+                                            <TagIcon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" />
+                                            <input type="text" placeholder="Поиск по #тегам..." value={tagQuery} onChange={(e) => setTagQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 focus:border-indigo-300 transition-all text-indigo-900 dark:text-indigo-300 placeholder:text-indigo-300" autoFocus />
+                                        </div>
+                                        <button onClick={() => setShowTagInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input type="text" placeholder="Поиск" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400" />
+                                        {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
+                                    </>
                                 )}
                             </div>
-                            
-                            <Tooltip content={showFilters ? "Скрыть фильтры" : "Фильтры"} side="bottom">
-                                <button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}>
-                                    <LayoutGrid size={20} />
-                                </button>
-                            </Tooltip>
-
-                            <Tooltip content={showTagInput ? "Обычный поиск" : "Поиск по тегам"} side="bottom">
-                                <button onClick={() => { setShowTagInput(!showTagInput); setTagQuery(''); setSearchQuery(''); }} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showTagInput ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}>
-                                    <TagIcon size={20} />
-                                </button>
-                            </Tooltip>
-
-                            {/* SYNAPTIC TOGGLE (Only in Inbox) */}
-                            {activeTab === 'inbox' && (
-                                <Tooltip content="Нейросеть связей" side="bottom">
-                                    <button onClick={() => setIsSynapticMode(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20`}>
-                                        <BrainCircuit size={20} />
-                                    </button>
-                                </Tooltip>
-                            )}
-
-                            {/* MOOD FILTER AI (Only if configured) */}
-                            {hasMoodMatcher && (
-                                <Tooltip content="Подбор по настроению (AI)" side="bottom">
-                                    <button onClick={() => setShowMoodInput(!showMoodInput)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showMoodInput || aiFilteredIds ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}>
-                                        <Sparkles size={20} />
-                                    </button>
-                                </Tooltip>
-                            )}
-                            
-                            {/* ORACLE TRIGGER (Only in Archive) */}
-                            {activeTab === 'library' && (
-                                <Tooltip content="Оракул" side="bottom">
-                                    <button onClick={startOracle} className={`p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20`}>
-                                        <Dices size={20} />
-                                    </button>
-                                </Tooltip>
+                            {!showMoodInput && !showTagInput && (
+                                <>
+                                    <Tooltip content="Поиск по тегам" side="bottom"><button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button></Tooltip>
+                                    <Tooltip content="Фильтр по цвету" side="bottom"><button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button></Tooltip>
+                                    {hasMoodMatcher && <Tooltip content="Подбор по теме (ИИ)" side="bottom"><button onClick={() => setShowMoodInput(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-purple-500 hover:bg-purple-50'}`}><Sparkles size={20} /></button></Tooltip>}
+                                    <Tooltip content="Оракул" side="bottom">
+                                        <button onClick={startOracle} className="group relative p-3 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none">
+                                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
+                                            <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+                                            <Dices size={20} className="relative z-10 text-white transition-transform duration-500 group-hover:rotate-180" />
+                                        </button>
+                                    </Tooltip>
+                                </>
                             )}
                         </div>
-
-                        {/* EXPANDABLE FILTERS */}
-                        <AnimatePresence>
-                            {/* COLOR FILTER */}
-                            {showFilters && (
-                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                    <div className="flex items-center gap-2 pt-3 pb-1 overflow-x-auto scrollbar-none">
-                                        <button onClick={() => setActiveColorFilter(null)} className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${!activeColorFilter ? 'border-slate-400 bg-slate-100 dark:bg-slate-700' : 'border-slate-200 bg-transparent'}`}><X size={12} className="text-slate-500"/></button>
-                                        {colors.filter(c => c.id !== 'white').map(c => (
-                                            <button key={c.id} onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)} className={`w-6 h-6 rounded-full border transition-all ${activeColorFilter === c.id ? 'ring-2 ring-offset-1 ring-slate-400 dark:ring-offset-slate-900 scale-110' : 'border-slate-200 dark:border-slate-700 hover:scale-110'}`} style={{ backgroundColor: c.hex }} />
-                                        ))}
-                                    </div>
-                                </motion.div>
-                            )}
-                            
-                            {/* AI MOOD INPUT */}
-                            {showMoodInput && (
-                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-2">
-                                    <div className="bg-white dark:bg-[#1e293b] p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex gap-2">
-                                        <input 
-                                            type="text" 
-                                            placeholder="Как ты себя чувствуешь? (например: устал, вдохновлен...)" 
-                                            className="flex-1 bg-transparent text-sm px-2 outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
-                                            value={moodQuery}
-                                            onChange={(e) => setMoodQuery(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleMoodSearch()}
-                                        />
-                                        <button onClick={handleMoodSearch} disabled={isMoodAnalyzing} className="p-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 disabled:opacity-50 transition-colors">
-                                            {isMoodAnalyzing ? <RefreshCw size={14} className="animate-spin"/> : <ArrowRight size={14}/>}
-                                        </button>
-                                    </div>
-                                    {aiFilteredIds && (
-                                        <div className="flex justify-between items-center mt-2 px-1">
-                                            <span className="text-[10px] text-slate-400 font-mono">Найдено: {aiFilteredIds.length} заметок</span>
-                                            <button onClick={clearMoodFilter} className="text-[10px] text-red-400 hover:text-red-500">Сбросить</button>
-                                        </div>
-                                    )}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                        {aiFilteredIds !== null && !showMoodInput && (
+                            <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl px-4 py-3 animate-in fade-in slide-in-from-top-1">
+                                <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300"><Sparkles size={14} /><span>Найдено {aiFilteredIds.length} заметок на тему: <b>«{moodQuery}»</b></span></div>
+                                <button onClick={clearMoodFilter} className="text-[10px] font-bold uppercase tracking-wider text-purple-400 hover:text-purple-700 dark:hover:text-purple-200 flex items-center gap-1"><X size={12} /> Сброс</button>
+                            </div>
+                        )}
+                        {(showFilters || activeColorFilter) && (
+                            <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200">
+                                <button onClick={() => setActiveColorFilter(null)} className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${activeColorFilter === null ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}>Все</button>
+                                {colors.map(c => <button key={c.id} onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)} className={`w-6 h-6 rounded-full border shadow-sm transition-transform ${activeColorFilter === c.id ? 'ring-2 ring-indigo-400 ring-offset-2 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: c.hex, borderColor: '#cbd5e1' }} title={c.id} />)}
+                            </div>
+                        )}
                     </div>
                 </motion.div>
 
-                <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pb-32">
-                    <Masonry
-                        breakpointCols={breakpointColumnsObj}
-                        className="flex w-auto -ml-6"
-                        columnClassName="pl-6 bg-clip-padding"
-                    >
-                        {/* INPUT CARD (Only in Inbox) */}
-                        {activeTab === 'inbox' && !searchQuery && !tagQuery && !activeColorFilter && !aiFilteredIds && (
-                            <div className={`mb-6 bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 transition-all duration-300 ${isExpanded ? 'ring-2 ring-indigo-100 dark:ring-indigo-900/30' : ''} break-inside-avoid`}>
-                                {isExpanded ? (
-                                    <div className="p-4 animate-in fade-in zoom-in-95 duration-200" ref={editorRef}>
-                                        <div className="flex justify-between items-start mb-2">
-                                            <input 
-                                                type="text" 
-                                                placeholder="Заголовок" 
-                                                className="w-full bg-transparent text-lg font-bold text-slate-900 dark:text-white outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
-                                                value={title}
-                                                onChange={e => setTitle(e.target.value)}
+                {/* CONTENT AREA */}
+                <div className="w-full max-w-5xl mx-auto px-3 md:px-8 pt-6 pb-8">
+                    {activeTab === 'inbox' && (
+                        <>
+                            {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
+                                <div ref={editorRef} className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative mb-8 ${isExpanded ? 'shadow-xl z-30' : 'shadow-sm hover:shadow-md'}`}>
+                                    {/* NOISE TEXTURE */}
+                                    <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0 rounded-3xl"></div>
+                                    
+                                    {!isExpanded ? (
+                                        <div onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }} className="p-5 text-slate-400 dark:text-slate-500 cursor-text text-base font-medium flex items-center justify-between relative z-10"><span>Заметка...</span><div className="flex gap-4 text-slate-300 hover:text-slate-400 transition-colors"><PenTool size={20} /><ImageIcon size={20} /></div></div>
+                                    ) : (
+                                        <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
+                                            {creationCover && <div className="relative w-full h-32 md:h-48 group rounded-t-3xl overflow-hidden"><img src={creationCover} alt="Cover" className="w-full h-full object-cover" /><button onClick={() => setCreationCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button></div>}
+                                            <input type="text" placeholder="Название" value={title} onChange={(e) => setTitle(e.target.value)} className="px-6 pt-6 pb-2 bg-transparent text-xl font-sans font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none" />
+                                            <div 
+                                                ref={contentEditableRef} 
+                                                contentEditable 
+                                                onInput={handleEditorInput} 
+                                                onClick={handleEditorClick} 
+                                                onBlur={saveSelection} 
+                                                onMouseUp={saveSelection} 
+                                                onKeyUp={saveSelection} 
+                                                className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-serif [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                                style={{ whiteSpace: 'pre-wrap' }} 
+                                                data-placeholder="О чём ты думаешь?" 
                                             />
-                                            <div className="flex gap-1 ml-2">
-                                                <div className="relative">
-                                                    <button onClick={() => setShowCreationCoverPicker(!showCreationCoverPicker)} className={`p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-400'}`}><Layout size={16}/></button>
-                                                    {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} />}
+                                            <div className="px-6 py-2"><TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} /></div>
+                                            <div className="flex items-center justify-between px-4 py-3 gap-2 bg-transparent">
+                                                <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
+                                                    <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button></Tooltip>
+                                                    <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={18} /></button></Tooltip>
+                                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                    <Tooltip content="Заголовок 1"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button></Tooltip>
+                                                    <Tooltip content="Заголовок 2"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={18} /></button></Tooltip>
+                                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                    <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button></Tooltip>
+                                                    <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button></Tooltip>
+                                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                    <Tooltip content="Очистить форматирование"><button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button></Tooltip>
+                                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                    <Tooltip content="Вставить картинку"><label className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={18} /></label></Tooltip>
+                                                    {activeImage && !isEditing && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors"><Trash2 size={18} /></button></Tooltip>}
                                                 </div>
-                                                <div className="relative">
-                                                    <button onClick={() => setShowModalColorPicker(!showModalColorPicker)} className={`p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors ${creationColor !== 'white' ? 'text-indigo-500' : 'text-slate-400'}`}><Palette size={16}/></button>
-                                                    {showModalColorPicker && (
-                                                        <div className="absolute top-full right-0 mt-2 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 flex-wrap max-w-[150px]" onMouseDown={e => e.stopPropagation()}>
-                                                            {colors.map(c => (<button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); }} className={`w-5 h-5 rounded-full border border-slate-300 ${creationColor === c.id ? 'ring-2 ring-offset-1 ring-slate-400' : ''}`} style={{ backgroundColor: c.hex }} />))}
-                                                        </div>
-                                                    )}
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <div className="relative"><Tooltip content="Обложка"><button onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button></Tooltip>{showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} />}</div>
+                                                    <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>{showColorPicker && <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
+                                                    <button onClick={handleDump} disabled={isProcessing} className="text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50">Закрыть</button>
                                                 </div>
                                             </div>
                                         </div>
-                                        
-                                        {creationCover && (
-                                            <div className="relative w-full h-32 rounded-lg overflow-hidden mb-3 group">
-                                                <img src={creationCover} alt="Cover" className="w-full h-full object-cover" />
-                                                <button onClick={() => setCreationCover(null)} className="absolute top-2 right-2 bg-black/50 hover:bg-red-500 text-white p-1 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={12} /></button>
-                                            </div>
-                                        )}
-
-                                        <div 
-                                            ref={contentEditableRef}
-                                            contentEditable
-                                            suppressContentEditableWarning={true}
-                                            className="w-full min-h-[120px] max-h-[400px] overflow-y-auto outline-none text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-serif mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 cursor-text relative z-10"
-                                            onInput={handleEditorInput}
-                                            onBlur={() => saveSelection()}
-                                            onMouseUp={() => saveSelection()}
-                                            onKeyUp={() => saveSelection()}
-                                            onClick={handleEditorClick}
-                                            data-placeholder="Начни писать..."
-                                        />
-
-                                        {activeImage && (
-                                            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full flex gap-4 z-[100] image-delete-btn">
-                                                <button onMouseDown={deleteActiveImage} className="hover:text-red-400"><Trash2 size={16} /></button>
-                                                <span className="text-xs self-center">Image Selected</span>
-                                            </div>
-                                        )}
-
-                                        <TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} />
-
-                                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-                                            <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1 mask-fade-right">
-                                                <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400"><Bold size={14} /></button></Tooltip>
-                                                <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400"><Italic size={14} /></button></Tooltip>
-                                                <Tooltip content="Заголовок"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400"><Heading1 size={14} /></button></Tooltip>
-                                                <div className="w-px h-4 bg-slate-200 mx-1 shrink-0"></div>
-                                                <Tooltip content="Изображение">
-                                                    <label className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 cursor-pointer">
-                                                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} ref={fileInputRef} />
-                                                        <ImageIcon size={14} />
-                                                    </label>
-                                                </Tooltip>
-                                                <Tooltip content="Очистить стиль"><button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400"><Eraser size={14} /></button></Tooltip>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                {isProcessing ? (
-                                                    <span className="text-xs text-slate-400 self-center animate-pulse">Saving...</span>
-                                                ) : (
-                                                    <button onClick={handleDump} className="bg-slate-900 dark:bg-indigo-600 text-white p-2 rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors shadow-lg"><ArrowRight size={16} /></button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div 
-                                        onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 100); }} 
-                                        className="p-4 cursor-text flex items-center justify-between group"
-                                    >
-                                        <span className="text-slate-400 text-sm font-medium">Новая мысль...</span>
-                                        <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                                            <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-400"><ImageIcon size={14} /></div>
-                                            <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-400"><List size={14} /></div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* NOTE CARDS */}
-                        {activeTab === 'inbox' && inboxNotes.map(note => (
-                            <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} />
-                        ))}
-                        {activeTab === 'library' && archivedNotes.map(note => (
-                            <NoteCard key={note.id} note={note} isArchived={true} handlers={cardHandlers} />
-                        ))}
-                    </Masonry>
-
-                    {(activeTab === 'inbox' ? inboxNotes : archivedNotes).length === 0 && !isExpanded && !isSynapticMode && (
-                        <div className="py-20">
-                            <EmptyState 
-                                icon={activeTab === 'inbox' ? LayoutGrid : Archive} 
-                                title={activeTab === 'inbox' ? "Пусто в голове?" : "Библиотека пуста"} 
-                                description={activeTab === 'inbox' ? "Самое время записать что-то важное." : "Архивируй заметки, чтобы сохранить их здесь."}
-                                actionLabel={activeTab === 'inbox' ? "Создать заметку" : undefined}
-                                onAction={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 100); }}
-                                color={activeTab === 'inbox' ? 'indigo' : 'slate'}
-                            />
-                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {inboxNotes.length > 0 ? (
+                                <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
+                                    {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} />)}
+                                </Masonry>
+                            ) : (
+                                <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
+                            )}
+                        </>
+                    )}
+                    {activeTab === 'library' && (
+                        <>
+                            {archivedNotes.length > 0 ? (
+                                <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
+                                    {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} handlers={cardHandlers} />)}
+                                </Masonry>
+                            ) : (
+                                <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
-            )
         )}
       </div>
+      
+      {/* The Oracle Modal (Ritualistic Random) */}
+      {showOracle && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          {/* 1. The Aura: Extreme Blur Backdrop */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 backdrop-blur-[70px] bg-white/30 dark:bg-black/40"
+            onClick={closeOracle}
+          />
+          
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="relative w-full max-w-2xl bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-[40px] shadow-2xl overflow-hidden border border-white/50 dark:border-white/10 flex flex-col min-h-[500px]"
+            onClick={e => e.stopPropagation()}
+          >
+             <button onClick={closeOracle} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors z-20">
+                 <X size={20} className="text-slate-400" />
+             </button>
 
-      {/* EDIT MODAL */}
-      <AnimatePresence>
-        {selectedNote && (
-            <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
+             {/* 2. The Selection (Tuning the Vibe) */}
+             <div className="flex justify-center items-center gap-6 pt-8 pb-4 border-b border-transparent">
+                {ORACLE_VIBES.map(vibe => (
+                    <button 
+                    key={vibe.id}
+                    onClick={() => setOracleVibe(vibe)}
+                    className={`text-[10px] font-mono uppercase tracking-widest transition-all flex items-center gap-2 pb-1 ${oracleVibe.id === vibe.id ? 'text-slate-900 dark:text-slate-100 border-b border-slate-900 dark:border-slate-100' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border-b border-transparent'}`}
+                    >
+                    {vibe.label}
+                    {oracleVibe.id === vibe.id && <Sparkles size={10} className="text-indigo-500" />}
+                    </button>
+                ))}
+             </div>
+
+             {/* 3. The Content / Interaction Area */}
+             <div className="flex-1 flex flex-col relative">
+                 {oracleState === 'select' && (
+                     <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500">
+                         <Diamond size={24} strokeWidth={1} className="text-slate-300 mb-8" />
+                         <button 
+                             onClick={() => castOracleSpell(oracleVibe)}
+                             className="px-8 py-4 border border-slate-300 dark:border-slate-600 rounded-full text-xs font-mono uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-500 active:scale-95"
+                         >
+                             [ ВЫЗВАТЬ МЫСЛЬ ]
+                         </button>
+                     </div>
+                 )}
+
+                 {oracleState === 'thinking' && (
+                     <div className="flex-1 flex flex-col items-center justify-center">
+                         <div className="relative">
+                             <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-20 animate-pulse"></div>
+                             <Diamond size={48} strokeWidth={0.5} className="text-slate-800 dark:text-white animate-pulse relative z-10" />
+                         </div>
+                         <div className="mt-8 text-[10px] font-mono uppercase tracking-[0.3em] text-slate-400 animate-pulse">
+                             Scanning Archive...
+                         </div>
+                     </div>
+                 )}
+
+                 {oracleState === 'result' && oracleNote && (
+                     <div className="flex-1 flex flex-col p-8 md:p-12 overflow-y-auto custom-scrollbar-ghost">
+                        <div className="flex justify-center mb-8 shrink-0">
+                            <Diamond size={16} strokeWidth={1} className="text-indigo-500" />
+                        </div>
+                        
+                        <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className="flex-1 flex items-center justify-center text-center"
+                        >
+                            <div className="font-serif text-2xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-200">
+                                <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                    {oracleNote.content}
+                                </ReactMarkdown>
+                            </div>
+                        </motion.div>
+
+                        <div className="mt-12 text-center shrink-0">
+                            <div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest mb-6 opacity-40">
+                                {new Date(oracleNote.createdAt).toLocaleDateString()} • ID: {oracleNote.id.slice(-5)}
+                            </div>
+                            
+                            <button 
+                                onClick={handleAcceptOracleResult}
+                                className="text-xs font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1"
+                            >
+                                [ ПРИНЯТЬ В РАБОТУ ]
+                            </button>
+                        </div>
+                     </div>
+                 )}
+             </div>
+          </motion.div>
+      </div>
+      )}
+
+      {selectedNote && (
+        <AnimatePresence>
+            <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
                 <motion.div 
-                    initial={{ opacity: 0, scale: 0.95, y: 10 }} 
-                    animate={{ opacity: 1, scale: 1, y: 0 }} 
-                    exit={{ opacity: 0, scale: 0.95, y: 10 }} 
-                    transition={{ duration: 0.2 }}
-                    className={`w-full max-w-2xl max-h-[85vh] flex flex-col bg-white dark:bg-[#1e293b] rounded-3xl shadow-2xl overflow-hidden relative ${getNoteColorClass(isEditing ? 'white' : selectedNote.color)}`}
-                    onClick={e => e.stopPropagation()}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="w-full max-w-lg bg-white/75 dark:bg-[#1e293b]/75 backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                    onScroll={() => setActiveImage(null)}
                 >
-                    {/* Header Image */}
-                    {(isEditing ? editCover : selectedNote.coverUrl) && (
-                        <div className="h-40 shrink-0 relative group">
-                            <img src={isEditing ? editCover! : selectedNote.coverUrl!} className="w-full h-full object-cover" />
-                            {isEditing && (
-                                <button onClick={() => setEditCover(null)} className="absolute top-2 right-2 bg-black/50 hover:bg-red-500 text-white p-1.5 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={14} /></button>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Toolbar */}
-                    <div className="flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5 shrink-0 bg-white/50 dark:bg-black/20 backdrop-blur-sm">
-                        <div className="flex items-center gap-2">
-                            {isEditing ? (
-                                <>
-                                    <div className="relative">
-                                        <button onClick={() => setShowEditCoverPicker(!showEditCoverPicker)} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors ${editCover ? 'text-indigo-500' : 'text-slate-400'}`}><Layout size={18} /></button>
-                                        {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} />}
+                    {(isEditing ? editCover : selectedNote.coverUrl) && <div className="h-40 w-full shrink-0 relative group -mx-10 -mt-10 mb-6 w-[calc(100%_+_5rem)] overflow-hidden"><img src={isEditing ? editCover! : selectedNote.coverUrl!} alt="Cover" className="w-full h-full object-cover" />{isEditing && <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button>}</div>}
+                    
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <div className="flex justify-between items-start mb-4 gap-4 shrink-0">
+                            <div className="flex-1 pt-1 min-w-0">
+                                {isEditing ? (
+                                    <div className="flex flex-col gap-2">
+                                        <input 
+                                            value={editTitle} 
+                                            onChange={(e) => setEditTitle(e.target.value)} 
+                                            className="w-full bg-transparent p-0 text-xl font-sans font-bold text-slate-900 dark:text-slate-100 border-none outline-none placeholder:text-slate-300" 
+                                            placeholder="Название" 
+                                        />
                                     </div>
-                                </>
-                            ) : (
-                                <div className="flex gap-1">
-                                    <button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-full transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 hover:bg-black/5 dark:hover:bg-white/10'}`}><Pin size={18} className={selectedNote.isPinned ? "fill-current" : ""} /></button>
-                                    <div className="flex items-center gap-1 p-1 bg-black/5 dark:bg-white/5 rounded-full ml-2">
-                                        {colors.map(c => (
-                                            <button key={c.id} onClick={() => setColor(c.id)} className={`w-4 h-4 rounded-full border border-black/10 dark:border-white/10 hover:scale-125 transition-transform ${selectedNote.color === c.id ? 'ring-1 ring-offset-1 ring-slate-400' : ''}`} style={{ backgroundColor: c.hex }} />
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {!isEditing && (
-                                <>
-                                    <button onClick={() => setIsEditing(true)} className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"><Edit3 size={18} /></button>
-                                    <button onClick={() => { if(confirm("Удалить?")) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"><Trash2 size={18} /></button>
-                                </>
-                            )}
-                            <button onClick={() => setSelectedNote(null)} className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors ml-2"><X size={20} /></button>
-                        </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar-light p-6 md:p-8">
-                        {isEditing ? (
-                            <div className="space-y-4">
-                                <input 
-                                    type="text" 
-                                    className="w-full text-2xl font-bold bg-transparent border-none outline-none placeholder:text-slate-300 text-slate-900 dark:text-white"
-                                    placeholder="Заголовок" 
-                                    value={editTitle}
-                                    onChange={e => setEditTitle(e.target.value)}
-                                />
-                                <div 
-                                    ref={editContentRef}
-                                    contentEditable
-                                    className="w-full min-h-[200px] outline-none text-base text-slate-700 dark:text-slate-300 leading-relaxed font-serif [&_img]:max-w-full [&_img]:rounded-lg cursor-text"
-                                    onInput={handleEditModalInput}
-                                    onBlur={saveSelection}
-                                    onMouseUp={saveSelection}
-                                    onKeyUp={saveSelection}
-                                    onClick={handleEditorClick}
-                                />
-                                {activeImage && (
-                                    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full flex gap-4 z-[110] image-delete-btn">
-                                        <button onMouseDown={deleteActiveImage} className="hover:text-red-400"><Trash2 size={16} /></button>
-                                        <span className="text-xs self-center">Image Selected</span>
+                                ) : (
+                                    <div className="flex flex-col gap-1">
+                                        <div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1 opacity-50">
+                                            <span>{new Date(selectedNote.createdAt).toLocaleDateString()}</span>
+                                            <span className="opacity-50 mx-2">|</span>
+                                            <span>ID // {selectedNote.id.slice(-5).toLowerCase()}</span>
+                                            {selectedNote.isPinned && <Pin size={10} className="fill-current" />}
+                                        </div>
+                                        {selectedNote.title ? <h2 className="font-sans text-2xl font-bold text-slate-900 dark:text-slate-200 leading-tight break-words">{selectedNote.title}</h2> : null}
                                     </div>
                                 )}
-                                <TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} />
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0 -mt-1">
+                                {!isEditing && (
+                                    <>
+                                        <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить"}><button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-lg transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-transparent' : 'text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5'}`}><Pin size={16} className={selectedNote.isPinned ? "fill-current" : ""} /></button></Tooltip>
+                                        <Tooltip content="Редактировать"><button onClick={() => setIsEditing(true)} className="p-2 text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={16} /></button></Tooltip>
+                                        <Tooltip content="Удалить"><button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors"><Trash2 size={16} /></button></Tooltip>
+                                    </>
+                                )}
+                                <button onClick={() => setSelectedNote(null)} className="p-2 text-slate-300 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg ml-2"><X size={20}/></button>
+                            </div>
+                        </div>
+
+                        {isEditing ? (
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                <div className="relative flex-1 overflow-hidden flex flex-col">
+                                    <div className="flex items-center justify-between mb-2 gap-2 shrink-0">
+                                        <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
+                                            <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
+                                            <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
+                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Очистить"><button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
+                                            {activeImage && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
+                                        </div>
+                                        <div className="shrink-0 relative flex gap-1">
+                                            <div className="relative"><Tooltip content="Обложка"><button onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 ${editCover ? 'text-indigo-500' : ''}`}><Layout size={16} /></button></Tooltip>{showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} />}</div>
+                                            <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Palette size={16} /></button></Tooltip>{showModalColorPicker && <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
+                                        </div>
+                                    </div>
+                                    <div 
+                                        ref={editContentRef} 
+                                        contentEditable 
+                                        onInput={handleEditModalInput} 
+                                        onClick={handleEditorClick} 
+                                        onBlur={saveSelection} 
+                                        onMouseUp={saveSelection} 
+                                        onKeyUp={saveSelection} 
+                                        onScroll={() => setActiveImage(null)} 
+                                        className="w-full flex-1 bg-transparent p-1 text-lg leading-relaxed text-slate-800 dark:text-slate-200 outline-none overflow-y-auto font-serif custom-scrollbar-ghost [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                    />
+                                </div>
+                                <div className="pt-4 border-t border-black/5 dark:border-white/5 mt-2">
+                                    <TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} placeholder="Добавить теги..." variant="ghost" />
+                                </div>
                             </div>
                         ) : (
-                            <div>
-                                {selectedNote.title && <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">{selectedNote.title}</h2>}
-                                <div className="prose dark:prose-invert prose-sm md:prose-base max-w-none font-serif leading-relaxed text-slate-700 dark:text-slate-300 break-words">
-                                    <ReactMarkdown components={markdownComponents} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-1">
+                                <div className={`text-slate-800 dark:text-slate-200 text-lg leading-relaxed font-serif font-normal min-h-[4rem] mb-6 ${!selectedNote.title ? 'mt-1' : ''}`}>
+                                    <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                                 </div>
-                                {findFirstUrl(selectedNote.content) && <LinkPreview url={findFirstUrl(selectedNote.content)!} />}
                                 {selectedNote.tags && selectedNote.tags.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 mt-8 pt-6 border-t border-black/5 dark:border-white/5">
-                                        {selectedNote.tags.map(tag => (
-                                            <span key={tag} className="px-2 py-1 bg-black/5 dark:bg-white/10 rounded text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">#{tag.replace(/^#/, '')}</span>
-                                        ))}
+                                    <div className="flex flex-wrap gap-3 pt-4 border-t border-black/5 dark:border-white/5">
+                                        {selectedNote.tags.map(tag => <span key={tag} className="text-[9px] text-slate-500/80 dark:text-slate-400/80 font-sans uppercase tracking-[0.15em]">#{tag.replace(/^#/, '')}</span>)}
                                     </div>
                                 )}
+                                {(() => { const url = findFirstUrl(selectedNote.content); return url ? <div className="mt-6"><LinkPreview url={url} /></div> : null; })()}
+                            </div>
+                        )}
+                        
+                        {isEditing && (
+                            <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5 shrink-0">
+                                <button onClick={() => setIsEditing(false)} className="font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">Отмена</button>
+                                <button onClick={handleSaveEdit} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold">Сохранить</button>
                             </div>
                         )}
                     </div>
-
-                    {/* Edit Footer */}
-                    {isEditing && (
-                        <div className="p-4 border-t border-black/5 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20 backdrop-blur-sm">
-                            <div className="flex gap-1">
-                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400"><Bold size={16} /></button>
-                                <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400"><Italic size={16} /></button>
-                                <label className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 cursor-pointer">
-                                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                                    <ImageIcon size={16} />
-                                </label>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => { setIsEditing(false); handleOpenNote(selectedNote); }} className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors">Отмена</button>
-                                <button onClick={handleSaveEdit} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors shadow-lg">Сохранить</button>
-                            </div>
-                        </div>
-                    )}
                 </motion.div>
             </div>
-        )}
-      </AnimatePresence>
-
-      {/* ORACLE MODAL */}
-      <AnimatePresence>
-          {showOracle && (
-              <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
-                  <motion.div 
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      className="w-full max-w-sm bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 relative overflow-hidden shadow-2xl"
-                  >
-                      {/* Close */}
-                      <button onClick={closeOracle} className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors"><X size={24} /></button>
-
-                      {oracleState === 'select' && (
-                          <div className="text-center">
-                              <h2 className="text-xl font-bold text-white mb-2 tracking-tight">Оракул Мыслей</h2>
-                              <p className="text-sm text-white/50 mb-8">Выбери намерение для случайного инсайта</p>
-                              <div className="grid grid-cols-2 gap-3">
-                                  {ORACLE_VIBES.map(v => (
-                                      <button 
-                                          key={v.id} 
-                                          onClick={() => castOracleSpell(v)}
-                                          className={`p-4 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-all flex flex-col items-center gap-2 group`}
-                                      >
-                                          <v.icon size={24} className={`mb-1 group-hover:scale-110 transition-transform duration-500 bg-gradient-to-br ${v.color} bg-clip-text text-transparent`} />
-                                          <span className={`text-xs font-bold uppercase tracking-widest ${v.text}`}>{v.label}</span>
-                                      </button>
-                                  ))}
-                              </div>
-                          </div>
-                      )}
-
-                      {oracleState === 'thinking' && (
-                          <div className="flex flex-col items-center justify-center py-10">
-                              <div className="relative w-24 h-24 mb-6">
-                                  <div className={`absolute inset-0 rounded-full bg-gradient-to-tr ${oracleVibe.color} opacity-20 blur-xl animate-pulse`} />
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                      <Dices size={48} className="text-white animate-spin duration-[3000ms]" strokeWidth={1} />
-                                  </div>
-                              </div>
-                              <p className="text-xs font-mono text-white/50 uppercase tracking-[0.2em] animate-pulse">Связь с хаосом...</p>
-                          </div>
-                      )}
-
-                      {oracleState === 'result' && oracleNote && (
-                          <div className="text-center">
-                              <div className={`inline-flex p-3 rounded-full bg-gradient-to-br ${oracleVibe.color} mb-6 shadow-lg shadow-${oracleVibe.color.split('-')[1]}-500/20`}>
-                                  <Quote size={24} className="text-white fill-white/20" />
-                              </div>
-                              
-                              <div className="mb-8 relative">
-                                  <Quote size={48} className="absolute -top-4 -left-2 text-white/5 rotate-180" />
-                                  <p className="text-lg md:text-xl font-serif text-white/90 leading-relaxed relative z-10 italic">
-                                      "{oracleNote.content.substring(0, 150)}{oracleNote.content.length > 150 ? '...' : ''}"
-                                  </p>
-                                  <Quote size={48} className="absolute -bottom-4 -right-2 text-white/5" />
-                              </div>
-
-                              <div className="flex flex-col gap-3">
-                                  <button onClick={() => { handleOpenNote(oracleNote); closeOracle(); }} className="w-full py-3 bg-white text-black font-bold rounded-xl text-sm uppercase tracking-wider hover:bg-slate-200 transition-colors">
-                                      Открыть заметку
-                                  </button>
-                                  <button onClick={handleAcceptOracleResult} className="w-full py-3 bg-white/10 text-white font-bold rounded-xl text-sm uppercase tracking-wider hover:bg-white/20 transition-colors flex items-center justify-center gap-2">
-                                      <Kanban size={16} /> Создать задачу
-                                  </button>
-                              </div>
-                          </div>
-                      )}
-                  </motion.div>
-              </div>
-          )}
-      </AnimatePresence>
-
+        </AnimatePresence>
+      )}
     </div>
   );
 };
