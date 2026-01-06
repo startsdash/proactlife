@@ -17,8 +17,8 @@ interface Props {
 // --- UTILS ---
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-4 last:mb-0 text-base leading-relaxed" {...props} />,
-    strong: ({node, ...props}: any) => <strong className="font-bold text-indigo-400" {...props} />,
-    em: ({node, ...props}: any) => <em className="italic font-serif" {...props} />,
+    strong: ({node, ...props}: any) => <strong className="font-bold text-white/90" {...props} />,
+    em: ({node, ...props}: any) => <em className="italic font-serif text-white/80" {...props} />,
 };
 
 // --- TYPES FOR VISUALIZATION ---
@@ -50,6 +50,8 @@ const SPHERE_CENTERS: Record<string, { x: number, y: number }> = {
 const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard, toggleFlashcardStar }) => {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  // Ref for the physics loop to access latest hover state without re-binding
+  const hoveredNodeRef = useRef<string | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
   
   // Canvas State
@@ -63,10 +65,12 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard, toggle
   // Initialize Simulation Data
   useEffect(() => {
       const nodes: VisualNode[] = flashcards.map(card => {
-          // Identify primary sphere logic is simplified here; ideally derived from tasks or tags
-          // Random assignment for visual distribution if not linked
-          const randomSphere = SPHERES[Math.floor(Math.random() * SPHERES.length)];
-          const sphereId = randomSphere.id; 
+          // Identify primary sphere logic
+          // Random assignment for visual distribution if not linked (mock for now)
+          // In a real app, derive sphereId from card tags or linked tasks if available
+          // Here we use a stable hash-like assignment based on ID char for consistency
+          const sphereIndex = card.id.charCodeAt(card.id.length - 1) % SPHERES.length;
+          const sphereId = SPHERES[sphereIndex]?.id || 'default';
           
           let color = GRAPHITE;
           if (sphereId === 'productivity') color = LAVENDER;
@@ -90,7 +94,6 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard, toggle
       });
 
       // Create connections based on shared Sphere
-      // Limit connections to avoid clutter (Ether Web)
       nodes.forEach((node, i) => {
           nodes.forEach((target, j) => {
               if (i !== j && node.sphereId === target.sphereId) {
@@ -115,6 +118,13 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard, toggle
           const { width, height } = containerSize;
           
           nodes.forEach(node => {
+              // ANCHOR PROTOCOL: Freeze if hovered
+              if (node.id === hoveredNodeRef.current) {
+                  node.vx = 0;
+                  node.vy = 0;
+                  return;
+              }
+
               // 1. Gravity towards Sphere Center (Gentle Current)
               const center = SPHERE_CENTERS[node.sphereId || 'default'] || SPHERE_CENTERS.default;
               const targetX = center.x * width;
@@ -176,8 +186,25 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard, toggle
       setIsFlipped(false);
   };
 
+  const handleMouseEnter = (id: string) => {
+      setHoveredNodeId(id);
+      hoveredNodeRef.current = id;
+  };
+
+  const handleMouseLeave = () => {
+      setHoveredNodeId(null);
+      hoveredNodeRef.current = null;
+  };
+
   const activeCard = flashcards.find(c => c.id === selectedCardId);
   
+  // Find color for active card
+  const activeCardColor = useMemo(() => {
+      if (!activeCard) return LAVENDER;
+      const node = simulationRef.current.nodes.find(n => n.id === activeCard.id);
+      return node ? node.color : LAVENDER;
+  }, [activeCard, simulationTick]);
+
   // Calculate Links for SVG
   const links = useMemo(() => {
       const lines: React.ReactNode[] = [];
@@ -249,87 +276,97 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard, toggle
         <div className="absolute top-1/4 right-1/4 translate-x-1/2 -translate-y-1/2 text-[80px] font-bold text-slate-800/20 select-none pointer-events-none blur-sm">GROWTH</div>
         <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 text-[80px] font-bold text-slate-800/20 select-none pointer-events-none blur-sm">PEOPLE</div>
 
-        {/* CANVAS LAYER */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
-            {links}
-        </svg>
+        {/* CANVAS LAYER (Receding Effect) */}
+        <motion.div 
+            className="absolute inset-0 w-full h-full"
+            animate={{ 
+                scale: activeCard ? 0.95 : 1,
+                opacity: activeCard ? 0.3 : 1,
+                filter: activeCard ? 'blur(4px)' : 'none'
+            }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+        >
+            <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                {links}
+            </svg>
 
-        {/* NODES LAYER */}
-        {simulationRef.current.nodes.map(node => (
-            <div
-                key={node.id}
-                className="absolute flex items-center justify-center cursor-pointer group"
-                style={{
-                    left: node.x,
-                    top: node.y,
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: hoveredNodeId === node.id ? 20 : 10
-                }}
-                onClick={() => handleNodeClick(node.id)}
-                onMouseEnter={() => setHoveredNodeId(node.id)}
-                onMouseLeave={() => setHoveredNodeId(null)}
-            >
-                {/* Visual Orb */}
-                <div className="relative">
-                    {/* Breathing Glow */}
-                    <motion.div 
-                        className="absolute inset-0 rounded-full blur-md"
-                        style={{ backgroundColor: node.color }}
-                        animate={{ 
-                            opacity: [0.2, 0.5, 0.2],
-                            scale: [1, 1.5, 1] 
-                        }}
-                        transition={{ 
-                            duration: 3 + Math.random(), 
-                            repeat: Infinity, 
-                            ease: "easeInOut",
-                            delay: node.phase // Async pulsing
-                        }}
-                    />
-                    
-                    {/* Core Node */}
-                    <div 
-                        className={`
-                            relative w-3 h-3 rounded-full border border-white/20 
-                            bg-white/10 backdrop-blur-sm shadow-inner
-                            transition-all duration-300 group-hover:scale-125 group-hover:bg-white/30 group-hover:border-white/50
-                        `}
-                        style={{ boxShadow: node.isStarred ? '0 0 10px #fbbf24' : 'none', borderColor: node.isStarred ? '#fbbf24' : undefined }}
-                    />
-
-                    {/* Star Flash Effect */}
-                    {node.isStarred && (
+            {/* NODES LAYER */}
+            {simulationRef.current.nodes.map(node => (
+                <div
+                    key={node.id}
+                    className="absolute flex items-center justify-center cursor-pointer group"
+                    style={{
+                        left: node.x,
+                        top: node.y,
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: hoveredNodeId === node.id ? 20 : 10
+                    }}
+                    onClick={() => handleNodeClick(node.id)}
+                    onMouseEnter={() => handleMouseEnter(node.id)}
+                    onMouseLeave={handleMouseLeave}
+                >
+                    {/* Visual Orb */}
+                    <div className="relative transition-transform duration-300 group-hover:scale-115">
+                        {/* Breathing Glow */}
                         <motion.div 
-                            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                            animate={{ rotate: 360, scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
-                            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                        >
-                            <Star size={8} className="text-amber-300 fill-amber-300 blur-[1px]" />
-                        </motion.div>
-                    )}
-                </div>
+                            className="absolute inset-0 rounded-full blur-md"
+                            style={{ backgroundColor: node.color }}
+                            animate={{ 
+                                opacity: [0.2, 0.5, 0.2],
+                                scale: [1, 1.5, 1] 
+                            }}
+                            transition={{ 
+                                duration: 3 + Math.random(), 
+                                repeat: Infinity, 
+                                ease: "easeInOut",
+                                delay: node.phase // Async pulsing
+                            }}
+                        />
+                        
+                        {/* Core Node */}
+                        <div 
+                            className={`
+                                relative w-3 h-3 rounded-full border border-white/20 
+                                bg-white/10 backdrop-blur-sm shadow-inner
+                                transition-all duration-300 group-hover:bg-white/30 group-hover:border-white/50 group-hover:shadow-[0_0_15px_rgba(255,255,255,0.4)]
+                            `}
+                            style={{ boxShadow: node.isStarred ? '0 0 10px #fbbf24' : undefined, borderColor: node.isStarred ? '#fbbf24' : undefined }}
+                        />
 
-                {/* Hover Label */}
-                <AnimatePresence>
-                    {hoveredNodeId === node.id && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="absolute bottom-full mb-4 px-3 py-2 bg-black/80 text-white text-xs rounded border border-white/10 whitespace-nowrap backdrop-blur-md pointer-events-none z-30"
-                        >
-                            <span className="font-mono text-[9px] text-indigo-300 mr-2 opacity-70">ID_{node.id.slice(-4)}</span>
-                            <span className="font-serif tracking-wide">{node.front.substring(0, 30)}...</span>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-        ))}
+                        {/* Star Flash Effect */}
+                        {node.isStarred && (
+                            <motion.div 
+                                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                                animate={{ rotate: 360, scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
+                                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                            >
+                                <Star size={8} className="text-amber-300 fill-amber-300 blur-[1px]" />
+                            </motion.div>
+                        )}
+                    </div>
+
+                    {/* Hover Label */}
+                    <AnimatePresence>
+                        {hoveredNodeId === node.id && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="absolute bottom-full mb-4 px-3 py-2 bg-black/80 text-white text-xs rounded border border-white/10 whitespace-nowrap backdrop-blur-md pointer-events-none z-30"
+                            >
+                                <span className="font-mono text-[9px] text-indigo-300 mr-2 opacity-70">ID_{node.id.slice(-4)}</span>
+                                <span className="font-serif tracking-wide">{node.front.substring(0, 30)}...</span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            ))}
+        </motion.div>
 
         {/* NEURAL NODE INTERFACE (MODAL) - GLASS ETHER STYLE */}
         <AnimatePresence>
             {activeCard && (
-                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setSelectedCardId(null)}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-6" onClick={() => setSelectedCardId(null)}>
                     
                     {/* The Card Container */}
                     <motion.div 
@@ -358,9 +395,9 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard, toggle
                                     <div className="flex gap-2">
                                         <button 
                                             onClick={(e) => { e.stopPropagation(); toggleFlashcardStar(activeCard.id); }}
-                                            className={`p-2 rounded-full transition-all ${activeCard.isStarred ? 'text-amber-400 bg-amber-400/10' : 'text-slate-600 hover:text-amber-200'}`}
+                                            className={`p-2 rounded-full transition-all group ${activeCard.isStarred ? 'text-amber-400' : 'text-slate-600 hover:text-amber-200'}`}
                                         >
-                                            <Star size={16} fill={activeCard.isStarred ? "currentColor" : "none"} strokeWidth={1.5} />
+                                            <Star size={16} fill={activeCard.isStarred ? "currentColor" : "none"} strokeWidth={1} className={activeCard.isStarred ? "animate-pulse" : ""} />
                                         </button>
                                         <button onClick={() => setSelectedCardId(null)} className="p-2 text-slate-500 hover:text-white transition-colors">
                                             <X size={20} strokeWidth={1} />
@@ -382,17 +419,19 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard, toggle
                                 <div className="mt-auto pt-8 flex justify-center relative z-10">
                                     <button 
                                         onClick={() => setIsFlipped(true)}
-                                        className="group px-6 py-3 rounded-full border border-white/10 hover:border-indigo-500/50 bg-white/5 hover:bg-white/10 text-xs font-mono uppercase tracking-[0.15em] text-slate-300 hover:text-indigo-300 transition-all flex items-center gap-3 backdrop-blur-md"
+                                        className="group px-6 py-3 rounded-full border border-white/20 hover:border-white/40 bg-transparent hover:bg-white/5 text-[9px] font-mono uppercase tracking-[0.15em] text-slate-300 hover:text-white transition-all flex items-center gap-3 backdrop-blur-md"
                                     >
-                                        [ ACCESS_DATA ] <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                        [ ACCESS_DATA ] <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                                     </button>
                                 </div>
                             </div>
 
-                            {/* BACK SIDE (B) - Decompressed */}
-                            <div className="absolute inset-0 backface-hidden rotate-y-180 bg-black/80 backdrop-blur-[50px] border border-white/5 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] p-8 flex flex-col text-slate-200 overflow-hidden">
+                            {/* BACK SIDE (B) - Mirror Glass */}
+                            <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white/5 backdrop-blur-[40px] border border-white/10 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] p-8 flex flex-col overflow-hidden">
+                                {/* Gradient Tint same as A */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none" />
+                                
                                 {/* Decor */}
-                                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-50" />
                                 <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
                                     <Diamond size={120} strokeWidth={0.5} />
                                 </div>
@@ -400,39 +439,41 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard, toggle
                                 {/* Header Actions */}
                                 <div className="flex justify-end mb-6 relative z-10">
                                     <button onClick={() => { if(confirm("Дефрагментировать (удалить) узел?")) { deleteFlashcard(activeCard.id); setSelectedCardId(null); } }} className="text-slate-600 hover:text-red-500 transition-colors p-2">
-                                        <Trash2 size={16} strokeWidth={1.5} />
+                                        <Trash2 size={16} strokeWidth={1} />
                                     </button>
                                 </div>
 
                                 {/* Content */}
                                 <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-2 relative z-10">
-                                    <div className="font-serif text-lg md:text-xl leading-relaxed text-slate-300 drop-shadow-md">
+                                    <div className="font-serif text-lg md:text-xl leading-relaxed text-slate-100 drop-shadow-md">
                                         <ReactMarkdown components={markdownComponents}>
                                             {activeCard.back}
                                         </ReactMarkdown>
                                     </div>
                                 </div>
 
-                                {/* Mastery Footer */}
-                                <div className="mt-8 pt-6 border-t border-white/5 relative z-10">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">Sync Level</span>
-                                        <span className="font-mono text-[9px] text-indigo-400">{activeCard.level * 20}%</span>
+                                {/* Mastery Footer - Sync Bar */}
+                                <div className="mt-8 pt-6 relative z-10">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="font-mono text-[9px] uppercase tracking-widest text-slate-500">Sync Level</span>
+                                        <span className="font-mono text-[9px]" style={{ color: activeCardColor }}>{activeCard.level * 20}%</span>
                                     </div>
-                                    <div className="w-full h-0.5 bg-slate-800 rounded-full overflow-hidden">
+                                    {/* Fine Line Bar */}
+                                    <div className="w-full h-px bg-white/10 rounded-full overflow-hidden relative">
                                         <motion.div 
                                             initial={{ width: 0 }}
                                             animate={{ width: `${Math.min(100, activeCard.level * 20)}%` }}
-                                            className="h-full bg-indigo-500 shadow-[0_0_10px_#6366f1]"
+                                            className="h-full absolute top-0 left-0"
+                                            style={{ backgroundColor: activeCardColor, boxShadow: `0 0 10px ${activeCardColor}` }}
                                         />
                                     </div>
                                     
                                     <div className="mt-6 flex justify-center">
                                         <button 
                                             onClick={() => setIsFlipped(false)}
-                                            className="text-xs font-mono text-slate-600 hover:text-slate-300 uppercase tracking-widest transition-colors flex items-center gap-2"
+                                            className="px-6 py-3 rounded-full border border-white/20 hover:border-white/40 bg-transparent hover:bg-white/5 text-[9px] font-mono uppercase tracking-[0.15em] text-slate-300 hover:text-white transition-all flex items-center gap-3"
                                         >
-                                            <RotateCw size={12} /> FLIP_BACK
+                                            <RotateCw size={12} /> [ FLIP_BACK ]
                                         </button>
                                     </div>
                                 </div>
