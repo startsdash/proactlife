@@ -21,8 +21,7 @@ export const loadState = (): AppState => {
       profileConfig: {
           role: 'architect',
           manifesto: 'Строить системы, которые переживут хаос.'
-      },
-      synapticLinks: []
+      }
     };
 
     if (!stored) return emptyState;
@@ -56,7 +55,6 @@ export const loadState = (): AppState => {
     }
 
     if (!parsed.mentorAnalyses) parsed.mentorAnalyses = [];
-    if (!parsed.synapticLinks) parsed.synapticLinks = [];
     
     // Robust Habit Migration
     if (parsed.habits) {
@@ -93,8 +91,7 @@ export const loadState = (): AppState => {
       profileConfig: {
           role: 'architect',
           manifesto: 'Строить системы, которые переживут хаос.'
-      },
-      synapticLinks: []
+      }
     };
   }
 };

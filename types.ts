@@ -203,13 +203,6 @@ export interface UserProfileConfig {
     manifesto: string;
 }
 
-export interface SynapticLink {
-  id: string;
-  source: string;
-  target: string;
-  createdAt: number;
-}
-
 export interface AppState {
   notes: Note[];
   sketchpad: SketchItem[];
@@ -221,8 +214,7 @@ export interface AppState {
   mentorAnalyses: MentorAnalysis[]; 
   config: AppConfig; 
   user?: UserProfile; 
-  profileConfig?: UserProfileConfig; 
-  synapticLinks: SynapticLink[]; // NEW
+  profileConfig?: UserProfileConfig; // NEW
 }
 
 export type SyncStatus = 'disconnected' | 'syncing' | 'synced' | 'error';
