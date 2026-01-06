@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Flashcard, Task } from '../types';
 import { Gem, X, RotateCw, Trash2, Plus, Minus, Move, Search, Disc, Diamond, BrainCircuit, Activity } from 'lucide-react';
@@ -53,8 +54,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
   // Initialize Simulation Data
   useEffect(() => {
       const nodes: VisualNode[] = flashcards.map(card => {
-          // Identify primary sphere from tasks if not on card directly (assuming spheres might be on tasks mostly, but let's assume correlation)
-          // For now, assign random sphere if not present, to show clustering
+          // Identify primary sphere from tasks if not on card directly
           const randomSphere = SPHERES[Math.floor(Math.random() * SPHERES.length)];
           const sphereId = randomSphere.id; 
           const color = randomSphere.color === 'indigo' ? '#6366f1' : randomSphere.color === 'emerald' ? '#10b981' : '#f43f5e';
@@ -75,7 +75,6 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
       nodes.forEach((node, i) => {
           nodes.forEach((target, j) => {
               if (i !== j && node.sphereId === target.sphereId) {
-                  // Connect if close in index or just random sparse connection
                   if (Math.abs(i - j) < 3) {
                       node.connections.push(target.id);
                   }
@@ -104,7 +103,7 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
               node.vx += (targetX - node.x) * 0.005;
               node.vy += (targetY - node.y) * 0.005;
 
-              // 2. Repulsion (Nodes push each other away)
+              // 2. Repulsion
               nodes.forEach(other => {
                   if (node.id !== other.id) {
                       const dx = node.x - other.x;
@@ -233,11 +232,16 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
                     <div className="absolute inset-0 m-1 rounded-full bg-current opacity-50" style={{ color: node.color }} />
                 </div>
 
-                {/* Pulsing Aura */}
-                <div 
-                    className="absolute inset-0 -m-2 rounded-full border opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-ping"
-                    style={{ borderColor: node.color }}
-                />
+                {/* Pulsing Aura - Subtle & Slow */}
+                {hoveredNodeId === node.id && (
+                    <motion.div 
+                        initial={{ opacity: 0.6, scale: 1 }}
+                        animate={{ opacity: 0, scale: 2 }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+                        className="absolute inset-0 rounded-full border pointer-events-none"
+                        style={{ borderColor: node.color }}
+                    />
+                )}
 
                 {/* Tooltip (Preview) */}
                 <AnimatePresence>
@@ -287,8 +291,12 @@ const MentalGym: React.FC<Props> = ({ flashcards, tasks, deleteFlashcard }) => {
 
                                 {/* Content */}
                                 <div className="flex-1 flex flex-col justify-center text-center relative z-10">
-                                    {/* Pulse Visual behind text */}
-                                    <div className="absolute inset-0 bg-indigo-500/5 rounded-full blur-3xl scale-75 animate-pulse" />
+                                    {/* Pulse Visual behind text - Slow Breath */}
+                                    <motion.div 
+                                        className="absolute inset-0 bg-indigo-500/5 rounded-full blur-3xl scale-75" 
+                                        animate={{ opacity: [0.5, 1, 0.5], scale: [0.7, 0.8, 0.7] }}
+                                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                                    />
                                     
                                     <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white leading-tight font-sans relative z-10">
                                         {activeCard.front}
