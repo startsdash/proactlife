@@ -1,11 +1,12 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Habit, HabitFrequency } from '../types';
-import { Flame, Check, Plus, Trash2, X, Zap, Edit2, Diamond } from 'lucide-react';
+import { notificationService } from '../services/notificationService';
+import { Flame, Check, Plus, Trash2, X, Zap, Calendar, Repeat, Bell, GripVertical, CheckCircle2, Circle, Edit2, Clock, Sparkles, Diamond, Activity, MoreHorizontal, TrendingUp, Link2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { SPHERES } from '../constants';
+import { SPHERES, ICON_MAP } from '../constants';
 
 interface Props {
   habits: Habit[];
@@ -14,13 +15,18 @@ interface Props {
   deleteHabit: (id: string) => void;
 }
 
-// --- CONSTANTS ---
+// --- CONSTANTS & HELPERS ---
 
 const NEON_COLORS: Record<string, string> = {
     productivity: '#6366f1', // Indigo
     growth: '#10b981',       // Emerald
     relationships: '#f43f5e', // Rose
     default: '#94a3b8'       // Slate
+};
+
+const DOT_GRID_STYLE = {
+    backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
+    backgroundSize: '24px 24px'
 };
 
 const getLocalDateKey = (date: Date) => {
@@ -35,115 +41,91 @@ const getSphereColor = (spheres?: string[]) => {
     return NEON_COLORS[spheres[0]] || NEON_COLORS.default;
 };
 
-// --- SUB-COMPONENTS ---
+// --- COMPONENTS ---
 
-// 1. The Atmospheric Accumulator
-const Accumulator = ({ 
-    counts, 
-    total, 
-    completed,
-    pulse 
-}: { 
-    counts: Record<string, number>, 
-    total: number, 
-    completed: number,
-    pulse: boolean
-}) => {
-    const percentage = total > 0 ? (completed / total) * 100 : 0;
-    const sphereKeys = ['productivity', 'growth', 'relationships', 'default'];
+const Sparkline = ({ data, color }: { data: number[], color: string }) => {
+    if (data.length < 2) return null;
+    const max = Math.max(...data, 1);
+    const points = data.map((d, i) => `${(i / (data.length - 1)) * 40},${20 - (d / max) * 20}`).join(' ');
 
     return (
-        <div className="w-full max-w-3xl mx-auto mb-8 relative z-20 px-4">
-            {/* The Capsule */}
-            <motion.div 
-                animate={pulse ? { scale: [1, 1.02, 1], filter: ["brightness(1)", "brightness(1.2)", "brightness(1)"] } : {}}
-                transition={{ duration: 0.3 }}
-                className="h-20 rounded-[2.5rem] bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-[30px] border border-white/60 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.1)] relative overflow-hidden flex items-center p-1.5"
-            >
-                {/* Liquid Container */}
-                <div className="w-full h-full rounded-[2rem] bg-slate-100/50 dark:bg-black/30 overflow-hidden relative">
-                    {/* The Fluid */}
-                    <motion.div 
-                        className="h-full flex relative z-10"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${percentage}%` }}
-                        transition={{ type: "spring", stiffness: 40, damping: 15 }}
-                    >
-                        {sphereKeys.map(key => {
-                            const count = counts[key] || 0;
-                            if (count === 0 && completed > 0) return null;
-                            const share = completed > 0 ? (count / completed) * 100 : 0;
-                            
-                            return (
-                                <motion.div
-                                    key={key}
-                                    initial={{ width: 0, opacity: 0 }}
-                                    animate={{ width: `${share}%`, opacity: 1 }}
-                                    className="h-full relative"
-                                    style={{ backgroundColor: NEON_COLORS[key] }}
-                                >
-                                    {/* Plasma Turbulence */}
-                                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIiBmaWxsPSJub25lIiBzdHJva2U9InB1cnBsZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSI+PHBhdGggZD0iTTAgMGwyMCAyME0yMCAwbC0yMCAyMCIvPjwvc3ZnPg==')] opacity-20 mix-blend-overlay" />
-                                    <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent" />
-                                </motion.div>
-                            );
-                        })}
-                        
-                        {/* Leading Edge Glow */}
-                        <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/50 blur-[4px] z-20" />
-                    </motion.div>
-
-                    {/* Empty State Ghost Text */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-                        <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-slate-300 dark:text-slate-700">
-                            {percentage === 0 ? 'ACCUMULATOR_EMPTY' : ''}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Glass Gloss */}
-                <div className="absolute inset-0 rounded-[2.5rem] ring-1 ring-inset ring-white/40 dark:ring-white/5 pointer-events-none z-30" />
-                <div className="absolute top-2 left-6 right-6 h-[40%] bg-gradient-to-b from-white/40 to-transparent rounded-full pointer-events-none z-30" />
-
-                {/* Data HUD */}
-                <div className="absolute right-8 top-1/2 -translate-y-1/2 z-40 text-right pointer-events-none mix-blend-difference text-white/80 hidden md:block">
-                    <div className="font-mono text-2xl font-bold leading-none">{Math.round(percentage)}%</div>
-                    <div className="font-mono text-[8px] uppercase tracking-wider opacity-70">Power Level</div>
-                </div>
-            </motion.div>
-        </div>
+        <svg width="40" height="20" className="overflow-visible opacity-50">
+            <polyline points={points} fill="none" stroke={color} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
     );
 };
 
-// 2. Rhythm Row (Simplified for focus on particles)
-const RhythmRow = ({ habit, dates, onToggle, color, todayStr }: { habit: Habit, dates: Date[], onToggle: (e: React.MouseEvent, date: Date) => void, color: string, todayStr: string }) => {
+const AuraRingButton = ({ isDone, onClick, color, progress = 0 }: { isDone: boolean, onClick: (e: React.MouseEvent) => void, color: string, progress?: number }) => {
+    return (
+        <button 
+            onClick={onClick}
+            className="relative w-8 h-8 flex items-center justify-center group outline-none"
+        >
+            {/* Background Ring - Collapses on Done */}
+            <div className={`absolute inset-0 rounded-full border border-slate-300 dark:border-slate-600 transition-all duration-300 ease-out ${isDone ? 'scale-50 opacity-0' : 'scale-100 opacity-100'}`} />
+            
+            {/* Active Fill - Fades In */}
+            <motion.div 
+                initial={false}
+                animate={{ 
+                    scale: isDone ? 1 : progress > 0 ? progress : 0,
+                    opacity: isDone || progress > 0 ? 1 : 0
+                }}
+                transition={{ duration: 0.2 }}
+                className="absolute inset-0 rounded-full"
+                style={{ backgroundColor: color, boxShadow: isDone ? `0 0 10px ${color}66` : 'none' }}
+            />
+
+            {/* Icon */}
+            <div className={`relative z-10 transition-all duration-300 ${isDone ? 'text-white scale-100' : 'text-slate-300 dark:text-slate-600 group-hover:text-slate-400 scale-75'}`}>
+                {isDone ? <Check size={14} strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-current opacity-50" />}
+            </div>
+        </button>
+    );
+};
+
+const RhythmRow = ({ habit, dates, onToggle, color, todayStr }: { habit: Habit, dates: Date[], onToggle: (date: Date) => void, color: string, todayStr: string }) => {
     return (
         <div className="flex items-center justify-between gap-1 h-full px-4 relative">
+            {/* SVG Connecting Line Layer */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible z-0">
+                <defs>
+                    <filter id="glow-line" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                {/* Lines skipped for cleaner look */}
+            </svg>
+
             {dates.map(date => {
                 const dateKey = getLocalDateKey(date);
-                const isDone = !!habit.history[dateKey];
+                const val = habit.history[dateKey];
+                const isDone = !!val;
                 const isToday = dateKey === todayStr;
                 
                 return (
-                    <div key={dateKey} className={`w-7 h-full flex items-center justify-center relative z-10 ${isToday ? 'bg-gradient-to-b from-transparent via-indigo-50/30 to-transparent dark:via-indigo-900/10' : ''}`}>
+                    <div key={dateKey} className={`w-7 h-full flex items-center justify-center relative z-10 ${isToday ? 'bg-gradient-to-b from-transparent via-indigo-50/50 to-transparent dark:via-indigo-900/10' : ''}`}>
                         <button 
-                            onClick={(e) => onToggle(e, date)}
+                            onClick={(e) => { e.stopPropagation(); onToggle(date); }}
                             className="group relative w-full h-8 flex items-center justify-center outline-none"
                         >
                             <motion.div 
                                 initial={false}
                                 animate={{ 
-                                    scale: isDone ? 1 : 0.4,
+                                    width: isDone ? 6 : 4,
+                                    height: isDone ? 6 : 4,
                                     backgroundColor: isDone ? color : '#94a3b8', 
                                     opacity: isDone ? 1 : 0.2
                                 }}
-                                className={`rounded-full shadow-sm ${isToday && !isDone ? 'ring-1 ring-slate-300 dark:ring-slate-600' : ''}`}
-                                style={{ 
-                                    width: isDone ? 6 : 4,
-                                    height: isDone ? 6 : 4,
-                                    boxShadow: isDone ? `0 0 8px ${color}` : 'none' 
-                                }}
+                                className="rounded-full shadow-sm"
+                                style={{ boxShadow: isDone ? `0 0 6px ${color}` : 'none' }}
                             />
+                            {/* Hover Ghost */}
+                            <div className={`absolute inset-0 rounded-full bg-slate-400/10 scale-0 group-hover:scale-50 transition-transform duration-200`} />
                         </button>
                     </div>
                 );
@@ -158,8 +140,6 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
-  const [particles, setParticles] = useState<{ id: number, x: number, y: number, color: string }[]>([]);
-  const [accumulatorPulse, setAccumulatorPulse] = useState(false);
 
   // Form State
   const [newTitle, setNewTitle] = useState('');
@@ -168,12 +148,10 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
   const [targetCount, setTargetCount] = useState<number>(1);
   const [selectedSpheres, setSelectedSpheres] = useState<string[]>([]);
 
-  const today = new Date();
-  const todayStr = getLocalDateKey(today);
-
-  // Date Range (Last 14 days)
+  // Date Range for Grid (Last 14 days)
   const dates = useMemo(() => {
       const arr = [];
+      const today = new Date();
       for (let i = 13; i >= 0; i--) {
           const d = new Date(today);
           d.setDate(d.getDate() - i);
@@ -182,229 +160,364 @@ const Rituals: React.FC<Props> = ({ habits, addHabit, updateHabit, deleteHabit }
       return arr;
   }, []);
 
-  // Stats for Accumulator
-  const stats = useMemo(() => {
-      const s: Record<string, number> = { productivity: 0, growth: 0, relationships: 0, default: 0 };
-      let completed = 0;
-      let total = 0;
-      
-      habits.filter(h => !h.isArchived).forEach(h => {
-          total++;
-          if (h.history[todayStr]) {
-              completed++;
-              const sphere = h.spheres?.[0] || 'default';
-              if (s[sphere] !== undefined) s[sphere]++;
-              else s['default']++;
-          }
-      });
-      return { counts: s, total, completed };
-  }, [habits, todayStr]);
+  const todayStr = getLocalDateKey(new Date());
 
-  // Particle Logic
-  const spawnParticle = (x: number, y: number, color: string) => {
-      const id = Date.now();
-      setParticles(prev => [...prev, { id, x, y, color }]);
-      
-      // Cleanup happens via animation onComplete, but fail-safe here
-      setTimeout(() => {
-          setParticles(prev => prev.filter(p => p.id !== id));
-      }, 1000);
-  };
+  // Calculate System Status
+  const activeHabitsCount = habits.filter(h => !h.isArchived).length;
+  const completedTodayCount = habits.filter(h => h.history[todayStr]).length;
+  const syncRate = activeHabitsCount > 0 ? Math.round((completedTodayCount / activeHabitsCount) * 100) : 0;
 
-  const handleParticleArrival = (id: number) => {
-      setParticles(prev => prev.filter(p => p.id !== id));
-      setAccumulatorPulse(true);
-      setTimeout(() => setAccumulatorPulse(false), 300);
-  };
-
-  const handleToggle = (e: React.MouseEvent, habit: Habit, date: Date) => {
-      e.stopPropagation();
+  const handleToggle = (habit: Habit, date: Date) => {
       const dStr = getLocalDateKey(date);
       const history = { ...habit.history };
       const currentVal = history[dStr];
-      const color = getSphereColor(habit.spheres);
 
       if (currentVal) {
           delete history[dStr];
       } else {
           history[dStr] = true;
-          // Spawn particle only if toggling ON
-          spawnParticle(e.clientX, e.clientY, color);
+          if (dStr === todayStr && window.confetti) {
+             window.confetti({ particleCount: 30, spread: 50, origin: { y: 0.7 }, colors: [getSphereColor(habit.spheres)] }); 
+          }
       }
       updateHabit({ ...habit, history });
   };
 
-  // Form Handlers
   const handleSave = () => {
       if (!newTitle.trim()) return;
+      
       const baseHabit = {
-          title: newTitle, description, frequency, targetCount: frequency === 'times_per_week' ? targetCount : undefined, spheres: selectedSpheres, color: 'indigo', icon: 'Zap'
+          title: newTitle,
+          description,
+          frequency,
+          targetCount: frequency === 'times_per_week' ? targetCount : undefined,
+          spheres: selectedSpheres,
+          color: 'indigo', 
+          icon: 'Zap'
       };
-      if (editingHabit) updateHabit({ ...editingHabit, ...baseHabit });
-      else addHabit({ id: Date.now().toString(), createdAt: Date.now(), history: {}, streak: 0, bestStreak: 0, reminders: [], ...baseHabit });
+
+      if (editingHabit) {
+          updateHabit({ ...editingHabit, ...baseHabit });
+      } else {
+          addHabit({
+              id: Date.now().toString(),
+              createdAt: Date.now(),
+              history: {},
+              streak: 0,
+              bestStreak: 0,
+              reminders: [],
+              ...baseHabit
+          });
+      }
       closeForm();
   };
 
-  const closeForm = () => { setIsFormOpen(false); setEditingHabit(null); setNewTitle(''); setDescription(''); setFrequency('daily'); setSelectedSpheres([]); };
-  const openNew = () => { closeForm(); setIsFormOpen(true); };
-  const openEdit = (h: Habit) => { setEditingHabit(h); setNewTitle(h.title); setDescription(h.description || ''); setFrequency(h.frequency); setTargetCount(h.targetCount || 3); setSelectedSpheres(h.spheres || []); setIsFormOpen(true); };
-  const toggleSphere = (id: string) => { if (selectedSpheres.includes(id)) setSelectedSpheres([]); else setSelectedSpheres([id]); };
+  const closeForm = () => {
+      setIsFormOpen(false);
+      setEditingHabit(null);
+      setNewTitle('');
+      setDescription('');
+      setFrequency('daily');
+      setSelectedSpheres([]);
+  };
 
-  const isFullSync = stats.percentage === 100;
+  const openNew = () => {
+      closeForm();
+      setIsFormOpen(true);
+  };
+
+  const openEdit = (h: Habit) => {
+      setEditingHabit(h);
+      setNewTitle(h.title);
+      setDescription(h.description || '');
+      setFrequency(h.frequency);
+      setTargetCount(h.targetCount || 3);
+      setSelectedSpheres(h.spheres || []);
+      setIsFormOpen(true);
+  };
+
+  const toggleSphere = (sphereId: string) => {
+      // Single select for habits usually, but array in type. Let's act as radio for simplicity or multi?
+      // Type is array. Let's allow multi but visually radio-like behavior is cleaner for primary color logic.
+      // Let's stick to toggle.
+      if (selectedSpheres.includes(sphereId)) {
+          setSelectedSpheres(selectedSpheres.filter(s => s !== sphereId));
+      } else {
+          setSelectedSpheres([sphereId]); // Enforce single sphere for primary color logic simplicity
+      }
+  };
 
   return (
     <div className="h-full flex flex-col bg-[#f8fafc] dark:bg-[#0f172a] relative overflow-hidden">
-        {/* Kinetic Particles Layer */}
-        {particles.map(p => (
-            <motion.div
-                key={p.id}
-                initial={{ x: p.x, y: p.y, scale: 1, opacity: 1 }}
-                animate={{ 
-                    x: window.innerWidth / 2, // Approximate center
-                    y: 80, // Approximate header position
-                    scale: 0.5, 
-                    opacity: 0.5 
-                }}
-                transition={{ duration: 0.6, ease: "easeInOut" }}
-                onAnimationComplete={() => handleParticleArrival(p.id)}
-                className="fixed w-3 h-3 rounded-full pointer-events-none z-[100]"
-                style={{ backgroundColor: p.color, boxShadow: `0 0 10px ${p.color}` }}
-            />
-        ))}
+        {/* Background Dot Grid */}
+        <div className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-10" style={DOT_GRID_STYLE} />
 
-        {/* Dynamic Background */}
-        <div 
-            className={`absolute inset-0 pointer-events-none transition-opacity duration-1000 ${isFullSync ? 'opacity-30' : 'opacity-10'}`} 
-            style={{ 
-                backgroundImage: 'radial-gradient(var(--dot-color) 1px, transparent 1px)', 
-                backgroundSize: '24px 24px',
-                // @ts-ignore
-                '--dot-color': isFullSync ? '#6366f1' : '#94a3b8'
-            }} 
-        />
-        {isFullSync && <div className="absolute inset-0 bg-indigo-500/5 animate-pulse pointer-events-none" />}
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar-light relative z-10 pt-8 pb-20">
-            
-            {/* Header Area */}
-            <Accumulator 
-                counts={stats.counts} 
-                total={stats.total} 
-                completed={stats.completed} 
-                pulse={accumulatorPulse}
-            />
-
-            {/* Controls */}
-            <div className="max-w-6xl mx-auto px-4 md:px-8 mb-6 flex justify-between items-end">
-                <div>
-                    <h1 className="text-2xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Протоколы</h1>
-                    <p className="text-slate-500 text-xs font-mono uppercase tracking-wider">Daily Routine</p>
-                </div>
-                <button onClick={openNew} className="p-3 bg-slate-900 dark:bg-white text-white dark:text-black rounded-full shadow-lg hover:scale-105 transition-transform">
-                    <Plus size={20} strokeWidth={2} />
-                </button>
+        <header className="p-6 md:p-8 flex justify-between items-end shrink-0 z-10">
+            <div>
+                <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Трекер</h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Ритм твоей жизни</p>
             </div>
+            {!isFormOpen && (
+                <button onClick={openNew} className="p-3 bg-slate-900 dark:bg-indigo-600 text-white rounded-full shadow-lg hover:scale-105 transition-transform">
+                    <Plus size={24} />
+                </button>
+            )}
+        </header>
 
-            {/* List */}
-            {habits.length === 0 ? (
-                <EmptyState icon={Flame} title="Система не активна" description="Добавь первый ритуал, чтобы запустить реактор" color="indigo" actionLabel="Создать" onAction={openNew} />
+        <div className="flex-1 overflow-y-auto custom-scrollbar-light px-4 md:px-8 pb-20 z-10">
+            {habits.length === 0 && !isFormOpen ? (
+                <EmptyState icon={Flame} title="Тишина" description="Добавь первый ритуал, чтобы запустить пульс" color="orange" actionLabel="Создать" onAction={openNew} />
             ) : (
-                <div className="flex flex-col gap-2 max-w-[1920px] mx-auto px-4 md:px-8">
-                    {/* Date Header */}
-                    <div className="flex pl-[200px] md:pl-[300px] mb-2 pr-4">
-                        <div className="flex justify-between w-full">
-                            {dates.map((d, i) => (
-                                <div key={i} className="w-7 text-center">
-                                    <div className="text-[8px] font-bold text-slate-300 dark:text-slate-600 uppercase">{d.toLocaleDateString('ru-RU', { weekday: 'short' })}</div>
-                                    <div className={`text-[8px] font-mono ${getLocalDateKey(d) === todayStr ? 'text-indigo-500' : 'text-slate-400'}`}>{d.getDate()}</div>
-                                </div>
-                            ))}
+                <div className="flex flex-col gap-1">
+                    {/* Header Row for Dates */}
+                    <div className="flex items-center pl-[250px] pr-[100px] mb-2 select-none">
+                        <div className="flex justify-between w-full px-4">
+                            {dates.map((d, i) => {
+                                const isToday = getLocalDateKey(d) === todayStr;
+                                return (
+                                    <div key={i} className={`w-7 text-center rounded-t-sm ${isToday ? 'bg-gradient-to-t from-indigo-50/50 to-transparent dark:from-indigo-900/10' : ''}`}>
+                                        <div className="text-[9px] font-bold text-slate-300 dark:text-slate-600 uppercase">
+                                            {d.toLocaleDateString('ru-RU', { weekday: 'short' })}
+                                        </div>
+                                        <div className={`text-[9px] font-mono mt-0.5 ${isToday ? 'text-indigo-500 font-bold' : 'text-slate-400'}`}>
+                                            {d.getDate()}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
+                    {/* Habit Rows */}
                     {habits.map(habit => {
                         const color = getSphereColor(habit.spheres);
+                        const isDoneToday = !!habit.history[todayStr];
+                        const progress = isDoneToday ? 100 : 0; 
+                        
+                        const sparkData = dates.slice(-7).map(d => habit.history[getLocalDateKey(d)] ? 1 : 0);
+                        const resonanceOpacity = Math.max(0.1, Math.min(1, 0.2 + (habit.streak * 0.05)));
+
                         return (
                             <motion.div 
                                 key={habit.id}
                                 layout
-                                className="group flex items-center bg-white/40 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-700/30 rounded-xl hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all relative overflow-hidden h-14"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="group flex items-center bg-white/50 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-700/30 rounded-xl hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all relative overflow-hidden"
                             >
-                                {/* Info */}
+                                {/* Left: Info */}
                                 <div 
-                                    className="w-[200px] md:w-[300px] px-4 flex items-center gap-3 shrink-0 cursor-pointer h-full border-r border-slate-100 dark:border-slate-700/50"
+                                    className="w-[250px] p-4 flex items-center gap-4 shrink-0 cursor-pointer"
                                     onClick={() => setSelectedHabitId(habit.id)}
                                 >
-                                    <div className="w-1 h-8 rounded-full" style={{ backgroundColor: color }} />
+                                    <AuraRingButton 
+                                        isDone={isDoneToday} 
+                                        onClick={(e) => { e.stopPropagation(); handleToggle(habit, new Date()); }} 
+                                        color={color}
+                                        progress={progress / 100}
+                                    />
                                     <div className="min-w-0">
-                                        <h3 className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{habit.title}</h3>
-                                        <div className="flex items-center gap-2">
-                                            <div className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">{habit.streak} DAY STREAK</div>
-                                        </div>
+                                        <h3 className="text-[13px] font-medium text-slate-800 dark:text-slate-200 leading-snug truncate flex items-center gap-2">
+                                            {habit.title}
+                                            <Diamond size={8} className="text-indigo-400 fill-current" style={{ opacity: resonanceOpacity }} />
+                                        </h3>
+                                        <p className="text-[10px] font-serif italic text-slate-400 dark:text-slate-500 truncate">{habit.description || 'Ритуал'}</p>
                                     </div>
                                 </div>
 
-                                {/* Rhythm Grid */}
-                                <div className="flex-1 h-full">
-                                    <RhythmRow habit={habit} dates={dates} onToggle={(e, d) => handleToggle(e, habit, d)} color={color} todayStr={todayStr} />
+                                {/* Middle: Matrix */}
+                                <div className="flex-1 h-12 overflow-hidden border-l border-r border-slate-100 dark:border-slate-700/50">
+                                    <RhythmRow habit={habit} dates={dates} onToggle={(d) => handleToggle(habit, d)} color={color} todayStr={todayStr} />
                                 </div>
 
+                                {/* Right: Stats */}
+                                <div className="w-[100px] p-3 flex flex-col items-end justify-center shrink-0">
+                                    <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                        {habit.streak > 0 && <Zap size={10} className="text-amber-500 fill-amber-500" />}
+                                        <span>{Math.round((Object.keys(habit.history).length / 30) * 100)}%</span>
+                                    </div>
+                                    <div className="w-16 h-4 mt-1">
+                                        <Sparkline data={sparkData} color={color} />
+                                    </div>
+                                </div>
+                                
                                 {/* Hover Actions */}
-                                <div className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-slate-800 shadow-md rounded-lg p-1">
-                                    <button onClick={() => openEdit(habit)} className="p-1.5 text-slate-400 hover:text-indigo-500"><Edit2 size={14} /></button>
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-slate-800 shadow-md rounded-lg p-1 flex gap-1">
+                                    <button onClick={() => openEdit(habit)} className="p-1.5 text-slate-400 hover:text-indigo-500 rounded hover:bg-slate-100 dark:hover:bg-slate-700"><Edit2 size={14} /></button>
                                 </div>
                             </motion.div>
                         );
                     })}
+
+                    {/* Metadata Footer */}
+                    <div className="mt-8 mb-4 text-center">
+                        <div className="inline-block px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 font-mono text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest shadow-sm">
+                            SYSTEM_STATUS: [ {syncRate > 80 ? 'RHYTHM_STABLE' : syncRate > 40 ? 'SYNCING...' : 'DESYNCHRONIZED'} ] <span className="opacity-30 mx-2">|</span> TOTAL_SYNC: {syncRate}%
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
 
-        {/* FORM MODAL */}
+        {/* CALIBRATION PANEL (MODAL) */}
         <AnimatePresence>
             {(isFormOpen || selectedHabitId) && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm" onClick={() => { closeForm(); setSelectedHabitId(null); }}>
                     <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                        className="w-full max-w-md bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl relative"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="w-full max-w-md bg-white/70 dark:bg-[#1e293b]/70 backdrop-blur-[45px] saturate-150 border border-slate-900/10 dark:border-white/10 rounded-[32px] p-8 shadow-2xl relative overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {isFormOpen ? (
                             <>
-                                <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">{editingHabit ? 'Настройка' : 'Новый ритуал'}</h3>
-                                    <button onClick={closeForm}><X size={20} className="text-slate-400" /></button>
+                                <div className="flex justify-between items-center mb-8">
+                                    <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
+                                        {editingHabit ? 'КАЛИБРОВКА' : 'НАСТРОЙКА РИТМА'}
+                                    </div>
+                                    <button onClick={closeForm} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                                        <X size={20} strokeWidth={1} />
+                                    </button>
                                 </div>
-                                <div className="space-y-6">
-                                    <input className="text-2xl font-light w-full bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none py-2" placeholder="Название..." value={newTitle} onChange={e => setNewTitle(e.target.value)} autoFocus />
-                                    <input className="text-sm w-full bg-transparent outline-none text-slate-500" placeholder="Зачем это нужно?" value={description} onChange={e => setDescription(e.target.value)} />
-                                    
+
+                                <div className="space-y-8">
+                                    {/* TITLE & DESCRIPTION */}
+                                    <div className="space-y-3">
+                                        <input 
+                                            className="text-xl md:text-2xl font-sans font-light bg-transparent border-b border-slate-300 dark:border-slate-600 focus:border-indigo-500 outline-none w-full py-2 text-slate-800 dark:text-slate-100 placeholder:text-slate-300 dark:placeholder:text-slate-600 transition-colors"
+                                            placeholder="Название нового ритма..."
+                                            value={newTitle}
+                                            onChange={e => setNewTitle(e.target.value)}
+                                            autoFocus
+                                        />
+                                        <input 
+                                            className="font-serif italic text-sm text-slate-500 dark:text-slate-400 bg-transparent border-none outline-none w-full placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                                            placeholder="Зачем тебе этот ритуал? (Контекст)"
+                                            value={description}
+                                            onChange={e => setDescription(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* SPHERES (Aura Rings) */}
                                     <div>
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Сфера</div>
-                                        <div className="flex gap-2">
-                                            {SPHERES.map(s => (
-                                                <button key={s.id} onClick={() => toggleSphere(s.id)} className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${selectedSpheres.includes(s.id) ? `bg-${s.color}-500 border-${s.color}-500 text-white` : 'border-slate-200'}`}>
-                                                    {selectedSpheres.includes(s.id) && <div className="w-2 h-2 bg-white rounded-full" />}
-                                                </button>
-                                            ))}
+                                        <div className="text-[9px] font-mono uppercase tracking-widest text-slate-400 mb-3">Сфера Влияния</div>
+                                        <div className="flex gap-4">
+                                            {SPHERES.map(s => {
+                                                const isSelected = selectedSpheres.includes(s.id);
+                                                return (
+                                                    <Tooltip key={s.id} content={s.label}>
+                                                        <button 
+                                                            onClick={() => toggleSphere(s.id)}
+                                                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isSelected ? `bg-${s.color}-500 border-${s.color}-500 shadow-[0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-300 dark:border-slate-600 hover:border-slate-400'}`}
+                                                        >
+                                                            {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                                                        </button>
+                                                    </Tooltip>
+                                                );
+                                            })}
                                         </div>
                                     </div>
 
-                                    <button onClick={handleSave} className="w-full py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-bold text-xs uppercase tracking-wider">Сохранить</button>
+                                    {/* FREQUENCY (Monospace Toggles) */}
+                                    <div>
+                                        <div className="text-[9px] font-mono uppercase tracking-widest text-slate-400 mb-3">Частота</div>
+                                        <div className="flex gap-3">
+                                            <button 
+                                                onClick={() => setFrequency('daily')}
+                                                className={`px-3 py-2 rounded text-[10px] font-mono uppercase tracking-widest border transition-all ${frequency === 'daily' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300'}`}
+                                            >
+                                                [ DAILY ]
+                                            </button>
+                                            <button 
+                                                onClick={() => setFrequency('times_per_week')}
+                                                className={`px-3 py-2 rounded text-[10px] font-mono uppercase tracking-widest border transition-all ${frequency === 'times_per_week' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300'}`}
+                                            >
+                                                [ WEEKLY ]
+                                            </button>
+                                        </div>
+                                        {frequency === 'times_per_week' && (
+                                            <div className="mt-3 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                                                <span className="text-xs text-slate-500">Цель:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="1" max="7" 
+                                                    className="w-12 bg-transparent border-b border-slate-300 text-center font-mono text-sm outline-none"
+                                                    value={targetCount}
+                                                    onChange={e => setTargetCount(parseInt(e.target.value))}
+                                                />
+                                                <span className="text-xs text-slate-500">раз в неделю</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* SKILL LINK (Mock Visual) */}
+                                    <div className="pt-2">
+                                        <button className="flex items-center gap-2 text-xs text-slate-400 hover:text-indigo-500 transition-colors group">
+                                            <div className="p-1 rounded border border-slate-300 group-hover:border-indigo-400 text-slate-300 group-hover:text-indigo-500 transition-colors">
+                                                <Diamond size={10} />
+                                            </div>
+                                            <span>Привязать к Скиллу...</span>
+                                        </button>
+                                    </div>
+
+                                    {/* PULSE PREVIEW & ACTION */}
+                                    <div className="pt-6 mt-4 border-t border-slate-900/5 dark:border-white/5">
+                                        {/* Pulse Line Visual */}
+                                        <div className="w-full h-8 mb-6 flex items-center justify-center opacity-30">
+                                            <svg width="100%" height="100%" viewBox="0 0 300 30" preserveAspectRatio="none">
+                                                <path d="M0,15 L100,15 L110,5 L120,25 L130,15 L300,15" fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-900 dark:text-white" />
+                                            </svg>
+                                        </div>
+
+                                        <button 
+                                            onClick={handleSave}
+                                            className="w-full py-3 rounded-full border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-white font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all active:scale-[0.98]"
+                                        >
+                                            {editingHabit ? 'ОБНОВИТЬ РИТМ' : 'ИНИЦИИРОВАТЬ РИТМ'}
+                                        </button>
+                                    </div>
                                 </div>
                             </>
                         ) : (
-                            // Detail View
-                            <div className="text-center relative">
-                                <button onClick={() => setSelectedHabitId(null)} className="absolute top-0 right-0"><X size={20} className="text-slate-400"/></button>
-                                <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 mx-auto mb-4 flex items-center justify-center"><Flame size={24} className="text-slate-400"/></div>
-                                <h3 className="text-2xl font-light mb-2">{habits.find(h => h.id === selectedHabitId)?.title}</h3>
-                                <div className="flex justify-center gap-4 mt-6">
-                                    <button onClick={() => { openEdit(habits.find(h => h.id === selectedHabitId)!); setSelectedHabitId(null); }} className="text-xs font-bold text-slate-400 hover:text-indigo-500 uppercase tracking-wider flex items-center gap-2"><Edit2 size={12}/> Редактировать</button>
-                                    <button onClick={() => { if(confirm("Удалить?")) { deleteHabit(selectedHabitId!); setSelectedHabitId(null); } }} className="text-xs font-bold text-slate-400 hover:text-red-500 uppercase tracking-wider flex items-center gap-2"><Trash2 size={12}/> Удалить</button>
-                                </div>
-                            </div>
+                            // DETAIL VIEW (Minimalist)
+                            (() => {
+                                const h = habits.find(habit => habit.id === selectedHabitId);
+                                if (!h) return null;
+                                return (
+                                    <div className="text-center relative">
+                                        <button onClick={() => setSelectedHabitId(null)} className="absolute top-0 right-0 text-slate-400 hover:text-slate-600"><X size={20} strokeWidth={1} /></button>
+                                        
+                                        <div className={`w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm`}>
+                                            <Flame size={24} className={h.streak > 3 ? "text-orange-500 animate-pulse" : "text-slate-400"} strokeWidth={1} />
+                                        </div>
+                                        
+                                        <h3 className="text-2xl font-light text-slate-800 dark:text-white mb-2 tracking-tight">{h.title}</h3>
+                                        <p className="text-sm text-slate-500 font-serif italic mb-8">{h.description}</p>
+                                        
+                                        <div className="flex justify-center gap-8 mb-8">
+                                            <div className="text-center">
+                                                <div className="text-3xl font-light text-indigo-500">{h.streak}</div>
+                                                <div className="text-[9px] uppercase font-mono tracking-widest text-slate-400 mt-1">Стрик</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-3xl font-light text-emerald-500">{Object.keys(h.history).length}</div>
+                                                <div className="text-[9px] uppercase font-mono tracking-widest text-slate-400 mt-1">Всего</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-center gap-4 pt-6 border-t border-slate-100 dark:border-white/5">
+                                            <button onClick={() => { setSelectedHabitId(null); openEdit(h); }} className="text-[10px] font-bold text-slate-400 hover:text-indigo-500 uppercase tracking-wider flex items-center gap-2 transition-colors">
+                                                <Edit2 size={12} /> Изменить
+                                            </button>
+                                            <div className="w-px h-3 bg-slate-200 dark:bg-slate-700" />
+                                            <button onClick={() => { if(confirm("Удалить?")) { deleteHabit(h.id); setSelectedHabitId(null); } }} className="text-[10px] font-bold text-slate-400 hover:text-red-500 uppercase tracking-wider flex items-center gap-2 transition-colors">
+                                                <Trash2 size={12} /> Удалить
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })()
                         )}
                     </motion.div>
                 </div>
