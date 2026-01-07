@@ -297,18 +297,9 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
     const addTag = (tag: string) => {
         const cleanTag = tag.trim().replace(/^#/, '');
         if (!cleanTag) return;
-        
-        // Prevent adding duplicate tags
-        if (selectedTags.some(t => t.toLowerCase() === cleanTag.toLowerCase())) {
-            setInput('');
-            setIsOpen(false);
-            return;
-        }
-        
-        const newTag = existingTags.find(t => t.toLowerCase() === cleanTag.toLowerCase()) || cleanTag;
-        onChange([...selectedTags, newTag]);
-        setInput('');
-        setIsOpen(false);
+        if (selectedTags.some(t => t.toLowerCase() === cleanTag.toLowerCase())) { setInput(''); setIsOpen(false); return; }
+        onChange([...selectedTags, existingTags.find(t => t.toLowerCase() === cleanTag.toLowerCase()) || cleanTag]);
+        setInput(''); setIsOpen(false);
     };
 
     return (
@@ -335,21 +326,10 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
             {isOpen && (input.length > 0 || filteredSuggestions.length > 0) && (
                 <div className={`absolute ${direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto`}>
                     {input.length > 0 && !filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase()) && (
-                        <button 
-                            onMouseDown={(e) => { e.preventDefault(); addTag(input); }} 
-                            className="w-full text-left px-3 py-2 text-xs font-sans text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-bold"
-                        >
-                            <Plus size={12} /> Создать «{input}»
-                        </button>
+                        <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-xs font-sans text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-bold"><Plus size={12} /> Создать «{input}»</button>
                     )}
                     {filteredSuggestions.map(tag => (
-                        <button 
-                            key={tag} 
-                            onMouseDown={(e) => { e.preventDefault(); addTag(tag); }} 
-                            className="w-full text-left px-3 py-2 text-xs font-sans text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-medium"
-                        >
-                            <TagIcon size={12} className="text-slate-400" /> {tag}
-                        </button>
+                        <button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-xs font-sans text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-medium"><TagIcon size={12} className="text-slate-400" /> {tag}</button>
                     ))}
                 </div>
             )}
@@ -739,28 +719,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const hasMoodMatcher = useMemo(() => config.aiTools.some(t => t.id === 'mood_matcher'), [config.aiTools]);
   const hasTagger = useMemo(() => config.aiTools.some(t => t.id === 'tagger'), [config.aiTools]);
-
-  // Click Outside Handler for Global Popups
-  useEffect(() => {
-      const handleGlobalMouseDown = (e: MouseEvent) => {
-          const target = e.target as HTMLElement;
-          
-          // Close Creation Color Picker
-          if (showColorPicker && !target.closest('.color-picker-dropdown') && !target.closest('[title="Фон заметки"]')) {
-              setShowColorPicker(false);
-          }
-          
-          // Close Edit Modal Color Picker
-          if (showModalColorPicker && !target.closest('.color-picker-dropdown') && !target.closest('[title="Фон заметки"]')) {
-              setShowModalColorPicker(false);
-          }
-      };
-
-      if (showColorPicker || showModalColorPicker) {
-          window.addEventListener('mousedown', handleGlobalMouseDown);
-      }
-      return () => window.removeEventListener('mousedown', handleGlobalMouseDown);
-  }, [showColorPicker, showModalColorPicker]);
 
   const saveHistorySnapshot = useCallback((content: string) => {
       if (content === history[historyIndex]) return;
