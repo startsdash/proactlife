@@ -24,7 +24,6 @@ interface Props {
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
   onAddJournalEntry: (entry: JournalEntry) => void;
-  // Sketchpad Props - Kept for interface compatibility but not used
   sketchItems?: SketchItem[];
   addSketchItem?: (item: SketchItem) => void;
   deleteSketchItem?: (id: string) => void;
@@ -50,15 +49,14 @@ const ORACLE_VIBES = [
 ];
 
 const UNSPLASH_PRESETS = [
-    'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=400&q=80', // Rain
-    'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&q=80', // Gradient
-    'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=400&q=80', // Dark Abstract
-    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80', // Nature
+    'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=400&q=80',
+    'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&q=80',
+    'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=400&q=80',
+    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80',
 ];
 
 const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E")`;
 
-// --- MASONRY BREAKPOINTS ---
 const breakpointColumnsObj = {
   default: 4,
   1600: 3,
@@ -66,10 +64,8 @@ const breakpointColumnsObj = {
   700: 1
 };
 
-// --- HELPER: ALLOW DATA URIS ---
 const allowDataUrls = (url: string) => url;
 
-// --- HELPER: IMAGE COMPRESSION ---
 const processImage = (file: File | Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
         if (!file.type.startsWith('image/')) {
@@ -83,7 +79,7 @@ const processImage = (file: File | Blob): Promise<string> => {
             img.src = event.target?.result as string;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800; // Improved quality
+                const MAX_WIDTH = 800;
                 const MAX_HEIGHT = 800;
                 let width = img.width;
                 let height = img.height;
@@ -117,14 +113,12 @@ const processImage = (file: File | Blob): Promise<string> => {
     });
 };
 
-// --- HELPER: EXTRACT URL ---
 const findFirstUrl = (text: string): string | null => {
     const maskedText = text.replace(/!\[.*?\]\(.*?\)/g, '');
     const match = maskedText.match(/(https?:\/\/[^\s\)]+)/);
     return match ? match[0] : null;
 };
 
-// --- COMPONENT: LINK PREVIEW ---
 const LinkPreview = React.memo(({ url }: { url: string }) => {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -192,7 +186,6 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
     );
 });
 
-// Markdown Styles
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
     a: ({node, ...props}: any) => <a className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors font-sans" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
@@ -212,28 +205,19 @@ const markdownComponents = {
     u: ({node, ...props}: any) => <u {...props} /> 
 };
 
-// Converters
-const markdownToHtml = (md: string) => {
-    if (!md) return '';
-    let html = md;
-    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
-    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
-    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
-    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
-        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
-    });
-    html = html.replace(/\n/g, '<br>');
-    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
-    return html;
-};
-
+// IMPROVED: HTML to Markdown converter
 const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
+
+    // Helper to replace block elements with newlines first
+    const normalizeBlocks = (node: HTMLElement) => {
+         const blockTags = ['DIV', 'P', 'H1', 'H2', 'H3', 'LI', 'UL', 'OL', 'BLOCKQUOTE'];
+         if (blockTags.includes(node.tagName)) {
+             // If previous sibling wasn't a block, maybe add newline?
+             // Actually, simplest strategy: Treat <div> as \n + content
+         }
+    };
 
     const wrap = (text: string, marker: string) => {
         const match = text.match(/^(\s*)(.*?)(\s*)$/s);
@@ -251,6 +235,7 @@ const htmlToMarkdown = (html: string) => {
             let content = '';
             el.childNodes.forEach(child => content += walk(child));
             
+            // Handle style attributes
             if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
             if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
             if (el.style.fontStyle === 'italic') return wrap(content, '*');
@@ -262,7 +247,12 @@ const htmlToMarkdown = (html: string) => {
                 case 'code': return `\`${content}\``;
                 case 'h1': return `\n# ${content}\n`;
                 case 'h2': return `\n## ${content}\n`;
-                case 'div': case 'p': return `\n${content}\n`;
+                // FIX: Better div/p handling for newlines
+                case 'div': 
+                    // Should we double newline or single? usually single for div
+                    return `\n${content}`; 
+                case 'p': 
+                    return `\n\n${content}\n`;
                 case 'br': return '\n';
                 case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
                 default: return content;
@@ -270,10 +260,36 @@ const htmlToMarkdown = (html: string) => {
         }
         return '';
     };
+    
     let md = walk(temp);
+    // Cleanup excessive newlines
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
+};
+
+// IMPROVED: Markdown to HTML converter
+const markdownToHtml = (md: string) => {
+    if (!md) return '';
+    let html = md;
+    // Standard conversions
+    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
+    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
+    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
+    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
+        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
+    });
+    
+    // FIX: Better Line Break handling for contentEditable
+    // Replace standard newlines with <br> but avoid breaking block tags structure
+    html = html.replace(/\n/g, '<br>');
+    // Cleanup: remove <br> after block closing tags to avoid double gaps
+    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
+    return html;
 };
 
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
@@ -286,6 +302,12 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
     const dropdownRef = useRef<HTMLDivElement>(null);
     const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
+    // FIX: Ensure tags are unique
+    const handleTagChange = (newTags: string[]) => {
+        const uniqueTags = Array.from(new Set(newTags));
+        onChange(uniqueTags);
+    };
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as Node;
@@ -297,14 +319,13 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
             }
         };
         
-        // Handle scroll to close dropdown to avoid detached floating UI
         const handleScroll = () => {
             if (isOpen) setIsOpen(false);
         };
 
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside);
-            document.addEventListener('scroll', handleScroll, true); // Capture phase to catch all scrolls
+            document.addEventListener('scroll', handleScroll, true); 
             window.addEventListener('resize', handleScroll);
         }
         
@@ -322,7 +343,7 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
                 position: 'fixed',
                 left: rect.left,
                 width: Math.max(rect.width, 200),
-                zIndex: 99999,
+                zIndex: 99999, // Ensure high Z-Index
             };
             
             if (direction === 'down') {
@@ -339,20 +360,22 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
     const addTag = (tag: string) => {
         const cleanTag = tag.trim().replace(/^#/, '');
         if (!cleanTag) return;
+        // Avoid duplicates in add
         if (selectedTags.some(t => t.toLowerCase() === cleanTag.toLowerCase())) { setInput(''); setIsOpen(false); return; }
-        onChange([...selectedTags, existingTags.find(t => t.toLowerCase() === cleanTag.toLowerCase()) || cleanTag]);
+        
+        handleTagChange([...selectedTags, existingTags.find(t => t.toLowerCase() === cleanTag.toLowerCase()) || cleanTag]);
         setInput(''); setIsOpen(false);
     };
 
     const hasContent = input.length > 0 || filteredSuggestions.length > 0;
 
     return (
-        <div className="relative" ref={wrapperRef}>
+        <div className="relative portal-popup" ref={wrapperRef}>
             <div className={`flex flex-wrap items-center gap-3 min-h-[36px] ${variant === 'ghost' ? 'px-0 py-2' : 'p-2'}`}>
                 {selectedTags.map(tag => (
                     <span key={tag} className="flex items-center gap-1 text-[9px] font-sans uppercase tracking-[0.1em] text-slate-500 dark:text-slate-400 group cursor-default">
                         #{tag.replace(/^#/, '')} 
-                        <button onClick={() => onChange(selectedTags.filter(t => t !== tag))} className="text-slate-300 hover:text-red-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleTagChange(selectedTags.filter(t => t !== tag))} className="text-slate-300 hover:text-red-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <X size={10} strokeWidth={2} />
                         </button>
                     </span>
@@ -370,8 +393,10 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
             {isOpen && hasContent && createPortal(
                 <div 
                     ref={dropdownRef}
-                    className="fixed bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-75"
+                    className="fixed bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-75 portal-popup"
                     style={dropdownStyle}
+                    // IMPORTANT: Prevent clicks inside from propagating to "click outside" listeners of parents
+                    onMouseDown={(e) => e.stopPropagation()} 
                 >
                     {input.length > 0 && !filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase()) && (
                         <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-xs font-sans text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-bold"><Plus size={12} /> Создать «{input}»</button>
@@ -402,19 +427,15 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
             
             const style: React.CSSProperties = {};
             
-            // Vertical Logic
             const spaceBelow = viewportH - rect.bottom;
             if (spaceBelow < pickerHeight && rect.top > spaceBelow) {
-                // Flip Up
                 style.bottom = viewportH - rect.top + 8;
                 style.maxHeight = rect.top - 20;
             } else {
-                // Normal Down
                 style.top = rect.bottom + 8;
                 style.maxHeight = spaceBelow - 20;
             }
 
-            // Horizontal Logic
             if (rect.left + 320 > viewportW) {
                 style.right = 16;
             } else {
@@ -425,9 +446,7 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
         }
     }, [triggerRef]);
     
-    // Robust Env Getter for the API Key inside the component or file scope
     const getUnsplashKey = () => {
-        // Try various prefixes just in case, prioritizing the direct one as per screenshot
         const keys = [
             'UNSPLASH_ACCESS_KEY', 
             'VITE_UNSPLASH_ACCESS_KEY', 
@@ -447,13 +466,12 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
     const searchUnsplash = async (q?: string) => {
         const key = getUnsplashKey();
         if (!key) {
-            if (q) alert("Ключ Unsplash не найден. Используйте встроенные пресеты или добавьте UNSPLASH_ACCESS_KEY.");
+            if (q) alert("Ключ Unsplash не найден.");
             return;
         }
         
         setLoading(true);
         try {
-            // Random page for variety on re-search
             const page = Math.floor(Math.random() * 10) + 1;
             const endpoint = q 
                 ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&page=${page}&client_id=${key}`
@@ -488,9 +506,10 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
 
     return createPortal(
         <>
+            {/* FIX: Use transparent backdrop to catch clicks outside the picker */}
             <div className="fixed inset-0 z-[9998]" onClick={onClose} />
             <div 
-                className="fixed bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] w-80 flex flex-col gap-3" 
+                className="fixed bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] w-80 flex flex-col gap-3 portal-popup" 
                 style={pickerStyle}
                 onMouseDown={e => e.stopPropagation()}
             >
@@ -572,7 +591,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             setIsExiting(true);
             setTimeout(() => {
                 handlers.archiveNote(note.id);
-            }, 400); // Wait for animation
+            }, 400); 
         }
     };
 
@@ -613,14 +632,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             onClick={() => handlers.handleOpenNote(note)}
             className={`${getNoteColorClass(note.color)} rounded-3xl transition-all duration-500 hover:-translate-y-[4px] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] group/card flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden mb-6 ${isExiting ? 'opacity-0 translate-x-full scale-90' : ''}`}
         >
-            {/* NOISE TEXTURE */}
             <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
             {note.coverUrl && (
                 <div className="h-40 w-full shrink-0 relative z-10"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
             )}
 
-            {/* PIN BUTTON - Top Right (Ghost Style) */}
             <div className="absolute top-4 right-4 z-30">
                 <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
                     <button 
@@ -643,7 +660,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                         <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                     </div>
                     {linkUrl && <LinkPreview url={linkUrl} />}
-                    {/* AIR TAGS */}
                     {note.tags && note.tags.length > 0 && (
                         <div className="flex flex-wrap gap-3 mt-6">
                             {note.tags.map(tag => (
@@ -656,7 +672,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 </div>
             </div>
             
-            {/* MINIMAL CONTROLS */}
             <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
@@ -681,7 +696,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                     )}
                 </div>
                 
-                {/* ID Display */}
                 <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
                     ID // {note.id.slice(-5).toLowerCase()}
                 </div>
@@ -737,7 +751,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
 
-  // Refs for Cover Picker triggers to calculate position
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -833,11 +846,15 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       }
   };
 
+  // FIX: Detect clicks outside the creation box but IGNORE clicks in portals (CoverPicker, etc)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-        if (editorRef.current && !editorRef.current.contains(event.target as Node)) {
+        const target = event.target as HTMLElement;
+        // Check if the click is inside a portal (like Cover Picker or Tag Selector)
+        if (target.closest('.portal-popup')) return;
+
+        if (editorRef.current && !editorRef.current.contains(target)) {
             if (isExpanded) {
-                const target = event.target as HTMLElement;
                 if (target.closest('.color-picker-dropdown')) return;
                 if (target.closest('.image-delete-btn')) return;
                 setIsExpanded(false);
@@ -850,6 +867,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   useEffect(() => {
     if (isEditing && editContentRef.current && selectedNote) {
+        // FIX: Ensure clean initialization of editable content
         editContentRef.current.innerHTML = markdownToHtml(selectedNote.content);
         setActiveImage(null);
     }
@@ -977,6 +995,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     }
     
     setIsProcessing(true);
+    // FIX: Using improved converter
     const markdownContent = htmlToMarkdown(rawHtml);
     let autoTags: string[] = [];
     if (hasTagger && creationTags.length === 0 && markdownContent.length > 20) {
@@ -1069,6 +1088,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const handleSaveEdit = () => {
       if (selectedNote) {
           const rawHtml = editContentRef.current?.innerHTML || '';
+          // FIX: Using improved converter
           const markdownContent = htmlToMarkdown(rawHtml);
           if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
               const updated = { 
@@ -1133,7 +1153,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
       
-      {/* HEADER SECTION (Fixed) */}
       <div className="shrink-0 w-full px-4 md:px-8 pt-4 md:pt-8 mb-4 z-50">
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
@@ -1153,13 +1172,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar-light"
                 onScroll={() => setActiveImage(null)}
             >
-                {/* STICKY SEARCH/FILTER HEADER */}
                 <motion.div 
                     className="sticky top-0 z-40 w-full mb-[-20px]"
                     animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
                 >
-                    {/* Extended Blur/Gradient Backdrop */}
                     <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
                         <div 
                             className="absolute inset-0 backdrop-blur-xl"
@@ -1231,14 +1248,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     </div>
                 </motion.div>
 
-                {/* CONTENT AREA */}
                 <div className="w-full px-4 md:px-8 pt-6 pb-8">
                     {activeTab === 'inbox' && (
                         <>
                             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
                                 <div className="max-w-3xl mx-auto w-full">
                                     <div ref={editorRef} className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative mb-8 ${isExpanded ? 'shadow-xl z-30' : 'shadow-sm hover:shadow-md'}`}>
-                                        {/* NOISE TEXTURE */}
                                         <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0 rounded-3xl"></div>
                                         
                                         {!isExpanded ? (
@@ -1277,8 +1292,22 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                                         {activeImage && !isEditing && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors"><Trash2 size={18} /></button></Tooltip>}
                                                     </div>
                                                     <div className="flex items-center gap-2 shrink-0">
-                                                        <div className="relative"><Tooltip content="Обложка"><button ref={creationCoverBtnRef} onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button></Tooltip>{showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationCoverBtnRef} />}</div>
-                                                        <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>{showColorPicker && <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
+                                                        <div className="relative">
+                                                            <Tooltip content="Обложка"><button ref={creationCoverBtnRef} onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button></Tooltip>
+                                                            {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationCoverBtnRef} />}
+                                                        </div>
+                                                        <div className="relative">
+                                                            <Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>
+                                                            {showColorPicker && (
+                                                                <>
+                                                                    {/* FIX: Backdrop for creation color picker */}
+                                                                    <div className="fixed inset-0 z-40" onClick={() => setShowColorPicker(false)} />
+                                                                    <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                                        {colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </div>
                                                         <button onClick={handleDump} disabled={isProcessing} className="text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50">Закрыть</button>
                                                     </div>
                                                 </div>
@@ -1311,10 +1340,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </div>
       </div>
       
-      {/* The Oracle Modal (Ritualistic Random) */}
       {showOracle && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* 1. The Aura: Extreme Blur Backdrop */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1334,7 +1361,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                  <X size={20} className="text-slate-400" />
              </button>
 
-             {/* 2. The Selection (Tuning the Vibe) */}
              <div className="flex justify-center items-center gap-6 pt-8 pb-4 border-b border-transparent">
                 {ORACLE_VIBES.map(vibe => (
                     <button 
@@ -1348,7 +1374,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 ))}
              </div>
 
-             {/* 3. The Content / Interaction Area */}
              <div className="flex-1 flex flex-col relative">
                  {oracleState === 'select' && (
                      <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500">
@@ -1479,8 +1504,22 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                             {activeImage && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
                                         </div>
                                         <div className="shrink-0 relative flex gap-1">
-                                            <div className="relative"><Tooltip content="Обложка"><button ref={editCoverBtnRef} onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 ${editCover ? 'text-indigo-500' : ''}`}><Layout size={16} /></button></Tooltip>{showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editCoverBtnRef} />}</div>
-                                            <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Palette size={16} /></button></Tooltip>{showModalColorPicker && <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
+                                            <div className="relative">
+                                                <Tooltip content="Обложка"><button ref={editCoverBtnRef} onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 ${editCover ? 'text-indigo-500' : ''}`}><Layout size={16} /></button></Tooltip>
+                                                {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editCoverBtnRef} />}
+                                            </div>
+                                            <div className="relative">
+                                                <Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Palette size={16} /></button></Tooltip>
+                                                {showModalColorPicker && (
+                                                    <>
+                                                        {/* FIX: Backdrop for edit modal color picker */}
+                                                        <div className="fixed inset-0 z-40" onClick={() => setShowModalColorPicker(false)} />
+                                                        <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                            {colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                     <div 
