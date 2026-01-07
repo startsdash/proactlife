@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus, IdentityRole, Habit, AppConfig, AccessControl } from '../types';
 import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Fingerprint, Diamond, Activity, Tablet, BrainCircuit, User } from 'lucide-react';
@@ -192,17 +191,17 @@ const SidebarAccumulator = ({ habits, expanded, onNavigate }: { habits: Habit[],
                         relative w-4 h-16 rounded-full 
                         bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl 
                         border border-white/20 dark:border-white/10 
-                        shadow-lg overflow-hidden flex flex-col-reverse items-center py-0.5
+                        shadow-lg overflow-hidden flex flex-col justify-end items-center
                         hover:scale-110 hover:shadow-xl transition-all duration-300
                         ${isGlitching ? 'brightness-150' : ''}
                     `}
                 >
-                        {/* PLASMA LIQUID (Vertical Stack) */}
-                    <div className={`absolute bottom-0.5 w-full flex flex-col-reverse items-center filter blur-[3px] opacity-90 ${isDecaying ? 'opacity-40' : ''}`}>
-                            <motion.div className="w-2.5 bg-indigo-500 rounded-full shadow-[0_0_5px_#6366f1]" initial={{ height: 0 }} animate={{ height: `${prodPercent}%` }} transition={{ duration: 1 }} />
-                            <motion.div className="w-2.5 bg-emerald-500 rounded-full -mb-1 shadow-[0_0_5px_#10b981]" initial={{ height: 0 }} animate={{ height: `${growthPercent}%` }} transition={{ duration: 1 }} />
-                            <motion.div className="w-2.5 bg-rose-500 rounded-full -mb-1 shadow-[0_0_5px_#f43f5e]" initial={{ height: 0 }} animate={{ height: `${relPercent}%` }} transition={{ duration: 1 }} />
-                            <motion.div className="w-2.5 bg-slate-400 dark:bg-slate-600 rounded-full -mb-1" initial={{ height: 0 }} animate={{ height: `${otherPercent}%` }} transition={{ duration: 1 }} />
+                        {/* PLASMA LIQUID (Vertical Stack) - Absolute fill from bottom */}
+                    <div className={`absolute inset-0 w-full h-full flex flex-col-reverse items-center justify-start filter blur-[3px] opacity-90 ${isDecaying ? 'opacity-40' : ''}`}>
+                            <motion.div className="w-2.5 bg-indigo-500 rounded-full shadow-[0_0_5px_#6366f1] mix-blend-screen dark:mix-blend-normal" initial={{ height: 0 }} animate={{ height: `${prodPercent}%` }} transition={{ duration: 1 }} />
+                            <motion.div className="w-2.5 bg-emerald-500 rounded-full -mb-1 shadow-[0_0_5px_#10b981] mix-blend-screen dark:mix-blend-normal" initial={{ height: 0 }} animate={{ height: `${growthPercent}%` }} transition={{ duration: 1 }} />
+                            <motion.div className="w-2.5 bg-rose-500 rounded-full -mb-1 shadow-[0_0_5px_#f43f5e] mix-blend-screen dark:mix-blend-normal" initial={{ height: 0 }} animate={{ height: `${relPercent}%` }} transition={{ duration: 1 }} />
+                            <motion.div className="w-2.5 bg-slate-400 dark:bg-slate-600 rounded-full -mb-1 mix-blend-screen dark:mix-blend-normal" initial={{ height: 0 }} animate={{ height: `${otherPercent}%` }} transition={{ duration: 1 }} />
                     </div>
                 </button>
             </Tooltip>
