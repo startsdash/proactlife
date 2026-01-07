@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -10,7 +11,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2 } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -24,7 +25,6 @@ interface Props {
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
   onAddJournalEntry: (entry: JournalEntry) => void;
-  // Sketchpad Props - Kept for interface compatibility but not used
   sketchItems?: SketchItem[];
   addSketchItem?: (item: SketchItem) => void;
   deleteSketchItem?: (id: string) => void;
@@ -68,6 +68,44 @@ const breakpointColumnsObj = {
 
 // --- HELPER: ALLOW DATA URIS ---
 const allowDataUrls = (url: string) => url;
+
+// --- HELPER: IMAGE EXTRACTION & PREVIEW TEXT ---
+const extractImages = (md: string) => {
+  const regex = /!\[.*?\]\((.*?)\)/g;
+  const images = [];
+  let match;
+  while ((match = regex.exec(md)) !== null) {
+    images.push(match[1]);
+  }
+  return images;
+};
+
+const getPreviewText = (md: string) => {
+  // 1. Remove images to avoid markdown syntax in text preview
+  const textOnly = md.replace(/!\[.*?\]\((.*?)\)/g, '');
+  
+  // 2. Simple clean up of headers for preview
+  const cleanText = textOnly.replace(/^#+\s+/gm, '').trim();
+
+  // 3. Extract roughly 2-3 sentences or ~250 chars
+  // Split by sentence delimiters but keep them
+  const sentences = cleanText.match(/[^\.!\?]+[\.!\?]+/g) || [cleanText];
+  
+  let preview = sentences.slice(0, 3).join(' ');
+  
+  // 4. Smart truncation if too long
+  if (preview.length > 250) {
+      preview = preview.substring(0, 250).trim();
+      // Don't cut word
+      const lastSpace = preview.lastIndexOf(' ');
+      if (lastSpace > 0) preview = preview.substring(0, lastSpace);
+      preview += '...';
+  } else if (sentences.length > 3) {
+      preview += '...';
+  }
+  
+  return applyTypography(preview);
+};
 
 // --- HELPER: IMAGE COMPRESSION ---
 const processImage = (file: File | Blob): Promise<string> => {
@@ -193,7 +231,7 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
 });
 
 // Markdown Styles
-const markdownComponents = {
+const createMarkdownComponents = (onImageClick?: (src: string) => void) => ({
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
     a: ({node, ...props}: any) => <a className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors font-sans" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
@@ -208,9 +246,17 @@ const markdownComponents = {
             ? <code className="bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
             : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-3 rounded-xl text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     },
-    img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
+    img: ({node, src, ...props}: any) => (
+        <img 
+            className={`rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm ${onImageClick ? 'cursor-zoom-in hover:opacity-95 transition-opacity' : ''}`} 
+            src={src} 
+            onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(src); }}
+            {...props} 
+            loading="lazy" 
+        />
+    ),
     u: ({node, ...props}: any) => <u {...props} /> 
-};
+});
 
 // Converters
 const markdownToHtml = (md: string) => {
@@ -565,6 +611,13 @@ interface NoteCardProps {
 const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     const [isExiting, setIsExiting] = useState(false);
     const linkUrl = findFirstUrl(note.content);
+    
+    // Extract images and preview text
+    const images = useMemo(() => extractImages(note.content), [note.content]);
+    const previewText = useMemo(() => getPreviewText(note.content), [note.content]);
+    
+    // Display card markdown components (different from full view)
+    const cardMarkdownComponents = useMemo(() => createMarkdownComponents(), []);
 
     const handleArchive = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -636,13 +689,30 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 </Tooltip>
             </div>
 
-            <div className="p-8 pb-16 w-full flex-1 relative z-10">
+            <div className="p-8 pb-16 w-full flex-1 relative z-10 flex flex-col">
                 <div className="block w-full mb-2">
                     {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
-                    <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words line-clamp-[6]`}>
-                        <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                    <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words`}>
+                        <ReactMarkdown components={cardMarkdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                            {previewText}
+                        </ReactMarkdown>
                     </div>
                     {linkUrl && <LinkPreview url={linkUrl} />}
+                    
+                    {/* THUMBNAIL GRID (If note contains images) */}
+                    {images.length > 0 && (
+                        <div className="grid grid-cols-4 gap-2 mt-4">
+                            {images.slice(0, 4).map((img, i) => (
+                                <div key={i} className="aspect-square rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 relative group/thumb">
+                                    <img src={img} alt="thumbnail" className="w-full h-full object-cover transition-transform group-hover/thumb:scale-110" loading="lazy" />
+                                    {i === 3 && images.length > 4 && (
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-xs">+{images.length - 4}</div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {/* AIR TAGS */}
                     {note.tags && note.tags.length > 0 && (
                         <div className="flex flex-wrap gap-3 mt-6">
@@ -736,10 +806,16 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  
+  // Image Viewer State
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   // Refs for Cover Picker triggers to calculate position
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Markdown Components for Details Modal (Handles Image Click)
+  const detailMarkdownComponents = useMemo(() => createMarkdownComponents(setZoomImage), []);
 
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab as any);
@@ -1314,7 +1390,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       {/* The Oracle Modal (Ritualistic Random) */}
       {showOracle && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* 1. The Aura: Extreme Blur Backdrop */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1334,7 +1409,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                  <X size={20} className="text-slate-400" />
              </button>
 
-             {/* 2. The Selection (Tuning the Vibe) */}
              <div className="flex justify-center items-center gap-6 pt-8 pb-4 border-b border-transparent">
                 {ORACLE_VIBES.map(vibe => (
                     <button 
@@ -1348,7 +1422,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 ))}
              </div>
 
-             {/* 3. The Content / Interaction Area */}
              <div className="flex-1 flex flex-col relative">
                  {oracleState === 'select' && (
                      <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500">
@@ -1387,7 +1460,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             className="flex-1 flex items-center justify-center text-center"
                         >
                             <div className="font-serif text-2xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-200">
-                                <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                <ReactMarkdown components={{...createMarkdownComponents(), p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                                     {oracleNote.content}
                                 </ReactMarkdown>
                             </div>
@@ -1502,7 +1575,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         ) : (
                             <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-1">
                                 <div className={`text-slate-800 dark:text-slate-200 text-base leading-relaxed font-serif font-normal min-h-[4rem] mb-6 ${!selectedNote.title ? 'mt-1' : ''}`}>
-                                    <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                                    <ReactMarkdown components={detailMarkdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                                 </div>
                                 {selectedNote.tags && selectedNote.tags.length > 0 && (
                                     <div className="flex flex-wrap gap-3 pt-4 border-t border-black/5 dark:border-white/5">
@@ -1523,6 +1596,27 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 </motion.div>
             </div>
         </AnimatePresence>
+      )}
+
+      {/* FULL SCREEN IMAGE VIEWER */}
+      {zoomImage && (
+          <div className="fixed inset-0 z-[120] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out" onClick={() => setZoomImage(null)}>
+              <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="relative max-w-full max-h-full"
+                  onClick={e => e.stopPropagation()}
+              >
+                  <img src={zoomImage} alt="Full view" className="max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+                  <button 
+                      onClick={() => setZoomImage(null)} 
+                      className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors"
+                  >
+                      <X size={32} />
+                  </button>
+              </motion.div>
+          </div>
       )}
     </div>
   );
