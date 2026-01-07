@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus, IdentityRole, Habit, AppConfig, AccessControl } from '../types';
 import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Fingerprint, Diamond, Activity, Tablet, BrainCircuit, User } from 'lucide-react';
@@ -170,10 +171,10 @@ const SidebarAccumulator = ({ habits, expanded, onNavigate }: { habits: Habit[],
                          />
                     </div>
 
-                    {/* Label Overlay - Hidden on Hover, Ghost Tooltip takes over */}
-                    <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none group-hover/acc:opacity-0 transition-opacity">
+                    {/* Label Overlay - No fading on hover */}
+                    <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none transition-opacity">
                         <span className={`font-mono text-[9px] font-bold text-slate-600 dark:text-slate-300 mix-blend-difference tracking-widest drop-shadow-md ${isDecaying ? 'animate-pulse text-rose-500' : ''}`}>
-                            {isDecaying ? 'SIGNAL_WEAK' : `ENERGY ${Math.round(percent)}%`}
+                            {isDecaying ? 'SIGNAL_WEAK' : `ЭНЕРГИЯ ${Math.round(percent)}%`}
                         </span>
                     </div>
                 </button>
@@ -400,7 +401,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
             <div className={`flex items-center gap-4 transition-all duration-300 ${isExpanded ? 'justify-start' : 'justify-center flex-col gap-6'}`}>
                 
                 {/* ROLE RING (Identity) -> Maps to DASHBOARD now */}
-                <Tooltip content={role.toUpperCase()} side="right">
+                <Tooltip content="Обзор" side="right">
                     <div 
                         className={`w-8 h-8 rounded-full border-2 bg-transparent flex items-center justify-center relative cursor-pointer group ${ROLE_COLORS[role]}`}
                         onClick={() => { setModule(Module.DASHBOARD); if(isMobile) setIsExpanded(false); }}
