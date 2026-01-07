@@ -1,8 +1,9 @@
 
+
 import React, { useState } from 'react';
-import { AppConfig, Mentor, ChallengeAuthor, AIToolConfig, AccessControl, InviteCode } from '../types';
-import { AVAILABLE_ICONS, ICON_MAP, DEFAULT_AI_TOOLS, AVAILABLE_MODELS, DEFAULT_MODEL } from '../constants';
-import { Save, Plus, Trash2, Edit3, X, Database, Users, Zap, Bot, Cpu, FileJson, FileType, Shield, Lock, Globe, Code, Copy, Check, ArrowLeft, ChevronRight, Eye, EyeOff, LayoutTemplate, Key, Ticket, Clock } from 'lucide-react';
+import { AppConfig, Mentor, ChallengeAuthor, AIToolConfig, AccessControl, InviteCode, ModuleConfig } from '../types';
+import { AVAILABLE_ICONS, ICON_MAP, DEFAULT_AI_TOOLS, AVAILABLE_MODELS, DEFAULT_MODEL, DEFAULT_MODULE_CONFIGS } from '../constants';
+import { Save, Plus, Trash2, Edit3, X, Database, Users, Zap, Bot, Cpu, FileJson, FileType, Shield, Lock, Globe, Code, Copy, Check, ArrowLeft, ChevronRight, Eye, EyeOff, LayoutTemplate, Key, Ticket, Clock, Grid } from 'lucide-react';
 
 interface Props {
   config: AppConfig;
@@ -231,7 +232,7 @@ const AccessControlEditor = ({ data, onChange }: { data: AccessControl, onChange
 };
 
 const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'general' | 'core' | 'mentors' | 'authors' | 'tools'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'core' | 'mentors' | 'authors' | 'tools' | 'sections'>('general');
   
   const [localCore, setLocalCore] = useState(config.coreLibrary);
   const [mentors, setMentors] = useState<Mentor[]>(config.mentors);
@@ -247,6 +248,15 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
         return saved ? { ...def, ...saved } : def;
     });
   });
+
+  // Initialize Modules
+  const [moduleConfigs, setModuleConfigs] = useState<ModuleConfig[]>(() => {
+      const savedModules = config.modules || [];
+      return DEFAULT_MODULE_CONFIGS.map(def => {
+          const saved = savedModules.find(m => m.id === def.id);
+          return saved ? { ...def, ...saved } : def;
+      });
+  });
   
   const [editingMentor, setEditingMentor] = useState<Mentor | null>(null);
   const [isNewMentor, setIsNewMentor] = useState(false);
@@ -255,6 +265,7 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
   const [isNewAuthor, setIsNewAuthor] = useState(false);
 
   const [editingTool, setEditingTool] = useState<AIToolConfig | null>(null);
+  const [editingModule, setEditingModule] = useState<ModuleConfig | null>(null);
 
   const [copyStatus, setCopyStatus] = useState(false);
 
@@ -266,7 +277,8 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
       challengeAuthors: authors,
       aiTools: aiTools,
       isGuestModeEnabled: isGuestMode,
-      inviteCodes: inviteCodes
+      inviteCodes: inviteCodes,
+      modules: moduleConfigs
     });
     alert("Конфигурация сохранена локально!");
   };
@@ -277,8 +289,8 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
 
       // Create a complete content for constants.ts
       const fileContent = `import React from 'react';
-import { AppConfig, AIToolConfig } from "./types";
-import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book, Flame, Repeat, Calendar, CheckCircle, LayoutDashboard, Briefcase, Sprout, Heart, Target } from 'lucide-react';
+import { AppConfig, AIToolConfig, ModuleConfig, Module } from "./types";
+import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book, Flame, Repeat, Calendar, CheckCircle, LayoutDashboard, Briefcase, Sprout, Heart, Target, Image, Palette, Smile, Frown, Meh, Activity, Thermometer } from 'lucide-react';
 
 // --- ICON REGISTRY ---
 export const ICON_MAP: Record<string, React.ElementType> = {
@@ -303,7 +315,14 @@ export const ICON_MAP: Record<string, React.ElementType> = {
   'Briefcase': Briefcase,
   'Sprout': Sprout,
   'Heart': Heart,
-  'Target': Target
+  'Target': Target,
+  'Image': Image,
+  'Palette': Palette,
+  'Smile': Smile,
+  'Frown': Frown,
+  'Meh': Meh,
+  'Activity': Activity,
+  'Thermometer': Thermometer
 };
 
 export const AVAILABLE_ICONS = Object.keys(ICON_MAP);
@@ -338,6 +357,17 @@ export const SPHERES = [
   }
 ];
 
+export const MOOD_TAGS = [
+    { id: 'sleep', label: 'Сон', emoji: '🛌' },
+    { id: 'work', label: 'Работа', emoji: '💼' },
+    { id: 'social', label: 'Общение', emoji: '💬' },
+    { id: 'health', label: 'Здоровье', emoji: '🍏' },
+    { id: 'hobby', label: 'Хобби', emoji: '🎨' },
+    { id: 'weather', label: 'Погода', emoji: '🌧' },
+    { id: 'stress', label: 'Стресс', emoji: '🤯' },
+    { id: 'flow', label: 'Поток', emoji: '🌊' },
+];
+
 export const AVAILABLE_MODELS = [
   { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Preview)' },
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Fast & Cheap)' },
@@ -360,6 +390,8 @@ export const BASE_OUTPUT_INSTRUCTION = \`
 
 export const DEFAULT_AI_TOOLS: AIToolConfig[] = ${JSON.stringify(aiTools, null, 2)};
 
+export const DEFAULT_MODULE_CONFIGS: ModuleConfig[] = ${JSON.stringify(moduleConfigs, null, 2)};
+
 export const DEFAULT_CONFIG: AppConfig = {
   "_version": ${version},
   "isGuestModeEnabled": ${isGuestMode},
@@ -367,7 +399,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   "coreLibrary": DEFAULT_CORE_LIBRARY,
   "mentors": ${JSON.stringify(mentors, null, 2)},
   "challengeAuthors": ${JSON.stringify(authors, null, 2)},
-  "aiTools": DEFAULT_AI_TOOLS
+  "aiTools": DEFAULT_AI_TOOLS,
+  "modules": DEFAULT_MODULE_CONFIGS
 };
 
 export const applyTypography = (text: string): string => {
@@ -423,6 +456,13 @@ export const applyTypography = (text: string): string => {
         setAiTools(aiTools.map(t => t.id === editingTool.id ? editingTool : t));
         setEditingTool(null);
     }
+  };
+
+  const handleSaveModule = () => {
+      if (editingModule) {
+          setModuleConfigs(moduleConfigs.map(m => m.id === editingModule.id ? editingModule : m));
+          setEditingModule(null);
+      }
   };
 
   const RenderIcon = ({ name, className }: { name: string, className?: string }) => {
@@ -492,6 +532,7 @@ export const applyTypography = (text: string): string => {
         <div className="flex gap-2 mb-4 shrink-0 overflow-x-auto pb-2 scrollbar-none">
           {[
             { id: 'general', label: 'Общие', icon: LayoutTemplate },
+            { id: 'sections', label: 'Разделы', icon: Grid },
             { id: 'core', label: 'Ядро Знаний', icon: Database },
             { id: 'mentors', label: 'Менторы', icon: Users },
             { id: 'authors', label: 'Авторы челленджей', icon: Zap },
@@ -504,6 +545,7 @@ export const applyTypography = (text: string): string => {
                 setEditingMentor(null);
                 setEditingAuthor(null);
                 setEditingTool(null);
+                setEditingModule(null);
               }} 
               className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-white shadow-sm border border-slate-200 text-indigo-600' : 'text-slate-500 hover:bg-white/50 border border-transparent'}`}
             >
@@ -529,6 +571,67 @@ export const applyTypography = (text: string): string => {
                    
                    <InviteCodeManager codes={inviteCodes} onChange={setInviteCodes} />
                </div>
+            </div>
+          )}
+
+          {/* SECTIONS TAB */}
+          {activeTab === 'sections' && (
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+               <div className={`${editingModule ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-slate-100 flex-col overflow-y-auto p-4 space-y-2 bg-slate-50/50`}>
+                <div className="px-2 py-1 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Разделы Приложения</div>
+                {moduleConfigs.map(m => (
+                  <div key={m.id} onClick={() => setEditingModule(m)} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${editingModule?.id === m.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'} ${m.isDisabled ? 'opacity-60' : ''}`}>
+                      <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center mb-1">
+                                <div className={`font-bold text-sm ${m.isDisabled ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{m.name}</div>
+                                <div className="ml-2 flex items-center" title={m.accessLevel || 'public'}>
+                                  {m.accessLevel === 'owner_only' && <Lock size={12} className="text-red-400" />}
+                                  {(m.accessLevel === 'public' || !m.accessLevel) && <Globe size={12} className="text-emerald-400" />}
+                                  {m.accessLevel === 'restricted' && <Users size={12} className="text-amber-400" />}
+                                </div>
+                                <div className="flex-1" />
+                          </div>
+                      </div>
+                      <ChevronRight size={14} className="text-slate-300 md:hidden" />
+                  </div>
+                ))}
+              </div>
+
+              {editingModule && (
+                <div className="flex-1 p-6 overflow-y-auto custom-scrollbar-light">
+                  <div className="max-w-2xl mx-auto space-y-6">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => setEditingModule(null)} className="md:hidden p-2 -ml-2 text-slate-400">
+                          <ArrowLeft size={20} />
+                        </button>
+                        <h3 className="text-lg font-bold text-slate-800">{editingModule.name}</h3>
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono">ID: {editingModule.id}</div>
+                    </div>
+                    
+                    <StatusToggle 
+                        isDisabled={editingModule.isDisabled} 
+                        onChange={(val) => setEditingModule({...editingModule, isDisabled: val})} 
+                        label="Доступность раздела"
+                        descriptionOn="Раздел отображается в меню навигации."
+                        descriptionOff="Раздел скрыт для всех пользователей."
+                    />
+
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Название (UI)</label>
+                        <input className="w-full p-3 md:p-2 border rounded-xl md:rounded-lg bg-slate-50" value={editingModule.name} onChange={(e) => setEditingModule({...editingModule, name: e.target.value})} />
+                    </div>
+                    
+                    <AccessControlEditor data={editingModule} onChange={(d) => setEditingModule({ ...editingModule, ...d })} />
+
+                    <div className="flex gap-2 pt-6 pb-12 md:pb-6 border-t">
+                      <button onClick={() => setEditingModule(null)} className="flex-1 md:flex-none px-6 py-3 md:py-2 text-slate-500 hover:bg-slate-50 rounded-xl">Отмена</button>
+                      <button onClick={handleSaveModule} className="flex-1 md:flex-none px-8 py-3 md:py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Сохранить</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

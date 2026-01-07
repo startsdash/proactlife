@@ -1,6 +1,7 @@
 
+
 import React, { useState, useEffect } from 'react';
-import { Module, SyncStatus, IdentityRole, Habit } from '../types';
+import { Module, SyncStatus, IdentityRole, Habit, AppConfig, AccessControl } from '../types';
 import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Fingerprint, Diamond, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip } from './Tooltip';
@@ -15,6 +16,8 @@ interface Props {
   isOwner: boolean;
   role: IdentityRole;
   habits: Habit[];
+  config: AppConfig;
+  userEmail?: string;
 }
 
 const NAV_GROUPS = [
@@ -207,7 +210,7 @@ const SidebarAccumulator = ({ habits, expanded, onNavigate }: { habits: Habit[],
     );
 }
 
-const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatus, onConnectDrive, isDriveConnected, isOwner, role, habits }) => {
+const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatus, onConnectDrive, isDriveConnected, isOwner, role, habits, config, userEmail }) => {
   const [isExpanded, setIsExpanded] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth >= 768;
@@ -237,6 +240,23 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
       case 'error': return 'bg-red-500';
       case 'disconnected': default: return 'bg-slate-300 dark:bg-slate-600';
     }
+  };
+
+  const isModuleVisible = (moduleId: string) => {
+      if (isOwner) return true; // Owner sees all
+      const moduleConfig = config.modules?.find(m => m.id === moduleId);
+      
+      // If no config found, assume public (default behavior for safety/migration)
+      if (!moduleConfig) return true;
+      if (moduleConfig.isDisabled) return false;
+
+      const level = moduleConfig.accessLevel || 'public';
+      
+      if (level === 'public') return true;
+      if (level === 'owner_only') return false; // Already checked isOwner above
+      if (level === 'restricted') return moduleConfig.allowedEmails?.includes(userEmail || '') || false;
+      
+      return true;
   };
 
   return (
@@ -315,59 +335,64 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
 
         {/* NAV GROUPS */}
         <div className="flex-1 overflow-y-auto custom-scrollbar-none px-4 py-2 space-y-8">
-            {NAV_GROUPS.map(group => (
-                <div key={group.id} className="space-y-2">
-                    <div className={`text-[9px] font-mono text-slate-400 dark:text-slate-600 uppercase tracking-widest pl-2 mb-2 select-none transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
-                        {group.id}
-                    </div>
-                    {group.items.map(item => {
-                        const isActive = currentModule === item.id;
-                        return (
-                            <Tooltip key={item.id} content={item.label} side="right" disabled={isExpanded} className="w-full">
-                                <button
-                                    onClick={() => {
-                                        setModule(item.id);
-                                        if (isMobile) setIsExpanded(false);
-                                    }}
-                                    className={`
-                                        w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 group relative
-                                        ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}
-                                        ${isExpanded ? '' : 'justify-center px-0'}
-                                    `}
-                                >
-                                    {/* Active Glow Background (Subtle) */}
-                                    {isActive && (
-                                        <motion.div
-                                            layoutId="activeGlow"
-                                            className="absolute inset-0 bg-white/50 dark:bg-white/5 rounded-lg shadow-sm"
-                                            initial={false}
-                                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                        />
-                                    )}
+            {NAV_GROUPS.map(group => {
+                const visibleItems = group.items.filter(item => isModuleVisible(item.id));
+                if (visibleItems.length === 0) return null;
 
-                                    <div className="relative z-10 flex items-center justify-center w-5 h-5 shrink-0">
-                                        {isActive ? (
-                                            <Diamond size={8} className="fill-current text-indigo-500 animate-pulse" />
-                                        ) : (
-                                            <item.icon size={18} strokeWidth={1} className="group-hover:scale-110 transition-transform duration-300" />
-                                        )}
-                                    </div>
-
-                                    <span 
+                return (
+                    <div key={group.id} className="space-y-2">
+                        <div className={`text-[9px] font-mono text-slate-400 dark:text-slate-600 uppercase tracking-widest pl-2 mb-2 select-none transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
+                            {group.id}
+                        </div>
+                        {visibleItems.map(item => {
+                            const isActive = currentModule === item.id;
+                            return (
+                                <Tooltip key={item.id} content={item.label} side="right" disabled={isExpanded} className="w-full">
+                                    <button
+                                        onClick={() => {
+                                            setModule(item.id);
+                                            if (isMobile) setIsExpanded(false);
+                                        }}
                                         className={`
-                                            font-sans text-[11px] uppercase tracking-[0.15em] font-medium transition-all duration-300 origin-left whitespace-nowrap overflow-hidden relative z-10
-                                            ${isExpanded ? 'w-auto opacity-100' : 'w-0 opacity-0'}
-                                            ${isActive ? 'font-bold' : ''}
+                                            w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 group relative
+                                            ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}
+                                            ${isExpanded ? '' : 'justify-center px-0'}
                                         `}
                                     >
-                                        {item.label}
-                                    </span>
-                                </button>
-                            </Tooltip>
-                        );
-                    })}
-                </div>
-            ))}
+                                        {/* Active Glow Background (Subtle) */}
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="activeGlow"
+                                                className="absolute inset-0 bg-white/50 dark:bg-white/5 rounded-lg shadow-sm"
+                                                initial={false}
+                                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                            />
+                                        )}
+
+                                        <div className="relative z-10 flex items-center justify-center w-5 h-5 shrink-0">
+                                            {isActive ? (
+                                                <Diamond size={8} className="fill-current text-indigo-500 animate-pulse" />
+                                            ) : (
+                                                <item.icon size={18} strokeWidth={1} className="group-hover:scale-110 transition-transform duration-300" />
+                                            )}
+                                        </div>
+
+                                        <span 
+                                            className={`
+                                                font-sans text-[11px] uppercase tracking-[0.15em] font-medium transition-all duration-300 origin-left whitespace-nowrap overflow-hidden relative z-10
+                                                ${isExpanded ? 'w-auto opacity-100' : 'w-0 opacity-0'}
+                                                ${isActive ? 'font-bold' : ''}
+                                            `}
+                                        >
+                                            {item.label}
+                                        </span>
+                                    </button>
+                                </Tooltip>
+                            );
+                        })}
+                    </div>
+                );
+            })}
         </div>
 
         {/* SYSTEM FOOTER */}

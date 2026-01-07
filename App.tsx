@@ -331,6 +331,8 @@ const App: React.FC = () => {
       mentors: (configToFilter.mentors || []).filter(isVisible),
       challengeAuthors: (configToFilter.challengeAuthors || []).filter(isVisible),
       aiTools: (configToFilter.aiTools || []).filter(isVisible),
+      // Modules filtering happens in Layout, but we pass filtered config if needed. 
+      // Layout handles filtering based on the full config to show/hide items.
     };
   }, [data.config, isOwner, data.user]);
 
@@ -418,6 +420,8 @@ const App: React.FC = () => {
         isOwner={isOwner}
         role={data.profileConfig?.role || 'architect'}
         habits={data.habits}
+        config={data.config}
+        userEmail={data.user?.email}
     >
       <Onboarding onClose={() => setShowOnboarding(false)} />
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}

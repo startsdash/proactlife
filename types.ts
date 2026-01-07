@@ -172,6 +172,11 @@ export interface AIToolConfig extends AccessControl {
   responseMimeType?: 'text/plain' | 'application/json'; 
 }
 
+export interface ModuleConfig extends AccessControl {
+  id: Module;
+  name: string;
+}
+
 export interface InviteCode {
   code: string;
   createdAt: number;
@@ -189,6 +194,7 @@ export interface AppConfig {
   mentors: Mentor[];
   challengeAuthors: ChallengeAuthor[];
   aiTools: AIToolConfig[];
+  modules?: ModuleConfig[];
 }
 
 export interface UserProfile {
