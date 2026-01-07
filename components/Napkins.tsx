@@ -195,7 +195,7 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
 // Markdown Styles
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
-    a: ({node, ...props}: any) => <a className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors font-sans" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
+    a: ({node, ...props}: any) => <a className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors font-sans text-sm" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
@@ -493,7 +493,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             .replace(/(\*|_)(.*?)\1/g, '$2') // italic
             .replace(/`{3}[\s\S]*?`{3}/g, '') // code blocks
             .replace(/`(.+?)`/g, '$1') // inline code
-            .replace(/\[(.*?)\]\(.*?\)/g, '$1') // links
+            // .replace(/\[(.*?)\]\(.*?\)/g, '$1') // links - KEPT FOR MARKDOWN RENDERING
             .replace(/^>\s/gm, '') // blockquotes
             .replace(/\n+/g, ' ') 
             .replace(/\s+/g, ' ')
@@ -603,7 +603,17 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                     
                     {/* TEXT PREVIEW */}
                     <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed break-words`}>
-                        {previewText}
+                        <ReactMarkdown 
+                            components={{
+                                ...markdownComponents, 
+                                p: ({node, ...props}: any) => <span {...props} /> 
+                            }} 
+                            urlTransform={allowDataUrls} 
+                            remarkPlugins={[remarkGfm]} 
+                            rehypePlugins={[rehypeRaw]}
+                        >
+                            {previewText}
+                        </ReactMarkdown>
                     </div>
 
                     {/* IMAGE THUMBNAILS */}
