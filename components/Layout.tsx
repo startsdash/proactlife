@@ -176,13 +176,6 @@ const SidebarAccumulator = ({ habits, expanded, onNavigate }: { habits: Habit[],
                         </span>
                     </div>
                 </button>
-
-                {/* Ghost Tooltip (Hover) */}
-                <div className="absolute left-6 right-6 -bottom-6 opacity-0 group-hover/acc:opacity-100 transition-all duration-300 pointer-events-none text-center transform translate-y-2 group-hover/acc:translate-y-0">
-                    <div className="inline-block px-2 py-1 rounded bg-white/10 backdrop-blur-md border border-white/10 text-[7px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-widest shadow-xl">
-                        [ SYSTEM_SYNC: {Math.round(percent)}% // {isDecaying ? 'DECAY' : 'RHYTHM_ACTIVE'} ]
-                    </div>
-                </div>
             </div>
         )
     }
