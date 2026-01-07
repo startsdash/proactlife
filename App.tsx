@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
@@ -5,7 +7,7 @@ import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSess
 import { DEFAULT_CONFIG } from './constants';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
-import { Napkins } from './components/Napkins';
+import Napkins from './components/Napkins';
 import Sketchpad from './components/Sketchpad';
 import Ether from './components/Ether';
 import Sandbox from './components/Sandbox';
