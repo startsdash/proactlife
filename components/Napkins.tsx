@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -11,7 +10,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2 } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -65,7 +64,60 @@ const breakpointColumnsObj = {
   700: 1
 };
 
+// --- HELPER FUNCTIONS ---
+
 const allowDataUrls = (url: string) => url;
+
+// Extract image URLs from Markdown content
+const extractImages = (content: string): string[] => {
+    const matches = content.matchAll(/!\[.*?\]\((.*?)\)/g);
+    return Array.from(matches, m => m[1]);
+};
+
+// Smart text truncation for preview (2-3 sentences)
+const getPreviewContent = (content: string) => {
+    // 1. Remove image markdown
+    let cleanText = content.replace(/!\[.*?\]\(.*?\)/g, '');
+    // 2. Remove headers markdown (e.g. ## Title -> Title)
+    cleanText = cleanText.replace(/#{1,6}\s/g, '');
+    // 3. Remove excess whitespace
+    cleanText = cleanText.replace(/\s+/g, ' ').trim();
+
+    if (!cleanText) return '';
+
+    // 4. Split into sentences (naive approach handling . ! ?)
+    // This regex looks for punctuation followed by space or end of string
+    const sentences = cleanText.match(/[^\.!\?]+[\.!\?]+(\s|$)/g);
+
+    if (!sentences) {
+        // Fallback if no clear punctuation found
+        return cleanText.length > 150 ? cleanText.slice(0, 150).trim() + '...' : cleanText;
+    }
+
+    // Take up to 3 sentences, but check length limit
+    let preview = '';
+    const MAX_CHARS = 220; 
+
+    for (let i = 0; i < sentences.length && i < 3; i++) {
+        if ((preview + sentences[i]).length > MAX_CHARS) {
+            // If adding the next sentence exceeds max chars, stop here or truncate current sentence
+            if (preview.length === 0) {
+                 // Even first sentence is too long
+                 return sentences[i].slice(0, MAX_CHARS).trim() + '...';
+            }
+            break; 
+        }
+        preview += sentences[i];
+    }
+    
+    // Check if we didn't include everything
+    const totalLength = sentences.join('').length;
+    if (preview.length < totalLength - 5) { // Tolerance
+        preview = preview.trim() + '...';
+    }
+
+    return preview.trim();
+};
 
 const processImage = (file: File | Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -118,6 +170,39 @@ const findFirstUrl = (text: string): string | null => {
     const maskedText = text.replace(/!\[.*?\]\(.*?\)/g, '');
     const match = maskedText.match(/(https?:\/\/[^\s\)]+)/);
     return match ? match[0] : null;
+};
+
+// --- COMPONENTS ---
+
+// Lightbox for full-size images
+const Lightbox = ({ src, onClose }: { src: string, onClose: () => void }) => {
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [onClose]);
+
+    return createPortal(
+        <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm"
+            onClick={onClose}
+        >
+            <motion.img 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                src={src} 
+                className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                onClick={(e) => e.stopPropagation()} 
+            />
+            <button onClick={onClose} className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors p-2">
+                <X size={32} />
+            </button>
+        </motion.div>,
+        document.body
+    );
 };
 
 const LinkPreview = React.memo(({ url }: { url: string }) => {
@@ -202,23 +287,15 @@ const markdownComponents = {
             ? <code className="bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
             : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-3 rounded-xl text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     },
+    // We will override IMG in specific places to handle click-to-zoom
     img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
     u: ({node, ...props}: any) => <u {...props} /> 
 };
 
-// IMPROVED: HTML to Markdown converter
+// HTML to Markdown converter
 const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
-
-    // Helper to replace block elements with newlines first
-    const normalizeBlocks = (node: HTMLElement) => {
-         const blockTags = ['DIV', 'P', 'H1', 'H2', 'H3', 'LI', 'UL', 'OL', 'BLOCKQUOTE'];
-         if (blockTags.includes(node.tagName)) {
-             // If previous sibling wasn't a block, maybe add newline?
-             // Actually, simplest strategy: Treat <div> as \n + content
-         }
-    };
 
     const wrap = (text: string, marker: string) => {
         const match = text.match(/^(\s*)(.*?)(\s*)$/s);
@@ -236,7 +313,6 @@ const htmlToMarkdown = (html: string) => {
             let content = '';
             el.childNodes.forEach(child => content += walk(child));
             
-            // Handle style attributes
             if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
             if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
             if (el.style.fontStyle === 'italic') return wrap(content, '*');
@@ -248,12 +324,8 @@ const htmlToMarkdown = (html: string) => {
                 case 'code': return `\`${content}\``;
                 case 'h1': return `\n# ${content}\n`;
                 case 'h2': return `\n## ${content}\n`;
-                // FIX: Better div/p handling for newlines
-                case 'div': 
-                    // Should we double newline or single? usually single for div
-                    return `\n${content}`; 
-                case 'p': 
-                    return `\n\n${content}\n`;
+                case 'div': return `\n${content}`; 
+                case 'p': return `\n\n${content}\n`;
                 case 'br': return '\n';
                 case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
                 default: return content;
@@ -263,17 +335,15 @@ const htmlToMarkdown = (html: string) => {
     };
     
     let md = walk(temp);
-    // Cleanup excessive newlines
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
 };
 
-// IMPROVED: Markdown to HTML converter
+// Markdown to HTML converter
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
-    // Standard conversions
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
@@ -285,10 +355,7 @@ const markdownToHtml = (md: string) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
     
-    // FIX: Better Line Break handling for contentEditable
-    // Replace standard newlines with <br> but avoid breaking block tags structure
     html = html.replace(/\n/g, '<br>');
-    // Cleanup: remove <br> after block closing tags to avoid double gaps
     html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
     return html;
 };
@@ -303,7 +370,6 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
     const dropdownRef = useRef<HTMLDivElement>(null);
     const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
-    // FIX: Ensure tags are unique
     const handleTagChange = (newTags: string[]) => {
         const uniqueTags = Array.from(new Set(newTags));
         onChange(uniqueTags);
@@ -344,7 +410,7 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
                 position: 'fixed',
                 left: rect.left,
                 width: Math.max(rect.width, 200),
-                zIndex: 99999, // Ensure high Z-Index
+                zIndex: 99999,
             };
             
             if (direction === 'down') {
@@ -361,7 +427,6 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
     const addTag = (tag: string) => {
         const cleanTag = tag.trim().replace(/^#/, '');
         if (!cleanTag) return;
-        // Avoid duplicates in add
         if (selectedTags.some(t => t.toLowerCase() === cleanTag.toLowerCase())) { setInput(''); setIsOpen(false); return; }
         
         handleTagChange([...selectedTags, existingTags.find(t => t.toLowerCase() === cleanTag.toLowerCase()) || cleanTag]);
@@ -396,7 +461,6 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
                     ref={dropdownRef}
                     className="fixed bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-75 portal-popup"
                     style={dropdownStyle}
-                    // IMPORTANT: Prevent clicks inside from propagating to "click outside" listeners of parents
                     onMouseDown={(e) => e.stopPropagation()} 
                 >
                     {input.length > 0 && !filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase()) && (
@@ -507,7 +571,6 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
 
     return createPortal(
         <>
-            {/* FIX: Use transparent backdrop to catch clicks outside the picker */}
             <div className="fixed inset-0 z-[9998]" onClick={onClose} />
             <div 
                 className="fixed bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] w-80 flex flex-col gap-3 portal-popup" 
@@ -585,6 +648,18 @@ interface NoteCardProps {
 const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     const [isExiting, setIsExiting] = useState(false);
     const linkUrl = findFirstUrl(note.content);
+    
+    // Extract text for preview (2-3 sentences)
+    const previewText = useMemo(() => getPreviewContent(note.content), [note.content]);
+    
+    // Extract images for thumbnails
+    const contentImages = useMemo(() => extractImages(note.content), [note.content]);
+    
+    // Determine which images to show in the thumbnail grid.
+    // If a cover exists, we typically don't show the same image again if it was just picked from content, 
+    // but here we just show distinct content images.
+    // Filter out the image used as cover if it appears exactly in content (optional logic, kept simple here: show all content images).
+    const thumbnailImages = contentImages.filter(img => img !== note.coverUrl).slice(0, 3);
 
     const handleArchive = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -657,9 +732,34 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             <div className="p-8 pb-16 w-full flex-1 relative z-10">
                 <div className="block w-full mb-2">
                     {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
-                    <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words line-clamp-[6]`}>
-                        <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                    <div className="text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words">
+                        {/* Use the smart truncated text, not direct markdown rendering of full content */}
+                        <ReactMarkdown 
+                            components={{
+                                // Disable images in text preview as we show them in grid
+                                img: () => null, 
+                                // Simplified rendering for preview
+                                p: ({children}) => <p className="mb-2 last:mb-0 inline">{children}</p>
+                            }} 
+                            urlTransform={allowDataUrls} 
+                            remarkPlugins={[remarkGfm]} 
+                            rehypePlugins={[rehypeRaw]}
+                        >
+                            {previewText}
+                        </ReactMarkdown>
                     </div>
+                    
+                    {/* Thumbnail Grid for Content Images */}
+                    {thumbnailImages.length > 0 && (
+                        <div className="flex gap-2 mt-4 overflow-hidden rounded-xl">
+                            {thumbnailImages.map((img, i) => (
+                                <div key={i} className="h-16 flex-1 min-w-0 first:rounded-l-xl last:rounded-r-xl overflow-hidden relative bg-slate-100 dark:bg-slate-800 border border-black/5 dark:border-white/5">
+                                    <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {linkUrl && <LinkPreview url={linkUrl} />}
                     {note.tags && note.tags.length > 0 && (
                         <div className="flex flex-wrap gap-3 mt-6">
@@ -751,6 +851,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null); // New state for Lightbox
 
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
@@ -847,11 +948,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       }
   };
 
-  // FIX: Detect clicks outside the creation box but IGNORE clicks in portals (CoverPicker, etc)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         const target = event.target as HTMLElement;
-        // Check if the click is inside a portal (like Cover Picker or Tag Selector)
         if (target.closest('.portal-popup')) return;
 
         if (editorRef.current && !editorRef.current.contains(target)) {
@@ -868,7 +967,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   useEffect(() => {
     if (isEditing && editContentRef.current && selectedNote) {
-        // FIX: Ensure clean initialization of editable content
         editContentRef.current.innerHTML = markdownToHtml(selectedNote.content);
         setActiveImage(null);
     }
@@ -996,7 +1094,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     }
     
     setIsProcessing(true);
-    // FIX: Using improved converter
     const markdownContent = htmlToMarkdown(rawHtml);
     let autoTags: string[] = [];
     if (hasTagger && creationTags.length === 0 && markdownContent.length > 20) {
@@ -1089,7 +1186,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const handleSaveEdit = () => {
       if (selectedNote) {
           const rawHtml = editContentRef.current?.innerHTML || '';
-          // FIX: Using improved converter
           const markdownContent = htmlToMarkdown(rawHtml);
           if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
               const updated = { 
@@ -1154,6 +1250,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
       
+      {/* Global Lightbox for viewing images */}
+      <AnimatePresence>
+          {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      </AnimatePresence>
+
       <div className="shrink-0 w-full px-4 md:px-8 pt-4 md:pt-8 mb-4 z-50">
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
@@ -1301,7 +1402,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                                             <Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>
                                                             {showColorPicker && (
                                                                 <>
-                                                                    {/* FIX: Backdrop for creation color picker */}
                                                                     <div className="fixed inset-0 z-40" onClick={() => setShowColorPicker(false)} />
                                                                     <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
                                                                         {colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}
@@ -1513,7 +1613,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                                 <Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Palette size={16} /></button></Tooltip>
                                                 {showModalColorPicker && (
                                                     <>
-                                                        {/* FIX: Backdrop for edit modal color picker */}
                                                         <div className="fixed inset-0 z-40" onClick={() => setShowModalColorPicker(false)} />
                                                         <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
                                                             {colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}
@@ -1542,7 +1641,27 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         ) : (
                             <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-1">
                                 <div className={`text-slate-800 dark:text-slate-200 text-base leading-relaxed font-serif font-normal min-h-[4rem] mb-6 ${!selectedNote.title ? 'mt-1' : ''}`}>
-                                    <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                                    {/* Enable Lightbox when clicking images in View mode */}
+                                    <ReactMarkdown 
+                                        components={{
+                                            ...markdownComponents,
+                                            img: ({node, src, alt, ...props}: any) => (
+                                                <img 
+                                                    src={src} 
+                                                    alt={alt} 
+                                                    className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm cursor-zoom-in hover:opacity-95 transition-opacity" 
+                                                    onClick={(e) => { e.stopPropagation(); if(src) setLightboxSrc(src); }} 
+                                                    loading="lazy" 
+                                                    {...props} 
+                                                />
+                                            )
+                                        }} 
+                                        urlTransform={allowDataUrls} 
+                                        remarkPlugins={[remarkGfm]} 
+                                        rehypePlugins={[rehypeRaw]}
+                                    >
+                                        {selectedNote.content.replace(/\n/g, '  \n')}
+                                    </ReactMarkdown>
                                 </div>
                                 {selectedNote.tags && selectedNote.tags.length > 0 && (
                                     <div className="flex flex-wrap gap-3 pt-4 border-t border-black/5 dark:border-white/5">
