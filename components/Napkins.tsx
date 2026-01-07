@@ -1,15 +1,19 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
-import rehypeRaw from 'rehype-raw';
-import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
-import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
-import { findNotesByMood, autoTagNote } from '../services/geminiService';
+import { autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play } from 'lucide-react';
+import { 
+    Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, 
+    Pin, Palette, Check, Search, Plus, Sparkles, 
+    ArrowRight, Image as ImageIcon, Bold, Italic, 
+    Eraser, Layout, Upload, RefreshCw, 
+    Archive, Shuffle, Book, Tablet, Globe
+} from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -23,12 +27,7 @@ interface Props {
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
   onAddJournalEntry: (entry: JournalEntry) => void;
-  // Sketchpad Props - Kept for interface compatibility but not used
-  sketchItems?: SketchItem[];
   addSketchItem?: (item: SketchItem) => void;
-  deleteSketchItem?: (id: string) => void;
-  updateSketchItem?: (item: SketchItem) => void;
-  defaultTab?: 'inbox' | 'library';
 }
 
 const colors = [
@@ -41,12 +40,7 @@ const colors = [
     { id: 'purple', class: 'bg-purple-50 dark:bg-purple-900/20', hex: '#faf5ff' },
 ];
 
-const ORACLE_VIBES = [
-    { id: 'cosmos', icon: Orbit, label: 'Инсайт', color: 'from-indigo-500 to-purple-600', text: 'text-indigo-100' },
-    { id: 'fire', icon: Flame, label: 'Энергия', color: 'from-orange-500 to-red-600', text: 'text-orange-100' },
-    { id: 'zen', icon: Waves, label: 'Дзен', color: 'from-emerald-500 to-teal-600', text: 'text-emerald-100' },
-    { id: 'luck', icon: Clover, label: 'Случай', color: 'from-slate-700 to-slate-900', text: 'text-slate-200' },
-];
+const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E")`;
 
 const UNSPLASH_PRESETS = [
     'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=400&q=80', // Rain
@@ -55,8 +49,6 @@ const UNSPLASH_PRESETS = [
     'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80', // Nature
 ];
 
-const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E")`;
-
 // --- MASONRY BREAKPOINTS ---
 const breakpointColumnsObj = {
   default: 4,
@@ -64,9 +56,6 @@ const breakpointColumnsObj = {
   1100: 2,
   700: 1
 };
-
-// --- HELPER: ALLOW DATA URIS ---
-const allowDataUrls = (url: string) => url;
 
 // --- HELPER: IMAGE COMPRESSION ---
 const processImage = (file: File | Blob): Promise<string> => {
@@ -116,80 +105,7 @@ const processImage = (file: File | Blob): Promise<string> => {
     });
 };
 
-// --- HELPER: EXTRACT URL ---
-const findFirstUrl = (text: string): string | null => {
-    const maskedText = text.replace(/!\[.*?\]\(.*?\)/g, '');
-    const match = maskedText.match(/(https?:\/\/[^\s\)]+)/);
-    return match ? match[0] : null;
-};
-
-// --- COMPONENT: LINK PREVIEW ---
-const LinkPreview = React.memo(({ url }: { url: string }) => {
-    const [data, setData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
-
-    useEffect(() => {
-        let mounted = true;
-        setLoading(true);
-        setError(false);
-        fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`)
-            .then(res => res.json())
-            .then(json => {
-                if (mounted) {
-                    if (json.status === 'success') {
-                        setData(json.data);
-                    } else {
-                        setError(true);
-                    }
-                    setLoading(false);
-                }
-            })
-            .catch(() => {
-                if (mounted) {
-                    setError(true);
-                    setLoading(false);
-                }
-            });
-        return () => { mounted = false; };
-    }, [url]);
-
-    if (error || loading) return null;
-    if (!data || !data.title) return null;
-
-    return (
-        <a 
-            href={url} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            onClick={(e) => e.stopPropagation()} 
-            className="block mt-4 bg-white/50 dark:bg-slate-800/50 hover:bg-white/80 dark:hover:bg-slate-800 transition-all rounded-xl overflow-hidden group/link relative no-underline break-inside-avoid border border-black/5 dark:border-white/5 shadow-sm"
-        >
-            {data.image?.url && (
-                <div className="h-32 w-full overflow-hidden relative">
-                    <img 
-                        src={data.image.url} 
-                        alt="Preview" 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover/link:scale-105 opacity-90 group-hover/link:opacity-100" 
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                </div>
-            )}
-            <div className="p-3">
-                <h4 className="font-sans font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-1 mb-1 leading-snug">{data.title}</h4>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-2 leading-relaxed font-sans">{data.description}</p>
-                <div className="flex items-center gap-2 text-[9px] text-slate-400 uppercase tracking-wider font-bold font-sans">
-                    {data.logo?.url ? (
-                        <img src={data.logo.url} className="w-3 h-3 rounded-full" alt="" />
-                    ) : (
-                        <Globe size={10} />
-                    )}
-                    <span className="truncate">{data.publisher || new URL(url).hostname}</span>
-                </div>
-            </div>
-        </a>
-    );
-});
+const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 // Markdown Styles
 const markdownComponents = {
@@ -208,74 +124,7 @@ const markdownComponents = {
             : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-3 rounded-xl text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     },
     img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
-    u: ({node, ...props}: any) => <u {...props} /> 
 };
-
-// Converters
-const markdownToHtml = (md: string) => {
-    if (!md) return '';
-    let html = md;
-    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
-    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
-    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
-    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
-        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
-    });
-    html = html.replace(/\n/g, '<br>');
-    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
-    return html;
-};
-
-const htmlToMarkdown = (html: string) => {
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-
-    const wrap = (text: string, marker: string) => {
-        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
-        if (match && match[2]) {
-            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
-        }
-        return text.trim() ? `${marker}${text}${marker}` : '';
-    };
-
-    const walk = (node: Node): string => {
-        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
-        if (node.nodeType === Node.ELEMENT_NODE) {
-            const el = node as HTMLElement;
-            const tag = el.tagName.toLowerCase();
-            let content = '';
-            el.childNodes.forEach(child => content += walk(child));
-            
-            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
-            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
-            if (el.style.fontStyle === 'italic') return wrap(content, '*');
-            
-            switch (tag) {
-                case 'b': case 'strong': return wrap(content, '**');
-                case 'i': case 'em': return wrap(content, '*');
-                case 'u': return content.trim() ? `<u>${content}</u>` : '';
-                case 'code': return `\`${content}\``;
-                case 'h1': return `\n# ${content}\n`;
-                case 'h2': return `\n## ${content}\n`;
-                case 'div': case 'p': return `\n${content}\n`;
-                case 'br': return '\n';
-                case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
-                default: return content;
-            }
-        }
-        return '';
-    };
-    let md = walk(temp);
-    md = md.replace(/\n{3,}/g, '\n\n').trim();
-    md = md.replace(/&nbsp;/g, ' ');
-    return applyTypography(md);
-};
-
-const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 // Tag Selector
 const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[]) => void, existingTags: string[], placeholder?: string, variant?: 'default' | 'ghost' }> = ({ selectedTags, onChange, existingTags, placeholder = "Добавить теги...", variant = 'default' }) => {
@@ -342,9 +191,7 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
     const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS);
     const [loading, setLoading] = useState(false);
     
-    // Robust Env Getter for the API Key inside the component or file scope
     const getUnsplashKey = () => {
-        // Try various prefixes just in case, prioritizing the direct one as per screenshot
         const keys = [
             'UNSPLASH_ACCESS_KEY', 
             'VITE_UNSPLASH_ACCESS_KEY', 
@@ -364,13 +211,12 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
     const searchUnsplash = async (q?: string) => {
         const key = getUnsplashKey();
         if (!key) {
-            if (q) alert("Ключ Unsplash не найден. Используйте встроенные пресеты или добавьте UNSPLASH_ACCESS_KEY.");
+            if (q) alert("Ключ Unsplash не найден. Используйте встроенные пресеты.");
             return;
         }
         
         setLoading(true);
         try {
-            // Random page for variety on re-search
             const page = Math.floor(Math.random() * 10) + 1;
             const endpoint = q 
                 ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&page=${page}&client_id=${key}`
@@ -473,7 +319,6 @@ interface NoteCardProps {
 
 const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     const [isExiting, setIsExiting] = useState(false);
-    const linkUrl = findFirstUrl(note.content);
 
     const handleArchive = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -481,7 +326,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             setIsExiting(true);
             setTimeout(() => {
                 handlers.archiveNote(note.id);
-            }, 400); // Wait for animation
+            }, 400); 
         }
     };
 
@@ -522,14 +367,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             onClick={() => handlers.handleOpenNote(note)}
             className={`${getNoteColorClass(note.color)} rounded-3xl transition-all duration-500 hover:-translate-y-[4px] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] group/card flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden mb-6 ${isExiting ? 'opacity-0 translate-x-full scale-90' : ''}`}
         >
-            {/* NOISE TEXTURE */}
             <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
             {note.coverUrl && (
                 <div className="h-40 w-full shrink-0 relative z-10"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
             )}
 
-            {/* PIN BUTTON - Top Right (Ghost Style) */}
             <div className="absolute top-4 right-4 z-30">
                 <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
                     <button 
@@ -538,3 +381,335 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                             note.isPinned 
                             ? 'text-[#B0A0FF] opacity-50 hover:opacity-100 bg-transparent' 
                             : 'text-slate-400 dark:text-slate-500 opacity-0 group-hover/card:opacity-100 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent'
+                        }`}
+                    >
+                        <Pin size={16} className={note.isPinned ? "fill-current" : ""} />
+                    </button>
+                </Tooltip>
+            </div>
+
+            <div className="p-6 flex flex-col gap-3 relative z-10">
+                <div className="font-serif text-base text-slate-800 dark:text-slate-200 leading-relaxed max-h-[400px] overflow-hidden relative">
+                    <ReactMarkdown components={markdownComponents}>{applyTypography(note.content)}</ReactMarkdown>
+                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-[#1e293b] to-transparent pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity" />
+                </div>
+
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {note.tags?.map(tag => (
+                        <span key={tag} className="px-2 py-1 bg-slate-100/50 dark:bg-black/10 rounded-md text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-colors cursor-default">
+                            #{tag.replace(/^#/, '')}
+                        </span>
+                    ))}
+                </div>
+
+                <div className="flex items-center justify-between pt-4 mt-2 border-t border-black/5 dark:border-white/5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
+                    <div className="flex gap-1">
+                        {handlers.addSketchItem && (
+                            <Tooltip content="В Скетчпад">
+                                <button onClick={handleToSketchpad} className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                                    <Tablet size={16} />
+                                </button>
+                            </Tooltip>
+                        )}
+                        <Tooltip content="В Дневник">
+                            <button onClick={handleToJournal} className="p-2 text-slate-400 hover:text-cyan-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                                <Book size={16} />
+                            </button>
+                        </Tooltip>
+                    </div>
+                    
+                    <div className="flex gap-1">
+                        {!isArchived && (
+                            <Tooltip content="В архив">
+                                <button onClick={handleArchive} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors">
+                                    <Archive size={16} />
+                                </button>
+                            </Tooltip>
+                        )}
+                        <Tooltip content="Удалить">
+                            <button onClick={(e) => { e.stopPropagation(); if(confirm('Удалить заметку?')) handlers.deleteNote(note.id); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                <Trash2 size={16} />
+                            </button>
+                        </Tooltip>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem }) => {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeNote, setActiveNote] = useState<Note | null>(null);
+    const [isInputFocused, setIsInputFocused] = useState(false);
+    const [content, setContent] = useState('');
+    const [tags, setTags] = useState<string[]>([]);
+    const [isTagging, setIsTagging] = useState(false);
+    const [coverUrl, setCoverUrl] = useState<string | null>(null);
+    const [isCoverPickerOpen, setIsCoverPickerOpen] = useState(false);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const filteredNotes = useMemo(() => {
+        if (!searchQuery) return notes.filter(n => n.status !== 'archived');
+        const q = searchQuery.toLowerCase();
+        return notes.filter(n => 
+            n.content.toLowerCase().includes(q) || 
+            n.tags.some(t => t.toLowerCase().includes(q))
+        );
+    }, [notes, searchQuery]);
+
+    const pinnedNotes = filteredNotes.filter(n => n.isPinned);
+    const otherNotes = filteredNotes.filter(n => !n.isPinned);
+    const allDisplayNotes = [...pinnedNotes, ...otherNotes];
+
+    const uniqueTags = useMemo(() => Array.from(new Set(notes.flatMap(n => n.tags))), [notes]);
+
+    const handleCreateNote = async () => {
+        if (!content.trim()) return;
+        
+        let finalTags = tags;
+        if (tags.length === 0 && content.length > 20) {
+            try {
+                finalTags = await autoTagNote(content, config);
+            } catch (e) { console.warn("Auto-tag failed", e); }
+        }
+
+        const newNote: Note = {
+            id: Date.now().toString(),
+            content: applyTypography(content),
+            tags: finalTags,
+            createdAt: Date.now(),
+            status: 'inbox',
+            coverUrl: coverUrl || undefined
+        };
+        addNote(newNote);
+        setContent('');
+        setTags([]);
+        setCoverUrl(null);
+        setIsInputFocused(false);
+        setIsTagging(false);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            handleCreateNote();
+        }
+    };
+
+    // --- DRAG HANDLERS ---
+    const handleDragStart = (e: React.DragEvent, id: string) => {
+        e.dataTransfer.setData('noteId', id);
+        e.dataTransfer.effectAllowed = "move";
+    };
+
+    const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+
+    const handleDrop = (e: React.DragEvent, targetId: string) => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer.getData('noteId');
+        if (draggedId && draggedId !== targetId) {
+            reorderNote(draggedId, targetId);
+        }
+    };
+
+    const togglePin = (e: React.MouseEvent, note: Note) => {
+        e.stopPropagation();
+        updateNote({ ...note, isPinned: !note.isPinned });
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] relative overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` }}></div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar-light p-6 md:p-8 relative z-10 pb-32">
+                <header className="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Заметки</h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Входящий поток мыслей</p>
+                    </div>
+                    <div className="relative group w-full md:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
+                        <input 
+                            type="text" 
+                            placeholder="Поиск..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition-all placeholder:text-slate-400"
+                        />
+                    </div>
+                </header>
+
+                <div className="max-w-7xl mx-auto">
+                    {allDisplayNotes.length === 0 && !isInputFocused ? (
+                        <EmptyState 
+                            icon={ArrowRight} 
+                            title="Пустой лист" 
+                            description="Начни писать, чтобы зафиксировать мысль" 
+                            color="slate"
+                            actionLabel="Новая заметка"
+                            onAction={() => { setIsInputFocused(true); setTimeout(() => textareaRef.current?.focus(), 100); }}
+                        />
+                    ) : (
+                        <Masonry
+                            breakpointCols={breakpointColumnsObj}
+                            className="my-masonry-grid"
+                            columnClassName="my-masonry-grid_column"
+                        >
+                            {allDisplayNotes.map(note => (
+                                <NoteCard 
+                                    key={note.id} 
+                                    note={note} 
+                                    isArchived={note.status === 'archived'} 
+                                    handlers={{
+                                        handleDragStart,
+                                        handleDragOver,
+                                        handleDrop,
+                                        handleOpenNote: setActiveNote,
+                                        togglePin,
+                                        onAddTask,
+                                        moveNoteToSandbox,
+                                        archiveNote,
+                                        moveNoteToInbox,
+                                        onAddJournalEntry,
+                                        addSketchItem,
+                                        deleteNote
+                                    }} 
+                                />
+                            ))}
+                        </Masonry>
+                    )}
+                </div>
+            </div>
+
+            {/* INPUT AREA (Docked Bottom) */}
+            <div className={`
+                fixed bottom-0 left-0 md:left-64 right-0 z-40 p-4 md:p-6 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
+                ${isInputFocused ? 'bg-white/90 dark:bg-[#0f172a]/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]' : 'pointer-events-none'}
+            `}>
+                <div className={`
+                    max-w-3xl mx-auto bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl transition-all duration-300 relative overflow-hidden
+                    ${isInputFocused ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-20 opacity-0 pointer-events-none'}
+                `}>
+                    {coverUrl && (
+                        <div className="relative h-32 w-full group">
+                            <img src={coverUrl} className="w-full h-full object-cover opacity-80" />
+                            <button onClick={() => setCoverUrl(null)} className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full hover:bg-red-500 transition-colors"><X size={14}/></button>
+                        </div>
+                    )}
+                    
+                    <textarea 
+                        ref={textareaRef}
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="О чем ты думаешь?"
+                        className="w-full p-6 bg-transparent text-lg text-slate-800 dark:text-slate-200 placeholder:text-slate-400 outline-none resize-none font-serif min-h-[120px]"
+                    />
+
+                    <div className="px-4 pb-4 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className="relative">
+                                <Tooltip content="Обложка">
+                                    <button onClick={() => setIsCoverPickerOpen(!isCoverPickerOpen)} className={`p-2 rounded-xl transition-colors ${coverUrl ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                                        <Layout size={20} strokeWidth={1.5} />
+                                    </button>
+                                </Tooltip>
+                                {isCoverPickerOpen && <CoverPicker onSelect={setCoverUrl} onClose={() => setIsCoverPickerOpen(false)} />}
+                            </div>
+                            
+                            <div className="relative">
+                                <Tooltip content="Теги">
+                                    <button onClick={() => setIsTagging(!isTagging)} className={`p-2 rounded-xl transition-colors ${isTagging || tags.length > 0 ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                                        <TagIcon size={20} strokeWidth={1.5} />
+                                    </button>
+                                </Tooltip>
+                                {isTagging && (
+                                    <div className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-2 z-50">
+                                        <TagSelector selectedTags={tags} onChange={setTags} existingTags={uniqueTags} />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-mono text-slate-300 dark:text-slate-600 uppercase tracking-widest hidden md:inline-block">CMD+ENTER</span>
+                            <button 
+                                onClick={handleCreateNote}
+                                disabled={!content.trim()}
+                                className="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black rounded-xl font-bold hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:shadow-none disabled:translate-y-0 flex items-center gap-2"
+                            >
+                                <Send size={18} strokeWidth={2} />
+                                <span className="hidden md:inline">Создать</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* Floating Trigger Button (Visible when Input is Hidden) */}
+                <div className={`absolute bottom-8 right-8 transition-all duration-300 ${isInputFocused ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 pointer-events-auto'}`}>
+                    <button 
+                        onClick={() => { setIsInputFocused(true); setTimeout(() => textareaRef.current?.focus(), 100); }}
+                        className="w-14 h-14 bg-slate-900 dark:bg-indigo-600 text-white rounded-full shadow-xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center"
+                    >
+                        <Plus size={28} />
+                    </button>
+                </div>
+
+                {/* Overlay to close input */}
+                {isInputFocused && (
+                    <div className="fixed inset-0 z-[-1]" onClick={() => setIsInputFocused(false)} />
+                )}
+            </div>
+
+            {/* FULL SCREEN MODAL FOR EDITING */}
+            <AnimatePresence>
+                {activeNote && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+                        onClick={() => setActiveNote(null)}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="bg-white dark:bg-[#1e293b] w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {activeNote.coverUrl && (
+                                <div className="h-48 w-full relative shrink-0">
+                                    <img src={activeNote.coverUrl} className="w-full h-full object-cover" />
+                                    <button onClick={() => updateNote({...activeNote, coverUrl: undefined})} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-red-500 transition-colors"><Trash2 size={16}/></button>
+                                </div>
+                            )}
+                            
+                            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar-light">
+                                <textarea 
+                                    className="w-full h-full min-h-[300px] resize-none outline-none text-lg text-slate-800 dark:text-slate-200 font-serif leading-relaxed bg-transparent"
+                                    value={activeNote.content}
+                                    onChange={(e) => updateNote({...activeNote, content: e.target.value})}
+                                />
+                            </div>
+
+                            <div className="p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-[#0f172a]/50 flex items-center justify-between shrink-0">
+                                <div className="flex-1 mr-4">
+                                    <TagSelector selectedTags={activeNote.tags} onChange={(tags) => updateNote({...activeNote, tags})} existingTags={uniqueTags} variant="ghost" />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => { if(confirm("Удалить заметку?")) { deleteNote(activeNote.id); setActiveNote(null); } }} className="p-2 text-slate-400 hover:text-red-500 rounded-lg transition-colors">
+                                        <Trash2 size={18} />
+                                    </button>
+                                    <button onClick={() => setActiveNote(null)} className="px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-black rounded-xl font-bold text-sm">
+                                        Готово
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
