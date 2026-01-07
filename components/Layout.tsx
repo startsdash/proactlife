@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus, IdentityRole, Habit, AppConfig, AccessControl } from '../types';
 import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Fingerprint, Diamond, Activity, Tablet, BrainCircuit } from 'lucide-react';
@@ -33,17 +32,17 @@ const NAV_GROUPS = [
     items: [
       { id: Module.KANBAN, icon: KanbanIcon, label: 'Спринты' },
       { id: Module.RITUALS, icon: Flame, label: 'Трекер' },
-      { id: Module.MENTAL_GYM, icon: Dumbbell, label: 'Скиллы' },
       { id: Module.JOURNAL, icon: Book, label: 'Дневник' },
+      { id: Module.ARCHIVE, icon: Trophy, label: 'Архив' },
     ]
   },
   {
-    id: '03_MASTERY',
+    id: '_LAB',
     items: [
       { id: Module.DASHBOARD, icon: LayoutDashboard, label: 'Обзор' },
       { id: Module.SKETCHPAD, icon: Tablet, label: 'Скетчпад' },
       { id: Module.ETHER, icon: BrainCircuit, label: 'Ether' },
-      { id: Module.ARCHIVE, icon: Trophy, label: 'Архив' },
+      { id: Module.MENTAL_GYM, icon: Dumbbell, label: 'Скиллы' },
     ]
   }
 ];
