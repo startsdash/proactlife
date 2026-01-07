@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -751,10 +752,23 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                     
                     {/* Thumbnail Grid for Content Images */}
                     {thumbnailImages.length > 0 && (
-                        <div className="flex gap-2 mt-4 overflow-hidden rounded-xl">
+                        <div className={`grid gap-1 mt-4 rounded-xl overflow-hidden border border-black/5 dark:border-white/5 ${
+                            thumbnailImages.length === 1 ? 'grid-cols-1' : 
+                            thumbnailImages.length === 2 ? 'grid-cols-2' : 
+                            'grid-cols-3'
+                        }`}>
                             {thumbnailImages.map((img, i) => (
-                                <div key={i} className="h-16 flex-1 min-w-0 first:rounded-l-xl last:rounded-r-xl overflow-hidden relative bg-slate-100 dark:bg-slate-800 border border-black/5 dark:border-white/5">
-                                    <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                <div key={i} className="relative bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                                    <img 
+                                        src={img} 
+                                        alt="" 
+                                        className={`w-full object-cover object-top transition-transform duration-500 hover:scale-105 ${
+                                            thumbnailImages.length === 1 ? 'h-auto max-h-[500px]' : 
+                                            thumbnailImages.length === 2 ? 'aspect-[3/4]' : 
+                                            'aspect-square'
+                                        }`} 
+                                        loading="lazy" 
+                                    />
                                 </div>
                             ))}
                         </div>
