@@ -10,88 +10,8 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2 } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play } from 'lucide-react';
 
-// --- HELPER: Extract Preview Data (Text & Images) ---
-const extractPreviewData = (markdown: string) => {
-    // 1. Extract Images
-    const imageRegex = /!\[.*?\]\((.*?)\)/g;
-    const images: string[] = [];
-    let match;
-    while ((match = imageRegex.exec(markdown)) !== null) {
-        images.push(match[1]);
-    }
-
-    // 2. Clean Text for Preview
-    // Remove image tags
-    let cleanText = markdown.replace(/!\[.*?\]\(.*?\)/g, '');
-    // Remove headers markers
-    cleanText = cleanText.replace(/^#+\s/gm, '');
-    // Remove bold/italic markers
-    cleanText = cleanText.replace(/(\*\*|__)(.*?)\1/g, '$2');
-    cleanText = cleanText.replace(/(\*|_)(.*?)\1/g, '$2');
-    // Remove links [text](url) -> text
-    cleanText = cleanText.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
-    // Remove code blocks
-    cleanText = cleanText.replace(/`{3}[\s\S]*?`{3}/g, '');
-    cleanText = cleanText.replace(/`([^`]+)`/g, '$1');
-    // Normalize whitespace
-    cleanText = cleanText.replace(/\s+/g, ' ').trim();
-
-    // 3. Sentence Logic
-    // Split by . ! ? followed by space or end of string
-    const sentences = cleanText.match(/[^\.!\?]+[\.!\?]+(\s|$)/g);
-    
-    let preview = '';
-    if (sentences) {
-        // Take up to 3 sentences
-        preview = sentences.slice(0, 3).join('').trim();
-    } else {
-        // Fallback if no punctuation found
-        preview = cleanText;
-    }
-
-    // Hard limit to avoid huge sentences taking over card
-    if (preview.length > 200) {
-        preview = preview.substring(0, 200);
-        // Don't break words
-        const lastSpace = preview.lastIndexOf(' ');
-        if (lastSpace > 0) preview = preview.substring(0, lastSpace);
-        preview += '...';
-    } else if (sentences && sentences.length > 3) {
-        preview += '...'; // Add ellipsis if we had more sentences than shown
-    }
-
-    return { previewText: preview, extractedImages: images };
-};
-
-// --- COMPONENT: Lightbox Image Viewer ---
-const ImageViewer: React.FC<{ src: string | null; onClose: () => void }> = ({ src, onClose }) => {
-    if (!src) return null;
-    return createPortal(
-        <div 
-            className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
-            onClick={onClose}
-        >
-            <button className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors p-2">
-                <X size={32} />
-            </button>
-            <img 
-                src={src} 
-                className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl scale-100 animate-in zoom-in-95 duration-300" 
-                onClick={(e) => e.stopPropagation()} 
-                alt="Full size"
-            />
-        </div>,
-        document.body
-    );
-};
-
-// ... (Colors, Constants, Props definitions remain same) ...
-// ... (Include colors, ORACLE_VIBES, UNSPLASH_PRESETS, NOISE_PATTERN, breakpointColumnsObj) ...
-// ... (Include allowDataUrls, processImage, findFirstUrl helper) ...
-
-// [INSERT PREVIOUS HELPER CONSTANTS HERE: colors, ORACLE_VIBES etc...]
 interface Props {
   notes: Note[];
   config: AppConfig;
@@ -145,7 +65,7 @@ const breakpointColumnsObj = {
 };
 
 const allowDataUrls = (url: string) => url;
-// (Re-include processImage, findFirstUrl, LinkPreview from previous code...)
+
 const processImage = (file: File | Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
         if (!file.type.startsWith('image/')) {
@@ -163,12 +83,29 @@ const processImage = (file: File | Blob): Promise<string> => {
                 const MAX_HEIGHT = 800;
                 let width = img.width;
                 let height = img.height;
-                if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
-                else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-                canvas.width = width; canvas.height = height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
                 const ctx = canvas.getContext('2d');
-                if (ctx) { ctx.drawImage(img, 0, 0, width, height); resolve(canvas.toDataURL('image/jpeg', 0.7)); } 
-                else { reject(new Error('Canvas context failed')); }
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    resolve(dataUrl);
+                } else {
+                    reject(new Error('Canvas context failed'));
+                }
             };
             img.onerror = (err) => reject(err);
         };
@@ -186,37 +123,110 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
+
     useEffect(() => {
-        let mounted = true; setLoading(true); setError(false);
-        fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`).then(res => res.json()).then(json => { if (mounted) { if (json.status === 'success') { setData(json.data); } else { setError(true); } setLoading(false); } }).catch(() => { if (mounted) { setError(true); setLoading(false); } });
+        let mounted = true;
+        setLoading(true);
+        setError(false);
+        fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`)
+            .then(res => res.json())
+            .then(json => {
+                if (mounted) {
+                    if (json.status === 'success') {
+                        setData(json.data);
+                    } else {
+                        setError(true);
+                    }
+                    setLoading(false);
+                }
+            })
+            .catch(() => {
+                if (mounted) {
+                    setError(true);
+                    setLoading(false);
+                }
+            });
         return () => { mounted = false; };
     }, [url]);
-    if (error || loading || !data || !data.title) return null;
+
+    if (error || loading) return null;
+    if (!data || !data.title) return null;
+
     return (
-        <a href={url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="block mt-4 bg-white/50 dark:bg-slate-800/50 hover:bg-white/80 dark:hover:bg-slate-800 transition-all rounded-xl overflow-hidden group/link relative no-underline break-inside-avoid border border-black/5 dark:border-white/5 shadow-sm">
-            {data.image?.url && <div className="h-32 w-full overflow-hidden relative"><img src={data.image.url} alt="Preview" className="w-full h-full object-cover transition-transform duration-700 group-hover/link:scale-105 opacity-90 group-hover/link:opacity-100" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /></div>}
-            <div className="p-3"><h4 className="font-sans font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-1 mb-1 leading-snug">{data.title}</h4><p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-2 leading-relaxed font-sans">{data.description}</p><div className="flex items-center gap-2 text-[9px] text-slate-400 uppercase tracking-wider font-bold font-sans">{data.logo?.url ? <img src={data.logo.url} className="w-3 h-3 rounded-full" alt="" /> : <Globe size={10} />}<span className="truncate">{data.publisher || new URL(url).hostname}</span></div></div>
+        <a 
+            href={url} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            onClick={(e) => e.stopPropagation()} 
+            className="block mt-4 bg-white/50 dark:bg-slate-800/50 hover:bg-white/80 dark:hover:bg-slate-800 transition-all rounded-xl overflow-hidden group/link relative no-underline break-inside-avoid border border-black/5 dark:border-white/5 shadow-sm"
+        >
+            {data.image?.url && (
+                <div className="h-32 w-full overflow-hidden relative">
+                    <img 
+                        src={data.image.url} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover/link:scale-105 opacity-90 group-hover/link:opacity-100" 
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                </div>
+            )}
+            <div className="p-3">
+                <h4 className="font-sans font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-1 mb-1 leading-snug">{data.title}</h4>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-2 leading-relaxed font-sans">{data.description}</p>
+                <div className="flex items-center gap-2 text-[9px] text-slate-400 uppercase tracking-wider font-bold font-sans">
+                    {data.logo?.url ? (
+                        <img src={data.logo.url} className="w-3 h-3 rounded-full" alt="" />
+                    ) : (
+                        <Globe size={10} />
+                    )}
+                    <span className="truncate">{data.publisher || new URL(url).hostname}</span>
+                </div>
+            </div>
         </a>
     );
 });
 
-// Basic Markdown Components for the Card (Cleaned up)
-const cardMarkdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-0" {...props} />,
-    // We suppress images in the text area of the card because we show thumbnails below
-    img: ({node, ...props}: any) => null, 
-    a: ({node, ...props}: any) => <span className="text-indigo-500 underline decoration-indigo-300 underline-offset-2" {...props} />,
+const markdownComponents = {
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
+    a: ({node, ...props}: any) => <a className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors font-sans" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
+    li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
+    h1: ({node, ...props}: any) => <h1 className="font-sans font-bold text-xl mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+    h2: ({node, ...props}: any) => <h2 className="font-sans font-bold text-lg mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+    h3: ({node, ...props}: any) => <h3 className="font-sans font-bold text-base mt-2 mb-1 text-slate-900 dark:text-slate-100" {...props} />,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 dark:border-slate-600 pl-4 italic text-slate-500 dark:text-slate-400 my-3 font-serif" {...props} />,
+    code: ({node, inline, className, children, ...props}: any) => {
+         return inline 
+            ? <code className="bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
+            : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-3 rounded-xl text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+    },
+    img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
+    u: ({node, ...props}: any) => <u {...props} /> 
 };
 
-// Converters (htmlToMarkdown / markdownToHtml) from previous fix
+// IMPROVED: HTML to Markdown converter
 const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
+
+    // Helper to replace block elements with newlines first
+    const normalizeBlocks = (node: HTMLElement) => {
+         const blockTags = ['DIV', 'P', 'H1', 'H2', 'H3', 'LI', 'UL', 'OL', 'BLOCKQUOTE'];
+         if (blockTags.includes(node.tagName)) {
+             // If previous sibling wasn't a block, maybe add newline?
+             // Actually, simplest strategy: Treat <div> as \n + content
+         }
+    };
+
     const wrap = (text: string, marker: string) => {
         const match = text.match(/^(\s*)(.*?)(\s*)$/s);
-        if (match && match[2]) { return `${match[1]}${marker}${match[2]}${marker}${match[3]}`; }
+        if (match && match[2]) {
+            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
+        }
         return text.trim() ? `${marker}${text}${marker}` : '';
     };
+
     const walk = (node: Node): string => {
         if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
         if (node.nodeType === Node.ELEMENT_NODE) {
@@ -224,9 +234,12 @@ const htmlToMarkdown = (html: string) => {
             const tag = el.tagName.toLowerCase();
             let content = '';
             el.childNodes.forEach(child => content += walk(child));
+            
+            // Handle style attributes
             if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
             if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
             if (el.style.fontStyle === 'italic') return wrap(content, '*');
+            
             switch (tag) {
                 case 'b': case 'strong': return wrap(content, '**');
                 case 'i': case 'em': return wrap(content, '*');
@@ -234,8 +247,12 @@ const htmlToMarkdown = (html: string) => {
                 case 'code': return `\`${content}\``;
                 case 'h1': return `\n# ${content}\n`;
                 case 'h2': return `\n## ${content}\n`;
-                case 'div': return `\n${content}`; 
-                case 'p': return `\n\n${content}\n`;
+                // FIX: Better div/p handling for newlines
+                case 'div': 
+                    // Should we double newline or single? usually single for div
+                    return `\n${content}`; 
+                case 'p': 
+                    return `\n\n${content}\n`;
                 case 'br': return '\n';
                 case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
                 default: return content;
@@ -243,15 +260,19 @@ const htmlToMarkdown = (html: string) => {
         }
         return '';
     };
+    
     let md = walk(temp);
+    // Cleanup excessive newlines
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
 };
 
+// IMPROVED: Markdown to HTML converter
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
+    // Standard conversions
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
@@ -262,52 +283,285 @@ const markdownToHtml = (md: string) => {
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
+    
+    // FIX: Better Line Break handling for contentEditable
+    // Replace standard newlines with <br> but avoid breaking block tags structure
     html = html.replace(/\n/g, '<br>');
+    // Cleanup: remove <br> after block closing tags to avoid double gaps
     html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
     return html;
 };
 
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
-// ... (TagSelector and CoverPicker components from previous code remain exactly the same) ...
-// [Assume TagSelector and CoverPicker are here exactly as in previous correct solution]
+// Tag Selector
 const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[]) => void, existingTags: string[], placeholder?: string, variant?: 'default' | 'ghost', direction?: 'up' | 'down' }> = ({ selectedTags, onChange, existingTags, placeholder = "Добавить теги...", variant = 'default', direction = 'down' }) => {
     const [input, setInput] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
-    const handleTagChange = (newTags: string[]) => { const uniqueTags = Array.from(new Set(newTags)); onChange(uniqueTags); };
+
+    // FIX: Ensure tags are unique
+    const handleTagChange = (newTags: string[]) => {
+        const uniqueTags = Array.from(new Set(newTags));
+        onChange(uniqueTags);
+    };
+
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => { const target = event.target as Node; const isWrapper = wrapperRef.current && wrapperRef.current.contains(target); const isDropdown = dropdownRef.current && dropdownRef.current.contains(target); if (!isWrapper && !isDropdown) { setIsOpen(false); } };
-        const handleScroll = () => { if (isOpen) setIsOpen(false); };
-        if (isOpen) { document.addEventListener('mousedown', handleClickOutside); document.addEventListener('scroll', handleScroll, true); window.addEventListener('resize', handleScroll); }
-        return () => { document.removeEventListener('mousedown', handleClickOutside); document.removeEventListener('scroll', handleScroll, true); window.removeEventListener('resize', handleScroll); };
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as Node;
+            const isWrapper = wrapperRef.current && wrapperRef.current.contains(target);
+            const isDropdown = dropdownRef.current && dropdownRef.current.contains(target);
+            
+            if (!isWrapper && !isDropdown) {
+                setIsOpen(false);
+            }
+        };
+        
+        const handleScroll = () => {
+            if (isOpen) setIsOpen(false);
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('scroll', handleScroll, true); 
+            window.addEventListener('resize', handleScroll);
+        }
+        
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('scroll', handleScroll, true);
+            window.removeEventListener('resize', handleScroll);
+        };
     }, [isOpen]);
-    useEffect(() => { if (isOpen && wrapperRef.current) { const rect = wrapperRef.current.getBoundingClientRect(); const style: React.CSSProperties = { position: 'fixed', left: rect.left, width: Math.max(rect.width, 200), zIndex: 99999 }; if (direction === 'down') { style.top = rect.bottom + 4; } else { style.bottom = window.innerHeight - rect.top + 4; } setDropdownStyle(style); } }, [isOpen, direction]);
+
+    useEffect(() => {
+        if (isOpen && wrapperRef.current) {
+            const rect = wrapperRef.current.getBoundingClientRect();
+            const style: React.CSSProperties = {
+                position: 'fixed',
+                left: rect.left,
+                width: Math.max(rect.width, 200),
+                zIndex: 99999, // Ensure high Z-Index
+            };
+            
+            if (direction === 'down') {
+                style.top = rect.bottom + 4;
+            } else {
+                style.bottom = window.innerHeight - rect.top + 4;
+            }
+            setDropdownStyle(style);
+        }
+    }, [isOpen, direction]);
+
     const filteredSuggestions = existingTags.filter(tag => !selectedTags.some(st => st.toLowerCase() === tag.toLowerCase()) && tag.toLowerCase().includes(input.toLowerCase()));
-    const addTag = (tag: string) => { const cleanTag = tag.trim().replace(/^#/, ''); if (!cleanTag) return; if (selectedTags.some(t => t.toLowerCase() === cleanTag.toLowerCase())) { setInput(''); setIsOpen(false); return; } handleTagChange([...selectedTags, existingTags.find(t => t.toLowerCase() === cleanTag.toLowerCase()) || cleanTag]); setInput(''); setIsOpen(false); };
+
+    const addTag = (tag: string) => {
+        const cleanTag = tag.trim().replace(/^#/, '');
+        if (!cleanTag) return;
+        // Avoid duplicates in add
+        if (selectedTags.some(t => t.toLowerCase() === cleanTag.toLowerCase())) { setInput(''); setIsOpen(false); return; }
+        
+        handleTagChange([...selectedTags, existingTags.find(t => t.toLowerCase() === cleanTag.toLowerCase()) || cleanTag]);
+        setInput(''); setIsOpen(false);
+    };
+
     const hasContent = input.length > 0 || filteredSuggestions.length > 0;
+
     return (
         <div className="relative portal-popup" ref={wrapperRef}>
             <div className={`flex flex-wrap items-center gap-3 min-h-[36px] ${variant === 'ghost' ? 'px-0 py-2' : 'p-2'}`}>
-                {selectedTags.map(tag => (<span key={tag} className="flex items-center gap-1 text-[9px] font-sans uppercase tracking-[0.1em] text-slate-500 dark:text-slate-400 group cursor-default">#{tag.replace(/^#/, '')} <button onClick={() => handleTagChange(selectedTags.filter(t => t !== tag))} className="text-slate-300 hover:text-red-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity"><X size={10} strokeWidth={2} /></button></span>))}
-                <input type="text" value={input} onChange={(e) => { setInput(e.target.value); setIsOpen(true); }} onFocus={() => setIsOpen(true)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); addTag(input); } }} placeholder={selectedTags.length === 0 ? placeholder : ''} className={`flex-1 min-w-[80px] bg-transparent text-xs font-sans outline-none ${variant === 'ghost' ? 'text-slate-600 dark:text-slate-300 placeholder:text-slate-300' : 'text-slate-600 dark:text-slate-300 placeholder:text-slate-400'}`} />
+                {selectedTags.map(tag => (
+                    <span key={tag} className="flex items-center gap-1 text-[9px] font-sans uppercase tracking-[0.1em] text-slate-500 dark:text-slate-400 group cursor-default">
+                        #{tag.replace(/^#/, '')} 
+                        <button onClick={() => handleTagChange(selectedTags.filter(t => t !== tag))} className="text-slate-300 hover:text-red-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <X size={10} strokeWidth={2} />
+                        </button>
+                    </span>
+                ))}
+                <input 
+                    type="text" 
+                    value={input} 
+                    onChange={(e) => { setInput(e.target.value); setIsOpen(true); }} 
+                    onFocus={() => setIsOpen(true)} 
+                    onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); addTag(input); } }} 
+                    placeholder={selectedTags.length === 0 ? placeholder : ''} 
+                    className={`flex-1 min-w-[80px] bg-transparent text-xs font-sans outline-none ${variant === 'ghost' ? 'text-slate-600 dark:text-slate-300 placeholder:text-slate-300' : 'text-slate-600 dark:text-slate-300 placeholder:text-slate-400'}`} 
+                />
             </div>
-            {isOpen && hasContent && createPortal(<div ref={dropdownRef} className="fixed bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-75 portal-popup" style={dropdownStyle} onMouseDown={(e) => e.stopPropagation()} >{input.length > 0 && !filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase()) && (<button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-xs font-sans text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-bold"><Plus size={12} /> Создать «{input}»</button>)}{filteredSuggestions.map(tag => (<button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-xs font-sans text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-medium"><TagIcon size={12} className="text-slate-400" /> {tag}</button>))}</div>, document.body)}
+            {isOpen && hasContent && createPortal(
+                <div 
+                    ref={dropdownRef}
+                    className="fixed bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-75 portal-popup"
+                    style={dropdownStyle}
+                    // IMPORTANT: Prevent clicks inside from propagating to "click outside" listeners of parents
+                    onMouseDown={(e) => e.stopPropagation()} 
+                >
+                    {input.length > 0 && !filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase()) && (
+                        <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-xs font-sans text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-bold"><Plus size={12} /> Создать «{input}»</button>
+                    )}
+                    {filteredSuggestions.map(tag => (
+                        <button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-xs font-sans text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-medium"><TagIcon size={12} className="text-slate-400" /> {tag}</button>
+                    ))}
+                </div>,
+                document.body
+            )}
         </div>
     );
 };
 
+// Cover Picker
 const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => void, triggerRef: React.RefObject<HTMLElement> }> = ({ onSelect, onClose, triggerRef }) => {
-    // ... [Copy previous CoverPicker implementation here] ...
-    // Simplified for brevity in this answer, but use the previous FULL implementation
-    const [query, setQuery] = useState(''); const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS); const [loading, setLoading] = useState(false); const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
-    useEffect(() => { if (triggerRef.current) { const rect = triggerRef.current.getBoundingClientRect(); const viewportH = window.innerHeight; const viewportW = window.innerWidth; const style: React.CSSProperties = {}; if (window.innerHeight - rect.bottom < 320 && rect.top > window.innerHeight - rect.bottom) { style.bottom = viewportH - rect.top + 8; style.maxHeight = rect.top - 20; } else { style.top = rect.bottom + 8; style.maxHeight = window.innerHeight - rect.bottom - 20; } if (rect.left + 320 > viewportW) { style.right = 16; } else { style.left = rect.left; } setPickerStyle(style); } }, [triggerRef]);
-    const searchUnsplash = async (q?: string) => { /* ... impl ... */ };
-    return createPortal(<><div className="fixed inset-0 z-[9998]" onClick={onClose} /><div className="fixed bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] w-80 flex flex-col gap-3 portal-popup" style={pickerStyle} onMouseDown={e => e.stopPropagation()}><div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase font-sans">Обложка</span><button onClick={onClose}><X size={14} /></button></div><div className="grid grid-cols-3 gap-2">{results.map((url, i) => (<button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded-lg overflow-hidden bg-slate-100"><img src={url} className="w-full h-full object-cover" /></button>))}</div></div></>, document.body);
-};
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS);
+    const [loading, setLoading] = useState(false);
+    const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
+    
+    useEffect(() => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const viewportH = window.innerHeight;
+            const viewportW = window.innerWidth;
+            const pickerHeight = 320; 
+            
+            const style: React.CSSProperties = {};
+            
+            const spaceBelow = viewportH - rect.bottom;
+            if (spaceBelow < pickerHeight && rect.top > spaceBelow) {
+                style.bottom = viewportH - rect.top + 8;
+                style.maxHeight = rect.top - 20;
+            } else {
+                style.top = rect.bottom + 8;
+                style.maxHeight = spaceBelow - 20;
+            }
 
+            if (rect.left + 320 > viewportW) {
+                style.right = 16;
+            } else {
+                style.left = rect.left;
+            }
+            
+            setPickerStyle(style);
+        }
+    }, [triggerRef]);
+    
+    const getUnsplashKey = () => {
+        const keys = [
+            'UNSPLASH_ACCESS_KEY', 
+            'VITE_UNSPLASH_ACCESS_KEY', 
+            'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY', 
+            'REACT_APP_UNSPLASH_ACCESS_KEY'
+        ];
+        
+        for (const k of keys) {
+            // @ts-ignore
+            if (typeof process !== 'undefined' && process.env?.[k]) return process.env[k];
+            // @ts-ignore
+            if (typeof import.meta !== 'undefined' && import.meta.env?.[k]) return import.meta.env[k];
+        }
+        return '';
+    };
+
+    const searchUnsplash = async (q?: string) => {
+        const key = getUnsplashKey();
+        if (!key) {
+            if (q) alert("Ключ Unsplash не найден.");
+            return;
+        }
+        
+        setLoading(true);
+        try {
+            const page = Math.floor(Math.random() * 10) + 1;
+            const endpoint = q 
+                ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&page=${page}&client_id=${key}`
+                : `https://api.unsplash.com/photos/random?count=20&client_id=${key}`;
+            
+            const res = await fetch(endpoint);
+            if (!res.ok) throw new Error("API Error");
+            const data = await res.json();
+            
+            const urls = q 
+                ? data.results.map((img: any) => img.urls.regular) 
+                : data.map((img: any) => img.urls.regular);
+            
+            setResults(urls);
+        } catch (e) {
+            console.error("Unsplash Fetch Error", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') searchUnsplash(query);
+    };
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            try { onSelect(await processImage(file)); onClose(); } catch (err) { console.error(err); }
+        }
+    };
+
+    return createPortal(
+        <>
+            {/* FIX: Use transparent backdrop to catch clicks outside the picker */}
+            <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+            <div 
+                className="fixed bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] w-80 flex flex-col gap-3 portal-popup" 
+                style={pickerStyle}
+                onMouseDown={e => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase font-sans">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
+                
+                <div className="relative">
+                    <input 
+                        type="text" 
+                        placeholder="Поиск Unsplash..." 
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-sans outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
+                    />
+                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <button 
+                        onClick={() => searchUnsplash(query)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
+                        title="Найти"
+                    >
+                        <ArrowRight size={12} />
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
+                    {loading ? (
+                        <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
+                            <RefreshCw size={16} className="animate-spin" />
+                        </div>
+                    ) : (
+                        results.map((url, i) => (
+                            <button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded-lg overflow-hidden border border-slate-100 dark:border-slate-700 hover:ring-2 hover:ring-indigo-500 relative group bg-slate-100">
+                                <img src={url} className="w-full h-full object-cover" loading="lazy" />
+                            </button>
+                        ))
+                    )}
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium font-sans cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
+                        <Upload size={12} /> Своя 
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                    </label>
+                    <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium font-sans transition-colors text-slate-600 dark:text-slate-300">
+                        <Shuffle size={12} /> Случайные
+                    </button>
+                </div>
+            </div>
+        </>,
+        document.body
+    );
+};
 
 interface NoteCardProps {
     note: Note;
@@ -330,9 +584,6 @@ interface NoteCardProps {
 const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     const [isExiting, setIsExiting] = useState(false);
     const linkUrl = findFirstUrl(note.content);
-    
-    // NEW: Extract preview data using helper
-    const { previewText, extractedImages } = useMemo(() => extractPreviewData(note.content), [note.content]);
 
     const handleArchive = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -402,34 +653,13 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 </Tooltip>
             </div>
 
-            <div className="p-8 pb-16 w-full flex-1 relative z-10 flex flex-col">
+            <div className="p-8 pb-16 w-full flex-1 relative z-10">
                 <div className="block w-full mb-2">
                     {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
-                    
-                    {/* NEW: Text Preview Logic (3 sentences max) */}
-                    <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words`}>
-                        {previewText}
+                    <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words line-clamp-[6]`}>
+                        <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                     </div>
-
                     {linkUrl && <LinkPreview url={linkUrl} />}
-                    
-                    {/* NEW: Image Thumbnails Grid */}
-                    {extractedImages.length > 0 && (
-                        <div className="flex gap-2 mt-4 overflow-hidden">
-                            {extractedImages.slice(0, 4).map((imgUrl, idx) => (
-                                <div key={idx} className="h-16 w-16 rounded-lg overflow-hidden shrink-0 border border-black/5 dark:border-white/5 relative">
-                                    <img src={imgUrl} className="w-full h-full object-cover" alt="thumbnail" loading="lazy" />
-                                    {/* If more than 4, show indicator on the last one */}
-                                    {idx === 3 && extractedImages.length > 4 && (
-                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs font-bold">
-                                            +{extractedImages.length - 4}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
                     {note.tags && note.tags.length > 0 && (
                         <div className="flex flex-wrap gap-3 mt-6">
                             {note.tags.map(tag => (
@@ -475,7 +705,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
 };
 
 const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab }) => {
-  // ... (State declarations - same as before) ...
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -484,9 +713,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'inbox' | 'library'>((defaultTab as any) || 'inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  // NEW: Lightbox State
-  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
-
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
   const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
@@ -527,10 +753,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
-
-  // ... (All other useEffects, helper functions, state logic from previous correct code) ...
-  // [Retain: useEffect for tabs, useMotionValueEvent, allExistingTags, hasMoodMatcher, hasTagger, saveHistorySnapshot, saveEditHistorySnapshot, handleEditorInput, handleEditModalInput, execUndo/Redo, handleClickOutside, handleEditorClick, deleteActiveImage, insertImageAtCursor, handlePaste, handleImageUpload, execCmd, handleClearStyle, handleDump, handleMoodSearch, clearMoodFilter, startOracle, castOracleSpell, closeOracle, handleAcceptOracleResult, handleDragStart, handleDrop, handleOpenNote, handleSaveEdit, togglePin, setColor, filterNotes]
-  // Assumed to be included here for brevity.
 
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab as any);
@@ -628,7 +850,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         const target = event.target as HTMLElement;
+        // Check if the click is inside a portal (like Cover Picker or Tag Selector)
         if (target.closest('.portal-popup')) return;
+
         if (editorRef.current && !editorRef.current.contains(target)) {
             if (isExpanded) {
                 if (target.closest('.color-picker-dropdown')) return;
@@ -643,6 +867,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   useEffect(() => {
     if (isEditing && editContentRef.current && selectedNote) {
+        // FIX: Ensure clean initialization of editable content
         editContentRef.current.innerHTML = markdownToHtml(selectedNote.content);
         setActiveImage(null);
     }
@@ -770,6 +995,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     }
     
     setIsProcessing(true);
+    // FIX: Using improved converter
     const markdownContent = htmlToMarkdown(rawHtml);
     let autoTags: string[] = [];
     if (hasTagger && creationTags.length === 0 && markdownContent.length > 20) {
@@ -862,6 +1088,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const handleSaveEdit = () => {
       if (selectedNote) {
           const rawHtml = editContentRef.current?.innerHTML || '';
+          // FIX: Using improved converter
           const markdownContent = htmlToMarkdown(rawHtml);
           if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
               const updated = { 
@@ -926,7 +1153,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
       
-      {/* HEADER SECTION */}
       <div className="shrink-0 w-full px-4 md:px-8 pt-4 md:pt-8 mb-4 z-50">
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
@@ -946,7 +1172,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar-light"
                 onScroll={() => setActiveImage(null)}
             >
-                {/* STICKY SEARCH/FILTER HEADER */}
                 <motion.div 
                     className="sticky top-0 z-40 w-full mb-[-20px]"
                     animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
@@ -965,7 +1190,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
                     <div className="relative z-10 w-full px-4 md:px-8 pb-2">
                         <div className="max-w-3xl mx-auto w-full">
-                            {/* ... Search/Filter Bars (kept same as previous) ... */}
                             <div className="flex gap-2">
                                 <div className="relative flex-1 group">
                                     {showMoodInput ? (
@@ -1024,11 +1248,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     </div>
                 </motion.div>
 
-                {/* CONTENT AREA */}
                 <div className="w-full px-4 md:px-8 pt-6 pb-8">
                     {activeTab === 'inbox' && (
                         <>
-                            {/* CREATION BOX */}
                             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
                                 <div className="max-w-3xl mx-auto w-full">
                                     <div ref={editorRef} className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative mb-8 ${isExpanded ? 'shadow-xl z-30' : 'shadow-sm hover:shadow-md'}`}>
@@ -1078,6 +1300,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                                             <Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>
                                                             {showColorPicker && (
                                                                 <>
+                                                                    {/* FIX: Backdrop for creation color picker */}
                                                                     <div className="fixed inset-0 z-40" onClick={() => setShowColorPicker(false)} />
                                                                     <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
                                                                         {colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}
@@ -1117,23 +1340,103 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </div>
       </div>
       
-      {/* ORACLE MODAL (Unchanged) */}
       {showOracle && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 backdrop-blur-[70px] bg-white/30 dark:bg-black/40" onClick={closeOracle} />
-          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative w-full max-w-2xl bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-[40px] shadow-2xl overflow-hidden border border-white/50 dark:border-white/10 flex flex-col min-h-[500px]" onClick={e => e.stopPropagation()} >
-             <button onClick={closeOracle} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors z-20"><X size={20} className="text-slate-400" /></button>
-             <div className="flex justify-center items-center gap-6 pt-8 pb-4 border-b border-transparent">{ORACLE_VIBES.map(vibe => (<button key={vibe.id} onClick={() => setOracleVibe(vibe)} className={`text-[10px] font-mono uppercase tracking-widest transition-all flex items-center gap-2 pb-1 ${oracleVibe.id === vibe.id ? 'text-slate-900 dark:text-slate-100 border-b border-slate-900 dark:border-slate-100' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border-b border-transparent'}`}>{vibe.label}{oracleVibe.id === vibe.id && <Sparkles size={10} className="text-indigo-500" />}</button>))}</div>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 backdrop-blur-[70px] bg-white/30 dark:bg-black/40"
+            onClick={closeOracle}
+          />
+          
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="relative w-full max-w-2xl bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-[40px] shadow-2xl overflow-hidden border border-white/50 dark:border-white/10 flex flex-col min-h-[500px]"
+            onClick={e => e.stopPropagation()}
+          >
+             <button onClick={closeOracle} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors z-20">
+                 <X size={20} className="text-slate-400" />
+             </button>
+
+             <div className="flex justify-center items-center gap-6 pt-8 pb-4 border-b border-transparent">
+                {ORACLE_VIBES.map(vibe => (
+                    <button 
+                    key={vibe.id}
+                    onClick={() => setOracleVibe(vibe)}
+                    className={`text-[10px] font-mono uppercase tracking-widest transition-all flex items-center gap-2 pb-1 ${oracleVibe.id === vibe.id ? 'text-slate-900 dark:text-slate-100 border-b border-slate-900 dark:border-slate-100' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border-b border-transparent'}`}
+                    >
+                    {vibe.label}
+                    {oracleVibe.id === vibe.id && <Sparkles size={10} className="text-indigo-500" />}
+                    </button>
+                ))}
+             </div>
+
              <div className="flex-1 flex flex-col relative">
-                 {oracleState === 'select' && (<div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500"><Diamond size={24} strokeWidth={1} className="text-slate-300 mb-8" /><button onClick={() => castOracleSpell(oracleVibe)} className="px-8 py-4 border border-slate-300 dark:border-slate-600 rounded-full text-xs font-mono uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-500 active:scale-95">[ ВЫЗВАТЬ МЫСЛЬ ]</button></div>)}
-                 {oracleState === 'thinking' && (<div className="flex-1 flex flex-col items-center justify-center"><div className="relative"><div className="absolute inset-0 bg-indigo-500 blur-xl opacity-20 animate-pulse"></div><Diamond size={48} strokeWidth={0.5} className="text-slate-800 dark:text-white animate-pulse relative z-10" /></div><div className="mt-8 text-[10px] font-mono uppercase tracking-[0.3em] text-slate-400 animate-pulse">Scanning Archive...</div></div>)}
-                 {oracleState === 'result' && oracleNote && (<div className="flex-1 flex flex-col p-8 md:p-12 overflow-y-auto custom-scrollbar-ghost"><div className="flex justify-center mb-8 shrink-0"><Diamond size={16} strokeWidth={1} className="text-indigo-500" /></div><motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: "easeOut" }} className="flex-1 flex items-center justify-center text-center"><div className="font-serif text-2xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-200"><ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{oracleNote.content}</ReactMarkdown></div></motion.div><div className="mt-12 text-center shrink-0"><div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest mb-6 opacity-40">{new Date(oracleNote.createdAt).toLocaleDateString()} • ID: {oracleNote.id.slice(-5)}</div><button onClick={handleAcceptOracleResult} className="text-xs font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1">[ ПРИНЯТЬ В РАБОТУ ]</button></div></div>)}
+                 {oracleState === 'select' && (
+                     <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500">
+                         <Diamond size={24} strokeWidth={1} className="text-slate-300 mb-8" />
+                         <button 
+                             onClick={() => castOracleSpell(oracleVibe)}
+                             className="px-8 py-4 border border-slate-300 dark:border-slate-600 rounded-full text-xs font-mono uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-500 active:scale-95"
+                         >
+                             [ ВЫЗВАТЬ МЫСЛЬ ]
+                         </button>
+                     </div>
+                 )}
+
+                 {oracleState === 'thinking' && (
+                     <div className="flex-1 flex flex-col items-center justify-center">
+                         <div className="relative">
+                             <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-20 animate-pulse"></div>
+                             <Diamond size={48} strokeWidth={0.5} className="text-slate-800 dark:text-white animate-pulse relative z-10" />
+                         </div>
+                         <div className="mt-8 text-[10px] font-mono uppercase tracking-[0.3em] text-slate-400 animate-pulse">
+                             Scanning Archive...
+                         </div>
+                     </div>
+                 )}
+
+                 {oracleState === 'result' && oracleNote && (
+                     <div className="flex-1 flex flex-col p-8 md:p-12 overflow-y-auto custom-scrollbar-ghost">
+                        <div className="flex justify-center mb-8 shrink-0">
+                            <Diamond size={16} strokeWidth={1} className="text-indigo-500" />
+                        </div>
+                        
+                        <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className="flex-1 flex items-center justify-center text-center"
+                        >
+                            <div className="font-serif text-2xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-200">
+                                <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                    {oracleNote.content}
+                                </ReactMarkdown>
+                            </div>
+                        </motion.div>
+
+                        <div className="mt-12 text-center shrink-0">
+                            <div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest mb-6 opacity-40">
+                                {new Date(oracleNote.createdAt).toLocaleDateString()} • ID: {oracleNote.id.slice(-5)}
+                            </div>
+                            
+                            <button 
+                                onClick={handleAcceptOracleResult}
+                                className="text-xs font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1"
+                            >
+                                [ ПРИНЯТЬ В РАБОТУ ]
+                            </button>
+                        </div>
+                     </div>
+                 )}
              </div>
           </motion.div>
       </div>
       )}
 
-      {/* NOTE DETAILS MODAL */}
       {selectedNote && (
         <AnimatePresence>
             <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
@@ -1146,11 +1449,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     onClick={(e) => e.stopPropagation()}
                     onScroll={() => setActiveImage(null)}
                 >
-                    {/* Cover Logic */}
                     {(isEditing ? editCover : selectedNote.coverUrl) && <div className="h-40 w-full shrink-0 relative group -mx-10 -mt-10 mb-6 w-[calc(100%_+_5rem)] overflow-hidden"><img src={isEditing ? editCover! : selectedNote.coverUrl!} alt="Cover" className="w-full h-full object-cover" />{isEditing && <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button>}</div>}
                     
                     <div className="flex-1 flex flex-col overflow-hidden">
-                        {/* Header & Title */}
                         <div className="flex justify-between items-start mb-4 gap-4 shrink-0">
                             <div className="flex-1 pt-1 min-w-0">
                                 {isEditing ? (
@@ -1186,7 +1487,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             </div>
                         </div>
 
-                        {/* Content Area */}
                         {isEditing ? (
                             <div className="flex-1 flex flex-col overflow-hidden">
                                 <div className="relative flex-1 overflow-hidden flex flex-col">
@@ -1212,6 +1512,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                                 <Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Palette size={16} /></button></Tooltip>
                                                 {showModalColorPicker && (
                                                     <>
+                                                        {/* FIX: Backdrop for edit modal color picker */}
                                                         <div className="fixed inset-0 z-40" onClick={() => setShowModalColorPicker(false)} />
                                                         <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
                                                             {colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}
@@ -1240,25 +1541,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         ) : (
                             <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-1">
                                 <div className={`text-slate-800 dark:text-slate-200 text-base leading-relaxed font-serif font-normal min-h-[4rem] mb-6 ${!selectedNote.title ? 'mt-1' : ''}`}>
-                                    <ReactMarkdown 
-                                        components={{
-                                            ...markdownComponents,
-                                            // Override Image component for Detail View to enable Lightbox
-                                            img: ({node, ...props}: any) => (
-                                                <img 
-                                                    className="rounded-xl max-h-80 object-cover my-3 block w-full shadow-sm hover:opacity-95 transition-opacity cursor-zoom-in" 
-                                                    {...props} 
-                                                    loading="lazy" 
-                                                    onClick={(e) => { e.stopPropagation(); setZoomedImage(props.src); }} 
-                                                />
-                                            )
-                                        }} 
-                                        urlTransform={allowDataUrls} 
-                                        remarkPlugins={[remarkGfm]} 
-                                        rehypePlugins={[rehypeRaw]}
-                                    >
-                                        {selectedNote.content.replace(/\n/g, '  \n')}
-                                    </ReactMarkdown>
+                                    <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                                 </div>
                                 {selectedNote.tags && selectedNote.tags.length > 0 && (
                                     <div className="flex flex-wrap gap-3 pt-4 border-t border-black/5 dark:border-white/5">
@@ -1280,9 +1563,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </div>
         </AnimatePresence>
       )}
-
-      {/* RENDER LIGHTBOX */}
-      <ImageViewer src={zoomedImage} onClose={() => setZoomedImage(null)} />
     </div>
   );
 };
