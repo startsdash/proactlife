@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
@@ -335,6 +333,25 @@ const App: React.FC = () => {
     };
   }, [data.config, isOwner, data.user]);
 
+  // --- CALCULATE SPHERE STATS FOR LAYOUT ---
+  const sphereStats = useMemo(() => {
+      const stats = { productivity: 0, growth: 0, relationships: 0 };
+      
+      const increment = (spheres?: string[]) => {
+          spheres?.forEach(s => {
+              if (s === 'productivity' || s === 'growth' || s === 'relationships') {
+                  stats[s]++;
+              }
+          });
+      };
+
+      data.tasks.forEach(t => !t.isArchived && increment(t.spheres));
+      data.habits.forEach(h => !h.isArchived && increment(h.spheres));
+      data.journal.forEach(j => increment(j.spheres));
+
+      return stats;
+  }, [data.tasks, data.habits, data.journal]);
+
   // INVITE CODE VALIDATION
   const validateGuestSession = (code: string | null): boolean => {
       if (!code) return false;
@@ -421,6 +438,7 @@ const App: React.FC = () => {
         habits={data.habits}
         config={data.config}
         userEmail={data.user?.email}
+        sphereStats={sphereStats}
     >
       <Onboarding onClose={() => setShowOnboarding(false)} />
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
