@@ -230,15 +230,6 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const getSyncColor = () => {
-    switch (syncStatus) {
-      case 'syncing': return 'bg-amber-500 animate-pulse';
-      case 'synced': return 'bg-emerald-500';
-      case 'error': return 'bg-red-500';
-      case 'disconnected': default: return 'bg-slate-300 dark:bg-slate-600';
-    }
-  };
-
   const isModuleVisible = (moduleId: string) => {
       const moduleConfig = config.modules?.find(m => m.id === moduleId);
       
@@ -306,14 +297,14 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
       >
         {/* HEADER */}
         <div className="shrink-0 h-20 flex items-center justify-between px-6 border-b border-transparent">
-             <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
-                <div className="w-6 h-6 bg-slate-900 dark:bg-white rounded-md flex items-center justify-center text-white dark:text-black font-bold text-xs shrink-0 select-none">
+             <button onClick={() => setModule(Module.DASHBOARD)} className="flex items-center gap-3 overflow-hidden whitespace-nowrap group outline-none">
+                <div className="w-6 h-6 bg-slate-900 dark:bg-white rounded-md flex items-center justify-center text-white dark:text-black font-bold text-xs shrink-0 select-none group-hover:scale-110 transition-transform">
                     L
                 </div>
                 <div className={`transition-all duration-300 ${isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0'}`}>
-                    <span className="font-sans font-bold text-sm tracking-tight text-slate-900 dark:text-white">LIVE.ACT</span>
+                    <span className="font-sans font-bold text-sm tracking-tight text-slate-900 dark:text-white group-hover:text-indigo-500 transition-colors">LIVE.ACT</span>
                 </div>
-             </div>
+             </button>
 
              {isExpanded && (
                  <button onClick={() => setIsExpanded(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
@@ -400,7 +391,7 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
         <div className="shrink-0 p-6">
             <div className={`flex items-center gap-4 transition-all duration-300 ${isExpanded ? 'justify-start' : 'justify-center flex-col gap-6'}`}>
                 
-                {/* ROLE RING (Identity) -> Maps to DASHBOARD now */}
+                {/* ROLE RING (Identity) */}
                 <Tooltip content="Обзор" side="right">
                     <div 
                         className={`w-8 h-8 rounded-full border-2 bg-transparent flex items-center justify-center relative cursor-pointer group ${ROLE_COLORS[role]}`}
@@ -412,15 +403,16 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
 
                 {isExpanded && (
                     <div className="flex-1 overflow-hidden">
-                        <div className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                            SYSTEM
-                        </div>
                         <div className="flex items-center gap-2 mt-1">
-                            <Tooltip content={syncStatus === 'synced' ? 'Синхронизировано' : 'Статус облака'}>
-                                <button onClick={!isDriveConnected ? onConnectDrive : undefined} className="flex items-center gap-1.5 group">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${getSyncColor()}`} />
+                            <Tooltip content={syncStatus === 'synced' ? 'Синхронизировано' : 'Нажмите для подключения'}>
+                                <button onClick={!isDriveConnected ? onConnectDrive : undefined} className="flex items-center gap-2 group">
+                                    {/* Icon Logic */}
+                                    {syncStatus === 'synced' && <Cloud size={14} className="text-emerald-500" />}
+                                    {syncStatus === 'syncing' && <RefreshCw size={14} className="text-amber-500 animate-spin" />}
+                                    {(syncStatus === 'error' || syncStatus === 'disconnected') && <CloudOff size={14} className={syncStatus === 'error' ? "text-red-500" : "text-slate-400"} />}
+                                    
                                     <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors uppercase">
-                                        {syncStatus === 'synced' ? 'ONLINE' : 'OFFLINE'}
+                                        Облако
                                     </span>
                                 </button>
                             </Tooltip>
