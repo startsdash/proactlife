@@ -176,6 +176,7 @@ export interface AIToolConfig extends AccessControl {
 export interface ModuleConfig extends AccessControl {
   id: Module;
   name: string;
+  isLab?: boolean;
 }
 
 export interface InviteCode {

@@ -9,8 +9,6 @@ interface Props {
   onClose?: () => void;
 }
 
-const LAB_MODULES = [Module.SKETCHPAD, Module.ETHER, Module.MENTAL_GYM, Module.PROFILE];
-
 // --- HELPER COMPONENT: STATUS TOGGLE ---
 const StatusToggle = ({ isDisabled, onChange, label = "Активно", descriptionOn = "Доступно для использования", descriptionOff = "Скрыто из интерфейса" }: { isDisabled?: boolean, onChange: (val: boolean) => void, label?: string, descriptionOn?: string, descriptionOff?: string }) => {
   return (
@@ -270,11 +268,11 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
   const [copyStatus, setCopyStatus] = useState(false);
 
   // LAB MASTER TOGGLE STATE
-  const isLabEnabled = moduleConfigs.some(m => LAB_MODULES.includes(m.id) && !m.isDisabled);
+  const isLabEnabled = moduleConfigs.some(m => m.isLab && !m.isDisabled);
 
   const handleToggleLab = (enabled: boolean) => {
       const updatedConfigs = moduleConfigs.map(m => {
-          if (LAB_MODULES.includes(m.id)) {
+          if (m.isLab) {
               return { ...m, isDisabled: !enabled };
           }
           return m;
@@ -627,6 +625,7 @@ export const applyTypography = (text: string): string => {
                                   {(m.accessLevel === 'public' || !m.accessLevel) && <Globe size={12} className="text-emerald-400" />}
                                   {m.accessLevel === 'restricted' && <Users size={12} className="text-amber-400" />}
                                 </div>
+                                {m.isLab && <div className="ml-2 text-[10px] bg-slate-100 px-1 rounded text-slate-500 font-mono">LAB</div>}
                                 <div className="flex-1" />
                           </div>
                       </div>
@@ -655,6 +654,28 @@ export const applyTypography = (text: string): string => {
                         descriptionOn="Раздел отображается в меню навигации."
                         descriptionOff="Раздел скрыт для всех пользователей."
                     />
+
+                    {/* LAB PROTOCOL MARKER TOGGLE */}
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between mb-4 shadow-sm">
+                        <div className="flex items-center gap-2">
+                            <FlaskConical size={20} className={editingModule.isLab ? "text-indigo-500" : "text-slate-400"} />
+                            <div>
+                                <div className="text-sm font-bold text-slate-800">Lab Protocol</div>
+                                <div className="text-[10px] text-slate-500">
+                                    {editingModule.isLab ? "Раздел является экспериментальным" : "Стандартный раздел"}
+                                </div>
+                            </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                className="sr-only peer" 
+                                checked={editingModule.isLab || false} 
+                                onChange={(e) => setEditingModule({...editingModule, isLab: e.target.checked})} 
+                            />
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
+                        </label>
+                    </div>
 
                     <div>
                         <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Название (UI)</label>

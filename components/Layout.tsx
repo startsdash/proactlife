@@ -239,17 +239,21 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
   };
 
   const isModuleVisible = (moduleId: string) => {
-      if (isOwner) return true; // Owner sees all
       const moduleConfig = config.modules?.find(m => m.id === moduleId);
+      
+      // Feature Toggle Check (Higher priority than Access Control)
+      if (moduleConfig?.isDisabled) return false;
+
+      // Access Control
+      if (isOwner) return true; // Owner sees all enabled modules
       
       // If no config found, assume public (default behavior for safety/migration)
       if (!moduleConfig) return true;
-      if (moduleConfig.isDisabled) return false;
 
       const level = moduleConfig.accessLevel || 'public';
       
       if (level === 'public') return true;
-      if (level === 'owner_only') return false; // Already checked isOwner above
+      if (level === 'owner_only') return false; 
       if (level === 'restricted') return moduleConfig.allowedEmails?.includes(userEmail || '') || false;
       
       return true;

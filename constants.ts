@@ -158,10 +158,10 @@ export const DEFAULT_MODULE_CONFIGS: ModuleConfig[] = [
     { id: Module.DASHBOARD, name: 'Обзор', accessLevel: 'public' },
     { id: Module.ARCHIVE, name: 'Архив', accessLevel: 'public' },
     // Lab Modules
-    { id: Module.SKETCHPAD, name: 'Скетчпад', accessLevel: 'public' },
-    { id: Module.ETHER, name: 'Ether', accessLevel: 'public' },
-    { id: Module.MENTAL_GYM, name: 'Скиллы', accessLevel: 'public' },
-    { id: Module.PROFILE, name: 'Профиль', accessLevel: 'public' },
+    { id: Module.SKETCHPAD, name: 'Скетчпад', accessLevel: 'public', isLab: true },
+    { id: Module.ETHER, name: 'Ether', accessLevel: 'public', isLab: true },
+    { id: Module.MENTAL_GYM, name: 'Скиллы', accessLevel: 'public', isLab: true },
+    { id: Module.PROFILE, name: 'Профиль', accessLevel: 'public', isLab: true },
 ];
 
 export const DEFAULT_CONFIG: AppConfig = {
