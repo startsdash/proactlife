@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus, IdentityRole, Habit, AppConfig, AccessControl } from '../types';
 import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Fingerprint, Diamond, Activity, Tablet, BrainCircuit } from 'lucide-react';
@@ -21,23 +20,28 @@ interface Props {
 
 const NAV_GROUPS = [
   {
-    id: '01_FOUNDATION',
+    id: '01_НАЧАЛО',
     items: [
       { id: Module.NAPKINS, icon: StickyNote, label: 'Заметки' },
       { id: Module.SANDBOX, icon: Box, label: 'Хаб' },
     ]
   },
   {
-    id: '02_FLOW',
+    id: '02_ФЛОУ',
     items: [
       { id: Module.KANBAN, icon: KanbanIcon, label: 'Спринты' },
       { id: Module.RITUALS, icon: Flame, label: 'Трекер' },
       { id: Module.JOURNAL, icon: Book, label: 'Дневник' },
-      { id: Module.ARCHIVE, icon: Trophy, label: 'Архив' },
     ]
   },
   {
-    id: '_LAB',
+    id: '03_АРХИВЫ',
+    items: [
+      { id: Module.ARCHIVE, icon: Trophy, label: 'Зал славы' },
+    ]
+  },
+  {
+    id: '00_LAB',
     items: [
       { id: Module.SKETCHPAD, icon: Tablet, label: 'Скетчпад' },
       { id: Module.ETHER, icon: BrainCircuit, label: 'Ether' },
