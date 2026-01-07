@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
@@ -282,6 +283,7 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
     const [input, setInput] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
+    const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -290,6 +292,32 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        if (isOpen && wrapperRef.current) {
+            const rect = wrapperRef.current.getBoundingClientRect();
+            // Decide whether to show above or below
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const spaceAbove = rect.top;
+            
+            let top, bottom;
+            if (spaceBelow < 200 && spaceAbove > 200) {
+                bottom = window.innerHeight - rect.top + 4;
+            } else {
+                top = rect.bottom + 4;
+            }
+
+            setDropdownStyle({
+                position: 'fixed',
+                left: rect.left,
+                width: rect.width,
+                top: top,
+                bottom: bottom,
+                maxHeight: '200px',
+                zIndex: 9999,
+            });
+        }
+    }, [isOpen]);
 
     const filteredSuggestions = existingTags.filter(tag => !selectedTags.some(st => st.toLowerCase() === tag.toLowerCase()) && tag.toLowerCase().includes(input.toLowerCase()));
 
@@ -322,25 +350,31 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
                     className={`flex-1 min-w-[80px] bg-transparent text-xs font-sans outline-none ${variant === 'ghost' ? 'text-slate-600 dark:text-slate-300 placeholder:text-slate-300' : 'text-slate-600 dark:text-slate-300 placeholder:text-slate-400'}`} 
                 />
             </div>
-            {isOpen && (input.length > 0 || filteredSuggestions.length > 0) && (
-                <div className="absolute top-full left-0 mt-1 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto">
+            {isOpen && (input.length > 0 || filteredSuggestions.length > 0) && createPortal(
+                <div style={dropdownStyle} className="fixed bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-y-auto">
                     {input.length > 0 && !filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase()) && (
                         <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-xs font-sans text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-bold"><Plus size={12} /> Создать «{input}»</button>
                     )}
                     {filteredSuggestions.map(tag => (
                         <button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-xs font-sans text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-medium"><TagIcon size={12} className="text-slate-400" /> {tag}</button>
                     ))}
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
 };
 
 // Cover Picker
-const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => void }> = ({ onSelect, onClose }) => {
+const CoverPicker: React.FC<{ 
+    onSelect: (url: string) => void, 
+    onClose: () => void, 
+    triggerRef: React.RefObject<HTMLElement> 
+}> = ({ onSelect, onClose, triggerRef }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS);
     const [loading, setLoading] = useState(false);
+    const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
     
     // Robust Env Getter for the API Key inside the component or file scope
     const getUnsplashKey = () => {
@@ -360,6 +394,38 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
         }
         return '';
     };
+
+    useEffect(() => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const viewportH = window.innerHeight;
+            const viewportW = window.innerWidth;
+            const pickerHeight = 320; 
+            
+            const style: React.CSSProperties = {};
+            
+            // Vertical Logic
+            const spaceBelow = viewportH - rect.bottom;
+            if (spaceBelow < pickerHeight && rect.top > spaceBelow) {
+                // Flip Up
+                style.bottom = viewportH - rect.top + 8;
+                style.maxHeight = rect.top - 20;
+            } else {
+                // Normal Down
+                style.top = rect.bottom + 8;
+                style.maxHeight = spaceBelow - 20;
+            }
+
+            // Horizontal Logic
+            if (rect.left + 320 > viewportW) {
+                style.right = 16;
+            } else {
+                style.left = rect.left;
+            }
+            
+            setPickerStyle(style);
+        }
+    }, [triggerRef]);
 
     const searchUnsplash = async (q?: string) => {
         const key = getUnsplashKey();
@@ -403,53 +469,61 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
         }
     };
 
-    return (
-        <div className="absolute top-full mt-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 w-80 flex flex-col gap-3" onMouseDown={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase font-sans">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
-            
-            <div className="relative">
-                <input 
-                    type="text" 
-                    placeholder="Поиск Unsplash..." 
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-sans outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
-                />
-                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                <button 
-                    onClick={() => searchUnsplash(query)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
-                    title="Найти"
-                >
-                    <ArrowRight size={12} />
-                </button>
-            </div>
+    return createPortal(
+        <>
+            <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+            <div 
+                className="fixed bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] w-80 flex flex-col gap-3 overflow-hidden" 
+                style={pickerStyle}
+                onMouseDown={e => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-center shrink-0"><span className="text-[10px] font-bold text-slate-400 uppercase font-sans">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
+                
+                <div className="relative shrink-0">
+                    <input 
+                        type="text" 
+                        placeholder="Поиск Unsplash..." 
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-sans outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
+                    />
+                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <button 
+                        onClick={() => searchUnsplash(query)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
+                        title="Найти"
+                    >
+                        <ArrowRight size={12} />
+                    </button>
+                </div>
 
-            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
-                {loading ? (
-                    <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
-                        <RefreshCw size={16} className="animate-spin" />
-                    </div>
-                ) : (
-                    results.map((url, i) => (
-                        <button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded-lg overflow-hidden border border-slate-100 dark:border-slate-700 hover:ring-2 hover:ring-indigo-500 relative group bg-slate-100">
-                            <img src={url} className="w-full h-full object-cover" loading="lazy" />
-                        </button>
-                    ))
-                )}
-            </div>
+                <div className="grid grid-cols-3 gap-2 overflow-y-auto custom-scrollbar-light min-h-[60px] flex-1">
+                    {loading ? (
+                        <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
+                            <RefreshCw size={16} className="animate-spin" />
+                        </div>
+                    ) : (
+                        results.map((url, i) => (
+                            <button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded-lg overflow-hidden border border-slate-100 dark:border-slate-700 hover:ring-2 hover:ring-indigo-500 relative group bg-slate-100">
+                                <img src={url} className="w-full h-full object-cover" loading="lazy" />
+                            </button>
+                        ))
+                    )}
+                </div>
 
-            <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-                <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium font-sans cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
-                    <Upload size={12} /> Своя 
-                    <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-                </label>
-                <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium font-sans transition-colors text-slate-600 dark:text-slate-300">
-                    <Shuffle size={12} /> Случайные
-                </button>
+                <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700 shrink-0">
+                    <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium font-sans cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
+                        <Upload size={12} /> Своя 
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                    </label>
+                    <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium font-sans transition-colors text-slate-600 dark:text-slate-300">
+                        <Shuffle size={12} /> Случайные
+                    </button>
+                </div>
             </div>
-        </div>
+        </>,
+        document.body
     );
 };
 
@@ -645,6 +719,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+
+  // Refs for CoverPicker positioning
+  const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
+  const editCoverBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab as any);
@@ -1182,7 +1260,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                                         {activeImage && !isEditing && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors"><Trash2 size={18} /></button></Tooltip>}
                                                     </div>
                                                     <div className="flex items-center gap-2 shrink-0">
-                                                        <div className="relative"><Tooltip content="Обложка"><button onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button></Tooltip>{showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} />}</div>
+                                                        <div className="relative">
+                                                            <Tooltip content="Обложка">
+                                                                <button ref={creationCoverBtnRef} onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button>
+                                                            </Tooltip>
+                                                            {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationCoverBtnRef} />}
+                                                        </div>
                                                         <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>{showColorPicker && <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
                                                         <button onClick={handleDump} disabled={isProcessing} className="text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50">Закрыть</button>
                                                     </div>
@@ -1384,7 +1467,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                             {activeImage && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
                                         </div>
                                         <div className="shrink-0 relative flex gap-1">
-                                            <div className="relative"><Tooltip content="Обложка"><button onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 ${editCover ? 'text-indigo-500' : ''}`}><Layout size={16} /></button></Tooltip>{showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} />}</div>
+                                            <div className="relative">
+                                                <Tooltip content="Обложка">
+                                                    <button ref={editCoverBtnRef} onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 ${editCover ? 'text-indigo-500' : ''}`}><Layout size={16} /></button>
+                                                </Tooltip>
+                                                {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editCoverBtnRef} />}
+                                            </div>
                                             <div className="relative"><Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Palette size={16} /></button></Tooltip>{showModalColorPicker && <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">{colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}</div>}</div>
                                         </div>
                                     </div>
