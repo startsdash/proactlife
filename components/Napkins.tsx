@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -473,7 +474,58 @@ interface NoteCardProps {
 
 const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     const [isExiting, setIsExiting] = useState(false);
-    const linkUrl = findFirstUrl(note.content);
+    
+    // NEW: Memoized extraction for preview
+    const { thumbnails, previewText } = useMemo(() => {
+        const content = note.content || '';
+        const imgRegex = /!\[.*?\]\((.*?)\)/g;
+        const images: string[] = [];
+        let match;
+        // Reset regex state just in case
+        while ((match = imgRegex.exec(content)) !== null) {
+            images.push(match[1]);
+        }
+
+        let clean = content
+            .replace(/!\[.*?\]\((.*?)\)/g, '') // remove images
+            .replace(/#{1,6}\s?/g, '') // remove headers
+            .replace(/(\*\*|__)(.*?)\1/g, '$2') // bold
+            .replace(/(\*|_)(.*?)\1/g, '$2') // italic
+            .replace(/`{3}[\s\S]*?`{3}/g, '') // code blocks
+            .replace(/`(.+?)`/g, '$1') // inline code
+            .replace(/\[(.*?)\]\(.*?\)/g, '$1') // links
+            .replace(/^>\s/gm, '') // blockquotes
+            .replace(/\n+/g, ' ') 
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        // Intelligent Sentence Splitter: Matches sentences ending with . ! ? followed by space or end
+        const sentences = clean.match(/[^.!?]+[.!?]+(\s|$)/g);
+        let text = '';
+        
+        if (!sentences) {
+            // Fallback for text without sentence structure
+            text = clean.slice(0, 150);
+            if (clean.length > 150) text += '...';
+        } else {
+            let acc = '';
+            let count = 0;
+            for (const s of sentences) {
+                acc += s;
+                count++;
+                // Stop after 2 sentences if they are long enough, otherwise 3 max
+                if (count >= 2 && acc.length > 100) break;
+                if (count >= 3) break;
+            }
+            text = acc.trim();
+            if (clean.length > text.length) text += '...';
+        }
+        
+        return { thumbnails: images, previewText: text };
+    }, [note.content]);
+
+    // Use original link logic only if no images (prioritize images for visual noise)
+    const linkUrl = thumbnails.length === 0 ? findFirstUrl(note.content) : null;
 
     const handleArchive = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -548,9 +600,28 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             <div className="p-8 pb-16 w-full flex-1 relative z-10">
                 <div className="block w-full mb-2">
                     {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
-                    <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words line-clamp-[6]`}>
-                        <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{note.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                    
+                    {/* TEXT PREVIEW */}
+                    <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed break-words`}>
+                        {previewText}
                     </div>
+
+                    {/* IMAGE THUMBNAILS */}
+                    {thumbnails.length > 0 && (
+                        <div className={`mt-4 grid gap-2 ${thumbnails.length === 1 ? 'grid-cols-1' : 'grid-cols-3'}`}>
+                            {thumbnails.slice(0, 3).map((src, i) => (
+                                <div key={i} className={`relative overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800 ${thumbnails.length === 1 ? 'h-48' : 'h-20 aspect-square'}`}>
+                                    <img src={src} alt="attachment" className="w-full h-full object-cover" loading="lazy" />
+                                    {i === 2 && thumbnails.length > 3 && (
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-sm">
+                                            +{thumbnails.length - 3}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {linkUrl && <LinkPreview url={linkUrl} />}
                     {/* AIR TAGS */}
                     {note.tags && note.tags.length > 0 && (
