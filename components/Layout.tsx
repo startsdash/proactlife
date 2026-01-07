@@ -39,7 +39,6 @@ const NAV_GROUPS = [
   {
     id: '_LAB',
     items: [
-      { id: Module.DASHBOARD, icon: LayoutDashboard, label: 'Обзор' },
       { id: Module.SKETCHPAD, icon: Tablet, label: 'Скетчпад' },
       { id: Module.ETHER, icon: BrainCircuit, label: 'Ether' },
       { id: Module.MENTAL_GYM, icon: Dumbbell, label: 'Скиллы' },
@@ -186,27 +185,25 @@ const SidebarAccumulator = ({ habits, expanded, onNavigate }: { habits: Habit[],
 
     return (
         <div className="flex justify-center py-4 mb-2 w-full animate-in fade-in zoom-in-95 duration-300">
-            <Tooltip content={`Заряд: ${Math.round(percent)}%`} side="right">
-                <button 
-                    onClick={handleClick}
-                    className={`
-                        relative w-3 h-14 rounded-full 
-                        bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl 
-                        border border-white/20 dark:border-white/10 
-                        shadow-lg overflow-hidden flex flex-col-reverse items-center py-0.5
-                        hover:scale-110 hover:w-4 transition-all duration-300
-                        ${isGlitching ? 'brightness-150' : ''}
-                    `}
-                >
-                     {/* PLASMA LIQUID (Vertical Stack) */}
-                    <div className={`absolute bottom-0.5 w-full flex flex-col-reverse items-center filter blur-[3px] opacity-90 ${isDecaying ? 'opacity-40' : ''}`}>
-                         <motion.div className="w-1.5 bg-indigo-500 rounded-full shadow-[0_0_5px_#6366f1]" initial={{ height: 0 }} animate={{ height: `${prodPercent}%` }} transition={{ duration: 1 }} />
-                         <motion.div className="w-1.5 bg-emerald-500 rounded-full -mb-0.5 shadow-[0_0_5px_#10b981]" initial={{ height: 0 }} animate={{ height: `${growthPercent}%` }} transition={{ duration: 1 }} />
-                         <motion.div className="w-1.5 bg-rose-500 rounded-full -mb-0.5 shadow-[0_0_5px_#f43f5e]" initial={{ height: 0 }} animate={{ height: `${relPercent}%` }} transition={{ duration: 1 }} />
-                         <motion.div className="w-1.5 bg-slate-400 dark:bg-slate-600 rounded-full -mb-0.5" initial={{ height: 0 }} animate={{ height: `${otherPercent}%` }} transition={{ duration: 1 }} />
-                    </div>
-                </button>
-            </Tooltip>
+            <button 
+                onClick={handleClick}
+                className={`
+                    relative w-3 h-14 rounded-full 
+                    bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl 
+                    border border-white/20 dark:border-white/10 
+                    shadow-lg overflow-hidden flex flex-col-reverse items-center py-0.5
+                    hover:scale-110 hover:w-4 transition-all duration-300
+                    ${isGlitching ? 'brightness-150' : ''}
+                `}
+            >
+                    {/* PLASMA LIQUID (Vertical Stack) */}
+                <div className={`absolute bottom-0.5 w-full flex flex-col-reverse items-center filter blur-[3px] opacity-90 ${isDecaying ? 'opacity-40' : ''}`}>
+                        <motion.div className="w-1.5 bg-indigo-500 rounded-full shadow-[0_0_5px_#6366f1]" initial={{ height: 0 }} animate={{ height: `${prodPercent}%` }} transition={{ duration: 1 }} />
+                        <motion.div className="w-1.5 bg-emerald-500 rounded-full -mb-0.5 shadow-[0_0_5px_#10b981]" initial={{ height: 0 }} animate={{ height: `${growthPercent}%` }} transition={{ duration: 1 }} />
+                        <motion.div className="w-1.5 bg-rose-500 rounded-full -mb-0.5 shadow-[0_0_5px_#f43f5e]" initial={{ height: 0 }} animate={{ height: `${relPercent}%` }} transition={{ duration: 1 }} />
+                        <motion.div className="w-1.5 bg-slate-400 dark:bg-slate-600 rounded-full -mb-0.5" initial={{ height: 0 }} animate={{ height: `${otherPercent}%` }} transition={{ duration: 1 }} />
+                </div>
+            </button>
         </div>
     );
 }
@@ -400,11 +397,11 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
         <div className="shrink-0 p-6">
             <div className={`flex items-center gap-4 transition-all duration-300 ${isExpanded ? 'justify-start' : 'justify-center flex-col gap-6'}`}>
                 
-                {/* ROLE RING (Identity) */}
+                {/* ROLE RING (Identity) -> Maps to DASHBOARD now */}
                 <Tooltip content={role.toUpperCase()} side="right">
                     <div 
                         className={`w-8 h-8 rounded-full border-2 bg-transparent flex items-center justify-center relative cursor-pointer group ${ROLE_COLORS[role]}`}
-                        onClick={() => { setModule(Module.PROFILE); if(isMobile) setIsExpanded(false); }}
+                        onClick={() => { setModule(Module.DASHBOARD); if(isMobile) setIsExpanded(false); }}
                     >
                         <div className="w-2 h-2 bg-current rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
                     </div>
