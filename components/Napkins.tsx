@@ -12,7 +12,6 @@ import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play } from 'lucide-react';
-import Sketchpad from './Sketchpad';
 
 interface Props {
   notes: Note[];
@@ -26,12 +25,12 @@ interface Props {
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
   onAddJournalEntry: (entry: JournalEntry) => void;
-  // Sketchpad Props
-  sketchItems: SketchItem[];
-  addSketchItem: (item: SketchItem) => void;
-  deleteSketchItem: (id: string) => void;
-  updateSketchItem: (item: SketchItem) => void;
-  defaultTab?: 'inbox' | 'sketchpad' | 'library' | 'ether';
+  // Sketchpad Props - Kept for interface compatibility but not used
+  sketchItems?: SketchItem[];
+  addSketchItem?: (item: SketchItem) => void;
+  deleteSketchItem?: (id: string) => void;
+  updateSketchItem?: (item: SketchItem) => void;
+  defaultTab?: 'inbox' | 'library';
 }
 
 const colors = [
@@ -64,286 +63,6 @@ const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmln
 const breakpointColumnsObj = {
   default: 2,
   767: 1 // 1 column for mobile (<= 767px)
-};
-
-// --- ETHER GRAPH TYPES & COMPONENT ---
-interface VisualNode extends Note {
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    phase: number;
-    hexColor: string;
-}
-
-const NoteEtherGraph: React.FC<{ notes: Note[], onNodeClick: (note: Note) => void, onUpdateNote: (note: Note) => void }> = ({ notes, onNodeClick, onUpdateNote }) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-    const simulationRef = useRef<{ nodes: VisualNode[], suggestedLinks: { source: string, target: string }[] }>({ nodes: [], suggestedLinks: [] });
-    const [tick, setTick] = useState(0);
-    const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-    const [isPaused, setIsPaused] = useState(false);
-
-    // Init Simulation
-    useEffect(() => {
-        if (!containerRef.current) return;
-        const { clientWidth, clientHeight } = containerRef.current;
-        setDimensions({ width: clientWidth, height: clientHeight });
-
-        const getColorHex = (colorId?: string) => colors.find(c => c.id === colorId)?.hex || '#94a3b8';
-
-        // 1. Create Nodes (Preserve existing positions if id matches)
-        const currentNodes = simulationRef.current.nodes;
-        const visualNodes: VisualNode[] = notes.map(n => {
-            const existing = currentNodes.find(en => en.id === n.id);
-            return {
-                ...n,
-                x: existing ? existing.x : Math.random() * clientWidth,
-                y: existing ? existing.y : Math.random() * clientHeight,
-                vx: existing ? existing.vx : (Math.random() - 0.5) * 0.5,
-                vy: existing ? existing.vy : (Math.random() - 0.5) * 0.5,
-                phase: existing ? existing.phase : Math.random() * Math.PI * 2,
-                hexColor: getColorHex(n.color)
-            };
-        });
-
-        // 2. Generate Random "Suggested" Links only if we need more or re-init
-        let suggestedLinks = simulationRef.current.suggestedLinks;
-        if (suggestedLinks.length === 0 && visualNodes.length > 2) {
-            const linkCount = Math.min(visualNodes.length, 5); // Suggest up to 5 connections
-            const usedIndices = new Set<number>();
-            
-            for (let i = 0; i < linkCount; i++) {
-                let idx1 = Math.floor(Math.random() * visualNodes.length);
-                let idx2 = Math.floor(Math.random() * visualNodes.length);
-                
-                let attempts = 0;
-                while ((idx1 === idx2 || usedIndices.has(idx1)) && attempts < 10) {
-                    idx2 = Math.floor(Math.random() * visualNodes.length);
-                    attempts++;
-                }
-                
-                if (idx1 !== idx2) {
-                    suggestedLinks.push({ 
-                        source: visualNodes[idx1].id, 
-                        target: visualNodes[idx2].id 
-                    });
-                    usedIndices.add(idx1);
-                }
-            }
-        }
-
-        simulationRef.current = { nodes: visualNodes, suggestedLinks };
-
-    }, [notes]);
-
-    // Physics Loop
-    useEffect(() => {
-        let animationFrameId: number;
-
-        const loop = () => {
-            const { width, height } = dimensions;
-            const { nodes } = simulationRef.current;
-
-            if (!isPaused) {
-                nodes.forEach(node => {
-                    // Gentle floating
-                    node.x += node.vx;
-                    node.y += node.vy;
-
-                    // Wall bounce with damping
-                    if (node.x <= 0 || node.x >= width) node.vx *= -1;
-                    if (node.y <= 0 || node.y >= height) node.vy *= -1;
-
-                    // Central Gravity (Keep them somewhat together)
-                    const dx = (width / 2) - node.x;
-                    const dy = (height / 2) - node.y;
-                    node.vx += dx * 0.00005;
-                    node.vy += dy * 0.00005;
-                });
-            } else {
-                // When paused, we might want a tiny pulse or completely static
-                // Let's keep them static for stability as requested ("Nodes stay in place")
-            }
-
-            setTick(t => t + 1);
-            animationFrameId = requestAnimationFrame(loop);
-        };
-        animationFrameId = requestAnimationFrame(loop);
-        return () => cancelAnimationFrame(animationFrameId);
-    }, [dimensions, isPaused]);
-
-    // Combine Suggested and Saved Links
-    const allLinks = useMemo(() => {
-        const { nodes, suggestedLinks } = simulationRef.current;
-        const links: { source: VisualNode, target: VisualNode, type: 'suggested' | 'starred', id: string }[] = [];
-        
-        // 1. Saved Links (Starred)
-        const savedLinksSet = new Set<string>();
-        nodes.forEach(node => {
-            if (node.connectedNoteIds) {
-                node.connectedNoteIds.forEach(targetId => {
-                    const target = nodes.find(n => n.id === targetId);
-                    if (target) {
-                        const linkId = [node.id, targetId].sort().join('-');
-                        if (!savedLinksSet.has(linkId)) {
-                            links.push({ source: node, target, type: 'starred', id: linkId });
-                            savedLinksSet.add(linkId);
-                        }
-                    }
-                });
-            }
-        });
-
-        // 2. Suggested Links (Only if not already saved)
-        suggestedLinks.forEach(link => {
-            const source = nodes.find(n => n.id === link.source);
-            const target = nodes.find(n => n.id === link.target);
-            if (source && target) {
-                const linkId = [source.id, target.id].sort().join('-');
-                if (!savedLinksSet.has(linkId)) {
-                    links.push({ source, target, type: 'suggested', id: linkId });
-                }
-            }
-        });
-
-        return links;
-    }, [tick, notes]); // Depend on tick to update positions, notes to update starred status
-
-    const toggleConnection = (sourceId: string, targetId: string) => {
-        const sourceNote = notes.find(n => n.id === sourceId);
-        if (!sourceNote) return;
-
-        const currentConnections = sourceNote.connectedNoteIds || [];
-        let newConnections;
-
-        if (currentConnections.includes(targetId)) {
-            newConnections = currentConnections.filter(id => id !== targetId);
-        } else {
-            newConnections = [...currentConnections, targetId];
-        }
-
-        onUpdateNote({ ...sourceNote, connectedNoteIds: newConnections });
-    };
-
-    return (
-        <div ref={containerRef} className="absolute inset-0 bg-[#0f172a] overflow-hidden">
-            {/* Header / Controls */}
-            <div className="absolute top-6 left-8 z-20 flex items-start gap-4">
-                <div>
-                    <h2 className="text-white/80 font-serif text-2xl tracking-tight flex items-center gap-3">
-                        <BrainCircuit size={24} className="text-indigo-400" />
-                        ETHER_WEB
-                    </h2>
-                    <p className="text-white/40 text-[10px] font-mono uppercase tracking-widest mt-1">
-                        Поиск скрытых связей // {notes.length} NODES
-                    </p>
-                </div>
-                <button 
-                    onClick={() => setIsPaused(!isPaused)}
-                    className="p-2 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                    title={isPaused ? "Возобновить Хаос" : "Остановить Хаос (Пауза)"}
-                >
-                    {isPaused ? <Play size={16} fill="currentColor" /> : <Pause size={16} fill="currentColor" />}
-                </button>
-            </div>
-
-            {/* Links Layer */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                {allLinks.map((link) => {
-                    const isStarred = link.type === 'starred';
-                    return (
-                        <g key={link.id}>
-                            <line 
-                                x1={link.source.x} y1={link.source.y} 
-                                x2={link.target.x} y2={link.target.y} 
-                                stroke={isStarred ? "#fbbf24" : "white"}
-                                strokeWidth={isStarred ? 1.5 : 1} 
-                                strokeDasharray={isStarred ? "none" : "4 4"} 
-                                strokeOpacity={isStarred ? 0.6 : 0.2} 
-                            />
-                            {/* Running Dot/Spark */}
-                            <circle r="2" fill={isStarred ? "#fbbf24" : "white"}>
-                                <animateMotion 
-                                    dur="4s"
-                                    repeatCount="indefinite"
-                                    path={`M${link.source.x},${link.source.y} L${link.target.x},${link.target.y}`}
-                                />
-                            </circle>
-                        </g>
-                    );
-                })}
-            </svg>
-
-            {/* Interaction Layer (Stars) */}
-            <div className="absolute inset-0 w-full h-full pointer-events-none z-10">
-                {allLinks.map((link) => {
-                    const mx = (link.source.x + link.target.x) / 2;
-                    const my = (link.source.y + link.target.y) / 2;
-                    const isStarred = link.type === 'starred';
-                    
-                    return (
-                        <div 
-                            key={`star-${link.id}`}
-                            className="absolute pointer-events-auto cursor-pointer transform -translate-x-1/2 -translate-y-1/2 p-2 hover:scale-125 transition-transform group"
-                            style={{ left: mx, top: my }}
-                            onClick={() => toggleConnection(link.source.id, link.target.id)}
-                        >
-                            <div className={`p-1 rounded-full backdrop-blur-sm ${isStarred ? 'bg-yellow-500/10' : 'bg-white/5 hover:bg-white/10'}`}>
-                                <Star 
-                                    size={12} 
-                                    className={`transition-colors ${isStarred ? 'text-yellow-400 fill-yellow-400' : 'text-white/40 hover:text-white'}`} 
-                                />
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Nodes Layer */}
-            {simulationRef.current.nodes.map(node => (
-                <div
-                    key={node.id}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-20"
-                    style={{ left: node.x, top: node.y }}
-                    onClick={() => onNodeClick(node)}
-                    onMouseEnter={() => setHoveredNodeId(node.id)}
-                    onMouseLeave={() => setHoveredNodeId(null)}
-                >
-                    {/* Glow */}
-                    <div 
-                        className={`absolute inset-0 rounded-full blur-md opacity-40 group-hover:opacity-80 transition-opacity duration-300 ${isPaused ? 'animate-pulse' : ''}`}
-                        style={{ backgroundColor: node.hexColor, width: 24, height: 24, transform: 'translate(-25%, -25%)' }}
-                    />
-                    
-                    {/* Core */}
-                    <div 
-                        className="w-3 h-3 rounded-full border border-white/50 bg-white/20 backdrop-blur-sm relative z-10 group-hover:scale-150 transition-transform duration-300"
-                        style={{ borderColor: node.hexColor }}
-                    />
-
-                    {/* Label on Hover */}
-                    <AnimatePresence>
-                        {hoveredNodeId === node.id && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                className="absolute top-full mt-3 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md border border-white/10 px-3 py-2 rounded-lg text-white w-48 z-30 pointer-events-none"
-                            >
-                                <div className="text-[10px] font-mono text-indigo-300 mb-1 opacity-70">
-                                    {new Date(node.createdAt).toLocaleDateString()}
-                                </div>
-                                <div className="text-xs font-serif line-clamp-2 leading-relaxed">
-                                    {node.title || node.content.substring(0, 50)}
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            ))}
-        </div>
-    );
 };
 
 // --- HELPER: ALLOW DATA URIS ---
@@ -748,7 +467,7 @@ interface NoteCardProps {
         archiveNote: (id: string) => void;
         moveNoteToInbox: (id: string) => void;
         onAddJournalEntry: (entry: JournalEntry) => void;
-        addSketchItem: (item: SketchItem) => void;
+        addSketchItem?: (item: SketchItem) => void;
     }
 }
 
@@ -781,7 +500,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
 
     const handleToSketchpad = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if(window.confirm('В скетчпад?')) {
+        if(handlers.addSketchItem && window.confirm('В скетчпад?')) {
              const item: SketchItem = {
                 id: Date.now().toString(),
                 type: 'text',
@@ -857,7 +576,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                             
                             <Tooltip content="В дневник"><button onClick={handleToJournal} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Book size={16} strokeWidth={1.5} /></button></Tooltip>
                             
-                            <Tooltip content="В скетчпад"><button onClick={handleToSketchpad} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Tablet size={16} strokeWidth={1.5} /></button></Tooltip>
+                            {handlers.addSketchItem && <Tooltip content="В скетчпад"><button onClick={handleToSketchpad} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Tablet size={16} strokeWidth={1.5} /></button></Tooltip>}
 
                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                             <Tooltip content="Переместить в библиотеку">
@@ -880,14 +599,14 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, sketchItems, addSketchItem, deleteSketchItem, updateSketchItem, defaultTab }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
   const [creationCover, setCreationCover] = useState<string | null>(null);
   
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'inbox' | 'sketchpad' | 'library' | 'ether'>(defaultTab || 'inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'library'>((defaultTab as any) || 'inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
@@ -928,7 +647,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
 
   useEffect(() => {
-      if(defaultTab) setActiveTab(defaultTab);
+      if(defaultTab) setActiveTab(defaultTab as any);
   }, [defaultTab]);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
@@ -1302,9 +1021,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const inboxNotes = filterNotes(notes.filter(n => n.status === 'inbox').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
   const archivedNotes = filterNotes(notes.filter(n => n.status === 'archived').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
 
-  // --- ETHER GRAPH TYPES & COMPONENT ---
-  // (NoteEtherGraph definition is above, updated with pause, connection toggling)
-
   const cardHandlers = useMemo(() => ({
       handleDragStart,
       handleDragOver,
@@ -1331,19 +1047,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 </div>
                 <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
                     <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
-                    <button onClick={() => { setActiveTab('sketchpad'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'sketchpad' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Tablet size={16} /> Скетчпад</button>
                     <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
-                    <button onClick={() => { setActiveTab('ether'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'ether' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><BrainCircuit size={16} /> Ether</button>
                 </div>
             </header>
       </div>
 
       <div className="flex-1 min-h-0 relative">
-        {activeTab === 'sketchpad' ? (
-            <Sketchpad items={sketchItems} addItem={addSketchItem} deleteItem={deleteSketchItem} updateItem={updateSketchItem} />
-        ) : activeTab === 'ether' ? (
-            <NoteEtherGraph notes={notes} onNodeClick={handleOpenNote} onUpdateNote={updateNote} />
-        ) : (
             <div 
                 ref={scrollContainerRef}
                 className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar-light"
@@ -1501,7 +1210,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     )}
                 </div>
             </div>
-        )}
       </div>
       
       {/* The Oracle Modal (Ritualistic Random) */}

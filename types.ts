@@ -10,6 +10,7 @@ export enum Module {
   DASHBOARD = 'dashboard',
   NAPKINS = 'napkins',
   SKETCHPAD = 'sketchpad',
+  ETHER = 'ether', // NEW
   SANDBOX = 'sandbox',
   MENTAL_GYM = 'mental_gym',
   KANBAN = 'kanban',
@@ -20,7 +21,7 @@ export enum Module {
   SETTINGS = 'settings',
   LEARNING = 'learning',
   USER_SETTINGS = 'user_settings',
-  PROFILE = 'profile' // NEW
+  PROFILE = 'profile' 
 }
 
 export interface Note {

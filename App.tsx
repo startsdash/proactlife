@@ -9,6 +9,7 @@ import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Napkins from './components/Napkins';
 import Sketchpad from './components/Sketchpad';
+import Ether from './components/Ether';
 import Sandbox from './components/Sandbox';
 import MentalGym from './components/MentalGym';
 import Kanban from './components/Kanban';
@@ -20,7 +21,7 @@ import Moodbar from './components/Moodbar';
 import LearningMode from './components/LearningMode';
 import UserSettings from './components/UserSettings';
 import Onboarding from './components/Onboarding';
-import Profile from './components/Profile'; // NEW IMPORT
+import Profile from './components/Profile'; 
 import { LogIn, Shield, CloudOff, ArrowRight } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -331,8 +332,6 @@ const App: React.FC = () => {
       mentors: (configToFilter.mentors || []).filter(isVisible),
       challengeAuthors: (configToFilter.challengeAuthors || []).filter(isVisible),
       aiTools: (configToFilter.aiTools || []).filter(isVisible),
-      // Modules filtering happens in Layout, but we pass filtered config if needed. 
-      // Layout handles filtering based on the full config to show/hide items.
     };
   }, [data.config, isOwner, data.user]);
 
@@ -426,16 +425,31 @@ const App: React.FC = () => {
       <Onboarding onClose={() => setShowOnboarding(false)} />
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
       {module === Module.DASHBOARD && <Dashboard notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} onNavigate={handleNavigate} flashcards={data.flashcards} />}
-      {/* Updated Napkins with Sketchpad props */}
-      {(module === Module.NAPKINS || module === Module.SKETCHPAD) && (
+      
+      {module === Module.NAPKINS && (
           <Napkins 
             notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} 
             onAddJournalEntry={addJournalEntry}
-            sketchItems={data.sketchpad || []} addSketchItem={addSketchItem} deleteSketchItem={deleteSketchItem} updateSketchItem={updateSketchItem}
-            defaultTab={module === Module.SKETCHPAD ? 'sketchpad' : undefined}
+            addSketchItem={addSketchItem} // Needed for "To Sketchpad" button inside Note Card
           />
       )}
-      {/* REMOVED STANDALONE SKETCHPAD */}
+      
+      {module === Module.SKETCHPAD && (
+          <Sketchpad 
+            items={data.sketchpad || []} 
+            addItem={addSketchItem} 
+            deleteItem={deleteSketchItem} 
+            updateItem={updateSketchItem} 
+          />
+      )}
+
+      {module === Module.ETHER && (
+          <Ether 
+            notes={data.notes} 
+            onUpdateNote={updateNote} 
+          />
+      )}
+
       {module === Module.SANDBOX && <Sandbox notes={data.notes} tasks={data.tasks} flashcards={data.flashcards} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
       {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}

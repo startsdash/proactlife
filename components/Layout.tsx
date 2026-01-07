@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus, IdentityRole, Habit, AppConfig, AccessControl } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Fingerprint, Diamond, Activity } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Fingerprint, Diamond, Activity, Tablet, BrainCircuit } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip } from './Tooltip';
 
@@ -41,6 +41,8 @@ const NAV_GROUPS = [
     id: '03_MASTERY',
     items: [
       { id: Module.DASHBOARD, icon: LayoutDashboard, label: 'Обзор' },
+      { id: Module.SKETCHPAD, icon: Tablet, label: 'Скетчпад' },
+      { id: Module.ETHER, icon: BrainCircuit, label: 'Ether' },
       { id: Module.ARCHIVE, icon: Trophy, label: 'Архив' },
     ]
   }
