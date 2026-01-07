@@ -182,27 +182,30 @@ const SidebarAccumulator = ({ habits, expanded, onNavigate }: { habits: Habit[],
         )
     }
 
+    // Vertical Flask Mode (Collapsed)
     return (
         <div className="flex justify-center py-4 mb-2 w-full animate-in fade-in zoom-in-95 duration-300">
-            <button 
-                onClick={handleClick}
-                className={`
-                    relative w-3 h-14 rounded-full 
-                    bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl 
-                    border border-white/20 dark:border-white/10 
-                    shadow-lg overflow-hidden flex flex-col-reverse items-center py-0.5
-                    hover:scale-110 hover:w-4 transition-all duration-300
-                    ${isGlitching ? 'brightness-150' : ''}
-                `}
-            >
-                    {/* PLASMA LIQUID (Vertical Stack) */}
-                <div className={`absolute bottom-0.5 w-full flex flex-col-reverse items-center filter blur-[3px] opacity-90 ${isDecaying ? 'opacity-40' : ''}`}>
-                        <motion.div className="w-1.5 bg-indigo-500 rounded-full shadow-[0_0_5px_#6366f1]" initial={{ height: 0 }} animate={{ height: `${prodPercent}%` }} transition={{ duration: 1 }} />
-                        <motion.div className="w-1.5 bg-emerald-500 rounded-full -mb-0.5 shadow-[0_0_5px_#10b981]" initial={{ height: 0 }} animate={{ height: `${growthPercent}%` }} transition={{ duration: 1 }} />
-                        <motion.div className="w-1.5 bg-rose-500 rounded-full -mb-0.5 shadow-[0_0_5px_#f43f5e]" initial={{ height: 0 }} animate={{ height: `${relPercent}%` }} transition={{ duration: 1 }} />
-                        <motion.div className="w-1.5 bg-slate-400 dark:bg-slate-600 rounded-full -mb-0.5" initial={{ height: 0 }} animate={{ height: `${otherPercent}%` }} transition={{ duration: 1 }} />
-                </div>
-            </button>
+            <Tooltip content={`Энергия: ${Math.round(percent)}%`} side="right">
+                <button 
+                    onClick={handleClick}
+                    className={`
+                        relative w-4 h-16 rounded-full 
+                        bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl 
+                        border border-white/20 dark:border-white/10 
+                        shadow-lg overflow-hidden flex flex-col-reverse items-center py-0.5
+                        hover:scale-110 hover:shadow-xl transition-all duration-300
+                        ${isGlitching ? 'brightness-150' : ''}
+                    `}
+                >
+                        {/* PLASMA LIQUID (Vertical Stack) */}
+                    <div className={`absolute bottom-0.5 w-full flex flex-col-reverse items-center filter blur-[3px] opacity-90 ${isDecaying ? 'opacity-40' : ''}`}>
+                            <motion.div className="w-2.5 bg-indigo-500 rounded-full shadow-[0_0_5px_#6366f1]" initial={{ height: 0 }} animate={{ height: `${prodPercent}%` }} transition={{ duration: 1 }} />
+                            <motion.div className="w-2.5 bg-emerald-500 rounded-full -mb-1 shadow-[0_0_5px_#10b981]" initial={{ height: 0 }} animate={{ height: `${growthPercent}%` }} transition={{ duration: 1 }} />
+                            <motion.div className="w-2.5 bg-rose-500 rounded-full -mb-1 shadow-[0_0_5px_#f43f5e]" initial={{ height: 0 }} animate={{ height: `${relPercent}%` }} transition={{ duration: 1 }} />
+                            <motion.div className="w-2.5 bg-slate-400 dark:bg-slate-600 rounded-full -mb-1" initial={{ height: 0 }} animate={{ height: `${otherPercent}%` }} transition={{ duration: 1 }} />
+                    </div>
+                </button>
+            </Tooltip>
         </div>
     );
 }
@@ -401,24 +404,22 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     </div>
                 </Tooltip>
 
-                {isExpanded && (
-                    <div className="flex-1 overflow-hidden">
-                        <div className="flex items-center gap-2 mt-1">
-                            <Tooltip content={syncStatus === 'synced' ? 'Синхронизировано' : 'Нажмите для подключения'}>
-                                <button onClick={!isDriveConnected ? onConnectDrive : undefined} className="flex items-center gap-2 group">
-                                    {/* Icon Logic */}
-                                    {syncStatus === 'synced' && <Cloud size={14} className="text-emerald-500" />}
-                                    {syncStatus === 'syncing' && <RefreshCw size={14} className="text-amber-500 animate-spin" />}
-                                    {(syncStatus === 'error' || syncStatus === 'disconnected') && <CloudOff size={14} className={syncStatus === 'error' ? "text-red-500" : "text-slate-400"} />}
-                                    
-                                    <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors uppercase">
-                                        Облако
-                                    </span>
-                                </button>
-                            </Tooltip>
-                        </div>
-                    </div>
-                )}
+                {/* SYNC BUTTON - Always Visible, Text Hides on Collapse */}
+                <Tooltip content={syncStatus === 'synced' ? 'Синхронизировано' : 'Нажмите для подключения'} side="right">
+                    <button 
+                        onClick={!isDriveConnected ? onConnectDrive : undefined} 
+                        className="flex items-center gap-2 group text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    >
+                        {/* Icon Logic */}
+                        {syncStatus === 'synced' && <Cloud size={16} className="text-emerald-500" strokeWidth={1.5} />}
+                        {syncStatus === 'syncing' && <RefreshCw size={16} className="text-amber-500 animate-spin" strokeWidth={1.5} />}
+                        {(syncStatus === 'error' || syncStatus === 'disconnected') && <CloudOff size={16} className={syncStatus === 'error' ? "text-red-500" : "text-slate-400"} strokeWidth={1.5} />}
+                        
+                        <span className={`text-[9px] font-bold uppercase transition-all duration-300 overflow-hidden whitespace-nowrap ${isExpanded ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
+                            Облако
+                        </span>
+                    </button>
+                </Tooltip>
 
                 {/* LEARNING LINK */}
                 <Tooltip content="Практикум" side="right">
@@ -440,8 +441,8 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                     </button>
                 </Tooltip>
                 
-                {isOwner && isExpanded && (
-                    <Tooltip content="Владелец" side="top">
+                {isOwner && (
+                    <Tooltip content="Владелец" side={isExpanded ? "top" : "right"}>
                         <button 
                             onClick={() => { setModule(Module.SETTINGS); if(isMobile) setIsExpanded(false); }}
                             className="text-slate-400 hover:text-indigo-500 transition-colors"
