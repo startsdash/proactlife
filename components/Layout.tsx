@@ -233,45 +233,67 @@ const SphereIdentityRing = ({ stats, role, onClick }: { stats: { productivity: n
     const circ = 2 * Math.PI * radius;
     let currentOffset = 0;
     
-    // Sorting to ensure consistent order
-    const segments = (['productivity', 'growth', 'relationships'] as const).map(key => {
+    // Prepare segments data
+    const segmentsData = (['productivity', 'growth', 'relationships'] as const).map(key => {
         const count = stats[key];
         if (!count) return null;
         const pct = count / total;
         const dash = pct * circ;
         const offset = currentOffset;
         currentOffset += dash;
-        
-        return (
-            <circle
-                key={key}
-                cx="16" cy="16" r={radius}
-                fill="none"
-                stroke={colors[key]}
-                strokeWidth="3"
-                strokeDasharray={`${dash} ${circ}`}
-                strokeDashoffset={-offset}
-                strokeLinecap={total === count ? "round" : "butt"} // Round if only 1 segment
-                className="transition-all duration-1000 ease-out"
-            />
-        );
-    });
+        return { key, color: colors[key], dash, offset };
+    }).filter(Boolean) as { key: string, color: string, dash: number, offset: number }[];
+
+    // Render Sharp Segments
+    const segments = segmentsData.map((seg) => (
+        <circle
+            key={seg.key}
+            cx="16" cy="16" r={radius}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth="3"
+            strokeDasharray={`${seg.dash} ${circ}`}
+            strokeDashoffset={-seg.offset}
+            strokeLinecap={segmentsData.length === 1 ? "round" : "butt"}
+            className="transition-all duration-1000 ease-out"
+        />
+    ));
+
+    // Render Blurred Glow Segments (The "Plasma" Effect)
+    const glowSegments = segmentsData.map((seg) => (
+        <circle
+            key={`glow-${seg.key}`}
+            cx="16" cy="16" r={radius}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth="5" // Thicker for glow
+            strokeDasharray={`${seg.dash} ${circ}`}
+            strokeDashoffset={-seg.offset}
+            strokeLinecap={segmentsData.length === 1 ? "round" : "butt"}
+            className="opacity-70"
+        />
+    ));
 
     return (
         <div 
             className="relative w-8 h-8 cursor-pointer group hover:scale-110 transition-transform duration-300" 
             onClick={onClick}
         >
-            {/* Subtle Pulse Background */}
-            <div className="absolute inset-0 rounded-full bg-slate-400/10 dark:bg-slate-600/10 animate-pulse group-hover:animate-none" />
+            {/* Pulsating Colored Glow Layer */}
+            <div className="absolute inset-0 animate-pulse">
+                 <svg className="w-full h-full transform -rotate-90 filter blur-[4px]">
+                    {glowSegments}
+                </svg>
+            </div>
             
-            <svg className="w-full h-full transform -rotate-90 drop-shadow-sm">
+            {/* Sharp Data Layer */}
+            <svg className="w-full h-full transform -rotate-90 drop-shadow-sm relative z-10">
                 <circle cx="16" cy="16" r={radius} stroke="currentColor" strokeWidth="3" className="text-slate-200 dark:text-slate-800 opacity-50" fill="none" />
                 {segments}
             </svg>
             
             {/* Center Dot */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500 group-hover:bg-slate-800 dark:group-hover:bg-slate-200 transition-colors" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500 group-hover:bg-slate-800 dark:group-hover:bg-slate-200 transition-colors z-20" />
         </div>
     );
 };
