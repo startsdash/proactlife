@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { AppConfig, AIToolConfig, ModuleConfig, Module } from "./types";
 import { BrainCircuit, ShieldAlert, Crown, BookOpen, Shield, Scroll, Hourglass, Shapes, Zap, Search, Feather, User, Book, Flame, Repeat, Calendar, CheckCircle, LayoutDashboard, Briefcase, Sprout, Heart, Target, Image, Palette, Smile, Frown, Meh, Activity, Thermometer } from 'lucide-react';
@@ -156,15 +154,18 @@ export const DEFAULT_MODULE_CONFIGS: ModuleConfig[] = [
     { id: Module.SANDBOX, name: 'Хаб', accessLevel: 'public' },
     { id: Module.KANBAN, name: 'Спринты', accessLevel: 'public' },
     { id: Module.RITUALS, name: 'Трекер', accessLevel: 'public' },
-    { id: Module.MENTAL_GYM, name: 'Скиллы', accessLevel: 'public' },
     { id: Module.JOURNAL, name: 'Дневник', accessLevel: 'public' },
     { id: Module.DASHBOARD, name: 'Обзор', accessLevel: 'public' },
     { id: Module.ARCHIVE, name: 'Архив', accessLevel: 'public' },
+    // Lab Modules
+    { id: Module.SKETCHPAD, name: 'Скетчпад', accessLevel: 'public' },
+    { id: Module.ETHER, name: 'Ether', accessLevel: 'public' },
+    { id: Module.MENTAL_GYM, name: 'Скиллы', accessLevel: 'public' },
     { id: Module.PROFILE, name: 'Профиль', accessLevel: 'public' },
 ];
 
 export const DEFAULT_CONFIG: AppConfig = {
-  "_version": 1766510000002,
+  "_version": 1766510000003,
   "ownerEmail": "rukomrus@gmail.com",
   "isGuestModeEnabled": false,
   "inviteCodes": [],

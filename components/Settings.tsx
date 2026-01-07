@@ -1,15 +1,15 @@
-
-
 import React, { useState } from 'react';
-import { AppConfig, Mentor, ChallengeAuthor, AIToolConfig, AccessControl, InviteCode, ModuleConfig } from '../types';
+import { AppConfig, Mentor, ChallengeAuthor, AIToolConfig, AccessControl, InviteCode, ModuleConfig, Module } from '../types';
 import { AVAILABLE_ICONS, ICON_MAP, DEFAULT_AI_TOOLS, AVAILABLE_MODELS, DEFAULT_MODEL, DEFAULT_MODULE_CONFIGS } from '../constants';
-import { Save, Plus, Trash2, Edit3, X, Database, Users, Zap, Bot, Cpu, FileJson, FileType, Shield, Lock, Globe, Code, Copy, Check, ArrowLeft, ChevronRight, Eye, EyeOff, LayoutTemplate, Key, Ticket, Clock, Grid } from 'lucide-react';
+import { Save, Plus, Trash2, Edit3, X, Database, Users, Zap, Bot, Cpu, FileJson, FileType, Shield, Lock, Globe, Code, Copy, Check, ArrowLeft, ChevronRight, Eye, EyeOff, LayoutTemplate, Key, Ticket, Clock, Grid, FlaskConical } from 'lucide-react';
 
 interface Props {
   config: AppConfig;
   onUpdateConfig: (config: AppConfig) => void;
-  onClose?: () => void; // Added onClose to support modal-like closing
+  onClose?: () => void;
 }
+
+const LAB_MODULES = [Module.SKETCHPAD, Module.ETHER, Module.MENTAL_GYM, Module.PROFILE];
 
 // --- HELPER COMPONENT: STATUS TOGGLE ---
 const StatusToggle = ({ isDisabled, onChange, label = "Активно", descriptionOn = "Доступно для использования", descriptionOff = "Скрыто из интерфейса" }: { isDisabled?: boolean, onChange: (val: boolean) => void, label?: string, descriptionOn?: string, descriptionOff?: string }) => {
@@ -268,6 +268,19 @@ const Settings: React.FC<Props> = ({ config, onUpdateConfig, onClose }) => {
   const [editingModule, setEditingModule] = useState<ModuleConfig | null>(null);
 
   const [copyStatus, setCopyStatus] = useState(false);
+
+  // LAB MASTER TOGGLE STATE
+  const isLabEnabled = moduleConfigs.some(m => LAB_MODULES.includes(m.id) && !m.isDisabled);
+
+  const handleToggleLab = (enabled: boolean) => {
+      const updatedConfigs = moduleConfigs.map(m => {
+          if (LAB_MODULES.includes(m.id)) {
+              return { ...m, isDisabled: !enabled };
+          }
+          return m;
+      });
+      setModuleConfigs(updatedConfigs);
+  };
 
   const saveAll = () => {
     onUpdateConfig({
@@ -578,6 +591,31 @@ export const applyTypography = (text: string): string => {
           {activeTab === 'sections' && (
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                <div className={`${editingModule ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-slate-100 flex-col overflow-y-auto p-4 space-y-2 bg-slate-50/50`}>
+                
+                {/* LAB MASTER TOGGLE */}
+                <div className="mb-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="p-2 bg-slate-100 rounded-lg text-slate-600">
+                                <FlaskConical size={16} />
+                            </div>
+                            <div>
+                                <div className="text-xs font-bold text-slate-700 uppercase">Lab Protocol</div>
+                                <div className="text-[10px] text-slate-400">Экспериментальные функции</div>
+                            </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                className="sr-only peer" 
+                                checked={isLabEnabled}
+                                onChange={(e) => handleToggleLab(e.target.checked)} 
+                            />
+                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+                </div>
+
                 <div className="px-2 py-1 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Разделы Приложения</div>
                 {moduleConfigs.map(m => (
                   <div key={m.id} onClick={() => setEditingModule(m)} className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${editingModule?.id === m.id ? 'bg-white shadow-md border-indigo-200 ring-1 ring-indigo-50' : 'bg-white border-slate-200 hover:border-indigo-100'} ${m.isDisabled ? 'opacity-60' : ''}`}>
