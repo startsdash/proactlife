@@ -17,7 +17,6 @@ interface Props {
   habits: Habit[];
   config: AppConfig;
   userEmail?: string;
-  sphereStats?: { productivity: number, growth: number, relationships: number };
 }
 
 const NAV_GROUPS = [
@@ -208,97 +207,7 @@ const SidebarAccumulator = ({ habits, expanded, onNavigate }: { habits: Habit[],
     );
 }
 
-const SphereIdentityRing = ({ stats, role, onClick }: { stats: { productivity: number, growth: number, relationships: number }, role: IdentityRole, onClick: () => void }) => {
-    const total = stats.productivity + stats.growth + stats.relationships;
-    
-    // Hardcoded from constants.ts for SVG usage
-    const colors = {
-        productivity: '#6366f1', // Indigo
-        growth: '#10b981',       // Emerald
-        relationships: '#f43f5e' // Rose
-    };
-
-    if (total === 0) {
-        return (
-            <div 
-                className={`w-8 h-8 rounded-full border-2 bg-transparent flex items-center justify-center relative cursor-pointer group ${ROLE_COLORS[role]} hover:scale-110 transition-transform`}
-                onClick={onClick}
-            >
-                <div className="w-2 h-2 bg-current rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
-            </div>
-        );
-    }
-
-    const radius = 12; // 32px box, 3px stroke -> 16 - 1.5 - margin
-    const circ = 2 * Math.PI * radius;
-    let currentOffset = 0;
-    
-    // Prepare segments data
-    const segmentsData = (['productivity', 'growth', 'relationships'] as const).map(key => {
-        const count = stats[key];
-        if (!count) return null;
-        const pct = count / total;
-        const dash = pct * circ;
-        const offset = currentOffset;
-        currentOffset += dash;
-        return { key, color: colors[key], dash, offset };
-    }).filter(Boolean) as { key: string, color: string, dash: number, offset: number }[];
-
-    // Render Sharp Segments
-    const segments = segmentsData.map((seg) => (
-        <circle
-            key={seg.key}
-            cx="16" cy="16" r={radius}
-            fill="none"
-            stroke={seg.color}
-            strokeWidth="3"
-            strokeDasharray={`${seg.dash} ${circ}`}
-            strokeDashoffset={-seg.offset}
-            strokeLinecap={segmentsData.length === 1 ? "round" : "butt"}
-            className="transition-all duration-1000 ease-out"
-        />
-    ));
-
-    // Render Blurred Glow Segments (The "Plasma" Effect)
-    const glowSegments = segmentsData.map((seg) => (
-        <circle
-            key={`glow-${seg.key}`}
-            cx="16" cy="16" r={radius}
-            fill="none"
-            stroke={seg.color}
-            strokeWidth="5" // Thicker for glow
-            strokeDasharray={`${seg.dash} ${circ}`}
-            strokeDashoffset={-seg.offset}
-            strokeLinecap={segmentsData.length === 1 ? "round" : "butt"}
-            className="opacity-70"
-        />
-    ));
-
-    return (
-        <div 
-            className="relative w-8 h-8 cursor-pointer group hover:scale-110 transition-transform duration-300" 
-            onClick={onClick}
-        >
-            {/* Pulsating Colored Glow Layer */}
-            <div className="absolute inset-0 animate-pulse">
-                 <svg className="w-full h-full transform -rotate-90 filter blur-[4px]">
-                    {glowSegments}
-                </svg>
-            </div>
-            
-            {/* Sharp Data Layer */}
-            <svg className="w-full h-full transform -rotate-90 drop-shadow-sm relative z-10">
-                <circle cx="16" cy="16" r={radius} stroke="currentColor" strokeWidth="3" className="text-slate-200 dark:text-slate-800 opacity-50" fill="none" />
-                {segments}
-            </svg>
-            
-            {/* Center Dot */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500 group-hover:bg-slate-800 dark:group-hover:bg-slate-200 transition-colors z-20" />
-        </div>
-    );
-};
-
-const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatus, onConnectDrive, isDriveConnected, isOwner, role, habits, config, userEmail, sphereStats }) => {
+const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatus, onConnectDrive, isDriveConnected, isOwner, role, habits, config, userEmail }) => {
   const [isExpanded, setIsExpanded] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth >= 768;
@@ -493,12 +402,11 @@ const Layout: React.FC<Props> = ({ currentModule, setModule, children, syncStatu
                 
                 {/* ROLE RING (Identity) -> Maps to DASHBOARD now */}
                 <Tooltip content="Обзор" side="right">
-                    <div>
-                        <SphereIdentityRing 
-                            stats={sphereStats || { productivity: 0, growth: 0, relationships: 0 }} 
-                            role={role}
-                            onClick={() => { setModule(Module.DASHBOARD); if(isMobile) setIsExpanded(false); }}
-                        />
+                    <div 
+                        className={`w-8 h-8 rounded-full border-2 bg-transparent flex items-center justify-center relative cursor-pointer group ${ROLE_COLORS[role]}`}
+                        onClick={() => { setModule(Module.DASHBOARD); if(isMobile) setIsExpanded(false); }}
+                    >
+                        <div className="w-2 h-2 bg-current rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
                     </div>
                 </Tooltip>
 
