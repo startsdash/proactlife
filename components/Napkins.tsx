@@ -83,8 +83,8 @@ const processImage = (file: File | Blob): Promise<string> => {
             img.src = event.target?.result as string;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 1200; // Increased quality for full view
-                const MAX_HEIGHT = 1200;
+                const MAX_WIDTH = 800; // Improved quality
+                const MAX_HEIGHT = 800;
                 let width = img.width;
                 let height = img.height;
 
@@ -105,7 +105,7 @@ const processImage = (file: File | Blob): Promise<string> => {
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                     ctx.drawImage(img, 0, 0, width, height);
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85); // Better quality
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
                     resolve(dataUrl);
                 } else {
                     reject(new Error('Canvas context failed'));
@@ -675,7 +675,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
   const [creationCover, setCreationCover] = useState<string | null>(null);
-  const [viewImage, setViewImage] = useState<string | null>(null);
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'inbox' | 'library'>((defaultTab as any) || 'inbox');
@@ -742,18 +741,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       });
       return Array.from(uniqueTagsMap.values()).sort();
   }, [notes]);
-
-  const detailMarkdownComponents = useMemo(() => ({
-      ...markdownComponents,
-      img: ({node, ...props}: any) => (
-          <img 
-              {...props} 
-              className="rounded-xl max-h-[500px] w-auto mx-auto object-contain my-6 block shadow-sm cursor-zoom-in hover:shadow-md transition-all bg-slate-50 dark:bg-slate-900/50" 
-              onClick={(e) => { e.stopPropagation(); setViewImage(props.src); }} 
-              loading="lazy"
-          />
-      )
-  }), []);
 
   const hasMoodMatcher = useMemo(() => config.aiTools.some(t => t.id === 'mood_matcher'), [config.aiTools]);
   const hasTagger = useMemo(() => config.aiTools.some(t => t.id === 'tagger'), [config.aiTools]);
@@ -1491,7 +1478,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         ) : (
                             <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-1">
                                 <div className={`text-slate-800 dark:text-slate-200 text-base leading-relaxed font-serif font-normal min-h-[4rem] mb-6 ${!selectedNote.title ? 'mt-1' : ''}`}>
-                                    <ReactMarkdown components={detailMarkdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                                    <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{selectedNote.content.replace(/\n/g, '  \n')}</ReactMarkdown>
                                 </div>
                                 {selectedNote.tags && selectedNote.tags.length > 0 && (
                                     <div className="flex flex-wrap gap-3 pt-4 border-t border-black/5 dark:border-white/5">
@@ -1513,37 +1500,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </div>
         </AnimatePresence>
       )}
-
-      {/* Lightbox for Image Viewing */}
-      <AnimatePresence>
-        {viewImage && (
-            <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-[200] bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-12 cursor-zoom-out"
-                onClick={() => setViewImage(null)}
-            >
-                <motion.img 
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.95, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    src={viewImage} 
-                    alt="Full size"
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                    onClick={(e) => e.stopPropagation()} 
-                />
-                <button 
-                    onClick={() => setViewImage(null)} 
-                    className="absolute top-6 right-6 p-2 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 rounded-full text-slate-500 dark:text-slate-400 transition-colors"
-                >
-                    <X size={24} />
-                </button>
-            </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
