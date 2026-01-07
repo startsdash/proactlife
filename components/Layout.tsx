@@ -182,6 +182,7 @@ const SidebarAccumulator = ({ habits, expanded, onNavigate }: { habits: Habit[],
         )
     }
 
+    // VERTICAL FLASK (COLLAPSED)
     return (
         <div className="flex justify-center py-4 mb-2 w-full animate-in fade-in zoom-in-95 duration-300">
             <button 
@@ -191,16 +192,30 @@ const SidebarAccumulator = ({ habits, expanded, onNavigate }: { habits: Habit[],
                     bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl 
                     border border-white/20 dark:border-white/10 
                     shadow-lg overflow-hidden flex flex-col-reverse items-center py-0.5
-                    hover:scale-110 hover:w-4 transition-all duration-300
+                    hover:scale-110 hover:w-4 transition-all duration-300 group
                     ${isGlitching ? 'brightness-150' : ''}
                 `}
             >
-                    {/* PLASMA LIQUID (Vertical Stack) */}
-                <div className={`absolute bottom-0.5 w-full flex flex-col-reverse items-center filter blur-[3px] opacity-90 ${isDecaying ? 'opacity-40' : ''}`}>
+                {/* Glitch Scanline */}
+                {isGlitching && (
+                    <div className="absolute inset-0 z-50 bg-white mix-blend-overlay animate-ping" />
+                )}
+
+                {/* PLASMA LIQUID (Vertical Stack) */}
+                <div className={`absolute bottom-0.5 w-full flex flex-col-reverse items-center filter blur-[3px] opacity-90 ${isDecaying ? 'opacity-40 grayscale-[50%]' : ''}`}>
                         <motion.div className="w-1.5 bg-indigo-500 rounded-full shadow-[0_0_5px_#6366f1]" initial={{ height: 0 }} animate={{ height: `${prodPercent}%` }} transition={{ duration: 1 }} />
                         <motion.div className="w-1.5 bg-emerald-500 rounded-full -mb-0.5 shadow-[0_0_5px_#10b981]" initial={{ height: 0 }} animate={{ height: `${growthPercent}%` }} transition={{ duration: 1 }} />
                         <motion.div className="w-1.5 bg-rose-500 rounded-full -mb-0.5 shadow-[0_0_5px_#f43f5e]" initial={{ height: 0 }} animate={{ height: `${relPercent}%` }} transition={{ duration: 1 }} />
                         <motion.div className="w-1.5 bg-slate-400 dark:bg-slate-600 rounded-full -mb-0.5" initial={{ height: 0 }} animate={{ height: `${otherPercent}%` }} transition={{ duration: 1 }} />
+                </div>
+                
+                {/* Hard Edge Overlay Vertical */}
+                <div className="absolute inset-0 flex flex-col-reverse items-center pb-0.5 opacity-40 z-10">
+                     <motion.div 
+                        className="w-0.5 bg-white rounded-full shadow-[0_0_5px_white]" 
+                        animate={{ height: `${percent}%` }} 
+                        transition={{ type: "spring", stiffness: 50, damping: 20 }} 
+                     />
                 </div>
             </button>
         </div>
