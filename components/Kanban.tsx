@@ -1,15 +1,16 @@
 
-
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import { Task, AppConfig, JournalEntry, Subtask } from '../types';
 import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiService';
-import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette, Bold, Italic, Eraser, Image as ImageIcon, Upload, RefreshCw, Shuffle, ArrowRight, Map, Gem } from 'lucide-react';
+import { CheckCircle2, MessageCircle, X, Zap, RotateCcw, RotateCw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette, Bold, Italic, Eraser, Image as ImageIcon, Upload, RefreshCw, Shuffle, ArrowRight, Map, Gem } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { SPHERES, ICON_MAP, applyTypography } from '../constants';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
+import UniversalEditor from './UniversalEditor';
+import { processImage } from '../utils/editorConverters';
 
 interface Props {
   tasks: Task[];
@@ -72,54 +73,6 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
         });
     }
     return children;
-};
-
-// --- RICH TEXT HELPERS ---
-const processImage = (file: File | Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        if (!file.type.startsWith('image/')) {
-            reject(new Error('File is not an image'));
-            return;
-        }
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-            const img = new Image();
-            img.src = event.target?.result as string;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800;
-                const MAX_HEIGHT = 800;
-                let width = img.width;
-                let height = img.height;
-
-                if (width > height) {
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
-                    }
-                } else {
-                    if (height > MAX_HEIGHT) {
-                        width *= MAX_HEIGHT / height;
-                        height = MAX_HEIGHT;
-                    }
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    ctx.drawImage(img, 0, 0, width, height);
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                    resolve(dataUrl);
-                } else {
-                    reject(new Error('Canvas context failed'));
-                }
-            };
-            img.onerror = (err) => reject(err);
-        };
-        reader.onerror = (err) => reject(err);
-    });
 };
 
 // --- Cover Picker Component ---
@@ -350,88 +303,6 @@ const ColorPickerPopover: React.FC<{
     );
 };
 
-// --- IMPROVED MARKDOWN CONVERTERS ---
-
-const markdownToHtml = (md: string) => {
-    if (!md) return '';
-    let html = md;
-    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
-    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
-    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
-    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
-        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
-    });
-    
-    // Improved new line handling: Replace newlines with BR, but clean up around block elements
-    html = html.replace(/\n/g, '<br>');
-    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
-    return html;
-};
-
-const htmlToMarkdown = (html: string) => {
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-
-    const wrap = (text: string, marker: string) => {
-        const match = text.match(/^([\s\u00A0]*)(.*?)([\s\u00A0]*)$/s);
-        if (match) {
-            if (!match[2]) return match[1] + match[3];
-            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
-        }
-        return text;
-    };
-
-    const walk = (node: Node): string => {
-        if (node.nodeType === Node.TEXT_NODE) {
-            return (node.textContent || '').replace(/\u00A0/g, ' ');
-        }
-        if (node.nodeType === Node.ELEMENT_NODE) {
-            const el = node as HTMLElement;
-            const tag = el.tagName.toLowerCase();
-            
-            if (tag === 'br') return '\n';
-            if (tag === 'img') return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
-            
-            let content = '';
-            el.childNodes.forEach(child => content += walk(child));
-            
-            // Robust Block Elements Handling
-            if (tag === 'div' || tag === 'p') {
-                const trimmed = content.trim();
-                return trimmed ? `${trimmed}\n` : '\n'; 
-            }
-            if (tag === 'li') return `\n- ${content.trim()}`;
-            if (tag === 'ul' || tag === 'ol') return `\n${content}\n`;
-            if (tag === 'blockquote') return `\n> ${content.trim()}\n`;
-
-            const styleBold = el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700;
-            const styleItalic = el.style.fontStyle === 'italic';
-
-            if (styleBold) return wrap(content, '**');
-            if (styleItalic) return wrap(content, '*');
-            
-            switch (tag) {
-                case 'b': case 'strong': return wrap(content, '**');
-                case 'i': case 'em': return wrap(content, '*');
-                case 'code': return `\`${content}\``;
-                case 'u': return `<u>${content}</u>`;
-                case 'h1': return `\n# ${content}\n`;
-                case 'h2': return `\n## ${content}\n`;
-                default: return content;
-            }
-        }
-        return '';
-    };
-    
-    let md = walk(temp);
-    md = md.replace(/\n{3,}/g, '\n\n').trim();
-    return applyTypography(md);
-};
-
 const formatForDisplay = (content: string) => {
     if (!content) return '';
     return content.replace(/\n/g, '  \n');
@@ -562,79 +433,6 @@ const GhostSphereSelector: React.FC<{ selected: string[], onChange: (s: string[]
                                 {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} />}
                                 <span className="flex-1">{s.label}</span>
                                 {isSelected && <Check size={12} className="text-indigo-500" />}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
-};
-
-const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const toggleSphere = (id: string) => {
-        if (selected.includes(id)) {
-            onChange(selected.filter(s => s !== id));
-        } else {
-            onChange([...selected, id]);
-        }
-    };
-
-    return (
-        <div className="relative" ref={dropdownRef}>
-            <button 
-                onClick={() => setIsOpen(!isOpen)}
-                className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all outline-none ${
-                  isOpen ? 'border-indigo-400 ring-2 ring-indigo-50 dark:ring-indigo-900 bg-white dark:bg-[#1e293b]' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-white dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                }`}
-            >
-                <div className="flex items-center gap-2 overflow-hidden">
-                    {selected.length > 0 ? (
-                        <>
-                            <div className="flex -space-x-1 shrink-0">
-                                {selected.map(s => {
-                                    const sp = SPHERES.find(x => x.id === s);
-                                    return sp ? <div key={s} className={`w-3 h-3 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
-                                })}
-                            </div>
-                            <span className="text-sm font-medium text-[#2F3437] dark:text-slate-200 truncate">
-                                {selected.map(id => SPHERES.find(s => s.id === id)?.label).join(', ')}
-                            </span>
-                        </>
-                    ) : (
-                        <span className="text-sm text-[#6B6E70]">Выбери сферу</span>
-                    )}
-                </div>
-                <ChevronDown size={16} className={`text-[#6B6E70] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5">
-                    {SPHERES.map(s => {
-                        const isSelected = selected.includes(s.id);
-                        const Icon = ICON_MAP[s.icon];
-                        return (
-                            <button
-                                key={s.id}
-                                onClick={() => toggleSphere(s.id)}
-                                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                            >
-                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-[#6B6E70]'} />}
-                                <span className="flex-1">{s.label}</span>
-                                {isSelected && <Check size={14} className="text-indigo-500" />}
                             </button>
                         );
                     })}
@@ -874,94 +672,6 @@ const StaticChallengeRenderer: React.FC<{
     return <>{renderedParts}</>;
 };
 
-// --- JOURNEY MODAL ---
-const JourneyModal = ({ task, journalEntries, onClose }: { task: Task, journalEntries: JournalEntry[], onClose: () => void }) => {
-    // Check for insight
-    const hasInsight = journalEntries.some(j => j.linkedTaskId === task.id && j.isInsight);
-    const sphere = task.spheres?.[0];
-    const sphereColor = sphere && NEON_COLORS[sphere] ? NEON_COLORS[sphere] : '#6366f1'; 
-
-    const stages = [
-        { id: 1, label: 'ХАОС', desc: 'Мысль зафиксирована в Дневнике/Заметках', active: true },
-        { id: 2, label: 'ЛОГОС', desc: 'Сформирован контекст и план действий', active: true },
-        { id: 3, label: 'ЭНЕРГИЯ', desc: 'Задача реализована в материальном мире', active: true },
-        { id: 4, label: 'СИНТЕЗ', desc: 'Опыт интегрирован в структуру личности', active: hasInsight }
-    ];
-
-    return (
-        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-[50px] flex items-center justify-center p-8" onClick={onClose}>
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="w-full max-w-4xl relative"
-                onClick={e => e.stopPropagation()}
-            >
-                {/* Close Button */}
-                <button onClick={onClose} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors">
-                    <X size={24} />
-                </button>
-
-                {/* Central Map */}
-                <div className="flex flex-col md:flex-row items-center justify-between relative py-20 px-10">
-                    
-                    {/* The Thread */}
-                    <div className="absolute left-10 right-10 top-1/2 h-[1px] bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 hidden md:block" />
-                    <div className="absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-slate-700 via-slate-500 to-slate-700 md:hidden" />
-                    
-                    {/* Pulse Animation */}
-                    <motion.div 
-                        className="absolute h-[3px] w-[20px] bg-white blur-[2px] rounded-full hidden md:block top-1/2 -mt-[1.5px]"
-                        animate={{ 
-                            left: ['0%', hasInsight ? '100%' : '75%'], 
-                            opacity: [0, 1, 0] 
-                        }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                    />
-
-                    {stages.map((stage, i) => (
-                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-6 group mb-8 md:mb-0">
-                            {/* Node */}
-                            <div className={`
-                                w-4 h-4 transition-all duration-500
-                                ${stage.id === 1 ? 'rounded-full border border-slate-400 bg-black' : ''}
-                                ${stage.id === 2 ? 'w-3 h-3 bg-slate-300 transform rotate-45' : ''}
-                                ${stage.id === 3 ? 'rounded-full' : ''}
-                                ${stage.id === 4 ? 'transform rotate-45' : ''}
-                            `}
-                            style={{ 
-                                backgroundColor: stage.id === 3 ? sphereColor : undefined,
-                                boxShadow: stage.id === 3 ? `0 0 15px ${sphereColor}` : undefined
-                            }}
-                            >
-                                {stage.id === 4 && (
-                                    <div className={`w-4 h-4 border border-indigo-500 transition-all duration-1000 ${stage.active ? 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.8)]' : 'bg-black'}`} />
-                                )}
-                            </div>
-
-                            {/* Label */}
-                            <div className="text-center">
-                                <div className="font-mono text-[10px] text-slate-300 uppercase tracking-[0.3em] mb-2">{stage.label}</div>
-                                <div className={`font-serif text-sm italic text-slate-400 max-w-[150px] leading-tight transition-opacity duration-500 ${stage.active ? 'opacity-100' : 'opacity-30'}`}>
-                                    {stage.desc}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                
-                {/* Footer Quote */}
-                <div className="text-center mt-8">
-                    <p className="font-mono text-[9px] text-slate-600 uppercase tracking-widest">
-                        Task ID: {task.id.slice(-4)}
-                    </p>
-                </div>
-
-            </motion.div>
-        </div>
-    )
-}
-
 const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
   const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details' | 'challenge'} | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<'todo' | 'doing' | 'done'>('todo');
@@ -988,10 +698,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const creationColorTriggerRef = useRef<HTMLButtonElement>(null);
   
   // Creation Editor State
-  const [creationHistory, setCreationHistory] = useState<string[]>(['']);
-  const [creationHistoryIndex, setCreationHistoryIndex] = useState(0);
-  const creationContentRef = useRef<HTMLDivElement>(null);
-  const lastCreationSelection = useRef<Range | null>(null);
+  const [creationContent, setCreationContent] = useState('');
 
   // EDIT TASK STATE
   const [isEditingTask, setIsEditingTask] = useState(false);
@@ -1004,10 +711,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const editColorTriggerRef = useRef<HTMLButtonElement>(null);
   
   // New Rich Text State for Edit Mode
-  const [editHistory, setEditHistory] = useState<string[]>(['']);
-  const [editHistoryIndex, setEditHistoryIndex] = useState(0);
-  const editContentEditableRef = useRef<HTMLDivElement>(null);
-  const editHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [editContent, setEditContent] = useState('');
   const hasInitializedEditRef = useRef(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -1030,108 +734,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
 
   const baseActiveTasks = tasks.filter(t => !t.isArchived);
-
-  // Creation Editor Helpers
-  const saveCreationSnapshot = useCallback((content: string) => {
-      if (content === creationHistory[creationHistoryIndex]) return;
-      const newHistory = creationHistory.slice(0, creationHistoryIndex + 1);
-      newHistory.push(content);
-      if (newHistory.length > 20) newHistory.shift();
-      setCreationHistory(newHistory);
-      setCreationHistoryIndex(newHistory.length - 1);
-  }, [creationHistory, creationHistoryIndex]);
-
-  const handleCreationInput = () => {
-      if (creationContentRef.current) {
-          saveCreationSnapshot(creationContentRef.current.innerHTML);
-      }
-  };
-
-  const execCreationCmd = (command: string, value: string | undefined = undefined) => {
-      document.execCommand(command, false, value);
-      if (creationContentRef.current) {
-          creationContentRef.current.focus();
-          saveCreationSnapshot(creationContentRef.current.innerHTML);
-      }
-  };
-  
-  const handleClearCreationStyle = (e: React.MouseEvent) => {
-      e.preventDefault();
-      execCreationCmd('removeFormat');
-      execCreationCmd('formatBlock', 'div'); 
-  };
-
-  const saveCreationSelection = () => {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0 && creationContentRef.current && creationContentRef.current.contains(sel.anchorNode)) {
-          lastCreationSelection.current = sel.getRangeAt(0).cloneRange();
-      }
-  };
-
-  const execCreationUndo = () => {
-      if (creationHistoryIndex > 0) {
-          const prevIndex = creationHistoryIndex - 1;
-          setCreationHistoryIndex(prevIndex);
-          if (creationContentRef.current) creationContentRef.current.innerHTML = creationHistory[prevIndex];
-      }
-  };
-
-  const execCreationRedo = () => {
-      if (creationHistoryIndex < creationHistory.length - 1) {
-          const nextIndex = creationHistoryIndex + 1;
-          setCreationHistoryIndex(nextIndex);
-          if (creationContentRef.current) creationContentRef.current.innerHTML = creationHistory[nextIndex];
-      }
-  };
-
-  // --- EDIT MODE HELPERS ---
-  const saveEditSnapshot = useCallback((content: string) => {
-      if (content === editHistory[editHistoryIndex]) return;
-      const newHistory = editHistory.slice(0, editHistoryIndex + 1);
-      newHistory.push(content);
-      if (newHistory.length > 20) newHistory.shift();
-      setEditHistory(newHistory);
-      setEditHistoryIndex(newHistory.length - 1);
-  }, [editHistory, editHistoryIndex]);
-
-  const handleEditInput = useCallback(() => {
-      if (editHistoryTimeoutRef.current) clearTimeout(editHistoryTimeoutRef.current);
-      editHistoryTimeoutRef.current = setTimeout(() => {
-          if (editContentEditableRef.current) {
-              saveEditSnapshot(editContentEditableRef.current.innerHTML);
-          }
-      }, 500);
-  }, [saveEditSnapshot]);
-
-  const execEditCmd = (command: string, value: string | undefined = undefined) => {
-      document.execCommand(command, false, value);
-      if (editContentEditableRef.current) {
-          editContentEditableRef.current.focus();
-          saveEditSnapshot(editContentEditableRef.current.innerHTML);
-      }
-  };
-
-  const execEditUndo = () => {
-      if (editHistoryIndex > 0) {
-          const prevIndex = editHistoryIndex - 1;
-          setEditHistoryIndex(prevIndex);
-          if (editContentEditableRef.current) editContentEditableRef.current.innerHTML = editHistory[prevIndex];
-      }
-  };
-
-  const execEditRedo = () => {
-      if (editHistoryIndex < editHistory.length - 1) {
-          const nextIndex = editHistoryIndex + 1;
-          setEditHistoryIndex(nextIndex);
-          if (editContentEditableRef.current) editContentEditableRef.current.innerHTML = editHistory[nextIndex];
-      }
-  };
-  
-  const handleClearEditStyle = (e: React.MouseEvent) => {
-      e.preventDefault();
-      execEditCmd('removeFormat');
-      execEditCmd('formatBlock', 'div'); 
-  };
 
   // KEYBOARD SHORTCUT FOR SEARCH
   useEffect(() => {
@@ -1198,15 +800,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       if (isEditingTask && activeModal?.taskId) {
           if (!hasInitializedEditRef.current) {
                const task = tasks.find(t => t.id === activeModal.taskId);
-               if (task && editContentEditableRef.current) {
+               if (task) {
                    setEditTaskTitle(task.title || '');
                    setEditCover(task.coverUrl || null);
                    setEditColor(task.color || 'white');
                    
-                   const html = markdownToHtml(task.content);
-                   editContentEditableRef.current.innerHTML = html;
-                   setEditHistory([html]);
-                   setEditHistoryIndex(0);
+                   setEditContent(task.content);
                    hasInitializedEditRef.current = true;
                }
           }
@@ -1242,15 +841,12 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   const handleCreateTask = () => {
-      const rawHtml = creationContentRef.current?.innerHTML || '';
-      const mdContent = htmlToMarkdown(rawHtml);
-      
-      if (!newTaskTitle.trim() && !mdContent.trim()) return;
+      if (!newTaskTitle.trim() && !creationContent.trim()) return;
       
       const newTask: Task = {
           id: Date.now().toString(),
           title: applyTypography(newTaskTitle.trim()),
-          content: mdContent,
+          content: applyTypography(creationContent),
           column: 'todo',
           createdAt: Date.now(),
           spheres: activeSphereFilter ? [activeSphereFilter] : [],
@@ -1261,9 +857,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       setNewTaskTitle('');
       setCreationCover(null);
       setCreationColor('white');
-      if(creationContentRef.current) creationContentRef.current.innerHTML = '';
-      setCreationHistory(['']);
-      setCreationHistoryIndex(0);
+      setCreationContent('');
       setIsCreatorOpen(false);
   };
 
@@ -1271,9 +865,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       setNewTaskTitle('');
       setCreationCover(null);
       setCreationColor('white');
-      if(creationContentRef.current) creationContentRef.current.innerHTML = '';
-      setCreationHistory(['']);
-      setCreationHistoryIndex(0);
+      setCreationContent('');
       setIsCreatorOpen(false);
   };
 
@@ -1281,14 +873,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const task = getTaskForModal();
       if (!task) return;
       
-      const rawHtml = editContentEditableRef.current?.innerHTML || '';
-      const content = htmlToMarkdown(rawHtml);
-
-      if (content !== task.content || editTaskTitle.trim() !== task.title || editCover !== task.coverUrl || editColor !== task.color) {
+      if (editContent !== task.content || editTaskTitle.trim() !== task.title || editCover !== task.coverUrl || editColor !== task.color) {
           updateTask({ 
               ...task, 
               title: applyTypography(editTaskTitle.trim()), 
-              content: applyTypography(content),
+              content: applyTypography(editContent),
               coverUrl: editCover || undefined,
               color: editColor
           });
@@ -1296,15 +885,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       setIsEditingTask(false);
   };
   
-  const handleTitleAutosave = () => {
-      const task = getTaskForModal();
-      if (!task) return;
-      const newTitle = applyTypography(editTaskTitle.trim());
-      if ((task.title || '') !== newTitle) {
-          updateTask({ ...task, title: newTitle });
-      }
-  };
-
   const canMoveTask = (task: Task, targetColId: string): boolean => {
     if (task.column === 'doing' && targetColId !== 'doing') {
         if (task.activeChallenge && !task.isChallengeCompleted) {
@@ -1700,7 +1280,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
              <div className="mb-4 px-1">
                 {!isCreatorOpen ? (
                     <button 
-                        onClick={() => { setIsCreatorOpen(true); setTimeout(() => creationContentRef.current?.focus(), 100); }}
+                        onClick={() => { setIsCreatorOpen(true); }}
                         className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-all uppercase tracking-wider font-mono"
                     >
                         <Plus size={14} /> NEW_TASK
@@ -1725,28 +1305,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             <button onClick={cancelCreateTask} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"><X size={20} /></button>
                         </div>
                         
-                        <div 
-                            ref={creationContentRef}
-                            contentEditable
-                            style={{ whiteSpace: 'pre-wrap' }}
-                            className="w-full min-h-[120px] max-h-[300px] overflow-y-auto outline-none text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-sans mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
-                            onInput={handleCreationInput}
-                            onBlur={() => saveCreationSelection()}
-                            onMouseUp={() => saveCreationSelection()}
-                            onKeyUp={() => saveCreationSelection()}
-                            data-placeholder="Контекст задачи..."
+                        <UniversalEditor 
+                            initialContent="" 
+                            onChange={setCreationContent}
+                            placeholder="Контекст задачи..."
+                            className="mb-2"
                         />
 
                         {/* Toolbar */}
                         <div className="flex items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-700 pt-3">
                             <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1 mask-fade-right">
-                                <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execCreationUndo(); }} disabled={creationHistoryIndex <= 0} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
-                                <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execCreationRedo(); }} disabled={creationHistoryIndex >= creationHistory.length - 1} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
-                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('bold'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
-                                <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
-                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                <Tooltip content="Очистить"><button onMouseDown={handleClearCreationStyle} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
                                 <div className="relative">
                                     <Tooltip content="Обложка">
                                         <button 
@@ -2280,13 +1848,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
                                             <div className="flex items-center justify-between mb-4 gap-2">
                                                 <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
-                                                    <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
-                                                    <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
-                                                    <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
-                                                    <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
-                                                    <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
-                                                    <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
-                                                    <Tooltip content="Очистить"><button onMouseDown={handleClearEditStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
                                                     <div className="relative">
                                                         <Tooltip content="Обложка">
                                                             <button 
@@ -2313,19 +1874,17 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div 
-                                                key={activeModal.taskId}
-                                                ref={editContentEditableRef} 
-                                                contentEditable 
-                                                suppressContentEditableWarning={true}
-                                                style={{ whiteSpace: 'pre-wrap' }}
-                                                onInput={handleEditInput} 
-                                                className="w-full h-64 bg-transparent rounded-none p-0 text-base text-slate-700 dark:text-slate-300 border-none outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text custom-scrollbar-ghost"
-                                                data-placeholder="Описание задачи..." 
+                                            
+                                            <UniversalEditor 
+                                                initialContent={editContent} 
+                                                onChange={setEditContent} 
+                                                placeholder="Описание задачи..." 
+                                                minHeight="200px"
+                                                className="mb-4"
                                             />
-                                            <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
+
+                                            <div className="pt-4 border-t border-black/5 dark:border-white/5">
                                                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block tracking-widest font-mono">Сферы</label>
-                                                {/* Use Reused Ghost Selector */}
                                                 <GhostSphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
                                             </div>
                                             <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-6 border-t border-black/5 dark:border-white/5 mt-4">
