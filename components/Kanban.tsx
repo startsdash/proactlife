@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -38,12 +37,6 @@ const UNSPLASH_PRESETS = [
     'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=400&q=80', // Dark Abstract
     'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80', // Nature
 ];
-
-// Dot Grid Background Pattern
-const DOT_GRID_STYLE = {
-    backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
-    backgroundSize: '24px 24px'
-};
 
 const colors = [
     { id: 'white', class: 'bg-white dark:bg-[#1e293b]', hex: '#ffffff' },
@@ -873,94 +866,6 @@ const StaticChallengeRenderer: React.FC<{
     flushBuffer('end');
     return <>{renderedParts}</>;
 };
-
-// --- JOURNEY MODAL ---
-const JourneyModal = ({ task, journalEntries, onClose }: { task: Task, journalEntries: JournalEntry[], onClose: () => void }) => {
-    // Check for insight
-    const hasInsight = journalEntries.some(j => j.linkedTaskId === task.id && j.isInsight);
-    const sphere = task.spheres?.[0];
-    const sphereColor = sphere && NEON_COLORS[sphere] ? NEON_COLORS[sphere] : '#6366f1'; 
-
-    const stages = [
-        { id: 1, label: 'ХАОС', desc: 'Мысль зафиксирована в Дневнике/Заметках', active: true },
-        { id: 2, label: 'ЛОГОС', desc: 'Сформирован контекст и план действий', active: true },
-        { id: 3, label: 'ЭНЕРГИЯ', desc: 'Задача реализована в материальном мире', active: true },
-        { id: 4, label: 'СИНТЕЗ', desc: 'Опыт интегрирован в структуру личности', active: hasInsight }
-    ];
-
-    return (
-        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-[50px] flex items-center justify-center p-8" onClick={onClose}>
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="w-full max-w-4xl relative"
-                onClick={e => e.stopPropagation()}
-            >
-                {/* Close Button */}
-                <button onClick={onClose} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors">
-                    <X size={24} />
-                </button>
-
-                {/* Central Map */}
-                <div className="flex flex-col md:flex-row items-center justify-between relative py-20 px-10">
-                    
-                    {/* The Thread */}
-                    <div className="absolute left-10 right-10 top-1/2 h-[1px] bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 hidden md:block" />
-                    <div className="absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-slate-700 via-slate-500 to-slate-700 md:hidden" />
-                    
-                    {/* Pulse Animation */}
-                    <motion.div 
-                        className="absolute h-[3px] w-[20px] bg-white blur-[2px] rounded-full hidden md:block top-1/2 -mt-[1.5px]"
-                        animate={{ 
-                            left: ['0%', hasInsight ? '100%' : '75%'], 
-                            opacity: [0, 1, 0] 
-                        }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                    />
-
-                    {stages.map((stage, i) => (
-                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-6 group mb-8 md:mb-0">
-                            {/* Node */}
-                            <div className={`
-                                w-4 h-4 transition-all duration-500
-                                ${stage.id === 1 ? 'rounded-full border border-slate-400 bg-black' : ''}
-                                ${stage.id === 2 ? 'w-3 h-3 bg-slate-300 transform rotate-45' : ''}
-                                ${stage.id === 3 ? 'rounded-full' : ''}
-                                ${stage.id === 4 ? 'transform rotate-45' : ''}
-                            `}
-                            style={{ 
-                                backgroundColor: stage.id === 3 ? sphereColor : undefined,
-                                boxShadow: stage.id === 3 ? `0 0 15px ${sphereColor}` : undefined
-                            }}
-                            >
-                                {stage.id === 4 && (
-                                    <div className={`w-4 h-4 border border-indigo-500 transition-all duration-1000 ${stage.active ? 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.8)]' : 'bg-black'}`} />
-                                )}
-                            </div>
-
-                            {/* Label */}
-                            <div className="text-center">
-                                <div className="font-mono text-[10px] text-slate-300 uppercase tracking-[0.3em] mb-2">{stage.label}</div>
-                                <div className={`font-serif text-sm italic text-slate-400 max-w-[150px] leading-tight transition-opacity duration-500 ${stage.active ? 'opacity-100' : 'opacity-30'}`}>
-                                    {stage.desc}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                
-                {/* Footer Quote */}
-                <div className="text-center mt-8">
-                    <p className="font-mono text-[9px] text-slate-600 uppercase tracking-widest">
-                        Task ID: {task.id.slice(-4)}
-                    </p>
-                </div>
-
-            </motion.div>
-        </div>
-    )
-}
 
 const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
   const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details' | 'challenge'} | null>(null);
@@ -1865,546 +1770,180 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     {task.activeChallenge && !task.isChallengeCompleted && !draftChallenge && (
                                         <div className="mt-2 mb-2">
                                             <button 
-                                                onClick={(e) => { e.stopPropagation(); setActiveModal({taskId: task.id, type: 'details'}); }}
-                                                className="w-full text-left group/challenge"
+                                                onClick={(e) => { e.stopPropagation(); setActiveModal({taskId: task.id, type: 'challenge'}); }}
+                                                className="w-full py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors flex items-center justify-center gap-2"
                                             >
-                                                <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-xl p-3 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-900 transition-all relative overflow-hidden">
-                                                    <div className="flex justify-between items-center">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-                                                            <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Активный челлендж</span>
-                                                        </div>
-                                                        <div className="text-slate-300 dark:text-slate-600 group-hover/challenge:text-indigo-400 transition-colors">
-                                                            <Maximize2 size={12} />
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                <Zap size={14} /> Открыть Челлендж
                                             </button>
                                         </div>
                                     )}
                                 </>
                             )}
-
-                            {col.id === 'done' && (
-                                <>
-                                    {renderCardChecklist(task)}
-                                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between opacity-50 group-hover:opacity-100 transition-opacity">
-                                        <div className="flex items-center gap-1">
-                                            <div className="w-1 h-1 rounded-full border border-slate-400 dark:border-slate-500" /> {/* Idea */}
-                                            <div className="w-3 h-px bg-slate-200 dark:bg-slate-700" />
-                                            <div className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-[1px]" /> {/* Structure */}
-                                            <div className="w-3 h-px bg-slate-200 dark:bg-slate-700" />
-                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sphereColor }} /> {/* Action */}
-                                            <div className="w-3 h-px bg-slate-200 dark:bg-slate-700" />
-                                            <Gem size={8} className={hasInsight ? "text-indigo-500 animate-pulse" : "text-slate-300 dark:text-slate-700"} strokeWidth={hasInsight ? 0 : 1.5} fill={hasInsight ? "currentColor" : "none"} /> {/* Synthesis */}
-                                        </div>
-                                        <button onClick={e => { e.stopPropagation(); setJourneyTask(task); }} className="text-[9px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 transition-colors">
-                                           <Map size={10} /> Путь
-                                        </button>
-                                    </div>
-                                </>
-                            )}
-
-                            <div className="mt-auto pt-3 flex items-end justify-between gap-2">
-                                <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                   {col.id === 'todo' && (
-                                        <Tooltip content="В работу">
-                                            <button 
-                                                onClick={(e) => moveToDoing(e, task)} 
-                                                className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
-                                            >
-                                                <Play size={16} className="fill-current" />
-                                            </button>
-                                        </Tooltip>
-                                   )}
-
-                                   {col.id === 'doing' && (
-                                       <>
-                                           <Tooltip content={hasJournalEntry ? "В Дневнике" : "В Дневник"}>
-                                               <button 
-                                                    onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }}
-                                                    className={`p-2 rounded-full transition-all opacity-60 hover:opacity-100 ${
-                                                        hasJournalEntry 
-                                                        ? 'text-cyan-500 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100' 
-                                                        : 'text-slate-400 dark:text-slate-500 hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/20'
-                                                    }`}
-                                               >
-                                                    <Book size={16} />
-                                               </button>
-                                           </Tooltip>
-
-                                           {!draftChallenge && hasChallengeAuthors && (
-                                               <Tooltip 
-                                                    content={generatingChallengeFor === task.id ? "Остановить" : "Челлендж (ИИ)"}
-                                                    disabled={generatingChallengeFor === task.id}
-                                               >
-                                                   <button 
-                                                        disabled={hasActiveChallenge}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (generatingChallengeFor === task.id) {
-                                                                stopGeneration(e);
-                                                                return;
-                                                            }
-                                                            if (hasActiveChallenge) return;
-                                                            if (window.confirm("Создать челлендж?")) {
-                                                                generateChallenge(e, task.id, task.content);
-                                                            }
-                                                        }} 
-                                                        className={`p-2 rounded-full transition-all opacity-60 hover:opacity-100
-                                                            ${hasActiveChallenge 
-                                                                ? 'text-slate-200 dark:text-slate-700 cursor-not-allowed' 
-                                                                : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
-                                                            }`}
-                                                   >
-                                                        {generatingChallengeFor === task.id ? (
-                                                            <div className="relative w-4 h-4 flex items-center justify-center">
-                                                                <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                                            </div>
-                                                        ) : (
-                                                            <Zap size={16} />
-                                                        )}
-                                                    </button>
-                                               </Tooltip>
-                                           )}
-
-                                           {hasKanbanTherapist && (
-                                               <Tooltip 
-                                                    content={generatingTherapyFor === task.id ? "Остановить" : "Консультант (ИИ)"}
-                                                    disabled={generatingTherapyFor === task.id}
-                                               >
-                                                   <button 
-                                                        onClick={(e) => openTherapy(e, task)} 
-                                                        className="p-2 text-slate-400 dark:text-slate-500 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
-                                                   >
-                                                       {generatingTherapyFor === task.id ? (
-                                                            <div className="relative w-4 h-4 flex items-center justify-center">
-                                                                <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                                            </div>
-                                                       ) : (
-                                                           <Bot size={16} /> 
-                                                       )}
-                                                   </button>
-                                               </Tooltip>
-                                           )}
-                                           <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-                                           <Tooltip content="Завершить">
-                                                <button 
-                                                    onClick={(e) => handleQuickComplete(e, task)} 
-                                                    className="p-2 rounded-full text-slate-400 dark:text-slate-500 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all opacity-60 hover:opacity-100"
-                                                >
-                                                    <Check size={16} strokeWidth={3} />
-                                                </button>
-                                            </Tooltip>
-                                       </>
-                                   )}
-                                   
-                                   {col.id === 'done' && (
-                                        <>
-                                            <Tooltip content="В Зал славы">
-                                                <button 
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        if(window.confirm('Перенести задачу в Зал славы?')) archiveTask(task.id); 
-                                                    }} 
-                                                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
-                                                >
-                                                    <Trophy size={16} /> 
-                                                </button>
-                                            </Tooltip>
-                                            <Tooltip content="Вернуть в работу">
-                                                <button 
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        updateTask({ ...task, column: 'doing' }); 
-                                                    }} 
-                                                    className="p-2 rounded-full text-slate-400 dark:text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all opacity-60 hover:opacity-100"
-                                                >
-                                                    <RotateCcw size={16} strokeWidth={2} />
-                                                </button>
-                                            </Tooltip>
-                                        </>
-                                   )}
+                            
+                            {/* Actions Footer */}
+                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-1">
+                                    {hasKanbanTherapist && <button onClick={(e) => { e.stopPropagation(); openTherapy(e, task); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-indigo-500"><Bot size={14}/></button>}
+                                    <button onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-indigo-500"><Book size={14}/></button>
                                 </div>
-
-                                <div className="text-[10px] font-mono text-[#6B6E70] dark:text-slate-500 flex gap-2 select-none pointer-events-none">
-                                    <span>[ID: {task.id.slice(-4)}]</span>
+                                <div className="flex gap-1">
+                                    {col.id !== 'done' && <button onClick={(e) => handleQuickComplete(e, task)} className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded text-slate-400 hover:text-emerald-500"><Check size={14}/></button>}
+                                    <button onClick={(e) => { e.stopPropagation(); if(confirm('В архив?')) archiveTask(task.id); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-600"><ArchiveIcon size={14}/></button>
                                 </div>
                             </div>
                         </div>
                     </motion.div>
-                )})
-            )}
+                );
+            })}
             </AnimatePresence>
         </div>
     </div>
     );
   };
 
-  // --- JOURNEY MODAL COMPONENT ---
-  const JourneyModal = ({ task, journalEntries, onClose }: { task: Task, journalEntries: JournalEntry[], onClose: () => void }) => {
-    // Check for insight
-    const hasInsight = journalEntries.some(j => j.linkedTaskId === task.id && j.isInsight);
-    const sphere = task.spheres?.[0];
-    const sphereColor = sphere && NEON_COLORS[sphere] ? NEON_COLORS[sphere] : '#6366f1'; 
-
-    const stages = [
-        { id: 1, label: 'ХАОС', desc: 'Мысль зафиксирована в Дневнике/Заметках', active: true },
-        { id: 2, label: 'ЛОГОС', desc: 'Сформирован контекст и план действий', active: true },
-        { id: 3, label: 'ЭНЕРГИЯ', desc: 'Задача реализована в материальном мире', active: true },
-        { id: 4, label: 'СИНТЕЗ', desc: 'Опыт интегрирован в структуру личности', active: hasInsight }
-    ];
-
-    return (
-        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-[50px] flex items-center justify-center p-8" onClick={onClose}>
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="w-full max-w-4xl relative"
-                onClick={e => e.stopPropagation()}
-            >
-                {/* Close Button */}
-                <button onClick={onClose} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors">
-                    <X size={24} />
-                </button>
-
-                {/* Central Map */}
-                <div className="flex flex-col md:flex-row items-center justify-between relative py-20 px-10">
-                    
-                    {/* The Thread */}
-                    <div className="absolute left-10 right-10 top-1/2 h-[1px] bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 hidden md:block" />
-                    <div className="absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-slate-700 via-slate-500 to-slate-700 md:hidden" />
-                    
-                    {/* Pulse Animation */}
-                    <motion.div 
-                        className="absolute h-[3px] w-[20px] bg-white blur-[2px] rounded-full hidden md:block top-1/2 -mt-[1.5px]"
-                        animate={{ 
-                            left: ['0%', hasInsight ? '100%' : '75%'], 
-                            opacity: [0, 1, 0] 
-                        }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                    />
-
-                    {stages.map((stage, i) => (
-                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-6 group mb-8 md:mb-0">
-                            {/* Node */}
-                            <div className={`
-                                w-4 h-4 transition-all duration-500
-                                ${stage.id === 1 ? 'rounded-full border border-slate-400 bg-black' : ''}
-                                ${stage.id === 2 ? 'w-3 h-3 bg-slate-300 transform rotate-45' : ''}
-                                ${stage.id === 3 ? 'rounded-full' : ''}
-                                ${stage.id === 4 ? 'transform rotate-45' : ''}
-                            `}
-                            style={{ 
-                                backgroundColor: stage.id === 3 ? sphereColor : undefined,
-                                boxShadow: stage.id === 3 ? `0 0 15px ${sphereColor}` : undefined
-                            }}
-                            >
-                                {stage.id === 4 && (
-                                    <div className={`w-4 h-4 border border-indigo-500 transition-all duration-1000 ${stage.active ? 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.8)]' : 'bg-black'}`} />
-                                )}
-                            </div>
-
-                            {/* Label */}
-                            <div className="text-center">
-                                <div className="font-mono text-[10px] text-slate-300 uppercase tracking-[0.3em] mb-2">{stage.label}</div>
-                                <div className={`font-serif text-sm italic text-slate-400 max-w-[150px] leading-tight transition-opacity duration-500 ${stage.active ? 'opacity-100' : 'opacity-30'}`}>
-                                    {stage.desc}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                
-                {/* Footer Quote */}
-                <div className="text-center mt-8">
-                    <p className="font-mono text-[9px] text-slate-600 uppercase tracking-widest">
-                        Task ID: {task.id.slice(-4)}
-                    </p>
-                </div>
-
-            </motion.div>
-        </div>
-    )
-  }
+  const selectedTask = getTaskForModal();
 
   return (
-    <div ref={scrollContainerRef} className="flex flex-col h-full relative overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
-      <div className="w-full px-4 md:px-8 pt-4 md:pt-8 mb-6">
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-                <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Спринты</h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Фокус на главном</p>
-            </div>
-        </header>
-      </div>
+    <div className="h-full flex flex-col md:flex-row bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
+        {/* Mobile Header / Search */}
+        <div className="md:hidden p-4 shrink-0 bg-white dark:bg-[#1e293b] border-b border-slate-200 dark:border-slate-700">
+             <div className="relative mb-3">
+                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
+                 <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Поиск..." className="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-sm outline-none" />
+             </div>
+             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                  {columns.map(c => (
+                      <button key={c.id} onClick={() => setActiveMobileTab(c.id as any)} className={getTabClass(c.id, activeMobileTab === c.id)}>{c.title}</button>
+                  ))}
+             </div>
+        </div>
 
-      <motion.div className="sticky top-0 z-40 w-full mb-[-20px]" animate={{ y: isHeaderHidden ? '-100%' : '0%' }} transition={{ duration: 0.3, ease: 'easeInOut' }}>
-            <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
-                <div className="absolute inset-0 backdrop-blur-xl" style={{ maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)' }} />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
-            </div>
-            <div className="relative z-10 w-full px-4 md:px-8 pb-2">
-                <div className="flex gap-2">
-                    <div className="relative flex-1">
-                        <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400'}`} />
-                        <input ref={searchInputRef} type="text" placeholder="Поиск задач..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-all shadow-sm placeholder:text-slate-400" />
-                        {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
-                    </div>
-                    <Tooltip content="Сферы" side="bottom"><button onClick={() => setShowSphereSelector(!showSphereSelector)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showSphereSelector || activeSphereFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Layout size={20} /></button></Tooltip>
-                    <Tooltip content="Сортировка" side="bottom"><button onClick={toggleSortOrder} className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">{sortOrder === 'asc' ? <ArrowUp size={20} /> : <ArrowDown size={20} />}</button></Tooltip>
+        {/* Desktop Search / Toolbar */}
+        <div className="hidden md:flex justify-between items-center px-6 py-4 shrink-0">
+             <div className="flex items-center gap-3">
+                 <h2 className="text-xl font-light text-slate-800 dark:text-slate-200">Спринты</h2>
+                 <div className="h-4 w-px bg-slate-300 dark:bg-slate-700" />
+                 <div className="relative w-64">
+                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
+                     <input ref={searchInputRef} type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Поиск (Ctrl+F)" className="w-full pl-9 pr-4 py-1.5 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-indigo-400 transition-colors" />
+                 </div>
+             </div>
+             <div className="flex items-center gap-2">
+                 <SphereSelector selected={activeSphereFilter ? [activeSphereFilter] : []} onChange={(s) => setActiveSphereFilter(s[0] || null)} />
+                 <button onClick={toggleSortOrder} className="p-2 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 hover:text-indigo-500 transition-colors">
+                     {sortOrder === 'desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
+                 </button>
+             </div>
+        </div>
+
+        <div className="flex-1 flex overflow-x-auto overflow-y-hidden px-2 md:px-6 pb-2 md:pb-6 gap-4 md:gap-6 snap-x">
+            {columns.map(col => (
+                <div key={col.id} className={`flex-1 min-w-[300px] h-full snap-center ${isMobile ? (activeMobileTab === col.id ? 'flex' : 'hidden') : 'flex'}`}>
+                    {renderColumn(col)}
                 </div>
-                {(showSphereSelector || activeSphereFilter) && (
-                    <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200 scrollbar-none">
-                        <button onClick={() => setActiveSphereFilter(null)} className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${!activeSphereFilter ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}>Все</button>
-                        {SPHERES.map(s => { const isActive = activeSphereFilter === s.id; return (<button key={s.id} onClick={() => setActiveSphereFilter(isActive ? null : s.id)} className={`px-3 py-1.5 text-xs font-mono font-bold rounded-full transition-all flex items-center gap-1.5 border uppercase tracking-wider whitespace-nowrap ${isActive ? `${s.bg.replace('/30','')} ${s.text} ${s.border} shadow-sm ring-1 ring-offset-1 dark:ring-offset-slate-900 ring-${s.color}-400` : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300'}`}>{isActive ? `[ ${s.label} ]` : s.label}</button>); })}
+            ))}
+        </div>
+
+        {/* MODALS */}
+        {activeModal && selectedTask && (
+            <div className="fixed inset-0 z-[100] bg-slate-900/30 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseModal}>
+                <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                    
+                    {/* MODAL HEADER */}
+                    <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center shrink-0">
+                        <h3 className="font-bold text-slate-800 dark:text-white text-lg flex items-center gap-2">
+                            {activeModal.type === 'details' && <Edit3 size={18} className="text-indigo-500"/>}
+                            {activeModal.type === 'stuck' && <Bot size={18} className="text-amber-500"/>}
+                            {activeModal.type === 'challenge' && <Zap size={18} className="text-emerald-500"/>}
+                            {activeModal.type === 'details' ? 'Редактирование' : activeModal.type === 'stuck' ? 'Совет Наставника' : 'Челлендж'}
+                        </h3>
+                        <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
                     </div>
-                )}
-            </div>
-      </motion.div>
 
-      <div className="w-full px-4 md:px-8 pt-10 pb-8 flex-1 min-h-0">
-         <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 shrink-0 z-10 mb-4 bg-transparent">
-            {columns.map(col => (<button key={col.id} onClick={() => setActiveMobileTab(col.id as any)} className={getTabClass(col.id, activeMobileTab === col.id)}>{col.title} <span className="opacity-60 text-[10px] font-mono">({baseActiveTasks.filter(t => t.column === col.id).length})</span></button>))}
-         </div>
-         <div className="flex flex-col md:flex-row gap-8 h-full md:items-start">
-            {columns.map(col => { const isHiddenOnMobile = activeMobileTab !== col.id; return (<div key={col.id} className={`flex-1 min-w-[300px] flex-col h-full ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}>{renderColumn(col)}</div>); })}
-         </div>
-      </div>
+                    {/* MODAL CONTENT */}
+                    <div className="p-6 overflow-y-auto custom-scrollbar-light">
+                        {activeModal.type === 'details' && (
+                            <div className="space-y-4">
+                                <input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} onBlur={handleTitleAutosave} className="w-full text-xl font-bold bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-300" placeholder="Название задачи" />
+                                <div ref={editContentEditableRef} contentEditable className="min-h-[100px] outline-none text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-serif" onInput={handleEditInput} />
+                                
+                                <div className="flex gap-2">
+                                    <div className="relative"><Tooltip content="Обложка"><button ref={editPickerTriggerRef} onClick={() => setShowEditCoverPicker(!showEditCoverPicker)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500"><Layout size={16}/></button></Tooltip>{showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editPickerTriggerRef} />}</div>
+                                    <div className="relative"><Tooltip content="Цвет"><button ref={editColorTriggerRef} onClick={() => setShowEditColorPicker(!showEditColorPicker)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500"><Palette size={16}/></button></Tooltip>{showEditColorPicker && <ColorPickerPopover onSelect={setEditColor} onClose={() => setShowEditColorPicker(false)} triggerRef={editColorTriggerRef} />}</div>
+                                </div>
 
-      {activeModal && (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseModal}>
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="w-full max-w-lg bg-white/75 dark:bg-[#1e293b]/75 backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {(isEditingTask ? editCover : getTaskForModal()?.coverUrl) && (
-                        <div className="h-40 w-full shrink-0 relative mb-6 -mx-8 -mt-8 w-[calc(100%_+_4rem)] group overflow-hidden">
-                            <img src={isEditingTask ? editCover! : getTaskForModal()!.coverUrl!} alt="Cover" className="w-full h-full object-cover" />
-                            {isEditingTask && (
-                                <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100">
-                                    <X size={16} />
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {/* GLASS MODAL HEADER */}
-                    <div className="flex justify-between items-start mb-6 shrink-0 border-b border-black/5 dark:border-white/5 pb-4">
-                        <div className="flex flex-col gap-1 pr-4 w-full">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1 font-mono">
-                                {new Date(getTaskForModal()?.createdAt || Date.now()).toLocaleDateString()} <span className="opacity-50 mx-1">/</span> ID: {(getTaskForModal()?.id || 'NEW').slice(-4)}
+                                <div className="flex justify-end gap-2 mt-4">
+                                    <button onClick={handleCloseModal} className="px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Отмена</button>
+                                    <button onClick={handleSaveTaskContent} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Сохранить</button>
+                                </div>
                             </div>
-                            {activeModal.type === 'details' ? (
-                                isEditingTask ? (
-                                    <input 
-                                        type="text" 
-                                        placeholder="Название" 
-                                        value={editTaskTitle} 
-                                        onChange={(e) => setEditTaskTitle(e.target.value)} 
-                                        className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full p-0 m-0 border-b border-transparent focus:border-slate-300 dark:focus:border-slate-600 transition-colors" 
-                                        autoFocus
-                                    />
-                                ) : (
-                                    <h3 className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight break-words">
-                                        {getTaskForModal()?.title || <span className="text-slate-300 dark:text-slate-600 italic">Без названия</span>}
-                                    </h3>
-                                )
-                            ) : (
-                                <h3 className="text-2xl font-sans font-bold text-slate-900 dark:text-white leading-tight">
-                                    {activeModal.type === 'stuck' && <span className="flex items-center gap-2"><Bot size={24} className="text-violet-500"/> Личный консультант</span>}
-                                    {activeModal.type === 'challenge' && <span className="flex items-center gap-2"><Zap size={24} className="text-indigo-500"/> Новый вызов</span>}
-                                </h3>
-                            )}
-                        </div>
-                        <div className="flex items-center shrink-0 gap-1">
-                            {activeModal.type === 'details' && !isEditingTask && (
-                                (() => {
-                                    const task = getTaskForModal();
-                                    if (task && task.column !== 'done') {
-                                        return (
-                                            <>
-                                                <Tooltip content="Редактировать"><button onClick={() => setIsEditingTask(true)} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={18} /></button></Tooltip>
-                                                <Tooltip content="Удалить"><button onClick={() => { if(window.confirm('Удалить задачу?')) { deleteTask(task.id); handleCloseModal(); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18} /></button></Tooltip>
-                                            </>
-                                        );
-                                    }
-                                    return null;
-                                })()
-                            )}
-                            <button onClick={handleCloseModal} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors ml-1"><X size={20} /></button>
-                        </div>
-                    </div>
+                        )}
 
-                    <div className="flex-1 overflow-y-auto custom-scrollbar-ghost min-h-0 pr-1 -mr-2">
                         {activeModal.type === 'stuck' && (
                             <div className="space-y-4">
+                                <p className="text-sm text-slate-600 dark:text-slate-400 italic">"{selectedTask.content}"</p>
                                 {aiResponse ? (
+                                    <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl text-sm text-slate-800 dark:text-indigo-100 leading-relaxed">
+                                        <ReactMarkdown>{aiResponse}</ReactMarkdown>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center py-8 text-slate-400">
+                                        <RefreshCw className="animate-spin mb-2" />
+                                        <span className="text-xs">Анализирую ситуацию...</span>
+                                    </div>
+                                )}
+                                {aiResponse && (
+                                    <div className="flex justify-end gap-2">
+                                        <button onClick={handleCloseModal} className="px-4 py-2 text-sm text-slate-500">Закрыть</button>
+                                        <button onClick={saveTherapyResponse} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg">Сохранить в историю</button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeModal.type === 'challenge' && (
+                            <div className="space-y-4">
+                                {draftChallenge ? (
+                                    <>
+                                        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800">
+                                            <div className="text-xs font-bold text-emerald-600 uppercase mb-2">Предложенный Челлендж</div>
+                                            <div className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
+                                                <ReactMarkdown>{draftChallenge}</ReactMarkdown>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <button onClick={() => setDraftChallenge(null)} className="px-4 py-2 text-sm text-slate-500">Отклонить</button>
+                                            <button onClick={acceptDraftChallenge} className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg">Принять вызов</button>
+                                        </div>
+                                    </>
+                                ) : selectedTask.activeChallenge && !selectedTask.isChallengeCompleted ? (
                                     <div className="space-y-4">
-                                        <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed">
-                                            <ReactMarkdown components={markdownComponents}>{formatForDisplay(aiResponse)}</ReactMarkdown>
+                                        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
+                                            <InteractiveChallenge 
+                                                content={selectedTask.activeChallenge} 
+                                                onToggle={(idx) => toggleChallengeCheckbox(idx, selectedTask)}
+                                                onPin={(idx) => handleToggleChallengeStepPin(idx)}
+                                                pinnedIndices={selectedTask.pinnedChallengeIndices}
+                                            />
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <button onClick={() => deleteActiveChallenge()} className="text-xs text-red-400 hover:text-red-600">Отменить челлендж</button>
+                                            <button onClick={() => toggleChallengeComplete()} className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700">Завершить</button>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="text-center text-slate-400 py-10 flex flex-col items-center gap-2"><Bot size={32} className="opacity-20" /><span>Не удалось получить ответ.</span></div>
+                                    <div className="text-center py-8">
+                                        <button onClick={(e) => generateChallenge(e, selectedTask.id, selectedTask.content)} className="px-6 py-3 bg-indigo-600 text-white rounded-xl shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2 mx-auto">
+                                            <Zap size={18} /> Сгенерировать Челлендж
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         )}
-                        {activeModal.type === 'challenge' && draftChallenge && (
-                            <div className="flex flex-col h-full">
-                                <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><StaticChallengeRenderer content={draftChallenge} mode="draft" /></div>
-                            </div>
-                        )}
-
-                        {activeModal.type === 'details' && (() => {
-                            const task = getTaskForModal();
-                            if (!task) return null;
-                            const isDone = task.column === 'done';
-                            const subtasksTotal = task.subtasks?.length || 0;
-                            const subtasksDone = task.subtasks?.filter(s => s.isCompleted).length || 0;
-                            const firstSphere = task.spheres && task.spheres.length > 0 ? task.spheres[0] : null;
-                            const sphereColorClass = firstSphere && NEON_COLORS[firstSphere] ? `text-[${NEON_COLORS[firstSphere]}]` : 'text-indigo-500';
-
-                            return (
-                                <div className="space-y-6">
-                                    {/* DESCRIPTION SEPARATOR */}
-                                    <div className="w-full h-px bg-black/5 dark:bg-white/5 mb-4" />
-
-                                    {isEditingTask ? (
-                                        <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
-                                            <div className="flex items-center justify-between mb-4 gap-2">
-                                                <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
-                                                    <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
-                                                    <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
-                                                    <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
-                                                    <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
-                                                    <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
-                                                    <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
-                                                    <Tooltip content="Очистить"><button onMouseDown={handleClearEditStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
-                                                    <div className="relative">
-                                                        <Tooltip content="Обложка">
-                                                            <button 
-                                                                ref={editPickerTriggerRef}
-                                                                onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} 
-                                                                className={`p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors ${editCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}
-                                                            >
-                                                                <Layout size={16} />
-                                                            </button>
-                                                        </Tooltip>
-                                                        {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editPickerTriggerRef} />}
-                                                    </div>
-                                                    <div className="relative">
-                                                        <Tooltip content="Фон задачи">
-                                                            <button 
-                                                                ref={editColorTriggerRef}
-                                                                onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} 
-                                                                className={`p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors ${editColor !== 'white' ? 'text-indigo-500' : ''}`}
-                                                            >
-                                                                <Palette size={16} />
-                                                            </button>
-                                                        </Tooltip>
-                                                        {showEditColorPicker && <ColorPickerPopover onSelect={setEditColor} onClose={() => setShowEditColorPicker(false)} triggerRef={editColorTriggerRef} />}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div 
-                                                key={activeModal.taskId}
-                                                ref={editContentEditableRef} 
-                                                contentEditable 
-                                                suppressContentEditableWarning={true}
-                                                style={{ whiteSpace: 'pre-wrap' }}
-                                                onInput={handleEditInput} 
-                                                className="w-full h-64 bg-transparent rounded-none p-0 text-base text-slate-700 dark:text-slate-300 border-none outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text custom-scrollbar-ghost"
-                                                data-placeholder="Описание задачи..." 
-                                            />
-                                            <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
-                                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block tracking-widest font-mono">Сферы</label>
-                                                {/* Use Reused Ghost Selector */}
-                                                <GhostSphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
-                                            </div>
-                                            <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-6 border-t border-black/5 dark:border-white/5 mt-4">
-                                                <button onClick={() => setIsEditingTask(false)} className="px-5 py-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-mono text-[10px] uppercase tracking-widest">Отмена</button>
-                                                <button onClick={handleSaveTaskContent} className="px-6 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg font-mono text-[10px] uppercase tracking-widest font-bold flex items-center justify-center gap-2">Сохранить</button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="group relative pr-1">
-                                            {task.description && (<CollapsibleSection title="Контекст" icon={<FileText size={12}/>}><div className="text-xs text-[#6B6E70] dark:text-slate-400 leading-relaxed font-sans"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.description))}</ReactMarkdown></div></CollapsibleSection>)}
-                                            
-                                            <div className="text-slate-700 dark:text-slate-300 text-sm font-normal leading-relaxed font-sans mb-6">
-                                                <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.content))}</ReactMarkdown>
-                                            </div>
-                                            
-                                            {/* METADATA RINGS */}
-                                            {task.spheres && task.spheres.length > 0 && (
-                                                <div className="flex gap-2 mb-6">
-                                                    {task.spheres.map(sid => {
-                                                        const s = SPHERES.find(x => x.id === sid);
-                                                        if (!s) return null;
-                                                        return (
-                                                            <div key={sid} className={`w-4 h-4 rounded-full border-2 bg-transparent ${s.text.replace('text-', 'border-')}`} title={s.label} />
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-
-                                            {(task.subtasks && task.subtasks.length > 0 || !isDone) && (
-                                                <CollapsibleSection title="Чек-лист" icon={<ListTodo size={14}/>}>
-                                                    {subtasksTotal > 0 && <SegmentedProgressBar total={subtasksTotal} current={subtasksDone} color={sphereColorClass} />}
-                                                    <div className="space-y-1">
-                                                        {task.subtasks?.map(s => (
-                                                            <div key={s.id} className="group flex items-start gap-3 p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-all duration-200 hover:translate-x-0.5 cursor-pointer relative" draggable={!isDone} onDragStart={!isDone ? (e) => handleSubtaskDragStart(e, s.id, task.id) : undefined} onDragOver={handleDragOver} onDrop={!isDone ? (e) => handleSubtaskDrop(e, s.id, task) : undefined} onClick={() => !isDone && handleToggleSubtask(s.id)}>
-                                                                <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-all duration-300 mt-0.5 ${s.isCompleted ? 'bg-indigo-500 border-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'border-slate-300 dark:border-slate-600 group-hover:border-indigo-400 bg-white dark:bg-transparent'}`}>{s.isCompleted && <Check size={12} className="text-white" strokeWidth={3} />}</div>
-                                                                <span className={`text-sm flex-1 break-words leading-relaxed transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-[#2F3437] dark:text-slate-200"}`}>{s.text}</span>
-                                                                {!isDone && <button onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(s.id); }} className="text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"><X size={14}/></button>}
-                                                            </div>
-                                                        ))}
-                                                        {!isDone && (<div className="flex gap-2 mt-3 pl-2"><input type="text" className="flex-1 bg-transparent border-b border-slate-200 dark:border-slate-700 py-1 text-sm outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:border-indigo-400 transition-colors" placeholder="Новый пункт..." value={newSubtaskText} onChange={(e) => setNewSubtaskText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()} /><button onClick={handleAddSubtask} disabled={!newSubtaskText.trim()} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors"><Plus size={18}/></button></div>)}
-                                                    </div>
-                                                </CollapsibleSection>
-                                            )}
-
-                                            {task.activeChallenge && (
-                                                <CollapsibleSection title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} icon={task.isChallengeCompleted ? <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" /> : <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />} actions={!isDone ? (<div className="flex items-center gap-3"><Tooltip content={task.isChallengeCompleted ? "Вернуть в активные" : "Завершить челлендж"}><button onClick={(e) => { e.stopPropagation(); toggleChallengeComplete(); }} className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${task.isChallengeCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-transparent border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:text-emerald-500 text-transparent'}`}><Check size={12} strokeWidth={3} /></button></Tooltip><div className="w-px h-3 bg-slate-300 dark:bg-slate-600"></div><Tooltip content="Удалить челлендж"><button onClick={(e) => deleteActiveChallenge(e)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button></Tooltip></div>) : null}>
-                                                    <div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed pl-1 pt-1">
-                                                        {task.isChallengeCompleted ? <StaticChallengeRenderer content={task.activeChallenge} mode="history" /> : <InteractiveChallenge content={task.activeChallenge} onToggle={(i) => !isDone && toggleChallengeCheckbox(i, task)} onPin={!isDone ? (i) => handleToggleChallengeStepPin(i) : undefined} pinnedIndices={task.pinnedChallengeIndices} />}
-                                                    </div>
-                                                </CollapsibleSection>
-                                            )}
-
-                                            {((task.challengeHistory && task.challengeHistory.length > 0) || (task.consultationHistory && task.consultationHistory.length > 0)) && (
-                                                <CollapsibleSection title="История" icon={<History size={14}/>}>
-                                                    <div className="space-y-4">
-                                                        {task.challengeHistory?.map((h, i) => (<div key={`ch-${i}`} className="text-sm bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50 relative group"><div className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Zap size={10}/> Архивный челлендж</div><div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><StaticChallengeRenderer content={h} mode="history" /></div>{!isDone && <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"><Tooltip content="Удалить"><button onClick={() => deleteChallengeFromHistory(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button></Tooltip></div>}</div>))}
-                                                        {task.consultationHistory?.map((h, i) => (<div key={`cons-${i}`} className="text-sm bg-violet-50/30 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-800/30 relative group"><div className="text-[9px] font-bold text-violet-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Bot size={10}/> Консультация</div><div className="text-[#2F3437] dark:text-slate-300 font-sans text-sm leading-relaxed"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(h))}</ReactMarkdown></div>{!isDone && <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"><Tooltip content="Удалить"><button onClick={() => deleteConsultation(i)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={12}/></button></Tooltip></div>}</div>))}
-                                                    </div>
-                                                </CollapsibleSection>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })()}
                     </div>
-                    {activeModal.type === 'stuck' && aiResponse && (<div className="mt-6 flex justify-end gap-2 pt-4 border-t border-black/5 dark:border-white/5 pr-1"><button onClick={saveTherapyResponse} className="px-6 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg font-mono text-[10px] uppercase tracking-widest font-bold flex items-center justify-center gap-2 shadow-sm"><Save size={16} /> Сохранить в историю</button></div>)}
-                    {activeModal.type === 'challenge' && draftChallenge && (<div className="mt-6 flex justify-end gap-2 shrink-0 pt-4 border-t border-black/5 dark:border-white/5 pr-1"><button onClick={acceptDraftChallenge} className="px-6 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg font-mono text-[10px] uppercase tracking-widest font-bold flex items-center justify-center gap-2 shadow-sm"><Rocket size={18} /> Принять вызов</button></div>)}
-                </motion.div>
+                </div>
             </div>
-        </AnimatePresence>
-      )}
-
-      {/* JOURNEY MODAL */}
-      <AnimatePresence>
-          {journeyTask && (
-              <JourneyModal task={journeyTask} journalEntries={journalEntries} onClose={() => setJourneyTask(null)} />
-          )}
-      </AnimatePresence>
+        )}
     </div>
   );
 };
