@@ -8,10 +8,9 @@ import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
 import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
-import { applyTypography } from '../utils/editorConverters'; // Updated import
+import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import UniversalEditor from './UniversalEditor'; // New Import
 import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Heading1, Heading2, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2 } from 'lucide-react';
 
 interface Props {
@@ -48,6 +47,13 @@ const ORACLE_VIBES = [
     { id: 'fire', icon: Flame, label: 'Энергия', color: 'from-orange-500 to-red-600', text: 'text-orange-100' },
     { id: 'zen', icon: Waves, label: 'Дзен', color: 'from-emerald-500 to-teal-600', text: 'text-emerald-100' },
     { id: 'luck', icon: Clover, label: 'Случай', color: 'from-slate-700 to-slate-900', text: 'text-slate-200' },
+];
+
+const UNSPLASH_PRESETS = [
+    'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=400&q=80',
+    'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&q=80',
+    'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=400&q=80',
+    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80',
 ];
 
 const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E")`;
@@ -101,10 +107,125 @@ const getPreviewContent = (content: string) => {
     return preview.trim();
 };
 
+const processImage = (file: File | Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        if (!file.type.startsWith('image/')) {
+            reject(new Error('File is not an image'));
+            return;
+        }
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                const MAX_HEIGHT = 800;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    resolve(dataUrl);
+                } else {
+                    reject(new Error('Canvas context failed'));
+                }
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+};
+
 const findFirstUrl = (text: string): string | null => {
     const maskedText = text.replace(/!\[.*?\]\(.*?\)/g, '');
     const match = maskedText.match(/(https?:\/\/[^\s\)]+)/);
     return match ? match[0] : null;
+};
+
+// --- HTML <-> Markdown Converters ---
+
+const htmlToMarkdown = (html: string) => {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+
+    const wrap = (text: string, marker: string) => {
+        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
+        if (match && match[2]) {
+            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
+        }
+        return text.trim() ? `${marker}${text}${marker}` : '';
+    };
+
+    const walk = (node: Node): string => {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            const tag = el.tagName.toLowerCase();
+            let content = '';
+            el.childNodes.forEach(child => content += walk(child));
+            
+            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
+            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
+            if (el.style.fontStyle === 'italic') return wrap(content, '*');
+            
+            switch (tag) {
+                case 'b': case 'strong': return wrap(content, '**');
+                case 'i': case 'em': return wrap(content, '*');
+                case 'u': return content.trim() ? `<u>${content}</u>` : '';
+                case 'code': return `\`${content}\``;
+                case 'h1': return `\n# ${content}\n`;
+                case 'h2': return `\n## ${content}\n`;
+                case 'div': return `\n${content}`; 
+                case 'p': return `\n\n${content}\n`;
+                case 'br': return '\n';
+                case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
+                default: return content;
+            }
+        }
+        return '';
+    };
+    
+    let md = walk(temp);
+    md = md.replace(/\n{3,}/g, '\n\n').trim();
+    md = md.replace(/&nbsp;/g, ' ');
+    return applyTypography(md);
+};
+
+const markdownToHtml = (md: string) => {
+    if (!md) return '';
+    let html = md;
+    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
+    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
+    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
+    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
+        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
+    });
+    
+    html = html.replace(/\n/g, '<br>');
+    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
+    return html;
 };
 
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
@@ -208,6 +329,290 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
         </a>
     );
 });
+
+const markdownComponents = {
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
+    a: ({node, ...props}: any) => <a className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors font-sans" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
+    li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
+    h1: ({node, ...props}: any) => <h1 className="font-sans font-bold text-xl mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+    h2: ({node, ...props}: any) => <h2 className="font-sans font-bold text-lg mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+    h3: ({node, ...props}: any) => <h3 className="font-sans font-bold text-base mt-2 mb-1 text-slate-900 dark:text-slate-100" {...props} />,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 dark:border-slate-600 pl-4 italic text-slate-500 dark:text-slate-400 my-3 font-serif" {...props} />,
+    code: ({node, inline, className, children, ...props}: any) => {
+         return inline 
+            ? <code className="bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
+            : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-3 rounded-xl text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+    },
+    img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
+    u: ({node, ...props}: any) => <u {...props} /> 
+};
+
+// Tag Selector
+const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[]) => void, existingTags: string[], placeholder?: string, variant?: 'default' | 'ghost', direction?: 'up' | 'down' }> = ({ selectedTags, onChange, existingTags, placeholder = "Добавить теги...", variant = 'default', direction = 'down' }) => {
+    const [input, setInput] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+
+    const handleTagChange = (newTags: string[]) => {
+        const uniqueTags = Array.from(new Set(newTags));
+        onChange(uniqueTags);
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as Node;
+            const isWrapper = wrapperRef.current && wrapperRef.current.contains(target);
+            const isDropdown = dropdownRef.current && dropdownRef.current.contains(target);
+            
+            if (!isWrapper && !isDropdown) {
+                setIsOpen(false);
+            }
+        };
+        
+        const handleScroll = () => {
+            if (isOpen) setIsOpen(false);
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('scroll', handleScroll, true); 
+            window.addEventListener('resize', handleScroll);
+        }
+        
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('scroll', handleScroll, true);
+            window.removeEventListener('resize', handleScroll);
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (isOpen && wrapperRef.current) {
+            const rect = wrapperRef.current.getBoundingClientRect();
+            const style: React.CSSProperties = {
+                position: 'fixed',
+                left: rect.left,
+                width: Math.max(rect.width, 200),
+                zIndex: 99999,
+            };
+            
+            if (direction === 'down') {
+                style.top = rect.bottom + 4;
+            } else {
+                style.bottom = window.innerHeight - rect.top + 4;
+            }
+            setDropdownStyle(style);
+        }
+    }, [isOpen, direction]);
+
+    const filteredSuggestions = existingTags.filter(tag => !selectedTags.some(st => st.toLowerCase() === tag.toLowerCase()) && tag.toLowerCase().includes(input.toLowerCase()));
+
+    const addTag = (tag: string) => {
+        const cleanTag = tag.trim().replace(/^#/, '');
+        if (!cleanTag) return;
+        if (selectedTags.some(t => t.toLowerCase() === cleanTag.toLowerCase())) { setInput(''); setIsOpen(false); return; }
+        
+        handleTagChange([...selectedTags, existingTags.find(t => t.toLowerCase() === cleanTag.toLowerCase()) || cleanTag]);
+        setInput(''); setIsOpen(false);
+    };
+
+    const hasContent = input.length > 0 || filteredSuggestions.length > 0;
+
+    return (
+        <div className="relative portal-popup" ref={wrapperRef}>
+            <div className={`flex flex-wrap items-center gap-3 min-h-[36px] ${variant === 'ghost' ? 'px-0 py-2' : 'p-2'}`}>
+                {selectedTags.map(tag => (
+                    <span key={tag} className="flex items-center gap-1 text-[9px] font-sans uppercase tracking-[0.1em] text-slate-500 dark:text-slate-400 group cursor-default">
+                        #{tag.replace(/^#/, '')} 
+                        <button onClick={() => handleTagChange(selectedTags.filter(t => t !== tag))} className="text-slate-300 hover:text-red-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <X size={10} strokeWidth={2} />
+                        </button>
+                    </span>
+                ))}
+                <input 
+                    type="text" 
+                    value={input} 
+                    onChange={(e) => { setInput(e.target.value); setIsOpen(true); }} 
+                    onFocus={() => setIsOpen(true)} 
+                    onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); addTag(input); } }} 
+                    placeholder={selectedTags.length === 0 ? placeholder : ''} 
+                    className={`flex-1 min-w-[80px] bg-transparent text-xs font-sans outline-none ${variant === 'ghost' ? 'text-slate-600 dark:text-slate-300 placeholder:text-slate-300' : 'text-slate-600 dark:text-slate-300 placeholder:text-slate-400'}`} 
+                />
+            </div>
+            {isOpen && hasContent && createPortal(
+                <div 
+                    ref={dropdownRef}
+                    className="fixed bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-75 portal-popup"
+                    style={dropdownStyle}
+                    onMouseDown={(e) => e.stopPropagation()} 
+                >
+                    {input.length > 0 && !filteredSuggestions.some(t => t.toLowerCase() === input.trim().toLowerCase()) && (
+                        <button onClick={() => addTag(input)} className="w-full text-left px-3 py-2 text-xs font-sans text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-bold"><Plus size={12} /> Создать «{input}»</button>
+                    )}
+                    {filteredSuggestions.map(tag => (
+                        <button key={tag} onClick={() => addTag(tag)} className="w-full text-left px-3 py-2 text-xs font-sans text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-medium"><TagIcon size={12} className="text-slate-400" /> {tag}</button>
+                    ))}
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+};
+
+// Cover Picker
+const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => void, triggerRef: React.RefObject<HTMLElement> }> = ({ onSelect, onClose, triggerRef }) => {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS);
+    const [loading, setLoading] = useState(false);
+    const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
+    
+    useEffect(() => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const viewportH = window.innerHeight;
+            const viewportW = window.innerWidth;
+            const pickerHeight = 320; 
+            
+            const style: React.CSSProperties = {};
+            
+            const spaceBelow = viewportH - rect.bottom;
+            if (spaceBelow < pickerHeight && rect.top > spaceBelow) {
+                style.bottom = viewportH - rect.top + 8;
+                style.maxHeight = rect.top - 20;
+            } else {
+                style.top = rect.bottom + 8;
+                style.maxHeight = spaceBelow - 20;
+            }
+
+            if (rect.left + 320 > viewportW) {
+                style.right = 16;
+            } else {
+                style.left = rect.left;
+            }
+            
+            setPickerStyle(style);
+        }
+    }, [triggerRef]);
+    
+    const getUnsplashKey = () => {
+        const keys = [
+            'UNSPLASH_ACCESS_KEY', 
+            'VITE_UNSPLASH_ACCESS_KEY', 
+            'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY', 
+            'REACT_APP_UNSPLASH_ACCESS_KEY'
+        ];
+        
+        for (const k of keys) {
+            // @ts-ignore
+            if (typeof process !== 'undefined' && process.env?.[k]) return process.env[k];
+            // @ts-ignore
+            if (typeof import.meta !== 'undefined' && import.meta.env?.[k]) return import.meta.env[k];
+        }
+        return '';
+    };
+
+    const searchUnsplash = async (q?: string) => {
+        const key = getUnsplashKey();
+        if (!key) {
+            if (q) alert("Ключ Unsplash не найден.");
+            return;
+        }
+        
+        setLoading(true);
+        try {
+            const page = Math.floor(Math.random() * 10) + 1;
+            const endpoint = q 
+                ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&page=${page}&client_id=${key}`
+                : `https://api.unsplash.com/photos/random?count=20&client_id=${key}`;
+            
+            const res = await fetch(endpoint);
+            if (!res.ok) throw new Error("API Error");
+            const data = await res.json();
+            
+            const urls = q 
+                ? data.results.map((img: any) => img.urls.regular) 
+                : data.map((img: any) => img.urls.regular);
+            
+            setResults(urls);
+        } catch (e) {
+            console.error("Unsplash Fetch Error", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') searchUnsplash(query);
+    };
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            try { onSelect(await processImage(file)); onClose(); } catch (err) { console.error(err); }
+        }
+    };
+
+    return createPortal(
+        <>
+            <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+            <div 
+                className="fixed bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] w-80 flex flex-col gap-3 portal-popup" 
+                style={pickerStyle}
+                onMouseDown={e => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase font-sans">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
+                
+                <div className="relative">
+                    <input 
+                        type="text" 
+                        placeholder="Поиск Unsplash..." 
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-sans outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
+                    />
+                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <button 
+                        onClick={() => searchUnsplash(query)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
+                        title="Найти"
+                    >
+                        <ArrowRight size={12} />
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
+                    {loading ? (
+                        <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
+                            <RefreshCw size={16} className="animate-spin" />
+                        </div>
+                    ) : (
+                        results.map((url, i) => (
+                            <button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded-lg overflow-hidden border border-slate-100 dark:border-slate-700 hover:ring-2 hover:ring-indigo-500 relative group bg-slate-100">
+                                <img src={url} className="w-full h-full object-cover" loading="lazy" />
+                            </button>
+                        ))
+                    )}
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium font-sans cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
+                        <Upload size={12} /> Своя 
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                    </label>
+                    <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium font-sans transition-colors text-slate-600 dark:text-slate-300">
+                        <Shuffle size={12} /> Случайные
+                    </button>
+                </div>
+            </div>
+        </>,
+        document.body
+    );
+};
 
 interface NoteCardProps {
     note: Note;
@@ -393,10 +798,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
 };
 
 const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab }) => {
-  // New State for Universal Editor
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [creationContent, setCreationContent] = useState('');
-  const [creationTitle, setCreationTitle] = useState('');
+  const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
   const [creationCover, setCreationCover] = useState<string | null>(null);
@@ -404,8 +806,22 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'inbox' | 'library'>((defaultTab as any) || 'inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
+  const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
+  const [showEditCoverPicker, setShowEditCoverPicker] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const contentEditableRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeImage, setActiveImage] = useState<HTMLImageElement | null>(null);
+  const lastSelectionRange = useRef<Range | null>(null);
+  const [history, setHistory] = useState<string[]>(['']);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const historyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [editHistory, setEditHistory] = useState<string[]>(['']);
+  const [editHistoryIndex, setEditHistoryIndex] = useState(0);
+  const editHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeColorFilter, setActiveColorFilter] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -415,17 +831,22 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [moodQuery, setMoodQuery] = useState('');
   const [aiFilteredIds, setAiFilteredIds] = useState<string[] | null>(null);
   const [isMoodAnalyzing, setIsMoodAnalyzing] = useState(false);
-  
-  // Oracle State
   const [showOracle, setShowOracle] = useState(false);
   const [oracleState, setOracleState] = useState<'select' | 'thinking' | 'result'>('select');
   const [oracleVibe, setOracleVibe] = useState(ORACLE_VIBES[0]);
   const [oracleNote, setOracleNote] = useState<Note | null>(null);
-
-  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editTagsList, setEditTagsList] = useState<string[]>([]);
+  const [editCover, setEditCover] = useState<string | null>(null);
+  const editContentRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
+  const editCoverBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab as any);
@@ -455,23 +876,226 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const hasMoodMatcher = useMemo(() => config.aiTools.some(t => t.id === 'mood_matcher'), [config.aiTools]);
   const hasTagger = useMemo(() => config.aiTools.some(t => t.id === 'tagger'), [config.aiTools]);
 
+  const saveHistorySnapshot = useCallback((content: string) => {
+      if (content === history[historyIndex]) return;
+      const newHistory = history.slice(0, historyIndex + 1);
+      newHistory.push(content);
+      if (newHistory.length > 50) newHistory.shift();
+      setHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+  }, [history, historyIndex]);
+
+  const saveEditHistorySnapshot = useCallback((content: string) => {
+      if (content === editHistory[editHistoryIndex]) return;
+      const newHistory = editHistory.slice(0, editHistoryIndex + 1);
+      newHistory.push(content);
+      if (newHistory.length > 50) newHistory.shift();
+      setEditHistory(newHistory);
+      setEditHistoryIndex(newHistory.length - 1);
+  }, [editHistory, editHistoryIndex]);
+
+  const handleEditorInput = () => {
+      if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
+      historyTimeoutRef.current = setTimeout(() => {
+          saveHistorySnapshot(contentEditableRef.current?.innerHTML || '');
+      }, 500); 
+  };
+
+  const handleEditModalInput = () => {
+      if (editHistoryTimeoutRef.current) clearTimeout(editHistoryTimeoutRef.current);
+      editHistoryTimeoutRef.current = setTimeout(() => {
+          saveEditHistorySnapshot(editContentRef.current?.innerHTML || '');
+      }, 500); 
+  };
+
+  const execUndo = () => {
+      if (historyIndex > 0) {
+          const prevIndex = historyIndex - 1;
+          setHistoryIndex(prevIndex);
+          if (contentEditableRef.current) contentEditableRef.current.innerHTML = history[prevIndex];
+      }
+  };
+
+  const execRedo = () => {
+      if (historyIndex < history.length - 1) {
+          const nextIndex = historyIndex + 1;
+          setHistoryIndex(nextIndex);
+          if (contentEditableRef.current) contentEditableRef.current.innerHTML = history[nextIndex];
+      }
+  };
+
+  const execEditUndo = () => {
+      if (editHistoryIndex > 0) {
+          const prevIndex = editHistoryIndex - 1;
+          setEditHistoryIndex(prevIndex);
+          if (editContentRef.current) editContentRef.current.innerHTML = editHistory[prevIndex];
+      }
+  };
+
+  const execEditRedo = () => {
+      if (editHistoryIndex < editHistory.length - 1) {
+          const nextIndex = editHistoryIndex + 1;
+          setEditHistoryIndex(nextIndex);
+          if (editContentRef.current) editContentRef.current.innerHTML = editHistory[nextIndex];
+      }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('.portal-popup')) return;
+
+        if (editorRef.current && !editorRef.current.contains(target)) {
+            if (isExpanded) {
+                if (target.closest('.color-picker-dropdown')) return;
+                if (target.closest('.image-delete-btn')) return;
+                setIsExpanded(false);
+            }
+        }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isExpanded]);
+
+  useEffect(() => {
+    if (isEditing && editContentRef.current && selectedNote) {
+        editContentRef.current.innerHTML = markdownToHtml(selectedNote.content);
+        setActiveImage(null);
+    }
+  }, [isEditing, selectedNote?.id]); 
+
+  const saveSelection = () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          const container = isEditing ? editContentRef.current : contentEditableRef.current;
+          if (container && container.contains(range.commonAncestorContainer)) lastSelectionRange.current = range.cloneRange();
+      }
+  };
+
+  const handleEditorClick = (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG') {
+          if (activeImage && activeImage !== target) activeImage.style.outline = 'none';
+          const img = target as HTMLImageElement;
+          img.style.outline = '3px solid #6366f1'; 
+          img.style.borderRadius = '4px';
+          setActiveImage(img);
+      } else {
+          if (activeImage) { activeImage.style.outline = 'none'; setActiveImage(null); }
+      }
+      saveSelection();
+  };
+
+  const deleteActiveImage = (e?: React.MouseEvent) => {
+      if(e) { e.preventDefault(); e.stopPropagation(); }
+      if (activeImage) {
+          activeImage.remove();
+          setActiveImage(null);
+          if (isEditing && editContentRef.current) saveEditHistorySnapshot(editContentRef.current.innerHTML);
+          else if (contentEditableRef.current) saveHistorySnapshot(contentEditableRef.current.innerHTML);
+      }
+  };
+
+  const insertImageAtCursor = (base64: string, targetEl: HTMLElement, onSave: (content: string) => void) => {
+        targetEl.focus();
+        let range = lastSelectionRange.current;
+        if (!range || !targetEl.contains(range.commonAncestorContainer)) {
+             range = document.createRange();
+             range.selectNodeContents(targetEl);
+             range.collapse(false);
+        }
+        const img = document.createElement('img');
+        img.src = base64;
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '8px';
+        img.style.display = 'block';
+        img.style.margin = '8px 0';
+        img.style.cursor = 'pointer';
+        range.deleteContents();
+        range.insertNode(img);
+        range.setStartAfter(img);
+        range.setEndAfter(img);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        onSave(targetEl.innerHTML); 
+  };
+
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+        const target = e.target as HTMLElement;
+        if (!target.isContentEditable) return;
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                e.preventDefault();
+                const blob = items[i].getAsFile();
+                if (blob) {
+                    try {
+                        const compressedBase64 = await processImage(blob);
+                        if (isEditing && editContentRef.current && target === editContentRef.current) insertImageAtCursor(compressedBase64, editContentRef.current, saveEditHistorySnapshot);
+                        else if (contentEditableRef.current && target === contentEditableRef.current) insertImageAtCursor(compressedBase64, contentEditableRef.current, saveHistorySnapshot);
+                    } catch (err) { console.error("Image paste failed", err); }
+                }
+            }
+        }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isEditing]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          try {
+              const compressedBase64 = await processImage(file);
+              if (isEditing && editContentRef.current) insertImageAtCursor(compressedBase64, editContentRef.current, saveEditHistorySnapshot);
+              else if (contentEditableRef.current) insertImageAtCursor(compressedBase64, contentEditableRef.current, saveHistorySnapshot);
+          } catch (err) { console.error("Image upload failed", err); }
+          e.target.value = '';
+      }
+  };
+
+  const execCmd = (command: string, value: string | undefined = undefined) => {
+      document.execCommand(command, false, value);
+      if (contentEditableRef.current && isExpanded && !isEditing) {
+          contentEditableRef.current.focus();
+          saveHistorySnapshot(contentEditableRef.current.innerHTML);
+      }
+      else if (editContentRef.current && isEditing) {
+          editContentRef.current.focus();
+          saveEditHistorySnapshot(editContentRef.current.innerHTML);
+      }
+  };
+
+  const handleClearStyle = (e: React.MouseEvent) => {
+      e.preventDefault();
+      execCmd('removeFormat');
+      execCmd('formatBlock', 'div'); 
+  };
+
   const handleDump = async () => {
-    // If empty, just close
-    if (!creationContent.trim() && !creationTitle.trim() && !creationCover) {
-        setIsExpanded(false); 
-        return;
+    const rawHtml = contentEditableRef.current?.innerHTML || '';
+    const textContent = contentEditableRef.current?.innerText.trim() || '';
+    const hasImages = contentEditableRef.current?.querySelector('img');
+
+    if (!textContent && !hasImages && !title.trim()) {
+        setIsExpanded(false); setHistory(['']); setHistoryIndex(0); return;
     }
     
     setIsProcessing(true);
+    const markdownContent = htmlToMarkdown(rawHtml);
     let autoTags: string[] = [];
-    if (hasTagger && creationTags.length === 0 && creationContent.length > 20) {
-        autoTags = await autoTagNote(creationContent, config);
+    if (hasTagger && creationTags.length === 0 && markdownContent.length > 20) {
+        autoTags = await autoTagNote(markdownContent, config);
     }
     
     const newNote: Note = {
       id: Date.now().toString(),
-      title: creationTitle.trim() ? applyTypography(creationTitle.trim()) : undefined,
-      content: applyTypography(creationContent),
+      title: title.trim() ? applyTypography(title.trim()) : undefined,
+      content: markdownContent,
       tags: [...creationTags, ...autoTags],
       createdAt: Date.now(),
       status: 'inbox',
@@ -480,15 +1104,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       isPinned: false
     };
     addNote(newNote);
-    
-    // Reset
-    setCreationTitle('');
-    setCreationContent('');
-    setCreationColor('white');
-    setCreationCover(null);
-    setCreationTags([]);
-    setIsProcessing(false); 
-    setIsExpanded(false);
+    setTitle(''); setCreationColor('white'); setCreationCover(null);
+    if (contentEditableRef.current) contentEditableRef.current.innerHTML = '';
+    setHistory(['']); setHistoryIndex(0); setCreationTags([]);
+    setIsProcessing(false); setIsExpanded(false);
   };
 
   const handleMoodSearch = async () => {
@@ -547,13 +1166,43 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const handleOpenNote = (note: Note) => {
       setSelectedNote(note);
+      setEditTitle(note.title || '');
+      setEditTagsList(note.tags ? note.tags.map(t => t.replace(/^#/, '')) : []);
+      setEditCover(note.coverUrl || null);
+      const contentHtml = markdownToHtml(note.content);
+      setEditHistory([contentHtml]);
+      setEditHistoryIndex(0);
       setIsEditing(false);
+  };
+
+  const handleSaveEdit = () => {
+      if (selectedNote) {
+          const rawHtml = editContentRef.current?.innerHTML || '';
+          const markdownContent = htmlToMarkdown(rawHtml);
+          if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
+              const updated = { 
+                  ...selectedNote, 
+                  title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
+                  content: markdownContent, 
+                  tags: editTagsList,
+                  coverUrl: editCover || undefined 
+              };
+              updateNote(updated); setSelectedNote(updated); setIsEditing(false);
+          }
+      }
   };
 
   const togglePin = (e: React.MouseEvent, note: Note) => {
       e.stopPropagation();
       updateNote({ ...note, isPinned: !note.isPinned });
       if (selectedNote?.id === note.id) setSelectedNote({ ...selectedNote, isPinned: !note.isPinned });
+  };
+
+  const setColor = (colorId: string) => {
+      if (selectedNote) {
+          const updated = { ...selectedNote, color: colorId };
+          updateNote(updated); setSelectedNote(updated);
+      }
   };
 
   const filterNotes = (list: Note[]) => {
@@ -591,20 +1240,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem]);
 
   const markdownRenderComponents = {
-      p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
-      a: ({node, ...props}: any) => <a className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors font-sans" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
-      ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
-      ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
-      li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
-      h1: ({node, ...props}: any) => <h1 className="font-sans font-bold text-xl mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-      h2: ({node, ...props}: any) => <h2 className="font-sans font-bold text-lg mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-      h3: ({node, ...props}: any) => <h3 className="font-sans font-bold text-base mt-2 mb-1 text-slate-900 dark:text-slate-100" {...props} />,
-      blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 dark:border-slate-600 pl-4 italic text-slate-500 dark:text-slate-400 my-3 font-serif" {...props} />,
-      code: ({node, inline, className, children, ...props}: any) => {
-           return inline 
-              ? <code className="bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
-              : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-3 rounded-xl text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
-      },
+      ...markdownComponents,
       img: ({node, src, alt, ...props}: any) => (
           <img 
               src={src} 
@@ -614,8 +1250,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
               loading="lazy" 
               {...props} 
           />
-      ),
-      u: ({node, ...props}: any) => <u {...props} /> 
+      )
   };
 
   return (
@@ -643,6 +1278,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             <div 
                 ref={scrollContainerRef}
                 className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar-light"
+                onScroll={() => setActiveImage(null)}
             >
                 <motion.div 
                     className="sticky top-0 z-40 w-full mb-[-20px]"
@@ -724,47 +1360,63 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     {activeTab === 'inbox' && (
                         <>
                             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
-                                <div className="max-w-3xl mx-auto w-full mb-8">
-                                    {/* UNIVERSAL EDITOR REPLACEMENT */}
-                                    <div className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shadow-sm hover:shadow-md relative overflow-hidden ${isExpanded ? 'ring-2 ring-indigo-500/20 shadow-xl z-30' : ''}`}>
-                                        <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
+                                <div className="max-w-3xl mx-auto w-full">
+                                    <div ref={editorRef} className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative mb-8 ${isExpanded ? 'shadow-xl z-30' : 'shadow-sm hover:shadow-md'}`}>
+                                        <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0 rounded-3xl"></div>
                                         
                                         {!isExpanded ? (
-                                            <div onClick={() => setIsExpanded(true)} className="p-5 text-slate-400 dark:text-slate-500 cursor-text text-base font-medium flex items-center justify-between relative z-10">
-                                                <span>Заметка...</span>
-                                                <div className="flex gap-4 text-slate-300 hover:text-slate-400 transition-colors">
-                                                    <PenTool size={20} /><ImageIcon size={20} />
-                                                </div>
-                                            </div>
+                                            <div onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }} className="p-5 text-slate-400 dark:text-slate-500 cursor-text text-base font-medium flex items-center justify-between relative z-10"><span>Заметка...</span><div className="flex gap-4 text-slate-300 hover:text-slate-400 transition-colors"><PenTool size={20} /><ImageIcon size={20} /></div></div>
                                         ) : (
-                                            <div className="relative z-10 p-2">
-                                                <UniversalEditor 
-                                                    initialContent={creationContent}
-                                                    onChange={setCreationContent}
-                                                    title={creationTitle}
-                                                    onTitleChange={setCreationTitle}
-                                                    tags={creationTags}
-                                                    onTagsChange={setCreationTags}
-                                                    existingTags={allExistingTags}
-                                                    coverUrl={creationCover || undefined}
-                                                    onCoverChange={setCreationCover}
-                                                    color={creationColor}
-                                                    onColorChange={setCreationColor}
-                                                    placeholder="О чём ты думаешь?"
-                                                    autoFocus
-                                                    extensions={{
-                                                        formatting: true,
-                                                        images: true,
-                                                        tags: true,
-                                                        color: true,
-                                                        cover: true
-                                                    }}
+                                            <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
+                                                {creationCover && <div className="relative w-full h-32 md:h-48 group rounded-t-3xl overflow-hidden"><img src={creationCover} alt="Cover" className="w-full h-full object-cover" /><button onClick={() => setCreationCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button></div>}
+                                                <input type="text" placeholder="Название" value={title} onChange={(e) => setTitle(e.target.value)} className="px-6 pt-6 pb-2 bg-transparent text-xl font-sans font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none" />
+                                                <div 
+                                                    ref={contentEditableRef} 
+                                                    contentEditable 
+                                                    onInput={handleEditorInput} 
+                                                    onClick={handleEditorClick} 
+                                                    onBlur={saveSelection} 
+                                                    onMouseUp={saveSelection} 
+                                                    onKeyUp={saveSelection} 
+                                                    className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-serif [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                                    style={{ whiteSpace: 'pre-wrap' }} 
+                                                    data-placeholder="О чём ты думаешь?" 
                                                 />
-                                                <div className="flex justify-between items-center px-2 pb-2 mt-2">
-                                                    <button onClick={() => { setIsExpanded(false); setCreationContent(''); setCreationTitle(''); setCreationCover(null); setCreationTags([]); }} className="text-xs font-medium text-slate-400 hover:text-slate-600 px-4 py-2">Отмена</button>
-                                                    <button onClick={handleDump} disabled={isProcessing} className="text-xs font-bold uppercase tracking-wider px-6 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-black rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50">
-                                                        {isProcessing ? 'Thinking...' : 'Сохранить'}
-                                                    </button>
+                                                <div className="px-6 py-2"><TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} /></div>
+                                                <div className="flex items-center justify-between px-4 py-3 gap-2 bg-transparent">
+                                                    <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
+                                                        <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button></Tooltip>
+                                                        <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={18} /></button></Tooltip>
+                                                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                        <Tooltip content="Заголовок 1"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading1 size={18} /></button></Tooltip>
+                                                        <Tooltip content="Заголовок 2"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Heading2 size={18} /></button></Tooltip>
+                                                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                        <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button></Tooltip>
+                                                        <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button></Tooltip>
+                                                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                        <Tooltip content="Очистить форматирование"><button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button></Tooltip>
+                                                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                        <Tooltip content="Вставить картинку"><label className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={18} /></label></Tooltip>
+                                                        {activeImage && !isEditing && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors"><Trash2 size={18} /></button></Tooltip>}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <div className="relative">
+                                                            <Tooltip content="Обложка"><button ref={creationCoverBtnRef} onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button></Tooltip>
+                                                            {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationCoverBtnRef} />}
+                                                        </div>
+                                                        <div className="relative">
+                                                            <Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>
+                                                            {showColorPicker && (
+                                                                <>
+                                                                    <div className="fixed inset-0 z-40" onClick={() => setShowColorPicker(false)} />
+                                                                    <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                                        {colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                        <button onClick={handleDump} disabled={isProcessing} className="text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors disabled:opacity-50">Закрыть</button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
@@ -867,7 +1519,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             className="flex-1 flex items-center justify-center text-center"
                         >
                             <div className="font-serif text-2xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-200">
-                                <ReactMarkdown components={{...markdownRenderComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                                     {oracleNote.content}
                                 </ReactMarkdown>
                             </div>
@@ -902,13 +1554,23 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                     className="w-full max-w-lg bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
+                    onScroll={() => setActiveImage(null)}
                 >
-                    {/* View Mode Header */}
-                    {!isEditing && (
-                        <>
-                            {selectedNote.coverUrl && <div className="h-40 w-full shrink-0 relative group -mx-10 -mt-10 mb-6 w-[calc(100%_+_5rem)] overflow-hidden"><img src={selectedNote.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>}
-                            <div className="flex justify-between items-start mb-4 gap-4 shrink-0">
-                                <div className="flex-1 pt-1 min-w-0">
+                    {(isEditing ? editCover : selectedNote.coverUrl) && <div className="h-40 w-full shrink-0 relative group -mx-10 -mt-10 mb-6 w-[calc(100%_+_5rem)] overflow-hidden"><img src={isEditing ? editCover! : selectedNote.coverUrl!} alt="Cover" className="w-full h-full object-cover" />{isEditing && <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button>}</div>}
+                    
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <div className="flex justify-between items-start mb-4 gap-4 shrink-0">
+                            <div className="flex-1 pt-1 min-w-0">
+                                {isEditing ? (
+                                    <div className="flex flex-col gap-2">
+                                        <input 
+                                            value={editTitle} 
+                                            onChange={(e) => setEditTitle(e.target.value)} 
+                                            className="w-full bg-transparent p-0 text-xl font-sans font-bold text-slate-900 dark:text-slate-100 border-none outline-none placeholder:text-slate-300" 
+                                            placeholder="Название" 
+                                        />
+                                    </div>
+                                ) : (
                                     <div className="flex flex-col gap-1">
                                         <div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1 opacity-50">
                                             <span>{new Date(selectedNote.createdAt).toLocaleDateString()}</span>
@@ -918,59 +1580,101 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         </div>
                                         {selectedNote.title ? <h2 className="font-sans text-2xl font-bold text-slate-900 dark:text-slate-200 leading-tight break-words">{selectedNote.title}</h2> : null}
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0 -mt-1">
-                                    <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить"}><button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-lg transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-transparent' : 'text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5'}`}><Pin size={16} className={selectedNote.isPinned ? "fill-current" : ""} /></button></Tooltip>
-                                    <Tooltip content="Редактировать"><button onClick={() => setIsEditing(true)} className="p-2 text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={16} /></button></Tooltip>
-                                    <Tooltip content="Удалить"><button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors"><Trash2 size={16} /></button></Tooltip>
-                                    <button onClick={() => setSelectedNote(null)} className="p-2 text-slate-300 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg ml-2"><X size={20}/></button>
-                                </div>
+                                )}
                             </div>
-                        </>
-                    )}
+                            <div className="flex items-center gap-1 shrink-0 -mt-1">
+                                {!isEditing && (
+                                    <>
+                                        <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить"}><button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-lg transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-transparent' : 'text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5'}`}><Pin size={16} className={selectedNote.isPinned ? "fill-current" : ""} /></button></Tooltip>
+                                        <Tooltip content="Редактировать"><button onClick={() => setIsEditing(true)} className="p-2 text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={16} /></button></Tooltip>
+                                        <Tooltip content="Удалить"><button onClick={() => { if(window.confirm('Удалить заметку?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors"><Trash2 size={16} /></button></Tooltip>
+                                    </>
+                                )}
+                                <button onClick={() => setSelectedNote(null)} className="p-2 text-slate-300 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg ml-2"><X size={20}/></button>
+                            </div>
+                        </div>
 
-                    {isEditing ? (
-                        <div className="flex-1 flex flex-col overflow-hidden -mx-6 -mt-6">
-                            <UniversalEditor 
-                                initialContent={selectedNote.content}
-                                title={selectedNote.title}
-                                coverUrl={selectedNote.coverUrl || undefined}
-                                tags={selectedNote.tags}
-                                existingTags={allExistingTags}
-                                color={selectedNote.color}
-                                onChange={(newContent) => updateNote({ ...selectedNote, content: newContent })}
-                                onTitleChange={(newTitle) => updateNote({ ...selectedNote, title: newTitle })}
-                                onCoverChange={(url) => updateNote({ ...selectedNote, coverUrl: url || undefined })}
-                                onColorChange={(color) => updateNote({ ...selectedNote, color })}
-                                onTagsChange={(tags) => updateNote({ ...selectedNote, tags })}
-                                className="h-full flex flex-col p-4"
-                                minHeight="300px"
-                                autoFocus
-                            />
-                            <div className="flex justify-end gap-4 p-4 border-t border-black/5 dark:border-white/5 bg-white dark:bg-[#1e293b]">
-                                <button onClick={() => setIsEditing(false)} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold">Готово</button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-1">
-                            <div className={`text-slate-800 dark:text-slate-200 text-base leading-relaxed font-serif font-normal min-h-[4rem] mb-6 ${!selectedNote.title ? 'mt-1' : ''}`}>
-                                <ReactMarkdown 
-                                    components={markdownRenderComponents} 
-                                    urlTransform={allowDataUrls} 
-                                    remarkPlugins={[remarkGfm]} 
-                                    rehypePlugins={[rehypeRaw]}
-                                >
-                                    {selectedNote.content.replace(/\n/g, '  \n')}
-                                </ReactMarkdown>
-                            </div>
-                            {selectedNote.tags && selectedNote.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-3 pt-4 border-t border-black/5 dark:border-white/5">
-                                    {selectedNote.tags.map(tag => <span key={tag} className="text-[9px] text-slate-500/80 dark:text-slate-400/80 font-sans uppercase tracking-[0.15em]">#{tag.replace(/^#/, '')}</span>)}
+                        {isEditing ? (
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                <div className="relative flex-1 overflow-hidden flex flex-col">
+                                    <div className="flex items-center justify-between mb-2 gap-2 shrink-0">
+                                        <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
+                                            <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
+                                            <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
+                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Очистить"><button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
+                                            {activeImage && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
+                                        </div>
+                                        <div className="shrink-0 relative flex gap-1">
+                                            <div className="relative">
+                                                <Tooltip content="Обложка"><button ref={editCoverBtnRef} onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 ${editCover ? 'text-indigo-500' : ''}`}><Layout size={16} /></button></Tooltip>
+                                                {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editCoverBtnRef} />}
+                                            </div>
+                                            <div className="relative">
+                                                <Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Palette size={16} /></button></Tooltip>
+                                                {showModalColorPicker && (
+                                                    <>
+                                                        <div className="fixed inset-0 z-40" onClick={() => setShowModalColorPicker(false)} />
+                                                        <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                            {colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div 
+                                        ref={editContentRef} 
+                                        contentEditable 
+                                        onInput={handleEditModalInput} 
+                                        onClick={handleEditorClick} 
+                                        onBlur={saveSelection} 
+                                        onMouseUp={saveSelection} 
+                                        onKeyUp={saveSelection} 
+                                        onScroll={() => setActiveImage(null)} 
+                                        className="w-full flex-1 bg-transparent p-1 text-base leading-relaxed text-slate-800 dark:text-slate-200 outline-none overflow-y-auto font-serif custom-scrollbar-ghost [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                    />
                                 </div>
-                            )}
-                            {(() => { const url = findFirstUrl(selectedNote.content); return url ? <div className="mt-6"><LinkPreview url={url} /></div> : null; })()}
-                        </div>
-                    )}
+                                <div className="pt-4 border-t border-black/5 dark:border-white/5 mt-2">
+                                    <TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} placeholder="Добавить теги..." variant="ghost" direction="up" />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-1">
+                                <div className={`text-slate-800 dark:text-slate-200 text-base leading-relaxed font-serif font-normal min-h-[4rem] mb-6 ${!selectedNote.title ? 'mt-1' : ''}`}>
+                                    {/* Enable Lightbox when clicking images in View mode */}
+                                    <ReactMarkdown 
+                                        components={{
+                                            ...markdownRenderComponents
+                                        }} 
+                                        urlTransform={allowDataUrls} 
+                                        remarkPlugins={[remarkGfm]} 
+                                        rehypePlugins={[rehypeRaw]}
+                                    >
+                                        {selectedNote.content.replace(/\n/g, '  \n')}
+                                    </ReactMarkdown>
+                                </div>
+                                {selectedNote.tags && selectedNote.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-3 pt-4 border-t border-black/5 dark:border-white/5">
+                                        {selectedNote.tags.map(tag => <span key={tag} className="text-[9px] text-slate-500/80 dark:text-slate-400/80 font-sans uppercase tracking-[0.15em]">#{tag.replace(/^#/, '')}</span>)}
+                                    </div>
+                                )}
+                                {(() => { const url = findFirstUrl(selectedNote.content); return url ? <div className="mt-6"><LinkPreview url={url} /></div> : null; })()}
+                            </div>
+                        )}
+                        
+                        {isEditing && (
+                            <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5 shrink-0">
+                                <button onClick={() => setIsEditing(false)} className="font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">Отмена</button>
+                                <button onClick={handleSaveEdit} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold">Сохранить</button>
+                            </div>
+                        )}
+                    </div>
                 </motion.div>
             </div>
         </AnimatePresence>

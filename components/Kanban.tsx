@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -7,10 +8,8 @@ import { getKanbanTherapy, generateTaskChallenge } from '../services/geminiServi
 import { CheckCircle2, MessageCircle, X, Zap, RotateCw, RotateCcw, Play, FileText, Check, Archive as ArchiveIcon, History, Trash2, Plus, Minus, Book, Save, ArrowDown, ArrowUp, Square, CheckSquare, Circle, XCircle, Kanban as KanbanIcon, ListTodo, Bot, Pin, GripVertical, ChevronUp, ChevronDown, Edit3, AlignLeft, Target, Trophy, Search, Rocket, Briefcase, Sprout, Heart, Hash, Clock, ChevronRight, Layout, Maximize2, Command, Palette, Bold, Italic, Eraser, Image as ImageIcon, Upload, RefreshCw, Shuffle, ArrowRight, Map, Gem } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { SPHERES, ICON_MAP } from '../constants';
-import { applyTypography } from '../utils/editorConverters'; // New Import
+import { SPHERES, ICON_MAP, applyTypography } from '../constants';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
-import UniversalEditor from './UniversalEditor'; // New Import
 
 interface Props {
   tasks: Task[];
@@ -32,6 +31,13 @@ const NEON_COLORS: Record<string, string> = {
     growth: '#00FFA3',       // Electric Mint
     relationships: '#FF007A' // Neon Rose
 };
+
+const UNSPLASH_PRESETS = [
+    'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=400&q=80', // Rain
+    'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&q=80', // Gradient
+    'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=400&q=80', // Dark Abstract
+    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80', // Nature
+];
 
 // Dot Grid Background Pattern
 const DOT_GRID_STYLE = {
@@ -66,6 +72,364 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
         });
     }
     return children;
+};
+
+// --- RICH TEXT HELPERS ---
+const processImage = (file: File | Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        if (!file.type.startsWith('image/')) {
+            reject(new Error('File is not an image'));
+            return;
+        }
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                const MAX_HEIGHT = 800;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    resolve(dataUrl);
+                } else {
+                    reject(new Error('Canvas context failed'));
+                }
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+};
+
+// --- Cover Picker Component ---
+const CoverPicker: React.FC<{ 
+    onSelect: (url: string) => void, 
+    onClose: () => void, 
+    triggerRef: React.RefObject<HTMLElement> 
+}> = ({ onSelect, onClose, triggerRef }) => {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS);
+    const [loading, setLoading] = useState(false);
+    const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
+    
+    useEffect(() => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const viewportH = window.innerHeight;
+            const viewportW = window.innerWidth;
+            const pickerHeight = 320; 
+            
+            const style: React.CSSProperties = {};
+            
+            // Vertical Logic
+            const spaceBelow = viewportH - rect.bottom;
+            if (spaceBelow < pickerHeight && rect.top > spaceBelow) {
+                // Flip Up
+                style.bottom = viewportH - rect.top + 8;
+                style.maxHeight = rect.top - 20;
+            } else {
+                // Normal Down
+                style.top = rect.bottom + 8;
+                style.maxHeight = spaceBelow - 20;
+            }
+
+            // Horizontal Logic
+            if (rect.left + 320 > viewportW) {
+                style.right = 16;
+            } else {
+                style.left = rect.left;
+            }
+            
+            setPickerStyle(style);
+        }
+    }, [triggerRef]);
+
+    const getUnsplashKey = () => {
+        const keys = [
+            'UNSPLASH_ACCESS_KEY', 
+            'VITE_UNSPLASH_ACCESS_KEY', 
+            'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY', 
+            'REACT_APP_UNSPLASH_ACCESS_KEY'
+        ];
+        for (const k of keys) {
+            // @ts-ignore
+            if (typeof process !== 'undefined' && process.env?.[k]) return process.env[k];
+            // @ts-ignore
+            if (typeof import.meta !== 'undefined' && import.meta.env?.[k]) return import.meta.env[k];
+        }
+        return '';
+    };
+
+    const searchUnsplash = async (q?: string) => {
+        const key = getUnsplashKey();
+        if (!key) {
+            if (q) alert("Ключ Unsplash не найден. Используйте встроенные пресеты.");
+            return;
+        }
+        
+        setLoading(true);
+        try {
+            const page = Math.floor(Math.random() * 10) + 1;
+            const endpoint = q 
+                ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&page=${page}&client_id=${key}`
+                : `https://api.unsplash.com/photos/random?count=20&client_id=${key}`;
+            
+            const res = await fetch(endpoint);
+            if (!res.ok) throw new Error("API Error");
+            const data = await res.json();
+            
+            const urls = q 
+                ? data.results.map((img: any) => img.urls.regular) 
+                : data.map((img: any) => img.urls.regular);
+            
+            setResults(urls);
+        } catch (e) {
+            console.error("Unsplash Fetch Error", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') searchUnsplash(query);
+    };
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            try { onSelect(await processImage(file)); onClose(); } catch (err) { console.error(err); }
+        }
+    };
+
+    return createPortal(
+        <>
+            <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+            <div 
+                className="fixed bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] w-80 flex flex-col gap-3 overflow-hidden" 
+                style={pickerStyle}
+                onMouseDown={e => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-center shrink-0"><span className="text-[10px] font-bold text-slate-400 uppercase">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
+                
+                <div className="relative shrink-0">
+                    <input 
+                        type="text" 
+                        placeholder="Поиск Unsplash..." 
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
+                    />
+                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <button 
+                        onClick={() => searchUnsplash(query)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
+                        title="Найти"
+                    >
+                        <ArrowRight size={12} />
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 overflow-y-auto custom-scrollbar-light min-h-[60px] flex-1">
+                    {loading ? (
+                        <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
+                            <RefreshCw size={16} className="animate-spin" />
+                        </div>
+                    ) : (
+                        results.map((url, i) => (
+                            <button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded-lg overflow-hidden border border-slate-100 dark:border-slate-700 hover:ring-2 hover:ring-indigo-500 relative group bg-slate-100">
+                                <img src={url} className="w-full h-full object-cover" loading="lazy" />
+                            </button>
+                        ))
+                    )}
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700 shrink-0">
+                    <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
+                        <Upload size={12} /> Своя 
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                    </label>
+                    <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg text-xs font-medium transition-colors text-slate-600 dark:text-slate-300">
+                        <Shuffle size={12} /> Случайные
+                    </button>
+                </div>
+            </div>
+        </>,
+        document.body
+    );
+};
+
+// --- Color Picker Component ---
+const ColorPickerPopover: React.FC<{ 
+    onSelect: (colorId: string) => void, 
+    onClose: () => void, 
+    triggerRef: React.RefObject<HTMLElement>,
+    direction?: 'up' | 'down' | 'auto'
+}> = ({ onSelect, onClose, triggerRef, direction = 'auto' }) => {
+    const [style, setStyle] = useState<React.CSSProperties>({});
+
+    useEffect(() => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const viewportH = window.innerHeight;
+            const viewportW = window.innerWidth;
+            
+            // Approximate size of picker
+            const height = 50; 
+            const width = 220; 
+
+            const topSpace = rect.top;
+            const bottomSpace = viewportH - rect.bottom;
+            
+            let top = rect.bottom + 8;
+            let left = rect.left;
+
+            // Logic to force UP if direction is 'up' OR if auto and not enough space below
+            const forceUp = direction === 'up';
+            const autoUp = direction === 'auto' && bottomSpace < height && topSpace > height;
+
+            if (forceUp || autoUp) {
+                top = rect.top - height - 8;
+            }
+
+            // Flip horizontally if right edge goes off screen
+            if (left + width > viewportW) {
+                left = viewportW - width - 16;
+            }
+
+            setStyle({
+                position: 'fixed',
+                top,
+                left,
+                zIndex: 9999
+            });
+        }
+    }, [triggerRef, direction]);
+
+    return createPortal(
+        <>
+            <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+            <div 
+                className="fixed bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-[9999] flex-wrap max-w-[200px]" 
+                style={style}
+                onMouseDown={e => e.stopPropagation()}
+            >
+                {colors.map(c => (
+                    <button 
+                        key={c.id} 
+                        onMouseDown={(e) => { e.preventDefault(); onSelect(c.id); onClose(); }} 
+                        className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform`} 
+                        style={{ backgroundColor: c.hex }} 
+                        title={c.id} 
+                    />
+                ))}
+            </div>
+        </>,
+        document.body
+    );
+};
+
+// --- IMPROVED MARKDOWN CONVERTERS ---
+
+const markdownToHtml = (md: string) => {
+    if (!md) return '';
+    let html = md;
+    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
+    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
+    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
+    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
+        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
+    });
+    
+    // Improved new line handling: Replace newlines with BR, but clean up around block elements
+    html = html.replace(/\n/g, '<br>');
+    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
+    return html;
+};
+
+const htmlToMarkdown = (html: string) => {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+
+    const wrap = (text: string, marker: string) => {
+        const match = text.match(/^([\s\u00A0]*)(.*?)([\s\u00A0]*)$/s);
+        if (match) {
+            if (!match[2]) return match[1] + match[3];
+            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
+        }
+        return text;
+    };
+
+    const walk = (node: Node): string => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return (node.textContent || '').replace(/\u00A0/g, ' ');
+        }
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            const tag = el.tagName.toLowerCase();
+            
+            if (tag === 'br') return '\n';
+            if (tag === 'img') return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
+            
+            let content = '';
+            el.childNodes.forEach(child => content += walk(child));
+            
+            // Robust Block Elements Handling
+            if (tag === 'div' || tag === 'p') {
+                const trimmed = content.trim();
+                return trimmed ? `${trimmed}\n` : '\n'; 
+            }
+            if (tag === 'li') return `\n- ${content.trim()}`;
+            if (tag === 'ul' || tag === 'ol') return `\n${content}\n`;
+            if (tag === 'blockquote') return `\n> ${content.trim()}\n`;
+
+            const styleBold = el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700;
+            const styleItalic = el.style.fontStyle === 'italic';
+
+            if (styleBold) return wrap(content, '**');
+            if (styleItalic) return wrap(content, '*');
+            
+            switch (tag) {
+                case 'b': case 'strong': return wrap(content, '**');
+                case 'i': case 'em': return wrap(content, '*');
+                case 'code': return `\`${content}\``;
+                case 'u': return `<u>${content}</u>`;
+                case 'h1': return `\n# ${content}\n`;
+                case 'h2': return `\n## ${content}\n`;
+                default: return content;
+            }
+        }
+        return '';
+    };
+    
+    let md = walk(temp);
+    md = md.replace(/\n{3,}/g, '\n\n').trim();
+    return applyTypography(md);
 };
 
 const formatForDisplay = (content: string) => {
@@ -207,6 +571,79 @@ const GhostSphereSelector: React.FC<{ selected: string[], onChange: (s: string[]
     );
 };
 
+const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const toggleSphere = (id: string) => {
+        if (selected.includes(id)) {
+            onChange(selected.filter(s => s !== id));
+        } else {
+            onChange([...selected, id]);
+        }
+    };
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all outline-none ${
+                  isOpen ? 'border-indigo-400 ring-2 ring-indigo-50 dark:ring-indigo-900 bg-white dark:bg-[#1e293b]' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-white dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                }`}
+            >
+                <div className="flex items-center gap-2 overflow-hidden">
+                    {selected.length > 0 ? (
+                        <>
+                            <div className="flex -space-x-1 shrink-0">
+                                {selected.map(s => {
+                                    const sp = SPHERES.find(x => x.id === s);
+                                    return sp ? <div key={s} className={`w-3 h-3 rounded-full ${sp.bg.replace('50', '400').replace('/30', '')}`}></div> : null;
+                                })}
+                            </div>
+                            <span className="text-sm font-medium text-[#2F3437] dark:text-slate-200 truncate">
+                                {selected.map(id => SPHERES.find(s => s.id === id)?.label).join(', ')}
+                            </span>
+                        </>
+                    ) : (
+                        <span className="text-sm text-[#6B6E70]">Выбери сферу</span>
+                    )}
+                </div>
+                <ChevronDown size={16} className={`text-[#6B6E70] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5">
+                    {SPHERES.map(s => {
+                        const isSelected = selected.includes(s.id);
+                        const Icon = ICON_MAP[s.icon];
+                        return (
+                            <button
+                                key={s.id}
+                                onClick={() => toggleSphere(s.id)}
+                                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                            >
+                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-[#6B6E70]'} />}
+                                <span className="flex-1">{s.label}</span>
+                                {isSelected && <Check size={14} className="text-indigo-500" />}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }> = ({ task, updateTask }) => {
     const [isOpen, setIsOpen] = useState(false);
     
@@ -290,6 +727,12 @@ const CollapsibleSection: React.FC<{
       )}
     </div>
   );
+};
+
+const getChallengeStats = (content: string) => {
+    const total = (content.match(/\[[xX ]\]/gm) || []).length;
+    const checked = (content.match(/\[[xX]\]/gm) || []).length;
+    return { total, checked, percent: total > 0 ? Math.round((checked / total) * 100) : 0 };
 };
 
 const InteractiveChallenge: React.FC<{ 
@@ -431,6 +874,94 @@ const StaticChallengeRenderer: React.FC<{
     return <>{renderedParts}</>;
 };
 
+// --- JOURNEY MODAL ---
+const JourneyModal = ({ task, journalEntries, onClose }: { task: Task, journalEntries: JournalEntry[], onClose: () => void }) => {
+    // Check for insight
+    const hasInsight = journalEntries.some(j => j.linkedTaskId === task.id && j.isInsight);
+    const sphere = task.spheres?.[0];
+    const sphereColor = sphere && NEON_COLORS[sphere] ? NEON_COLORS[sphere] : '#6366f1'; 
+
+    const stages = [
+        { id: 1, label: 'ХАОС', desc: 'Мысль зафиксирована в Дневнике/Заметках', active: true },
+        { id: 2, label: 'ЛОГОС', desc: 'Сформирован контекст и план действий', active: true },
+        { id: 3, label: 'ЭНЕРГИЯ', desc: 'Задача реализована в материальном мире', active: true },
+        { id: 4, label: 'СИНТЕЗ', desc: 'Опыт интегрирован в структуру личности', active: hasInsight }
+    ];
+
+    return (
+        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-[50px] flex items-center justify-center p-8" onClick={onClose}>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full max-w-4xl relative"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Close Button */}
+                <button onClick={onClose} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors">
+                    <X size={24} />
+                </button>
+
+                {/* Central Map */}
+                <div className="flex flex-col md:flex-row items-center justify-between relative py-20 px-10">
+                    
+                    {/* The Thread */}
+                    <div className="absolute left-10 right-10 top-1/2 h-[1px] bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 hidden md:block" />
+                    <div className="absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-slate-700 via-slate-500 to-slate-700 md:hidden" />
+                    
+                    {/* Pulse Animation */}
+                    <motion.div 
+                        className="absolute h-[3px] w-[20px] bg-white blur-[2px] rounded-full hidden md:block top-1/2 -mt-[1.5px]"
+                        animate={{ 
+                            left: ['0%', hasInsight ? '100%' : '75%'], 
+                            opacity: [0, 1, 0] 
+                        }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                    />
+
+                    {stages.map((stage, i) => (
+                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-6 group mb-8 md:mb-0">
+                            {/* Node */}
+                            <div className={`
+                                w-4 h-4 transition-all duration-500
+                                ${stage.id === 1 ? 'rounded-full border border-slate-400 bg-black' : ''}
+                                ${stage.id === 2 ? 'w-3 h-3 bg-slate-300 transform rotate-45' : ''}
+                                ${stage.id === 3 ? 'rounded-full' : ''}
+                                ${stage.id === 4 ? 'transform rotate-45' : ''}
+                            `}
+                            style={{ 
+                                backgroundColor: stage.id === 3 ? sphereColor : undefined,
+                                boxShadow: stage.id === 3 ? `0 0 15px ${sphereColor}` : undefined
+                            }}
+                            >
+                                {stage.id === 4 && (
+                                    <div className={`w-4 h-4 border border-indigo-500 transition-all duration-1000 ${stage.active ? 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.8)]' : 'bg-black'}`} />
+                                )}
+                            </div>
+
+                            {/* Label */}
+                            <div className="text-center">
+                                <div className="font-mono text-[10px] text-slate-300 uppercase tracking-[0.3em] mb-2">{stage.label}</div>
+                                <div className={`font-serif text-sm italic text-slate-400 max-w-[150px] leading-tight transition-opacity duration-500 ${stage.active ? 'opacity-100' : 'opacity-30'}`}>
+                                    {stage.desc}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                
+                {/* Footer Quote */}
+                <div className="text-center mt-8">
+                    <p className="font-mono text-[9px] text-slate-600 uppercase tracking-widest">
+                        Task ID: {task.id.slice(-4)}
+                    </p>
+                </div>
+
+            </motion.div>
+        </div>
+    )
+}
+
 const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
   const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details' | 'challenge'} | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<'todo' | 'doing' | 'done'>('todo');
@@ -449,17 +980,35 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   // NEW TASK CREATION STATE
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskContent, setNewTaskContent] = useState('');
   const [creationCover, setCreationCover] = useState<string | null>(null);
   const [creationColor, setCreationColor] = useState('white');
+  const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
+  const [showCreationColorPicker, setShowCreationColorPicker] = useState(false);
+  const creationPickerTriggerRef = useRef<HTMLButtonElement>(null); 
+  const creationColorTriggerRef = useRef<HTMLButtonElement>(null);
   
+  // Creation Editor State
+  const [creationHistory, setCreationHistory] = useState<string[]>(['']);
+  const [creationHistoryIndex, setCreationHistoryIndex] = useState(0);
+  const creationContentRef = useRef<HTMLDivElement>(null);
+  const lastCreationSelection = useRef<Range | null>(null);
+
   // EDIT TASK STATE
   const [isEditingTask, setIsEditingTask] = useState(false);
-  // Separate states for editing task
-  const [editingTaskContent, setEditingTaskContent] = useState('');
-  const [editingTaskTitle, setEditingTaskTitle] = useState('');
-  const [editingTaskCover, setEditingTaskCover] = useState<string | null>(null);
-  const [editingTaskColor, setEditingTaskColor] = useState('white');
+  const [editTaskTitle, setEditTaskTitle] = useState('');
+  const [editCover, setEditCover] = useState<string | null>(null);
+  const [editColor, setEditColor] = useState('white');
+  const [showEditCoverPicker, setShowEditCoverPicker] = useState(false);
+  const [showEditColorPicker, setShowEditColorPicker] = useState(false);
+  const editPickerTriggerRef = useRef<HTMLButtonElement>(null); 
+  const editColorTriggerRef = useRef<HTMLButtonElement>(null);
+  
+  // New Rich Text State for Edit Mode
+  const [editHistory, setEditHistory] = useState<string[]>(['']);
+  const [editHistoryIndex, setEditHistoryIndex] = useState(0);
+  const editContentEditableRef = useRef<HTMLDivElement>(null);
+  const editHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasInitializedEditRef = useRef(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -481,6 +1030,108 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   const hasKanbanTherapist = useMemo(() => config.aiTools.some(t => t.id === 'kanban_therapist'), [config.aiTools]);
 
   const baseActiveTasks = tasks.filter(t => !t.isArchived);
+
+  // Creation Editor Helpers
+  const saveCreationSnapshot = useCallback((content: string) => {
+      if (content === creationHistory[creationHistoryIndex]) return;
+      const newHistory = creationHistory.slice(0, creationHistoryIndex + 1);
+      newHistory.push(content);
+      if (newHistory.length > 20) newHistory.shift();
+      setCreationHistory(newHistory);
+      setCreationHistoryIndex(newHistory.length - 1);
+  }, [creationHistory, creationHistoryIndex]);
+
+  const handleCreationInput = () => {
+      if (creationContentRef.current) {
+          saveCreationSnapshot(creationContentRef.current.innerHTML);
+      }
+  };
+
+  const execCreationCmd = (command: string, value: string | undefined = undefined) => {
+      document.execCommand(command, false, value);
+      if (creationContentRef.current) {
+          creationContentRef.current.focus();
+          saveCreationSnapshot(creationContentRef.current.innerHTML);
+      }
+  };
+  
+  const handleClearCreationStyle = (e: React.MouseEvent) => {
+      e.preventDefault();
+      execCreationCmd('removeFormat');
+      execCreationCmd('formatBlock', 'div'); 
+  };
+
+  const saveCreationSelection = () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && creationContentRef.current && creationContentRef.current.contains(sel.anchorNode)) {
+          lastCreationSelection.current = sel.getRangeAt(0).cloneRange();
+      }
+  };
+
+  const execCreationUndo = () => {
+      if (creationHistoryIndex > 0) {
+          const prevIndex = creationHistoryIndex - 1;
+          setCreationHistoryIndex(prevIndex);
+          if (creationContentRef.current) creationContentRef.current.innerHTML = creationHistory[prevIndex];
+      }
+  };
+
+  const execCreationRedo = () => {
+      if (creationHistoryIndex < creationHistory.length - 1) {
+          const nextIndex = creationHistoryIndex + 1;
+          setCreationHistoryIndex(nextIndex);
+          if (creationContentRef.current) creationContentRef.current.innerHTML = creationHistory[nextIndex];
+      }
+  };
+
+  // --- EDIT MODE HELPERS ---
+  const saveEditSnapshot = useCallback((content: string) => {
+      if (content === editHistory[editHistoryIndex]) return;
+      const newHistory = editHistory.slice(0, editHistoryIndex + 1);
+      newHistory.push(content);
+      if (newHistory.length > 20) newHistory.shift();
+      setEditHistory(newHistory);
+      setEditHistoryIndex(newHistory.length - 1);
+  }, [editHistory, editHistoryIndex]);
+
+  const handleEditInput = useCallback(() => {
+      if (editHistoryTimeoutRef.current) clearTimeout(editHistoryTimeoutRef.current);
+      editHistoryTimeoutRef.current = setTimeout(() => {
+          if (editContentEditableRef.current) {
+              saveEditSnapshot(editContentEditableRef.current.innerHTML);
+          }
+      }, 500);
+  }, [saveEditSnapshot]);
+
+  const execEditCmd = (command: string, value: string | undefined = undefined) => {
+      document.execCommand(command, false, value);
+      if (editContentEditableRef.current) {
+          editContentEditableRef.current.focus();
+          saveEditSnapshot(editContentEditableRef.current.innerHTML);
+      }
+  };
+
+  const execEditUndo = () => {
+      if (editHistoryIndex > 0) {
+          const prevIndex = editHistoryIndex - 1;
+          setEditHistoryIndex(prevIndex);
+          if (editContentEditableRef.current) editContentEditableRef.current.innerHTML = editHistory[prevIndex];
+      }
+  };
+
+  const execEditRedo = () => {
+      if (editHistoryIndex < editHistory.length - 1) {
+          const nextIndex = editHistoryIndex + 1;
+          setEditHistoryIndex(nextIndex);
+          if (editContentEditableRef.current) editContentEditableRef.current.innerHTML = editHistory[nextIndex];
+      }
+  };
+  
+  const handleClearEditStyle = (e: React.MouseEvent) => {
+      e.preventDefault();
+      execEditCmd('removeFormat');
+      execEditCmd('formatBlock', 'div'); 
+  };
 
   // KEYBOARD SHORTCUT FOR SEARCH
   useEffect(() => {
@@ -534,16 +1185,35 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       if (activeModal?.type === 'details') {
           const task = tasks.find(t => t.id === activeModal.taskId);
           if (task) {
-              setEditingTaskTitle(task.title || '');
-              setEditingTaskContent(task.content || '');
-              setEditingTaskCover(task.coverUrl || null);
-              setEditingTaskColor(task.color || 'white');
+              setEditTaskTitle(task.title || '');
           }
       } else {
           setIsEditingTask(false);
           setShowHistory(false);
       }
   }, [activeModal, tasks]);
+
+  // Sync effect for Edit Mode Content
+  useEffect(() => {
+      if (isEditingTask && activeModal?.taskId) {
+          if (!hasInitializedEditRef.current) {
+               const task = tasks.find(t => t.id === activeModal.taskId);
+               if (task && editContentEditableRef.current) {
+                   setEditTaskTitle(task.title || '');
+                   setEditCover(task.coverUrl || null);
+                   setEditColor(task.color || 'white');
+                   
+                   const html = markdownToHtml(task.content);
+                   editContentEditableRef.current.innerHTML = html;
+                   setEditHistory([html]);
+                   setEditHistoryIndex(0);
+                   hasInitializedEditRef.current = true;
+               }
+          }
+      } else {
+          hasInitializedEditRef.current = false;
+      }
+  }, [isEditingTask, activeModal?.taskId, tasks]);
 
   const columns = [
     { id: 'todo', title: 'Нужно сделать' },
@@ -572,12 +1242,15 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
   };
 
   const handleCreateTask = () => {
-      if (!newTaskTitle.trim() && !newTaskContent.trim()) return;
+      const rawHtml = creationContentRef.current?.innerHTML || '';
+      const mdContent = htmlToMarkdown(rawHtml);
+      
+      if (!newTaskTitle.trim() && !mdContent.trim()) return;
       
       const newTask: Task = {
           id: Date.now().toString(),
           title: applyTypography(newTaskTitle.trim()),
-          content: applyTypography(newTaskContent),
+          content: mdContent,
           column: 'todo',
           createdAt: Date.now(),
           spheres: activeSphereFilter ? [activeSphereFilter] : [],
@@ -585,20 +1258,22 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
           color: creationColor
       };
       addTask(newTask);
-      
-      // Reset
       setNewTaskTitle('');
-      setNewTaskContent('');
       setCreationCover(null);
       setCreationColor('white');
+      if(creationContentRef.current) creationContentRef.current.innerHTML = '';
+      setCreationHistory(['']);
+      setCreationHistoryIndex(0);
       setIsCreatorOpen(false);
   };
 
   const cancelCreateTask = () => {
       setNewTaskTitle('');
-      setNewTaskContent('');
       setCreationCover(null);
       setCreationColor('white');
+      if(creationContentRef.current) creationContentRef.current.innerHTML = '';
+      setCreationHistory(['']);
+      setCreationHistoryIndex(0);
       setIsCreatorOpen(false);
   };
 
@@ -606,18 +1281,28 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
       const task = getTaskForModal();
       if (!task) return;
       
-      const content = editingTaskContent;
+      const rawHtml = editContentEditableRef.current?.innerHTML || '';
+      const content = htmlToMarkdown(rawHtml);
 
-      if (content !== task.content || editingTaskTitle.trim() !== task.title || editingTaskCover !== task.coverUrl || editingTaskColor !== task.color) {
+      if (content !== task.content || editTaskTitle.trim() !== task.title || editCover !== task.coverUrl || editColor !== task.color) {
           updateTask({ 
               ...task, 
-              title: applyTypography(editingTaskTitle.trim()), 
+              title: applyTypography(editTaskTitle.trim()), 
               content: applyTypography(content),
-              coverUrl: editingTaskCover || undefined,
-              color: editingTaskColor
+              coverUrl: editCover || undefined,
+              color: editColor
           });
       }
       setIsEditingTask(false);
+  };
+  
+  const handleTitleAutosave = () => {
+      const task = getTaskForModal();
+      if (!task) return;
+      const newTitle = applyTypography(editTaskTitle.trim());
+      if ((task.title || '') !== newTitle) {
+          updateTask({ ...task, title: newTitle });
+      }
   };
 
   const canMoveTask = (task: Task, targetColId: string): boolean => {
@@ -1015,33 +1700,78 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
              <div className="mb-4 px-1">
                 {!isCreatorOpen ? (
                     <button 
-                        onClick={() => setIsCreatorOpen(true)}
+                        onClick={() => { setIsCreatorOpen(true); setTimeout(() => creationContentRef.current?.focus(), 100); }}
                         className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-all uppercase tracking-wider font-mono"
                     >
                         <Plus size={14} /> NEW_TASK
                     </button>
                 ) : (
-                    <div className={`${getTaskColorClass(creationColor)} border border-slate-200 dark:border-slate-700 rounded-2xl p-2 shadow-lg animate-in slide-in-from-top-2 relative z-20`}>
-                        <UniversalEditor
-                            initialContent={newTaskContent}
-                            onChange={setNewTaskContent}
-                            title={newTaskTitle}
-                            onTitleChange={setNewTaskTitle}
-                            color={creationColor}
-                            onColorChange={setCreationColor}
-                            coverUrl={creationCover || undefined}
-                            onCoverChange={setCreationCover}
-                            placeholder="Контекст задачи..."
-                            autoFocus
-                            extensions={{
-                                formatting: true,
-                                images: true,
-                                color: true,
-                                cover: true
-                            }}
+                    <div className={`${getTaskColorClass(creationColor)} border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg animate-in slide-in-from-top-2 relative z-20`}>
+                        {creationCover && (
+                            <div className="relative w-full h-32 group rounded-t-xl overflow-hidden mb-2 -mt-4 -mx-4 w-[calc(100%_+_2rem)]">
+                                <img src={creationCover} alt="Cover" className="w-full h-full object-cover" />
+                                <button onClick={() => setCreationCover(null)} className="absolute top-2 right-2 bg-black/50 hover:bg-red-500 text-white p-1.5 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={14} /></button>
+                            </div>
+                        )}
+                        <div className="flex justify-between items-start mb-2">
+                            <input 
+                                type="text" 
+                                placeholder="Название" 
+                                className="w-full bg-transparent text-lg font-sans font-bold text-slate-900 dark:text-white outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                                value={newTaskTitle}
+                                onChange={e => setNewTaskTitle(e.target.value)}
+                                autoFocus
+                            />
+                            <button onClick={cancelCreateTask} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"><X size={20} /></button>
+                        </div>
+                        
+                        <div 
+                            ref={creationContentRef}
+                            contentEditable
+                            style={{ whiteSpace: 'pre-wrap' }}
+                            className="w-full min-h-[120px] max-h-[300px] overflow-y-auto outline-none text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-sans mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
+                            onInput={handleCreationInput}
+                            onBlur={() => saveCreationSelection()}
+                            onMouseUp={() => saveCreationSelection()}
+                            onKeyUp={() => saveCreationSelection()}
+                            data-placeholder="Контекст задачи..."
                         />
-                        <div className="flex justify-between items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700 mt-2 px-2 pb-1">
-                            <button onClick={cancelCreateTask} className="text-slate-400 hover:text-slate-600 p-1"><X size={20} /></button>
+
+                        {/* Toolbar */}
+                        <div className="flex items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-700 pt-3">
+                            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1 mask-fade-right">
+                                <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execCreationUndo(); }} disabled={creationHistoryIndex <= 0} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
+                                <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execCreationRedo(); }} disabled={creationHistoryIndex >= creationHistory.length - 1} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
+                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('bold'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
+                                <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('italic'); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
+                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                <Tooltip content="Очистить"><button onMouseDown={handleClearCreationStyle} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
+                                <div className="relative">
+                                    <Tooltip content="Обложка">
+                                        <button 
+                                            ref={creationPickerTriggerRef}
+                                            onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} 
+                                            className={`p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
+                                        >
+                                            <Layout size={16} />
+                                        </button>
+                                    </Tooltip>
+                                    {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationPickerTriggerRef} />}
+                                </div>
+                                <div className="relative">
+                                    <Tooltip content="Фон задачи">
+                                        <button 
+                                            ref={creationColorTriggerRef}
+                                            onMouseDown={(e) => { e.preventDefault(); setShowCreationColorPicker(!showCreationColorPicker); }} 
+                                            className={`p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors ${creationColor !== 'white' ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
+                                        >
+                                            <Palette size={16} />
+                                        </button>
+                                    </Tooltip>
+                                    {showCreationColorPicker && <ColorPickerPopover onSelect={setCreationColor} onClose={() => setShowCreationColorPicker(false)} triggerRef={creationColorTriggerRef} direction="up" />}
+                                </div>
+                            </div>
                             <button onClick={handleCreateTask} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors">
                                 <Plus size={20} />
                             </button>
@@ -1454,9 +2184,14 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     className="w-full max-w-lg bg-white/75 dark:bg-[#1e293b]/75 backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {(isEditingTask ? editingTaskCover : getTaskForModal()?.coverUrl) && (
+                    {(isEditingTask ? editCover : getTaskForModal()?.coverUrl) && (
                         <div className="h-40 w-full shrink-0 relative mb-6 -mx-8 -mt-8 w-[calc(100%_+_4rem)] group overflow-hidden">
-                            <img src={isEditingTask ? editingTaskCover! : getTaskForModal()!.coverUrl!} alt="Cover" className="w-full h-full object-cover" />
+                            <img src={isEditingTask ? editCover! : getTaskForModal()!.coverUrl!} alt="Cover" className="w-full h-full object-cover" />
+                            {isEditingTask && (
+                                <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                                    <X size={16} />
+                                </button>
+                            )}
                         </div>
                     )}
 
@@ -1467,7 +2202,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                 {new Date(getTaskForModal()?.createdAt || Date.now()).toLocaleDateString()} <span className="opacity-50 mx-1">/</span> ID: {(getTaskForModal()?.id || 'NEW').slice(-4)}
                             </div>
                             {activeModal.type === 'details' ? (
-                                !isEditingTask && (
+                                isEditingTask ? (
+                                    <input 
+                                        type="text" 
+                                        placeholder="Название" 
+                                        value={editTaskTitle} 
+                                        onChange={(e) => setEditTaskTitle(e.target.value)} 
+                                        className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full p-0 m-0 border-b border-transparent focus:border-slate-300 dark:focus:border-slate-600 transition-colors" 
+                                        autoFocus
+                                    />
+                                ) : (
                                     <h3 className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight break-words">
                                         {getTaskForModal()?.title || <span className="text-slate-300 dark:text-slate-600 italic">Без названия</span>}
                                     </h3>
@@ -1533,34 +2277,58 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     <div className="w-full h-px bg-black/5 dark:bg-white/5 mb-4" />
 
                                     {isEditingTask ? (
-                                        <div className="flex flex-col animate-in fade-in duration-200 relative z-10 -mx-6 -mt-6">
-                                            <UniversalEditor
-                                                initialContent={editingTaskContent}
-                                                onChange={setEditingTaskContent}
-                                                title={editingTaskTitle}
-                                                onTitleChange={setEditingTaskTitle}
-                                                coverUrl={editingTaskCover || undefined}
-                                                onCoverChange={setEditingTaskCover}
-                                                color={editingTaskColor}
-                                                onColorChange={setEditingTaskColor}
-                                                placeholder="Описание задачи..."
-                                                className="p-6"
-                                                minHeight="300px"
-                                                autoFocus
-                                                extensions={{
-                                                    formatting: true,
-                                                    images: true,
-                                                    cover: true,
-                                                    color: true
-                                                }}
+                                        <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
+                                            <div className="flex items-center justify-between mb-4 gap-2">
+                                                <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
+                                                    <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
+                                                    <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
+                                                    <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                                    <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
+                                                    <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
+                                                    <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                                    <Tooltip content="Очистить"><button onMouseDown={handleClearEditStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
+                                                    <div className="relative">
+                                                        <Tooltip content="Обложка">
+                                                            <button 
+                                                                ref={editPickerTriggerRef}
+                                                                onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} 
+                                                                className={`p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors ${editCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}
+                                                            >
+                                                                <Layout size={16} />
+                                                            </button>
+                                                        </Tooltip>
+                                                        {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editPickerTriggerRef} />}
+                                                    </div>
+                                                    <div className="relative">
+                                                        <Tooltip content="Фон задачи">
+                                                            <button 
+                                                                ref={editColorTriggerRef}
+                                                                onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} 
+                                                                className={`p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors ${editColor !== 'white' ? 'text-indigo-500' : ''}`}
+                                                            >
+                                                                <Palette size={16} />
+                                                            </button>
+                                                        </Tooltip>
+                                                        {showEditColorPicker && <ColorPickerPopover onSelect={setEditColor} onClose={() => setShowEditColorPicker(false)} triggerRef={editColorTriggerRef} />}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div 
+                                                key={activeModal.taskId}
+                                                ref={editContentEditableRef} 
+                                                contentEditable 
+                                                suppressContentEditableWarning={true}
+                                                style={{ whiteSpace: 'pre-wrap' }}
+                                                onInput={handleEditInput} 
+                                                className="w-full h-64 bg-transparent rounded-none p-0 text-base text-slate-700 dark:text-slate-300 border-none outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text custom-scrollbar-ghost"
+                                                data-placeholder="Описание задачи..." 
                                             />
-                                            
-                                            <div className="px-6 mt-4 pt-4 border-t border-black/5 dark:border-white/5">
+                                            <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
                                                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block tracking-widest font-mono">Сферы</label>
+                                                {/* Use Reused Ghost Selector */}
                                                 <GhostSphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
                                             </div>
-                                            
-                                            <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-6 border-t border-black/5 dark:border-white/5 mt-4 px-6 pb-6">
+                                            <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-6 border-t border-black/5 dark:border-white/5 mt-4">
                                                 <button onClick={() => setIsEditingTask(false)} className="px-5 py-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-mono text-[10px] uppercase tracking-widest">Отмена</button>
                                                 <button onClick={handleSaveTaskContent} className="px-6 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg font-mono text-[10px] uppercase tracking-widest font-bold flex items-center justify-center gap-2">Сохранить</button>
                                             </div>
