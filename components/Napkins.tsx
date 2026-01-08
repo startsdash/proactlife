@@ -675,9 +675,11 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     // Extract text for preview
     const previewText = useMemo(() => getPreviewContent(note.content), [note.content]);
     
-    // Extract images for thumbnails
+    // Extract images for thumbnails and calculate count
     const contentImages = useMemo(() => extractImages(note.content), [note.content]);
-    const thumbnailImages = contentImages.filter(img => img !== note.coverUrl).slice(0, 3);
+    const imagesToShow = contentImages.filter(img => img !== note.coverUrl);
+    const thumbnailImages = imagesToShow.slice(0, 3);
+    const remainingImagesCount = imagesToShow.length - thumbnailImages.length;
 
     const renderComponents = useMemo(() => ({
         ...markdownComponents,
@@ -766,8 +768,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
 
             <div className="p-8 pb-16 w-full flex-1 relative z-10">
                 <div className="block w-full mb-2">
-                    {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
-                    <div className="text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words relative max-h-[400px] mask-linear-fade">
+                    {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words pr-6 ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
+                    <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words relative max-h-[400px] mask-linear-fade ${!note.title ? 'pr-6' : ''}`}>
                         <ReactMarkdown 
                             components={renderComponents} 
                             urlTransform={allowDataUrls} 
@@ -786,7 +788,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                             'grid-cols-3'
                         }`}>
                             {thumbnailImages.map((img, i) => (
-                                <div key={i} className="relative bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                                <div key={i} className="relative bg-slate-100 dark:bg-slate-800 overflow-hidden group/image">
                                     <img 
                                         src={img} 
                                         alt="" 
@@ -797,6 +799,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                                         }`} 
                                         loading="lazy" 
                                     />
+                                    {/* Count Overlay */}
+                                    {i === thumbnailImages.length - 1 && remainingImagesCount > 0 && (
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-[2px]">
+                                            <span className="text-white font-sans font-bold text-lg tracking-wider">+{remainingImagesCount}</span>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
