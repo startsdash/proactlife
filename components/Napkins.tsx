@@ -75,15 +75,51 @@ const extractImages = (content: string): string[] => {
 };
 
 const getPreviewContent = (content: string) => {
-    // Preserve structure but remove images
+    // 1. Remove images
     let cleanText = content.replace(/!\[.*?\]\(.*?\)/g, '');
     
-    // Truncate if too long to prevent massive DOM
-    if (cleanText.length > 400) {
-        cleanText = cleanText.slice(0, 400) + '...';
+    // 2. Normalize spaces
+    cleanText = cleanText.replace(/\s+/g, ' ').trim();
+
+    // 3. Smart Truncation (2-3 sentences)
+    // Split by sentence terminators followed by space
+    const sentences = cleanText.match(/[^\.!\?]+[\.!\?]+(?=\s|$)/g) || [cleanText];
+    
+    // Determine how many sentences to show based on length
+    let limit = 0;
+    let sentenceCount = 0;
+    
+    // Try to get at least 2 sentences, up to 3, but watch char count
+    for (let s of sentences) {
+        if (sentenceCount >= 3) break; // Max 3 sentences
+        if (limit + s.length > 300 && sentenceCount >= 1) break; // If adding next makes it huge, stop
+        limit += s.length;
+        sentenceCount++;
+    }
+
+    let preview = sentences.slice(0, sentenceCount).join(' ');
+    
+    // Fallback if sentences detection failed or text is one giant block
+    if (preview.length === 0 && cleanText.length > 0) {
+        preview = cleanText;
+    }
+
+    // Hard cap at 300 chars to prevent overflow, but respect word boundaries
+    if (preview.length > 300) {
+        preview = preview.slice(0, 300);
+        const lastSpace = preview.lastIndexOf(' ');
+        if (lastSpace > 0) {
+            preview = preview.slice(0, lastSpace);
+        }
+    }
+
+    // Add ellipsis if we cut content
+    if (preview.length < cleanText.length) {
+        // Remove trailing punctuation before adding ellipsis
+        preview = preview.replace(/[\.!\?,\s]+$/, '') + '...';
     }
     
-    return cleanText;
+    return preview;
 };
 
 const processImage = (file: File | Blob): Promise<string> => {
@@ -326,7 +362,8 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
 
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
-    a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors font-sans text-sm" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
+    // Graphite Ghost Style Links
+    a: ({node, ...props}: any) => <a className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:underline cursor-pointer underline-offset-4 decoration-slate-300 dark:decoration-slate-600 transition-colors font-sans text-sm font-medium relative z-20 break-all" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
@@ -958,6 +995,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
         const target = event.target as HTMLElement;
         if (target.closest('.portal-popup')) return;
 
+        // Prevent closing if any picker is active
+        if (showCreationCoverPicker || showEditCoverPicker || showColorPicker || showModalColorPicker) return;
+
         if (editorRef.current && !editorRef.current.contains(target)) {
             if (isExpanded) {
                 if (target.closest('.color-picker-dropdown')) return;
@@ -968,7 +1008,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isExpanded]);
+  }, [isExpanded, showCreationCoverPicker, showEditCoverPicker, showColorPicker, showModalColorPicker]);
 
   useEffect(() => {
     if (isEditing && editContentRef.current && selectedNote) {
@@ -1590,7 +1630,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                             <span>{new Date(selectedNote.createdAt).toLocaleDateString()}</span>
                                             <span className="opacity-50 mx-2">|</span>
                                             <span>ID // {selectedNote.id.slice(-5).toLowerCase()}</span>
-                                            {selectedNote.isPinned && <Pin size={10} className="fill-current" />}
                                         </div>
                                         {selectedNote.title ? <h2 className="font-sans text-2xl font-bold text-slate-900 dark:text-slate-200 leading-tight break-words">{selectedNote.title}</h2> : null}
                                     </div>
