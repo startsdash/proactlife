@@ -38,6 +38,12 @@ const UNSPLASH_PRESETS = [
     'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80', // Nature
 ];
 
+// Dot Grid Background Pattern
+const DOT_GRID_STYLE = {
+    backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
+    backgroundSize: '24px 24px'
+};
+
 const colors = [
     { id: 'white', class: 'bg-white dark:bg-[#1e293b]', hex: '#ffffff' },
     { id: 'red', class: 'bg-red-50 dark:bg-red-900/20', hex: '#fef2f2' },
@@ -866,6 +872,94 @@ const StaticChallengeRenderer: React.FC<{
     flushBuffer('end');
     return <>{renderedParts}</>;
 };
+
+// --- JOURNEY MODAL ---
+const JourneyModal = ({ task, journalEntries, onClose }: { task: Task, journalEntries: JournalEntry[], onClose: () => void }) => {
+    // Check for insight
+    const hasInsight = journalEntries.some(j => j.linkedTaskId === task.id && j.isInsight);
+    const sphere = task.spheres?.[0];
+    const sphereColor = sphere && NEON_COLORS[sphere] ? NEON_COLORS[sphere] : '#6366f1'; 
+
+    const stages = [
+        { id: 1, label: 'ХАОС', desc: 'Мысль зафиксирована в Дневнике/Заметках', active: true },
+        { id: 2, label: 'ЛОГОС', desc: 'Сформирован контекст и план действий', active: true },
+        { id: 3, label: 'ЭНЕРГИЯ', desc: 'Задача реализована в материальном мире', active: true },
+        { id: 4, label: 'СИНТЕЗ', desc: 'Опыт интегрирован в структуру личности', active: hasInsight }
+    ];
+
+    return (
+        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-[50px] flex items-center justify-center p-8" onClick={onClose}>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full max-w-4xl relative"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Close Button */}
+                <button onClick={onClose} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors">
+                    <X size={24} />
+                </button>
+
+                {/* Central Map */}
+                <div className="flex flex-col md:flex-row items-center justify-between relative py-20 px-10">
+                    
+                    {/* The Thread */}
+                    <div className="absolute left-10 right-10 top-1/2 h-[1px] bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 hidden md:block" />
+                    <div className="absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-slate-700 via-slate-500 to-slate-700 md:hidden" />
+                    
+                    {/* Pulse Animation */}
+                    <motion.div 
+                        className="absolute h-[3px] w-[20px] bg-white blur-[2px] rounded-full hidden md:block top-1/2 -mt-[1.5px]"
+                        animate={{ 
+                            left: ['0%', hasInsight ? '100%' : '75%'], 
+                            opacity: [0, 1, 0] 
+                        }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                    />
+
+                    {stages.map((stage, i) => (
+                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-6 group mb-8 md:mb-0">
+                            {/* Node */}
+                            <div className={`
+                                w-4 h-4 transition-all duration-500
+                                ${stage.id === 1 ? 'rounded-full border border-slate-400 bg-black' : ''}
+                                ${stage.id === 2 ? 'w-3 h-3 bg-slate-300 transform rotate-45' : ''}
+                                ${stage.id === 3 ? 'rounded-full' : ''}
+                                ${stage.id === 4 ? 'transform rotate-45' : ''}
+                            `}
+                            style={{ 
+                                backgroundColor: stage.id === 3 ? sphereColor : undefined,
+                                boxShadow: stage.id === 3 ? `0 0 15px ${sphereColor}` : undefined
+                            }}
+                            >
+                                {stage.id === 4 && (
+                                    <div className={`w-4 h-4 border border-indigo-500 transition-all duration-1000 ${stage.active ? 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.8)]' : 'bg-black'}`} />
+                                )}
+                            </div>
+
+                            {/* Label */}
+                            <div className="text-center">
+                                <div className="font-mono text-[10px] text-slate-300 uppercase tracking-[0.3em] mb-2">{stage.label}</div>
+                                <div className={`font-serif text-sm italic text-slate-400 max-w-[150px] leading-tight transition-opacity duration-500 ${stage.active ? 'opacity-100' : 'opacity-30'}`}>
+                                    {stage.desc}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                
+                {/* Footer Quote */}
+                <div className="text-center mt-8">
+                    <p className="font-mono text-[9px] text-slate-600 uppercase tracking-widest">
+                        Task ID: {task.id.slice(-4)}
+                    </p>
+                </div>
+
+            </motion.div>
+        </div>
+    )
+}
 
 const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updateTask, deleteTask, reorderTask, archiveTask, onReflectInJournal, initialTaskId, onClearInitialTask }) => {
   const [activeModal, setActiveModal] = useState<{taskId: string, type: 'stuck' | 'reflect' | 'details' | 'challenge'} | null>(null);
@@ -1770,182 +1864,4 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     {task.activeChallenge && !task.isChallengeCompleted && !draftChallenge && (
                                         <div className="mt-2 mb-2">
                                             <button 
-                                                onClick={(e) => { e.stopPropagation(); setActiveModal({taskId: task.id, type: 'challenge'}); }}
-                                                className="w-full py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors flex items-center justify-center gap-2"
-                                            >
-                                                <Zap size={14} /> Открыть Челлендж
-                                            </button>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                            
-                            {/* Actions Footer */}
-                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="flex gap-1">
-                                    {hasKanbanTherapist && <button onClick={(e) => { e.stopPropagation(); openTherapy(e, task); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-indigo-500"><Bot size={14}/></button>}
-                                    <button onClick={(e) => { e.stopPropagation(); onReflectInJournal(task.id); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-indigo-500"><Book size={14}/></button>
-                                </div>
-                                <div className="flex gap-1">
-                                    {col.id !== 'done' && <button onClick={(e) => handleQuickComplete(e, task)} className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded text-slate-400 hover:text-emerald-500"><Check size={14}/></button>}
-                                    <button onClick={(e) => { e.stopPropagation(); if(confirm('В архив?')) archiveTask(task.id); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-600"><ArchiveIcon size={14}/></button>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                );
-            })}
-            </AnimatePresence>
-        </div>
-    </div>
-    );
-  };
-
-  const selectedTask = getTaskForModal();
-
-  return (
-    <div className="h-full flex flex-col md:flex-row bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
-        {/* Mobile Header / Search */}
-        <div className="md:hidden p-4 shrink-0 bg-white dark:bg-[#1e293b] border-b border-slate-200 dark:border-slate-700">
-             <div className="relative mb-3">
-                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
-                 <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Поиск..." className="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-sm outline-none" />
-             </div>
-             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                  {columns.map(c => (
-                      <button key={c.id} onClick={() => setActiveMobileTab(c.id as any)} className={getTabClass(c.id, activeMobileTab === c.id)}>{c.title}</button>
-                  ))}
-             </div>
-        </div>
-
-        {/* Desktop Search / Toolbar */}
-        <div className="hidden md:flex justify-between items-center px-6 py-4 shrink-0">
-             <div className="flex items-center gap-3">
-                 <h2 className="text-xl font-light text-slate-800 dark:text-slate-200">Спринты</h2>
-                 <div className="h-4 w-px bg-slate-300 dark:bg-slate-700" />
-                 <div className="relative w-64">
-                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
-                     <input ref={searchInputRef} type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Поиск (Ctrl+F)" className="w-full pl-9 pr-4 py-1.5 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-indigo-400 transition-colors" />
-                 </div>
-             </div>
-             <div className="flex items-center gap-2">
-                 <SphereSelector selected={activeSphereFilter ? [activeSphereFilter] : []} onChange={(s) => setActiveSphereFilter(s[0] || null)} />
-                 <button onClick={toggleSortOrder} className="p-2 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 hover:text-indigo-500 transition-colors">
-                     {sortOrder === 'desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
-                 </button>
-             </div>
-        </div>
-
-        <div className="flex-1 flex overflow-x-auto overflow-y-hidden px-2 md:px-6 pb-2 md:pb-6 gap-4 md:gap-6 snap-x">
-            {columns.map(col => (
-                <div key={col.id} className={`flex-1 min-w-[300px] h-full snap-center ${isMobile ? (activeMobileTab === col.id ? 'flex' : 'hidden') : 'flex'}`}>
-                    {renderColumn(col)}
-                </div>
-            ))}
-        </div>
-
-        {/* MODALS */}
-        {activeModal && selectedTask && (
-            <div className="fixed inset-0 z-[100] bg-slate-900/30 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseModal}>
-                <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                    
-                    {/* MODAL HEADER */}
-                    <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center shrink-0">
-                        <h3 className="font-bold text-slate-800 dark:text-white text-lg flex items-center gap-2">
-                            {activeModal.type === 'details' && <Edit3 size={18} className="text-indigo-500"/>}
-                            {activeModal.type === 'stuck' && <Bot size={18} className="text-amber-500"/>}
-                            {activeModal.type === 'challenge' && <Zap size={18} className="text-emerald-500"/>}
-                            {activeModal.type === 'details' ? 'Редактирование' : activeModal.type === 'stuck' ? 'Совет Наставника' : 'Челлендж'}
-                        </h3>
-                        <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
-                    </div>
-
-                    {/* MODAL CONTENT */}
-                    <div className="p-6 overflow-y-auto custom-scrollbar-light">
-                        {activeModal.type === 'details' && (
-                            <div className="space-y-4">
-                                <input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} onBlur={handleTitleAutosave} className="w-full text-xl font-bold bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-300" placeholder="Название задачи" />
-                                <div ref={editContentEditableRef} contentEditable className="min-h-[100px] outline-none text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-serif" onInput={handleEditInput} />
-                                
-                                <div className="flex gap-2">
-                                    <div className="relative"><Tooltip content="Обложка"><button ref={editPickerTriggerRef} onClick={() => setShowEditCoverPicker(!showEditCoverPicker)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500"><Layout size={16}/></button></Tooltip>{showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editPickerTriggerRef} />}</div>
-                                    <div className="relative"><Tooltip content="Цвет"><button ref={editColorTriggerRef} onClick={() => setShowEditColorPicker(!showEditColorPicker)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500"><Palette size={16}/></button></Tooltip>{showEditColorPicker && <ColorPickerPopover onSelect={setEditColor} onClose={() => setShowEditColorPicker(false)} triggerRef={editColorTriggerRef} />}</div>
-                                </div>
-
-                                <div className="flex justify-end gap-2 mt-4">
-                                    <button onClick={handleCloseModal} className="px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Отмена</button>
-                                    <button onClick={handleSaveTaskContent} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Сохранить</button>
-                                </div>
-                            </div>
-                        )}
-
-                        {activeModal.type === 'stuck' && (
-                            <div className="space-y-4">
-                                <p className="text-sm text-slate-600 dark:text-slate-400 italic">"{selectedTask.content}"</p>
-                                {aiResponse ? (
-                                    <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl text-sm text-slate-800 dark:text-indigo-100 leading-relaxed">
-                                        <ReactMarkdown>{aiResponse}</ReactMarkdown>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center py-8 text-slate-400">
-                                        <RefreshCw className="animate-spin mb-2" />
-                                        <span className="text-xs">Анализирую ситуацию...</span>
-                                    </div>
-                                )}
-                                {aiResponse && (
-                                    <div className="flex justify-end gap-2">
-                                        <button onClick={handleCloseModal} className="px-4 py-2 text-sm text-slate-500">Закрыть</button>
-                                        <button onClick={saveTherapyResponse} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg">Сохранить в историю</button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {activeModal.type === 'challenge' && (
-                            <div className="space-y-4">
-                                {draftChallenge ? (
-                                    <>
-                                        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800">
-                                            <div className="text-xs font-bold text-emerald-600 uppercase mb-2">Предложенный Челлендж</div>
-                                            <div className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
-                                                <ReactMarkdown>{draftChallenge}</ReactMarkdown>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-end gap-2">
-                                            <button onClick={() => setDraftChallenge(null)} className="px-4 py-2 text-sm text-slate-500">Отклонить</button>
-                                            <button onClick={acceptDraftChallenge} className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg">Принять вызов</button>
-                                        </div>
-                                    </>
-                                ) : selectedTask.activeChallenge && !selectedTask.isChallengeCompleted ? (
-                                    <div className="space-y-4">
-                                        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
-                                            <InteractiveChallenge 
-                                                content={selectedTask.activeChallenge} 
-                                                onToggle={(idx) => toggleChallengeCheckbox(idx, selectedTask)}
-                                                onPin={(idx) => handleToggleChallengeStepPin(idx)}
-                                                pinnedIndices={selectedTask.pinnedChallengeIndices}
-                                            />
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <button onClick={() => deleteActiveChallenge()} className="text-xs text-red-400 hover:text-red-600">Отменить челлендж</button>
-                                            <button onClick={() => toggleChallengeComplete()} className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700">Завершить</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <button onClick={(e) => generateChallenge(e, selectedTask.id, selectedTask.content)} className="px-6 py-3 bg-indigo-600 text-white rounded-xl shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2 mx-auto">
-                                            <Zap size={18} /> Сгенерировать Челлендж
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        )}
-    </div>
-  );
-};
-
-export default Kanban;
+                                                onClick={(e) => { e.stopPropagation(); setActiveModal({taskId: task.id, type:
