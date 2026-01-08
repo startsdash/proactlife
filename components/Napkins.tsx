@@ -11,7 +11,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -43,7 +43,7 @@ const colors = [
 ];
 
 const ORACLE_VIBES = [
-    { id: 'cosmos', icon: Sparkles, label: 'Инсайт', color: 'from-indigo-500 to-purple-600', text: 'text-indigo-100' },
+    { id: 'cosmos', icon: Gem, label: 'Инсайт', color: 'from-indigo-500 to-purple-600', text: 'text-indigo-100' },
     { id: 'fire', icon: Zap, label: 'Энергия', color: 'from-orange-500 to-red-600', text: 'text-orange-100' },
     { id: 'zen', icon: Circle, label: 'Дзен', color: 'from-emerald-500 to-teal-600', text: 'text-emerald-100' },
     { id: 'luck', icon: Dices, label: 'Случай', color: 'from-slate-700 to-slate-900', text: 'text-slate-200' },
@@ -1520,14 +1520,14 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="relative w-full max-w-2xl bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-[40px] shadow-2xl overflow-hidden border border-white/50 dark:border-white/10 flex flex-col min-h-[500px]"
+            className="relative w-full max-w-2xl bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-[40px] shadow-2xl overflow-hidden border border-white/50 dark:border-white/10 flex flex-col min-h-[500px] max-h-[85vh]"
             onClick={e => e.stopPropagation()}
           >
              <button onClick={closeOracle} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors z-20">
                  <X size={20} className="text-slate-400" />
              </button>
 
-             <div className="flex justify-center items-center gap-6 pt-8 pb-4 border-b border-transparent">
+             <div className="flex justify-center items-center gap-6 pt-8 pb-4 border-b border-transparent shrink-0">
                 {ORACLE_VIBES.map(vibe => (
                     <button 
                     key={vibe.id}
@@ -1540,7 +1540,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 ))}
              </div>
 
-             <div className="flex-1 flex flex-col relative">
+             <div className="flex-1 flex flex-col relative overflow-hidden">
                  {oracleState === 'select' && (
                      <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500">
                          <Diamond size={24} strokeWidth={1} className="text-slate-300 mb-8" />
@@ -1566,7 +1566,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                  )}
 
                  {oracleState === 'result' && oracleNote && (
-                     <div className="flex-1 flex flex-col p-8 md:p-12 overflow-y-auto custom-scrollbar-ghost">
+                     <div className="flex-1 flex flex-col p-8 md:p-12 overflow-y-auto custom-scrollbar-ghost min-h-0">
                         <div className="flex justify-center mb-8 shrink-0">
                             <Diamond size={16} strokeWidth={1} className="text-indigo-500" />
                         </div>
@@ -1575,7 +1575,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 1, ease: "easeOut" }}
-                            className="flex-1 flex items-center justify-center text-center"
+                            className="my-auto text-center w-full"
                         >
                             <div className="font-serif text-2xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-200">
                                 <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
