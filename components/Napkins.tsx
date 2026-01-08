@@ -75,36 +75,15 @@ const extractImages = (content: string): string[] => {
 };
 
 const getPreviewContent = (content: string) => {
+    // Preserve structure but remove images
     let cleanText = content.replace(/!\[.*?\]\(.*?\)/g, '');
-    cleanText = cleanText.replace(/#{1,6}\s/g, '');
-    cleanText = cleanText.replace(/\s+/g, ' ').trim();
-
-    if (!cleanText) return '';
-
-    const sentences = cleanText.match(/[^\.!\?]+[\.!\?]+(\s|$)/g);
-
-    if (!sentences) {
-        return cleanText.length > 150 ? cleanText.slice(0, 150).trim() + '...' : cleanText;
-    }
-
-    let preview = '';
-    const MAX_CHARS = 220; 
-
-    for (let i = 0; i < sentences.length && i < 3; i++) {
-        if ((preview + sentences[i]).length > MAX_CHARS) {
-            if (preview.length === 0) {
-                 return sentences[i].slice(0, MAX_CHARS).trim() + '...';
-            }
-            break; 
-        }
-        preview += sentences[i];
+    
+    // Truncate if too long to prevent massive DOM
+    if (cleanText.length > 400) {
+        cleanText = cleanText.slice(0, 400) + '...';
     }
     
-    if (preview.length < sentences.join('').length - 5) {
-        preview = preview.trim() + '...';
-    }
-
-    return preview.trim();
+    return cleanText;
 };
 
 const processImage = (file: File | Blob): Promise<string> => {
@@ -195,7 +174,7 @@ const htmlToMarkdown = (html: string) => {
                 case 'h2': return `\n## ${content}\n`;
                 // Improved block handling:
                 case 'div': return content ? `\n${content}` : '\n'; 
-                case 'p': return `\n\n${content}\n`;
+                case 'p': return `\n${content}\n`;
                 case 'br': return '\n';
                 case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
                 default: return content;
@@ -346,8 +325,8 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
 });
 
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0" {...props} />,
-    a: ({node, ...props}: any) => <a className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors font-sans" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
+    a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 hover:underline cursor-pointer underline-offset-2 break-all relative z-20 transition-colors font-sans" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
     li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
@@ -733,17 +712,19 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
             <div className="p-8 pb-16 w-full flex-1 relative z-10">
                 <div className="block w-full mb-2">
                     {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
-                    <div className="text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words">
+                    <div className="text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words relative max-h-[400px] mask-linear-fade">
                         <ReactMarkdown 
                             components={{
                                 img: () => null, 
-                                p: ({children}) => <p className="mb-2 last:mb-0 inline">{children}</p>
+                                p: ({children}) => <p className="mb-2 last:mb-0">{children}</p>,
+                                h1: ({children}) => <h3 className="font-bold text-base mt-2 mb-1">{children}</h3>,
+                                h2: ({children}) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
                             }} 
                             urlTransform={allowDataUrls} 
                             remarkPlugins={[remarkGfm]} 
                             rehypePlugins={[rehypeRaw]}
                         >
-                            {previewText}
+                            {previewText.replace(/\n/g, '  \n')}
                         </ReactMarkdown>
                     </div>
                     
