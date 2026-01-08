@@ -160,7 +160,7 @@ const findFirstUrl = (text: string): string | null => {
     return match ? match[0] : null;
 };
 
-// --- HTML <-> Markdown Converters ---
+// --- HTML <-> Markdown Converters (IMPROVED) ---
 
 const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
@@ -193,7 +193,8 @@ const htmlToMarkdown = (html: string) => {
                 case 'code': return `\`${content}\``;
                 case 'h1': return `\n# ${content}\n`;
                 case 'h2': return `\n## ${content}\n`;
-                case 'div': return `\n${content}`; 
+                // Improved block handling:
+                case 'div': return content ? `\n${content}` : '\n'; 
                 case 'p': return `\n\n${content}\n`;
                 case 'br': return '\n';
                 case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
@@ -204,6 +205,7 @@ const htmlToMarkdown = (html: string) => {
     };
     
     let md = walk(temp);
+    // Cleanup aggressive newlines but keep paragraphs
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
@@ -212,20 +214,33 @@ const htmlToMarkdown = (html: string) => {
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
+    
+    // Headers
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    
+    // Formatting
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
     html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
     html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
     html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
     
-    html = html.replace(/\n/g, '<br>');
-    html = html.replace(/(<\/h1>|<\/h2>|<\/p>|<\/div>)<br>/gi, '$1');
-    return html;
+    // Improved Line Breaks: Wrap loose lines in divs to simulate standard contentEditable behavior
+    const lines = html.split('\n');
+    const processedLines = lines.map(line => {
+        // Leave block elements alone
+        if (line.match(/^<(h1|h2|div|p|ul|ol|li|blockquote)/i)) return line;
+        // Wrap text lines in div
+        return line.trim() ? `<div>${line}</div>` : '<div><br></div>';
+    });
+    
+    return processedLines.join('');
 };
 
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
@@ -373,7 +388,11 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
             }
         };
         
-        const handleScroll = () => {
+        const handleScroll = (event: Event) => {
+            // Fix: Check if scrolling happens inside the dropdown
+            if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
+                return;
+            }
             if (isOpen) setIsOpen(false);
         };
 
@@ -446,7 +465,7 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
             {isOpen && hasContent && createPortal(
                 <div 
                     ref={dropdownRef}
-                    className="fixed bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-75 portal-popup"
+                    className="fixed bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-75 portal-popup custom-scrollbar-ghost"
                     style={dropdownStyle}
                     onMouseDown={(e) => e.stopPropagation()} 
                 >
@@ -1602,6 +1621,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                             <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
                                             <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
                                             <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Заголовок 1"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H1'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Heading1 size={16} /></button></Tooltip>
+                                            <Tooltip content="Заголовок 2"><button onMouseDown={(e) => { e.preventDefault(); execCmd('formatBlock', 'H2'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Heading2 size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
                                             <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
                                             <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
                                             <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
@@ -1637,7 +1659,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         onMouseUp={saveSelection} 
                                         onKeyUp={saveSelection} 
                                         onScroll={() => setActiveImage(null)} 
-                                        className="w-full flex-1 bg-transparent p-1 text-base leading-relaxed text-slate-800 dark:text-slate-200 outline-none overflow-y-auto font-serif custom-scrollbar-ghost [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                        className="w-full flex-1 bg-transparent p-1 text-base leading-relaxed text-slate-800 dark:text-slate-200 outline-none overflow-y-auto font-serif custom-scrollbar-ghost [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
                                     />
                                 </div>
                                 <div className="pt-4 border-t border-black/5 dark:border-white/5 mt-2">
