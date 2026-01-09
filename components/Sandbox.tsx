@@ -168,13 +168,13 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
             </div>
         </div>
 
-        {/* LEFT PANEL: KNOWLEDGE INCUBATOR (Vertical Timeline) */}
+        {/* LEFT PANEL: HUB (Vertical Timeline) */}
         <div className="w-80 flex flex-col border-r border-slate-200/50 dark:border-white/5 bg-white/30 dark:bg-[#0f172a]/30 backdrop-blur-sm z-10">
-            <div className="p-6 pb-2 border-b border-slate-100 dark:border-white/5">
-                <h2 className="font-serif text-xl font-bold text-slate-800 dark:text-slate-100 tracking-tight mb-1">Инкубатор</h2>
-                <div className="flex justify-between items-center">
-                    <span className="font-sans text-[10px] uppercase tracking-widest text-slate-400">Входящие мысли</span>
-                    <span className="font-mono text-[10px] text-slate-300 dark:text-slate-600">{incomingNotes.length}</span>
+            <div className="px-6 pt-8 pb-6 border-b border-slate-100 dark:border-white/5">
+                <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Хаб</h1>
+                <div className="flex justify-between items-center mt-2">
+                    <p className="text-slate-500 dark:text-slate-400 text-sm font-sans">Коворкинг с лучшими</p>
+                    <span className="font-mono text-[10px] text-slate-300 dark:text-slate-600 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{incomingNotes.length}</span>
                 </div>
             </div>
             
@@ -319,7 +319,6 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                                         onClick={handleAnalyze}
                                         className="px-8 py-4 border border-slate-300 dark:border-slate-600 rounded-full text-xs font-mono uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-500 active:scale-95 flex items-center gap-3"
                                     >
-                                        <Sparkles size={14} strokeWidth={1} />
                                         [ СИНТЕЗ ]
                                     </button>
                                 </div>
