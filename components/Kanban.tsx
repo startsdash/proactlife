@@ -714,7 +714,7 @@ const CollapsibleSection: React.FC<{
         </div>
         <div className="flex items-center gap-3">
             {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
-            <div className="text-slate-300 dark:text-slate-600">
+            <div className="text-slate-500 dark:text-slate-400 group-hover/header:text-indigo-500 transition-colors">
                 {isOpen ? <Minus size={12} /> : <Plus size={12} />}
             </div>
         </div>
