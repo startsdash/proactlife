@@ -1,4 +1,5 @@
 
+// ... imports ... (Keep existing imports)
 import React, { useState, useMemo, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Note, Task, Flashcard, AppConfig } from '../types';
@@ -78,10 +79,21 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
       setIsAnalyzing(true);
       try {
         const result = await analyzeSandboxItem(activeNote.content, mentorId, config);
-        setAnalysis(result);
-      } finally {
+        // Only set result if we are still analyzing (user didn't cancel)
+        setIsAnalyzing(prev => {
+            if (prev) {
+                setAnalysis(result);
+                return false;
+            }
+            return false;
+        });
+      } catch (e) {
         setIsAnalyzing(false);
       }
+  };
+
+  const handleStopAnalysis = () => {
+      setIsAnalyzing(false);
   };
 
   const handleAcceptTask = () => {
@@ -94,11 +106,9 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
       column: 'todo',
       createdAt: Date.now()
     });
-    if(confirm("Задача создана. Архивировать мысль?")) {
-        onProcessNote(activeNote.id);
-        setSelectedNoteId(null);
-        setAnalysis(null);
-    }
+    
+    // UPDATED: Keep note in sandbox, just notify user
+    alert("Задача создана");
   };
 
   const handleAcceptCard = () => {
@@ -324,15 +334,19 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                                 </div>
                             )}
 
-                            {/* LOADING */}
+                            {/* UPDATED LOADING STATE */}
                             {isAnalyzing && (
-                                <div className="flex flex-col items-center py-12">
+                                <div 
+                                    className="flex flex-col items-center py-12 cursor-pointer group" 
+                                    onClick={handleStopAnalysis}
+                                    title="Нажмите, чтобы остановить"
+                                >
                                     <div className="relative">
                                         <div className="w-12 h-12 rounded-full border-2 border-indigo-100 dark:border-slate-800 animate-ping absolute inset-0" />
-                                        <div className="w-12 h-12 rounded-full border-2 border-t-indigo-500 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+                                        <div className="w-12 h-12 rounded-full border-2 border-t-indigo-500 border-r-transparent border-b-transparent border-l-transparent animate-spin group-hover:border-t-red-500 transition-colors" />
                                     </div>
-                                    <div className="mt-4 font-mono text-[10px] text-slate-400 uppercase tracking-widest animate-pulse">
-                                        Думаю...
+                                    <div className="mt-4 font-mono text-[10px] text-slate-400 uppercase tracking-widest animate-pulse group-hover:text-red-400 transition-colors">
+                                        Остановить
                                     </div>
                                 </div>
                             )}
