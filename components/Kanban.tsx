@@ -399,12 +399,16 @@ const htmlToMarkdown = (html: string) => {
             el.childNodes.forEach(child => content += walk(child));
             
             // Robust Block Elements Handling
-            if (tag === 'div' || tag === 'p') {
+            if (tag === 'p') {
                 const trimmed = content.trim();
-                // Ensure block elements have breathing room, especially if nested or following text
-                // Adding a newline before and after ensures they are treated as separate lines
                 return trimmed ? `\n${trimmed}\n` : '\n'; 
             }
+            if (tag === 'div') {
+                const trimmed = content.trim();
+                // Fix for extra spacing in Kanban cards: single newline for divs
+                return trimmed ? `\n${trimmed}` : '\n'; 
+            }
+
             if (tag === 'li') return `\n- ${content.trim()}`;
             if (tag === 'ul' || tag === 'ol') return `\n${content}\n`;
             if (tag === 'blockquote') return `\n> ${content.trim()}\n`;
@@ -1909,7 +1913,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             )}
 
                             <div className="mt-auto pt-3 flex items-end justify-between gap-2">
-                                <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-1 rounded-full border border border-black/5 dark:border-white/5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                    {col.id === 'todo' && (
                                         <Tooltip content="В работу">
                                             <button 
