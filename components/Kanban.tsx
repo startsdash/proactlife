@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -2156,7 +2157,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                         {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
                     </div>
                     <Tooltip content="Сферы" side="bottom"><button onClick={() => setShowSphereSelector(!showSphereSelector)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showSphereSelector || activeSphereFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Layout size={20} /></button></Tooltip>
-                    <Tooltip content={sortOrder === 'asc' ? "Сначала старые" : "Сначала новые"} side="bottom"><button onClick={toggleSortOrder} className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">{sortOrder === 'asc' ? <ArrowUp size={20} /> : <ArrowDown size={20} />}</button></Tooltip>
+                    <Tooltip content={sortOrder === 'asc' ? "Старые сверху" : "Новые сверху"} side="bottom"><button onClick={toggleSortOrder} className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">{sortOrder === 'asc' ? <ArrowUp size={20} /> : <ArrowDown size={20} />}</button></Tooltip>
                 </div>
                 {(showSphereSelector || activeSphereFilter) && (
                     <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200 scrollbar-none">
@@ -2320,7 +2321,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 suppressContentEditableWarning={true}
                                                 style={{ whiteSpace: 'pre-wrap' }}
                                                 onInput={handleEditInput} 
-                                                className="w-full h-64 bg-transparent rounded-none p-0 text-base text-slate-700 dark:text-slate-300 border-none outline-none overflow-y-auto font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text custom-scrollbar-ghost"
+                                                className="w-full min-h-[16rem] bg-transparent rounded-none p-0 text-base text-slate-700 dark:text-slate-300 border-none outline-none font-sans [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
                                                 data-placeholder="Описание задачи..." 
                                             />
                                             <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
