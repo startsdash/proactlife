@@ -332,7 +332,7 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                                         <div className="w-12 h-12 rounded-full border-2 border-t-indigo-500 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
                                     </div>
                                     <div className="mt-4 font-mono text-[10px] text-slate-400 uppercase tracking-widest animate-pulse">
-                                        Processing Logic...
+                                        Думаю...
                                     </div>
                                 </div>
                             )}
@@ -347,32 +347,34 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                                     {/* Verdict */}
                                     <GlassPod className="p-8 relative overflow-hidden">
                                         <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
-                                        <h3 className="font-sans text-xs font-bold uppercase tracking-widest text-indigo-500 mb-4 flex items-center gap-2">
-                                            <Zap size={14} /> Вердикт
+                                        <h3 className="font-sans text-xs font-bold uppercase tracking-widest text-slate-900 dark:text-white mb-4">
+                                            Вердикт
                                         </h3>
                                         <div className="font-serif text-lg leading-relaxed text-slate-800 dark:text-slate-200">
                                             <ReactMarkdown components={markdownComponents}>{analysis.analysis}</ReactMarkdown>
                                         </div>
                                         <div className="mt-6 flex justify-end">
-                                            <button onClick={() => setAnalysis(null)} className="text-slate-400 hover:text-slate-600 transition-colors p-2">
-                                                <RotateCw size={16} />
-                                            </button>
+                                            <Tooltip content="Сменить ментора">
+                                                <button onClick={() => setAnalysis(null)} className="text-slate-400 hover:text-slate-600 transition-colors p-2">
+                                                    <RotateCw size={16} />
+                                                </button>
+                                            </Tooltip>
                                         </div>
                                     </GlassPod>
 
                                     {/* Artifacts */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                                         {/* Task Artifact */}
                                         <motion.div 
                                             whileHover={{ y: -4, scale: 1.01 }}
-                                            className="group bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-emerald-400/50 transition-all shadow-sm hover:shadow-lg relative overflow-hidden cursor-default"
+                                            className="group bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-emerald-400/50 transition-all shadow-sm hover:shadow-lg relative overflow-hidden cursor-default h-full flex flex-col justify-between"
                                         >
                                             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                                 <Zap size={80} />
                                             </div>
-                                            <div className="relative z-10">
-                                                <div className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-3">Action Protocol</div>
-                                                <div className="font-serif italic text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6 line-clamp-4">
+                                            <div className="relative z-10 flex-1 flex flex-col">
+                                                <div className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-3">Протокол действия</div>
+                                                <div className="font-serif italic text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6 line-clamp-4 flex-1">
                                                     <ReactMarkdown components={markdownComponents}>{analysis.suggestedTask}</ReactMarkdown>
                                                 </div>
                                                 <button onClick={handleAcceptTask} className="w-full py-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold uppercase tracking-wider hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-200 transition-all flex items-center justify-center gap-2">
@@ -384,16 +386,18 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                                         {/* Skill Artifact */}
                                         <motion.div 
                                             whileHover={{ y: -4, scale: 1.01 }}
-                                            className="group bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-indigo-400/50 transition-all shadow-sm hover:shadow-lg relative overflow-hidden cursor-default"
+                                            className="group bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-indigo-400/50 transition-all shadow-sm hover:shadow-lg relative overflow-hidden cursor-default h-full flex flex-col justify-between"
                                         >
                                             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                                 <Diamond size={80} />
                                             </div>
-                                            <div className="relative z-10">
-                                                <div className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mb-3">Neural Node</div>
-                                                <div className="font-serif text-lg text-slate-800 dark:text-slate-100 mb-2">{analysis.suggestedFlashcardFront}</div>
-                                                <div className="h-px w-full bg-slate-100 dark:bg-white/5 my-3" />
-                                                <div className="font-serif italic text-sm text-slate-500 dark:text-slate-400 mb-6 line-clamp-3">{analysis.suggestedFlashcardBack}</div>
+                                            <div className="relative z-10 flex-1 flex flex-col">
+                                                <div className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mb-3">Нейросвязь</div>
+                                                <div className="flex-1 flex flex-col">
+                                                    <div className="font-serif text-lg text-slate-800 dark:text-slate-100 mb-2">{analysis.suggestedFlashcardFront}</div>
+                                                    <div className="h-px w-full bg-slate-100 dark:bg-white/5 my-3" />
+                                                    <div className="font-serif italic text-sm text-slate-500 dark:text-slate-400 mb-6 line-clamp-3">{analysis.suggestedFlashcardBack}</div>
+                                                </div>
                                                 
                                                 <button onClick={handleAcceptCard} className="w-full py-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold uppercase tracking-wider hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 transition-all flex items-center justify-center gap-2">
                                                     КРИСТАЛЛИЗОВАТЬ <Diamond size={14} />
