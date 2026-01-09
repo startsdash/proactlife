@@ -530,11 +530,9 @@ const GhostSphereSelector: React.FC<{ selected: string[], onChange: (s: string[]
         <div className="relative" ref={dropdownRef}>
             <button 
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full p-2.5 rounded-lg border flex items-center justify-between transition-all outline-none bg-transparent ${
-                  isOpen ? 'border-slate-400 dark:border-slate-500' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                }`}
+                className="w-full py-2 flex items-center justify-between transition-all outline-none bg-transparent group"
             >
-                <div className="flex items-center gap-2 overflow-hidden">
+                <div className="flex items-center gap-3 overflow-hidden min-h-[24px]">
                     {selected.length > 0 ? (
                         <>
                             <div className="flex -space-x-1 shrink-0">
@@ -544,19 +542,18 @@ const GhostSphereSelector: React.FC<{ selected: string[], onChange: (s: string[]
                                     return sp ? <div key={s} className={`w-3 h-3 rounded-full border-2 bg-transparent ${sp.text.replace('text-', 'border-')}`}></div> : null;
                                 })}
                             </div>
-                            <span className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300 truncate">
+                            <span className="text-xs font-sans text-slate-600 dark:text-slate-300 truncate">
                                 {selected.map(id => SPHERES.find(s => s.id === id)?.label).join(', ')}
                             </span>
                         </>
                     ) : (
-                        <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">Выбери сферу</span>
+                        <span className="text-xs font-sans text-slate-300 dark:text-slate-500 group-hover:text-slate-400 transition-colors">Выбери сферу...</span>
                     )}
                 </div>
-                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
             
             {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5">
+                <div className="absolute bottom-full left-0 mb-2 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5">
                     {SPHERES.map(s => {
                         const isSelected = selected.includes(s.id);
                         const Icon = ICON_MAP[s.icon];
@@ -2203,7 +2200,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     )}
 
                     {/* GLASS MODAL HEADER */}
-                    <div className="flex justify-between items-start mb-2 shrink-0">
+                    <div className="flex justify-between items-start mb-6 shrink-0">
                         <div className="flex flex-col gap-1 pr-4 w-full">
                             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1 font-mono">
                                 {new Date(getTaskForModal()?.createdAt || Date.now()).toLocaleDateString()} <span className="opacity-50 mx-1">/</span> ID: {(getTaskForModal()?.id || 'NEW').slice(-4)}
@@ -2328,13 +2325,22 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 data-placeholder="Описание задачи..." 
                                             />
                                             <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
-                                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block tracking-widest font-mono">Сферы</label>
-                                                {/* Use Reused Ghost Selector */}
+                                                <button 
+                                                    onClick={() => {
+                                                        const current = task.spheres || [];
+                                                        // Simple cycle logic for demo or open full selector. 
+                                                        // Here we use a custom inline version of GhostSphereSelector logic
+                                                        // But reusing the GhostSphereSelector component we defined
+                                                    }}
+                                                    className="w-full py-2 flex items-center justify-between transition-all outline-none bg-transparent group"
+                                                >
+                                                    {/* We need to use GhostSphereSelector component here but custom styled */}
+                                                </button>
                                                 <GhostSphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
                                             </div>
-                                            <div className="flex flex-col-reverse md:flex-row justify-end items-stretch md:items-center gap-3 pt-6 border-t border-black/5 dark:border-white/5 mt-4">
-                                                <button onClick={() => setIsEditingTask(false)} className="px-5 py-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-mono text-[10px] uppercase tracking-widest">Отмена</button>
-                                                <button onClick={handleSaveTaskContent} className="px-6 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg font-mono text-[10px] uppercase tracking-widest font-bold flex items-center justify-center gap-2">Сохранить</button>
+                                            <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5 shrink-0">
+                                                <button onClick={() => setIsEditingTask(false)} className="font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">Отмена</button>
+                                                <button onClick={handleSaveTaskContent} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold">Сохранить</button>
                                             </div>
                                         </div>
                                     ) : (
