@@ -43,69 +43,6 @@ const DotGridBackground = () => (
     />
 );
 
-interface AuraRingProps {
-    sphere: typeof SPHERES[0];
-    stats: { active: number, done: number };
-    colorClass: string;
-}
-
-const AuraRing: React.FC<AuraRingProps> = ({ sphere, stats, colorClass }) => {
-    // Pulse animation intensity based on count
-    const pulseScale = 1 + Math.min(0.2, stats.active * 0.02);
-    
-    // Scale bars visually (max 10 units for width calculation)
-    const solidWidth = Math.min(100, stats.done * 5);
-    const dottedWidth = Math.min(100, stats.active * 5);
-    
-    return (
-        <div className="flex flex-col items-center gap-3 relative group cursor-default">
-            <div className="relative w-16 h-16 flex items-center justify-center">
-                {/* Glow */}
-                <motion.div 
-                    animate={{ scale: [1, pulseScale, 1], opacity: [0.3, 0.6, 0.3] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    className={`absolute inset-0 rounded-full blur-xl ${sphere.bg.replace('50', '200').replace('dark:bg-', 'dark:bg-').replace('/30', '/20')}`}
-                />
-                
-                {/* Ring */}
-                <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-200 dark:text-slate-800" />
-                    <motion.circle 
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: Math.min(1, stats.active / 10) }} // 10 tasks = full ring
-                        transition={{ duration: 1.5, ease: "easeOut" }}
-                        cx="32" cy="32" r="30" 
-                        fill="none" stroke="currentColor" strokeWidth="1.5" 
-                        className={colorClass}
-                        strokeLinecap="round"
-                    />
-                </svg>
-
-                {/* Icon */}
-                <div className={`absolute inset-0 flex items-center justify-center ${colorClass}`}>
-                    {React.createElement(ICON_MAP[sphere.icon], { size: 20, strokeWidth: 1.5 })}
-                </div>
-            </div>
-            
-            <div className="text-center flex flex-col items-center">
-                <div className="font-sans text-[10px] font-bold uppercase tracking-widest text-slate-400">{sphere.label}</div>
-                
-                {/* Energy Bar: Solid (Done) + Dotted (Active) */}
-                <div className="flex items-center justify-center gap-0.5 mt-1.5 h-[2px] w-10 overflow-hidden opacity-60">
-                     <div 
-                        className={`h-full ${sphere.bg.replace('50', '400').replace('dark:bg-', 'dark:bg-').replace('/30', '')}`} 
-                        style={{ width: `${solidWidth}%`, minWidth: stats.done > 0 ? '4px' : '0' }} 
-                     />
-                     <div 
-                        className={`h-full border-t-[2px] border-dotted ${sphere.text.replace('text-', 'border-')}`} 
-                        style={{ width: `${dottedWidth}%`, minWidth: stats.active > 0 ? '4px' : '0' }} 
-                     />
-                </div>
-            </div>
-        </div>
-    );
-};
-
 interface GlassPodProps {
     children?: React.ReactNode;
     className?: string;
@@ -130,27 +67,6 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
 
   const incomingNotes = useMemo(() => notes.filter(n => n.status === 'sandbox'), [notes]);
   const activeNote = useMemo(() => notes.find(n => n.id === selectedNoteId), [notes, selectedNoteId]);
-
-  // Sphere Stats Calculation (Active vs Completed)
-  const sphereStats = useMemo(() => {
-      const stats = { 
-          productivity: { active: 0, done: 0 }, 
-          growth: { active: 0, done: 0 }, 
-          relationships: { active: 0, done: 0 } 
-      };
-      
-      tasks.forEach(t => {
-          const isDone = t.column === 'done' || t.isArchived;
-          t.spheres?.forEach(s => {
-              const key = s as keyof typeof stats;
-              if (stats[key] !== undefined) {
-                  if (isDone) stats[key].done++;
-                  else stats[key].active++;
-              }
-          });
-      });
-      return stats;
-  }, [tasks]);
 
   const flowData = useMemo(() => {
       const recentTasks = tasks.filter(t => t.createdAt > Date.now() - 7 * 86400000).length;
@@ -300,20 +216,6 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
         {/* MAIN PANEL: THE WORKBENCH */}
         <div className="flex-1 flex flex-col relative overflow-hidden">
             
-            {/* SPHERES DASHBOARD (Floating Top) */}
-            <div className="shrink-0 pt-8 px-8 pb-4 flex justify-center z-20">
-                <GlassPod className="px-10 py-6 flex gap-12 md:gap-16 items-center">
-                    {SPHERES.map(sphere => (
-                        <AuraRing 
-                            key={sphere.id} 
-                            sphere={sphere} 
-                            stats={sphereStats[sphere.id as keyof typeof sphereStats]} 
-                            colorClass={sphere.text}
-                        />
-                    ))}
-                </GlassPod>
-            </div>
-
             {/* CONTENT AREA */}
             <div className="flex-1 overflow-y-auto custom-scrollbar-light p-8 pb-24 relative z-10 flex flex-col items-center">
                 
@@ -371,39 +273,42 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                             exit={{ opacity: 0, y: -20 }}
                             className="w-full max-w-3xl"
                         >
-                            {/* NOTE CONTENT */}
-                            <div className="mb-12 relative">
-                                <div className="absolute -left-6 top-0 bottom-0 border-l border-indigo-500/20" />
-                                <div className="font-serif text-xl md:text-2xl leading-relaxed text-slate-800 dark:text-slate-100 pl-6">
+                            {/* NOTE CONTENT - INCOMING THOUGHT BLOCK */}
+                            <GlassPod className="mb-12 relative p-8">
+                                <div className="font-sans text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                                    <Box size={12} />
+                                    Входящая мысль
+                                </div>
+                                <div className="font-serif text-xl md:text-2xl leading-relaxed text-slate-800 dark:text-slate-100">
                                     <ReactMarkdown components={markdownComponents}>{activeNote?.content || ''}</ReactMarkdown>
                                 </div>
-                                <div className="pl-6 mt-4 flex gap-2">
+                                <div className="mt-4 flex gap-2">
                                     {activeNote?.tags.map(t => (
                                         <span key={t} className="font-mono text-[10px] text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded">
                                             {t}
                                         </span>
                                     ))}
                                 </div>
-                            </div>
+                            </GlassPod>
 
                             {/* MENTOR SELECTION */}
                             {!analysis && !isAnalyzing && (
-                                <div className="flex flex-col items-center gap-6 mb-12 animate-in fade-in slide-in-from-bottom-4">
-                                    <div className="flex gap-4 overflow-x-auto pb-4 max-w-full justify-center">
+                                <div className="flex flex-col items-center gap-8 mb-12 animate-in fade-in slide-in-from-bottom-4">
+                                    <div className="flex flex-wrap gap-6 justify-center max-w-2xl">
                                         {config.mentors.map(m => (
                                             <button
                                                 key={m.id}
                                                 onClick={() => setMentorId(m.id)}
-                                                className={`group relative p-1 rounded-full transition-all duration-300 ${mentorId === m.id ? 'scale-110 ring-1 ring-indigo-200 dark:ring-indigo-800' : 'opacity-50 hover:opacity-100 hover:scale-105'}`}
+                                                className={`group flex flex-col items-center gap-2 transition-all duration-300 ${mentorId === m.id ? 'opacity-100 scale-110' : 'opacity-50 hover:opacity-100 hover:scale-105'}`}
                                             >
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm ${mentorId === m.id ? 'shadow-indigo-500/20' : ''}`}>
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center bg-white dark:bg-slate-800 border-2 shadow-sm transition-colors ${mentorId === m.id ? 'border-indigo-500 dark:border-indigo-400 shadow-indigo-500/20' : 'border-slate-200 dark:border-slate-700'}`}>
                                                     {React.createElement(ICON_MAP[m.icon] || ICON_MAP['User'], { 
-                                                        size: 18, 
+                                                        size: 20, 
                                                         className: m.color,
                                                         strokeWidth: 1.5 
                                                     })}
                                                 </div>
-                                                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-bold uppercase tracking-wider whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity text-slate-500">
+                                                <div className={`text-[9px] font-bold uppercase tracking-wider whitespace-nowrap transition-colors ${mentorId === m.id ? 'text-indigo-600 dark:text-indigo-300' : 'text-slate-500'}`}>
                                                     {m.name}
                                                 </div>
                                             </button>
@@ -412,12 +317,10 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                                     
                                     <button 
                                         onClick={handleAnalyze}
-                                        className="group flex items-center gap-3 px-8 py-3 rounded-full bg-slate-900 dark:bg-white text-white dark:text-black shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+                                        className="px-8 py-4 border border-slate-300 dark:border-slate-600 rounded-full text-xs font-mono uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-500 active:scale-95 flex items-center gap-3"
                                     >
-                                        <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 3, repeat: Infinity }}>
-                                            <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
-                                        </motion.div>
-                                        <span className="text-xs font-bold uppercase tracking-[0.2em]">Синтез</span>
+                                        <Sparkles size={14} strokeWidth={1} />
+                                        [ СИНТЕЗ ]
                                     </button>
                                 </div>
                             )}
