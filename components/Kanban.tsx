@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -2185,7 +2186,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     onClick={(e) => e.stopPropagation()}
                 >
                     {(isEditingTask ? editCover : getTaskForModal()?.coverUrl) && (
-                        <div className="h-40 w-full shrink-0 relative mb-6 -mx-8 -mt-8 w-[calc(100%_+_4rem)] group overflow-hidden">
+                        <div className="h-40 shrink-0 relative mb-6 -mx-8 -mt-8 md:-mx-10 md:-mt-10 w-[calc(100%_+_4rem)] md:w-[calc(100%_+_5rem)] group overflow-hidden">
                             <img src={isEditingTask ? editCover! : getTaskForModal()!.coverUrl!} alt="Cover" className="w-full h-full object-cover" />
                             {isEditingTask && (
                                 <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100">
@@ -2196,7 +2197,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                     )}
 
                     {/* GLASS MODAL HEADER */}
-                    <div className="flex justify-between items-start mb-6 shrink-0 border-b border-black/5 dark:border-white/5 pb-4">
+                    <div className="flex justify-between items-start mb-2 shrink-0">
                         <div className="flex flex-col gap-1 pr-4 w-full">
                             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1 font-mono">
                                 {new Date(getTaskForModal()?.createdAt || Date.now()).toLocaleDateString()} <span className="opacity-50 mx-1">/</span> ID: {(getTaskForModal()?.id || 'NEW').slice(-4)}
@@ -2213,7 +2214,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     />
                                 ) : (
                                     <h3 className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight break-words">
-                                        {getTaskForModal()?.title || <span className="text-slate-300 dark:text-slate-600 italic">Без названия</span>}
+                                        {getTaskForModal()?.title}
                                     </h3>
                                 )
                             ) : (
@@ -2273,9 +2274,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
 
                             return (
                                 <div className="space-y-6">
-                                    {/* DESCRIPTION SEPARATOR */}
-                                    <div className="w-full h-px bg-black/5 dark:bg-white/5 mb-4" />
-
                                     {isEditingTask ? (
                                         <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
                                             <div className="flex items-center justify-between mb-4 gap-2">
