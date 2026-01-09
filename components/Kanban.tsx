@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -402,7 +400,9 @@ const htmlToMarkdown = (html: string) => {
             // Robust Block Elements Handling
             if (tag === 'div' || tag === 'p') {
                 const trimmed = content.trim();
-                return trimmed ? `${trimmed}\n` : '\n'; 
+                // Ensure block elements have breathing room, especially if nested or following text
+                // Adding a newline before and after ensures they are treated as separate lines
+                return trimmed ? `\n${trimmed}\n` : '\n'; 
             }
             if (tag === 'li') return `\n- ${content.trim()}`;
             if (tag === 'ul' || tag === 'ol') return `\n${content}\n`;
@@ -456,7 +456,7 @@ const HighlightedText = ({ text, highlight, className = "" }: { text: string, hi
 };
 
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-[#2F3437] dark:text-slate-300 leading-relaxed font-sans" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-[#2F3437] dark:text-slate-300 leading-relaxed font-sans whitespace-pre-wrap" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-[#2F3437] dark:text-slate-300" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-[#2F3437] dark:text-slate-300" {...props} />,
@@ -1655,7 +1655,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             {s.isCompleted && <Check size={10} className="text-white" strokeWidth={3} />}
                         </div>
                         
-                        <span className={`text-sm flex-1 break-words leading-relaxed transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-[#2F3437] dark:text-slate-200"}`}>{s.text}</span>
+                        <span className={`text-sm flex-1 break-words leading-relaxed whitespace-pre-wrap transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-[#2F3437] dark:text-slate-200"}`}>{s.text}</span>
                         
                         <button onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(s.id, task.id); }} className="text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"><X size={12}/></button>
                     </div>
@@ -2361,7 +2361,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                         {task.subtasks?.map(s => (
                                                             <div key={s.id} className="group flex items-start gap-3 p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-all duration-200 hover:translate-x-0.5 cursor-pointer relative" draggable={!isDone} onDragStart={!isDone ? (e) => handleSubtaskDragStart(e, s.id, task.id) : undefined} onDragOver={handleDragOver} onDrop={!isDone ? (e) => handleSubtaskDrop(e, s.id, task) : undefined} onClick={() => !isDone && handleToggleSubtask(s.id)}>
                                                                 <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-all duration-300 mt-0.5 ${s.isCompleted ? 'bg-indigo-500 border-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'border-slate-300 dark:border-slate-600 group-hover:border-indigo-400 bg-white dark:bg-transparent'}`}>{s.isCompleted && <Check size={12} className="text-white" strokeWidth={3} />}</div>
-                                                                <span className={`text-sm flex-1 break-words leading-relaxed transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-[#2F3437] dark:text-slate-200"}`}>{s.text}</span>
+                                                                <span className={`text-sm flex-1 break-words leading-relaxed whitespace-pre-wrap transition-all duration-300 ${s.isCompleted ? "text-slate-400 line-through opacity-50" : "text-[#2F3437] dark:text-slate-200"}`}>{s.text}</span>
                                                                 {!isDone && <button onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(s.id); }} className="text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"><X size={14}/></button>}
                                                             </div>
                                                         ))}
