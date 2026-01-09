@@ -458,6 +458,8 @@ const HighlightedText = ({ text, highlight, className = "" }: { text: string, hi
 
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-sm text-[#2F3437] dark:text-slate-300 leading-relaxed font-sans" {...props} />,
+    strong: ({node, ...props}: any) => <strong className="font-bold text-[#2F3437] dark:text-slate-200" {...props} />,
+    em: ({node, ...props}: any) => <em className="italic text-[#2F3437] dark:text-slate-300" {...props} />,
     a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-2 space-y-1 text-sm text-[#2F3437] dark:text-slate-300" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-sm text-[#2F3437] dark:text-slate-300" {...props} />,
