@@ -1,7 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import Masonry from 'react-masonry-css';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
@@ -24,13 +23,6 @@ interface Props {
   onClearInitialTask?: () => void;
   onNavigateToTask?: (taskId: string) => void;
 }
-
-const breakpointColumnsObj = {
-  default: 3,
-  1600: 3,
-  1100: 2,
-  700: 1
-};
 
 const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     if (typeof children === 'string') return children.replace(/:\s*$/, '');
@@ -661,7 +653,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
         {/* MAIN SCROLL AREA */}
         <div 
-            className="flex-1 flex flex-col relative overflow-y-auto custom-scrollbar-light"
+            className="flex-1 flex flex-col relative overflow-y-auto custom-scrollbar-light px-4 md:px-8 pb-20"
             ref={scrollContainerRef}
         >
              {/* Sticky Search/Toolbar */}
@@ -681,7 +673,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     />
                 </div>
                 
-                <div className="relative z-10 w-full px-4 md:px-8 pb-2">
+                <div className="max-w-4xl mx-auto w-full">
                      <div className="flex justify-between items-center mb-2">
                         {/* Tools (Right aligned) */}
                         <div className="flex items-center gap-2 ml-auto">
@@ -772,174 +764,196 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 </div>
              </motion.div>
 
-             <div className="w-full px-4 md:px-8 pb-20">
-                {/* CREATION BLOCK (COLLAPSIBLE) */}
-                <div className="max-w-3xl mx-auto w-full mb-10 z-30 relative" ref={creationRef}>
-                    {!isCreationExpanded ? (
-                        <div 
-                            onClick={() => setIsCreationExpanded(true)}
-                            className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-sm p-4 cursor-text flex items-center justify-between group hover:shadow-md transition-all"
-                        >
-                            <span className="text-slate-400 dark:text-slate-500 font-serif italic text-base pl-2">Записать мысль...</span>
-                            <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 group-hover:text-indigo-500 transition-colors">
-                                <PenTool size={18} />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-lg p-5 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200 relative">
-                            {/* Expanded Form */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
-                                        <Link size={10} strokeWidth={1} /> Контекст
-                                    </label>
-                                    <TaskSelect tasks={availableTasks} selectedId={linkedTaskId} onSelect={setLinkedTaskId} />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
-                                        <Target size={10} strokeWidth={1} /> Сферы
-                                    </label>
-                                    <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
-                                </div>
-                            </div>
-                            
-                            <div className="relative">
-                                <textarea 
-                                    className="w-full h-40 md:h-56 resize-none outline-none text-base text-slate-800 dark:text-slate-200 bg-transparent p-1 placeholder:text-slate-400/50 dark:placeholder:text-slate-500/50 font-serif leading-relaxed" 
-                                    placeholder="О чем ты думаешь? Чему научило это событие? (Markdown поддерживается)" 
-                                    value={content} 
-                                    onChange={(e) => setContent(e.target.value)} 
-                                    autoFocus
-                                />
-                                <div className="absolute bottom-0 left-0 w-full h-px bg-slate-200/50 dark:bg-slate-700/50" />
-                            </div>
-                            
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={handlePost} 
-                                    disabled={!content.trim()} 
-                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium text-sm transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
-                                >
-                                    <Send size={16} strokeWidth={1} /> 
-                                    <span className="font-serif">Записать мысль</span>
-                                </button>
-                                <button 
-                                    onClick={() => setIsCreationExpanded(false)} 
-                                    className="px-4 py-3 rounded-xl border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                                >
-                                    <X size={20} strokeWidth={1} />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {displayedEntries.length === 0 ? (
-                <div className="py-10">
-                    <EmptyState 
-                        icon={Book} 
-                        title="Страницы пусты" 
-                        description={searchQuery || hasActiveDateFilter ? 'Ничего не найдено по вашему запросу' : 'Записывай свои мысли, связывай их с задачами, чтобы отслеживать свой путь'}
-                        color="cyan"
-                    />
-                </div>
-                ) : (
-                    <Masonry
-                        breakpointCols={breakpointColumnsObj}
-                        className="my-masonry-grid"
-                        columnClassName="my-masonry-grid_column"
+             {/* CREATION BLOCK (COLLAPSIBLE) */}
+             <div className="max-w-4xl mx-auto w-full mb-10 z-30 relative" ref={creationRef}>
+                {!isCreationExpanded ? (
+                    <div 
+                        onClick={() => setIsCreationExpanded(true)}
+                        className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-sm p-4 cursor-text flex items-center justify-between group hover:shadow-md transition-all"
                     >
-                        {displayedEntries.map(entry => {
-                        const mentor = config.mentors.find(m => m.id === entry.mentorId);
-                        const isEditing = editingId === entry.id;
-                        const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
+                        <span className="text-slate-400 dark:text-slate-500 font-serif italic text-base pl-2">Записать мысль...</span>
+                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 group-hover:text-indigo-500 transition-colors">
+                            <PenTool size={18} />
+                        </div>
+                    </div>
+                ) : (
+                    <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-lg p-5 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200 relative">
+                        {/* Expanded Form */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
+                                    <Link size={10} strokeWidth={1} /> Контекст
+                                </label>
+                                <TaskSelect tasks={availableTasks} selectedId={linkedTaskId} onSelect={setLinkedTaskId} />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
+                                    <Target size={10} strokeWidth={1} /> Сферы
+                                </label>
+                                <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
+                            </div>
+                        </div>
                         
-                        const primarySphereId = entry.spheres?.[0];
-                        const sphereConfig = SPHERES.find(s => s.id === primarySphereId);
-                        const nodeColorClass = sphereConfig 
-                            ? sphereConfig.text.replace('text-', 'border-') 
-                            : 'border-slate-300 dark:border-slate-600';
+                        <div className="relative">
+                            <textarea 
+                                className="w-full h-40 md:h-56 resize-none outline-none text-base text-slate-800 dark:text-slate-200 bg-transparent p-1 placeholder:text-slate-400/50 dark:placeholder:text-slate-500/50 font-serif leading-relaxed" 
+                                placeholder="О чем ты думаешь? Чему научило это событие? (Markdown поддерживается)" 
+                                value={content} 
+                                onChange={(e) => setContent(e.target.value)} 
+                                autoFocus
+                            />
+                            <div className="absolute bottom-0 left-0 w-full h-px bg-slate-200/50 dark:bg-slate-700/50" />
+                        </div>
+                        
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={handlePost} 
+                                disabled={!content.trim()} 
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium text-sm transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
+                            >
+                                <Send size={16} strokeWidth={1} /> 
+                                <span className="font-serif">Записать мысль</span>
+                            </button>
+                            <button 
+                                onClick={() => setIsCreationExpanded(false)} 
+                                className="px-4 py-3 rounded-xl border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                            >
+                                <X size={20} strokeWidth={1} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+             </div>
 
-                        return (
+            {displayedEntries.length === 0 ? (
+            <div className="py-10">
+                <EmptyState 
+                    icon={Book} 
+                    title="Страницы пусты" 
+                    description={searchQuery || hasActiveDateFilter ? 'Ничего не найдено по вашему запросу' : 'Записывай свои мысли, связывай их с задачами, чтобы отслеживать свой путь'}
+                    color="cyan"
+                />
+            </div>
+            ) : (
+            <div className="max-w-4xl mx-auto w-full relative">
+                {/* The Ghost Line */}
+                <div className="absolute left-[3rem] md:left-[4rem] top-8 bottom-8 border-l border-slate-900/5 dark:border-white/5 width-px" />
+
+                <div className="space-y-8">
+                    {displayedEntries.map(entry => {
+                    const mentor = config.mentors.find(m => m.id === entry.mentorId);
+                    const isEditing = editingId === entry.id;
+                    const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
+                    
+                    const primarySphereId = entry.spheres?.[0];
+                    const sphereConfig = SPHERES.find(s => s.id === primarySphereId);
+                    const nodeColorClass = sphereConfig 
+                        ? sphereConfig.text.replace('text-', 'border-') 
+                        : 'border-slate-300 dark:border-slate-600';
+                    const iconColorClass = 'text-violet-500';
+
+                    return (
+                        <div key={entry.id} className="relative pl-20 md:pl-28 group">
+                            {/* Time Label */}
+                            <div className="absolute left-0 top-[2.25rem] w-[2.5rem] md:w-[3.5rem] text-right pr-2 select-none">
+                                <span className="font-mono text-[9px] text-slate-300 dark:text-slate-600 font-bold tracking-tighter block leading-none">
+                                    {formatTimelineDate(entry.date).split(' ')[0]}
+                                </span>
+                                <span className="font-mono text-slate-300 dark:text-slate-600 font-bold tracking-tighter block leading-none text-[8px] uppercase">
+                                    {formatTimelineDate(entry.date).split(' ')[1]}
+                                </span>
+                            </div>
+
+                            {/* Node Marker */}
+                            <div className="absolute left-[3rem] md:left-[4rem] top-[2.25rem] -translate-x-1/2 -translate-y-1/2 z-10 bg-[#f8fafc] dark:bg-[#0f172a] p-1.5 transition-colors duration-300">
+                                {entry.isInsight ? (
+                                    <Gem size={10} strokeWidth={2} className={iconColorClass} />
+                                ) : (
+                                    <div className={`w-1.5 h-1.5 rounded-full bg-transparent border-[1.5px] ${nodeColorClass}`} />
+                                )}
+                            </div>
+
+                            {/* Entry Card */}
                             <div 
-                                key={entry.id} 
                                 onClick={() => setSelectedEntryId(entry.id)} 
-                                className={`relative p-6 rounded-2xl border transition-all duration-300 group cursor-pointer mb-6 break-inside-avoid
+                                className={`relative p-6 md:p-8 rounded-2xl border transition-all duration-300 group cursor-pointer
                                     ${entry.isInsight 
                                         ? 'bg-gradient-to-br from-violet-50/80 via-fuchsia-50/50 to-white dark:from-violet-900/20 dark:via-fuchsia-900/10 dark:to-[#1e293b] border-violet-200/50 dark:border-violet-800/30 shadow-sm' 
                                         : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md'
                                     }
                                 `}
                             >
-                                {/* CARD HEADER */}
-                                <div className="flex justify-between items-center mb-4">
-                                    <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
-                                        <span>{formatDate(entry.date)}</span>
-                                    </div>
-
-                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                        {!isEditing && (
-                                            <button 
-                                                onClick={() => toggleInsight(entry)} 
-                                                className={`p-1.5 rounded-lg transition-all ${
-                                                    entry.isInsight 
-                                                    ? "text-violet-600 dark:text-violet-300 bg-gradient-to-tr from-violet-100 via-fuchsia-50 to-cyan-50 dark:from-violet-900/30 dark:via-fuchsia-900/20 dark:to-cyan-900/20 shadow-[0_0_12px_rgba(139,92,246,0.3)]" 
-                                                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                                                }`}
-                                            >
-                                                <Gem 
-                                                    size={16} 
-                                                    strokeWidth={1.5} 
-                                                    className={entry.isInsight ? "fill-violet-200/50" : "fill-transparent"} 
-                                                />
-                                            </button>
-                                        )}
-                                    </div>
+                            
+                            {/* CARD HEADER - ALIGNED */}
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
+                                    <span>{formatDate(entry.date)}</span>
                                 </div>
 
-                                {isEditing ? (
-                                    <div className="mb-4" onClick={(e) => e.stopPropagation()}>
-                                        <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
-                                        <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
-                                            <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
-                                            <button onClick={() => saveEdit(entry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
-                                        <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
-                                    </div>
-                                )}
-
-                                {/* Context Link */}
-                                {linkedTask && !isEditing && (
-                                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                    {!isEditing && (
                                         <button 
-                                            onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
-                                            className="font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                                            onClick={() => toggleInsight(entry)} 
+                                            className={`p-1.5 rounded-lg transition-all ${
+                                                entry.isInsight 
+                                                ? "text-violet-600 dark:text-violet-300 bg-gradient-to-tr from-violet-100 via-fuchsia-50 to-cyan-50 dark:from-violet-900/30 dark:via-fuchsia-900/20 dark:to-cyan-900/20 shadow-[0_0_12px_rgba(139,92,246,0.3)]" 
+                                                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                            }`}
                                         >
-                                            <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                                                [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{linkedTask.content}</span> ]
-                                            </span>
+                                            <Gem 
+                                                size={16} 
+                                                strokeWidth={1.5} 
+                                                className={entry.isInsight ? "fill-violet-200/50" : "fill-transparent"} 
+                                            />
                                         </button>
-                                    </div>
-                                )}
-
-                                {entry.aiFeedback && (
-                                    <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
-                                        <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
-                                    </div>
-                                    <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
-                        );
-                        })}
-                    </Masonry>
-                )}
+
+                            {isEditing ? (
+                                <div className="mb-4" onClick={(e) => e.stopPropagation()}>
+                                    <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
+                                    <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
+                                        <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
+                                        <button onClick={() => saveEdit(entry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
+                                    <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
+                                </div>
+                            )}
+
+                            {/* Context Link */}
+                            {linkedTask && !isEditing && (
+                                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
+                                        className="font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                                    >
+                                        <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                                            [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{linkedTask.content}</span> ]
+                                        </span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {entry.aiFeedback && (
+                                <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
+                                    <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
+                                </div>
+                                <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
+                                </div>
+                            )}
+                            </div>
+                        </div>
+                    );
+                    })}
+                </div>
             </div>
+            )}
         </div>
 
       {analysisResult && (
