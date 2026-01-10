@@ -677,16 +677,16 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     <div className="max-w-3xl mx-auto w-full">
                         <div className="flex gap-2">
                             <div className="relative flex-1 group">
-                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" strokeWidth={1} />
+                                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                                 <input 
                                     type="text" 
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="Поиск"
-                                    className="w-full pl-9 pr-8 py-2 bg-slate-100/50 dark:bg-slate-800/50 border border-transparent focus:border-slate-200 dark:focus:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-0 focus:bg-white dark:focus:bg-slate-800 transition-colors font-serif placeholder:font-sans shadow-sm"
+                                    className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-shadow shadow-sm placeholder:text-slate-400"
                                 />
                                 {searchQuery && (
-                                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={14} /></button>
+                                    <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>
                                 )}
                             </div>
                             
@@ -694,9 +694,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 <Tooltip content="Фильтр по дате">
                                     <button 
                                         onClick={() => setShowDatePicker(!showDatePicker)}
-                                        className={`p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square ${hasActiveDateFilter || showDatePicker ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400' : 'bg-white/80 dark:bg-[#1e293b]/80 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                                        className={`p-3 rounded-2xl border-none transition-all shadow-sm ${hasActiveDateFilter || showDatePicker ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
                                     >
-                                        <Calendar size={18} strokeWidth={1} />
+                                        <Calendar size={20} strokeWidth={1} />
                                         {hasActiveDateFilter && <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
                                     </button>
                                 </Tooltip>
@@ -721,9 +721,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                             <Tooltip content={sortOrder === 'desc' ? "Новые сверху" : "Старые сверху"}>
                                 <button 
                                     onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                                    className="p-2 rounded-xl border transition-all h-full flex items-center justify-center aspect-square bg-white/80 dark:bg-[#1e293b]/80 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"
+                                    className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
                                 >
-                                    {sortOrder === 'desc' ? <ArrowDown size={18} strokeWidth={1} /> : <ArrowUp size={18} strokeWidth={1} />}
+                                    {sortOrder === 'desc' ? <ArrowDown size={20} strokeWidth={1} /> : <ArrowUp size={20} strokeWidth={1} />}
                                 </button>
                             </Tooltip>
                         </div>
@@ -801,8 +801,8 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     <button 
                                         onClick={handleAnalyzePath} 
                                         disabled={displayedEntries.length === 0} 
-                                        className={`flex items-center justify-center p-3.5 rounded-2xl border transition-all shadow-sm ${
-                                            'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
+                                        className={`flex items-center justify-center p-3 rounded-2xl border-none transition-all shadow-sm ${
+                                            'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
                                         } ${isAnalyzing ? 'animate-pulse' : ''}`}
                                     >
                                         {isAnalyzing ? (
@@ -816,10 +816,10 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     </button>
                                 </Tooltip>
 
-                                <Tooltip content="История диалогов" side="bottom">
+                                <Tooltip content="Архив наставника" side="bottom">
                                     <button 
                                         onClick={() => setShowHistory(true)} 
-                                        className="flex items-center justify-center p-3.5 rounded-2xl border transition-all shadow-sm bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border-white/40 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800"
+                                        className="flex items-center justify-center p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
                                     >
                                         <History size={20} strokeWidth={1.5} />
                                     </button>
@@ -841,7 +841,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
             </div>
             ) : (
             <div className="w-full px-4 md:px-8">
-                <div className="w-full relative">
+                <div className="max-w-3xl mx-auto w-full relative">
                     {/* The Ghost Line */}
                     <div className="absolute left-[3rem] md:left-[4rem] top-8 bottom-8 border-l border-slate-900/5 dark:border-white/5 width-px" />
 
