@@ -206,22 +206,26 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                             />
                             
                             {/* Delete Button */}
-                            <button 
-                                onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    if(confirm('Удалить мысль?')) {
-                                        deleteNote(note.id);
-                                        if (selectedNoteId === note.id) {
-                                            setSelectedNoteId(null);
-                                            setAnalysis(null);
-                                        }
-                                    }
-                                }}
-                                className="absolute right-0 top-0 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                                title="Удалить"
+                            <Tooltip 
+                                content="Удалить мысль"
+                                className="absolute right-0 top-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
-                                <Trash2 size={14} />
-                            </button>
+                                <button 
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        if(confirm('Удалить мысль?')) {
+                                            deleteNote(note.id);
+                                            if (selectedNoteId === note.id) {
+                                                setSelectedNoteId(null);
+                                                setAnalysis(null);
+                                            }
+                                        }
+                                    }}
+                                    className="p-1 text-slate-300 hover:text-red-500 transition-colors"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </Tooltip>
 
                             <button 
                                 onClick={() => { setSelectedNoteId(note.id); setAnalysis(null); }}
