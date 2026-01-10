@@ -696,7 +696,7 @@ const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }
 };
 
 const CollapsibleSection: React.FC<{
-  title: string;
+  title: React.ReactNode | ((isOpen: boolean) => React.ReactNode);
   children: React.ReactNode;
   icon?: React.ReactNode;
   isCard?: boolean;
@@ -704,6 +704,7 @@ const CollapsibleSection: React.FC<{
   defaultOpen?: boolean;
 }> = ({ title, children, icon, isCard = false, actions, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const titleContent = typeof title === 'function' ? title(isOpen) : title;
 
   return (
     <div className={`${isCard ? 'bg-slate-50/50 dark:bg-slate-800/30 mb-2' : 'bg-transparent mb-4'} rounded-xl ${isCard ? 'border border-slate-100 dark:border-slate-700/50' : ''} overflow-hidden`}>
@@ -713,7 +714,7 @@ const CollapsibleSection: React.FC<{
       >
         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
            {icon}
-           {title}
+           {titleContent}
         </div>
         <div className="flex items-center gap-3">
             {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
@@ -1628,7 +1629,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     return (
     <div className="mt-2 mb-2">
         <CollapsibleSection
-            title={`Чек-лист ${subtasksTotal > 0 ? `(${subtasksDone}/${subtasksTotal})` : ''}`}
+            title={(isOpen) => `Чек-лист ${!isOpen && subtasksTotal > 0 ? `(${subtasksDone}/${subtasksTotal})` : ''}`}
             icon={<ListTodo size={12}/>}
             isCard
         >
@@ -2135,6 +2136,48 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     )
   }
 
+  // --- UPDATED CollapsibleSection (supports dynamic title) ---
+  const CollapsibleSection: React.FC<{
+    title: React.ReactNode | ((isOpen: boolean) => React.ReactNode);
+    children: React.ReactNode;
+    icon?: React.ReactNode;
+    isCard?: boolean;
+    actions?: React.ReactNode;
+    defaultOpen?: boolean;
+  }> = ({ title, children, icon, isCard = false, actions, defaultOpen = false }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+    
+    // Determine title content based on state
+    const titleContent = typeof title === 'function' ? title(isOpen) : title;
+
+    return (
+      <div className={`${isCard ? 'bg-slate-50/50 dark:bg-slate-800/30 mb-2' : 'bg-transparent mb-4'} rounded-xl ${isCard ? 'border border-slate-100 dark:border-slate-700/50' : ''} overflow-hidden`}>
+        <div 
+          onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} 
+          className={`w-full flex items-center justify-between ${isCard ? 'p-2' : 'p-0 pb-2'} cursor-pointer ${isCard ? 'hover:bg-slate-100/50 dark:hover:bg-slate-700/30' : ''} transition-colors group/header`}
+        >
+          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+             {icon}
+             {titleContent}
+          </div>
+          <div className="flex items-center gap-3">
+              {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
+              <div className="text-slate-500 dark:text-slate-400 group-hover/header:text-indigo-500 transition-colors">
+                  {isOpen ? <Minus size={12} /> : <Plus size={12} />}
+              </div>
+          </div>
+        </div>
+        {isOpen && (
+          <div className={`${isCard ? 'px-2 pb-2' : 'px-0 pb-2'} pt-0 animate-in slide-in-from-top-1 duration-200`}>
+             <div className={`pt-2 ${isCard ? 'border-t border-slate-200/30 dark:border-slate-700/30' : ''} text-sm`}>
+               {children}
+             </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div ref={scrollContainerRef} className="flex flex-col h-full relative overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
       <div className="w-full px-4 md:px-8 pt-4 md:pt-8 mb-6">
@@ -2377,7 +2420,10 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             )}
 
                                             {(task.subtasks && task.subtasks.length > 0 || !isDone) && (
-                                                <CollapsibleSection title={`Чек-лист ${subtasksTotal > 0 ? `(${subtasksDone}/${subtasksTotal})` : ''}`} icon={<ListTodo size={14}/>}>
+                                                <CollapsibleSection 
+                                                    title={(isOpen) => `Чек-лист ${!isOpen && subtasksTotal > 0 ? `(${subtasksDone}/${subtasksTotal})` : ''}`} 
+                                                    icon={<ListTodo size={14}/>}
+                                                >
                                                     {subtasksTotal > 0 && <SegmentedProgressBar total={subtasksTotal} current={subtasksDone} color={sphereColorClass} />}
                                                     <div className="space-y-1">
                                                         {task.subtasks?.map(s => (
