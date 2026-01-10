@@ -641,7 +641,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         
         {/* HEADER (Main) */}
         <div className="shrink-0 w-full px-4 md:px-8 pt-4 md:pt-8 mb-4 z-50">
-             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 max-w-5xl mx-auto w-full">
                 <div>
                     <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">
                         Дневник
@@ -677,13 +677,13 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     <div className="max-w-3xl mx-auto w-full">
                         <div className="flex gap-2">
                             <div className="relative flex-1 group">
-                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" strokeWidth={1} />
+                                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                                 <input 
                                     type="text" 
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="Поиск"
-                                    className="w-full pl-9 pr-8 py-2 bg-slate-100/50 dark:bg-slate-800/50 border border-transparent focus:border-slate-200 dark:focus:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-0 focus:bg-white dark:focus:bg-slate-800 transition-colors font-serif placeholder:font-sans shadow-sm"
+                                    className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-shadow shadow-sm placeholder:text-slate-400 font-sans"
                                 />
                                 {searchQuery && (
                                     <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={14} /></button>
@@ -840,7 +840,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 />
             </div>
             ) : (
-            <div className="w-full px-4 md:px-8">
+            <div className="w-full px-4 md:px-8 max-w-5xl mx-auto">
                 <div className="w-full relative">
                     {/* The Ghost Line */}
                     <div className="absolute left-[3rem] md:left-[4rem] top-8 bottom-8 border-l border-slate-900/5 dark:border-white/5 width-px" />
