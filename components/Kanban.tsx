@@ -696,7 +696,7 @@ const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }
 };
 
 const CollapsibleSection: React.FC<{
-  title: string;
+  title: React.ReactNode | ((isOpen: boolean) => React.ReactNode);
   children: React.ReactNode;
   icon?: React.ReactNode;
   isCard?: boolean;
@@ -704,6 +704,8 @@ const CollapsibleSection: React.FC<{
   defaultOpen?: boolean;
 }> = ({ title, children, icon, isCard = false, actions, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  const renderedTitle = typeof title === 'function' ? title(isOpen) : title;
 
   return (
     <div className={`${isCard ? 'bg-slate-50/50 dark:bg-slate-800/30 mb-2' : 'bg-transparent mb-4'} rounded-xl ${isCard ? 'border border-slate-100 dark:border-slate-700/50' : ''} overflow-hidden`}>
@@ -713,7 +715,7 @@ const CollapsibleSection: React.FC<{
       >
         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
            {icon}
-           {title}
+           {renderedTitle}
         </div>
         <div className="flex items-center gap-3">
             {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
@@ -1628,7 +1630,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     return (
     <div className="mt-2 mb-2">
         <CollapsibleSection
-            title={`Чек-лист ${subtasksTotal > 0 ? `(${subtasksDone}/${subtasksTotal})` : ''}`}
+            title={(isOpen: boolean) => `Чек-лист ${!isOpen && subtasksTotal > 0 ? `(${subtasksDone}/${subtasksTotal})` : ''}`}
             icon={<ListTodo size={12}/>}
             isCard
         >
@@ -2047,94 +2049,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     );
   };
 
-  // --- JOURNEY MODAL COMPONENT ---
-  const JourneyModal = ({ task, journalEntries, onClose }: { task: Task, journalEntries: JournalEntry[], onClose: () => void }) => {
-    // Check for insight
-    const hasInsight = journalEntries.some(j => j.linkedTaskId === task.id && j.isInsight);
-    const sphere = task.spheres?.[0];
-    const sphereColor = sphere && NEON_COLORS[sphere] ? NEON_COLORS[sphere] : '#6366f1'; 
-
-    const stages = [
-        { id: 1, label: 'ХАОС', desc: 'Мысль зафиксирована в Дневнике/Заметках', active: true },
-        { id: 2, label: 'ЛОГОС', desc: 'Сформирован контекст и план действий', active: true },
-        { id: 3, label: 'ЭНЕРГИЯ', desc: 'Задача реализована в материальном мире', active: true },
-        { id: 4, label: 'СИНТЕЗ', desc: 'Опыт интегрирован в структуру личности', active: hasInsight }
-    ];
-
-    return (
-        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-[50px] flex items-center justify-center p-8" onClick={onClose}>
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="w-full max-w-4xl relative"
-                onClick={e => e.stopPropagation()}
-            >
-                {/* Close Button */}
-                <button onClick={onClose} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors">
-                    <X size={24} />
-                </button>
-
-                {/* Central Map */}
-                <div className="flex flex-col md:flex-row items-center justify-between relative py-20 px-10">
-                    
-                    {/* The Thread */}
-                    <div className="absolute left-10 right-10 top-1/2 h-[1px] bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 hidden md:block" />
-                    <div className="absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-slate-700 via-slate-500 to-slate-700 md:hidden" />
-                    
-                    {/* Pulse Animation */}
-                    <motion.div 
-                        className="absolute h-[3px] w-[20px] bg-white blur-[2px] rounded-full hidden md:block top-1/2 -mt-[1.5px]"
-                        animate={{ 
-                            left: ['0%', hasInsight ? '100%' : '75%'], 
-                            opacity: [0, 1, 0] 
-                        }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                    />
-
-                    {stages.map((stage, i) => (
-                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-6 group mb-8 md:mb-0">
-                            {/* Node */}
-                            <div className={`
-                                w-4 h-4 transition-all duration-500
-                                ${stage.id === 1 ? 'rounded-full border border-slate-400 bg-black' : ''}
-                                ${stage.id === 2 ? 'w-3 h-3 bg-slate-300 transform rotate-45' : ''}
-                                ${stage.id === 3 ? 'rounded-full' : ''}
-                                ${stage.id === 4 ? 'transform rotate-45' : ''}
-                            `}
-                            style={{ 
-                                backgroundColor: stage.id === 3 ? sphereColor : undefined,
-                                boxShadow: stage.id === 3 ? `0 0 15px ${sphereColor}` : undefined
-                            }}
-                            >
-                                {stage.id === 4 && (
-                                    <div className={`w-4 h-4 border border-indigo-500 transition-all duration-1000 ${stage.active ? 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.8)]' : 'bg-black'}`} />
-                                )}
-                            </div>
-
-                            {/* Label */}
-                            <div className="text-center">
-                                <div className="font-mono text-[10px] text-slate-300 uppercase tracking-[0.3em] mb-2">{stage.label}</div>
-                                <div className={`font-serif text-sm italic text-slate-400 max-w-[150px] leading-tight transition-opacity duration-500 ${stage.active ? 'opacity-100' : 'opacity-30'}`}>
-                                    {stage.desc}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                
-                {/* Footer Quote */}
-                <div className="text-center mt-8">
-                    <p className="font-mono text-[9px] text-slate-600 uppercase tracking-widest">
-                        Task ID: {task.id.slice(-4)}
-                    </p>
-                </div>
-
-            </motion.div>
-        </div>
-    )
-  }
-
   return (
     <div ref={scrollContainerRef} className="flex flex-col h-full relative overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
       <div className="w-full px-4 md:px-8 pt-4 md:pt-8 mb-6">
@@ -2340,13 +2254,9 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 <button 
                                                     onClick={() => {
                                                         const current = task.spheres || [];
-                                                        // Simple cycle logic for demo or open full selector. 
-                                                        // Here we use a custom inline version of GhostSphereSelector logic
-                                                        // But reusing the GhostSphereSelector component we defined
                                                     }}
                                                     className="w-full py-2 flex items-center justify-between transition-all outline-none bg-transparent group"
                                                 >
-                                                    {/* We need to use GhostSphereSelector component here but custom styled */}
                                                 </button>
                                                 <GhostSphereSelector selected={task.spheres || []} onChange={(s) => updateTask({...task, spheres: s})} />
                                             </div>
@@ -2377,7 +2287,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             )}
 
                                             {(task.subtasks && task.subtasks.length > 0 || !isDone) && (
-                                                <CollapsibleSection title={`Чек-лист ${subtasksTotal > 0 ? `(${subtasksDone}/${subtasksTotal})` : ''}`} icon={<ListTodo size={14}/>}>
+                                                <CollapsibleSection title={(isOpen: boolean) => `Чек-лист ${!isOpen && subtasksTotal > 0 ? `(${subtasksDone}/${subtasksTotal})` : ''}`} icon={<ListTodo size={14}/>}>
                                                     {subtasksTotal > 0 && <SegmentedProgressBar total={subtasksTotal} current={subtasksDone} color={sphereColorClass} />}
                                                     <div className="space-y-1">
                                                         {task.subtasks?.map(s => (
