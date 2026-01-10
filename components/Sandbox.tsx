@@ -205,13 +205,30 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
                                 className={`absolute left-0 top-1.5 w-2.5 h-2.5 rounded-full border-2 transition-all duration-300 z-10 ${selectedNoteId === note.id ? 'bg-indigo-500 border-indigo-500 scale-125' : 'bg-[#f8fafc] dark:bg-[#0f172a] border-slate-300 dark:border-slate-600 group-hover:border-indigo-400'}`}
                             />
                             
+                            {/* Delete Button */}
+                            <button 
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    if(confirm('Удалить мысль?')) {
+                                        deleteNote(note.id);
+                                        if (selectedNoteId === note.id) {
+                                            setSelectedNoteId(null);
+                                            setAnalysis(null);
+                                        }
+                                    }
+                                }}
+                                className="absolute right-0 top-0 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                                title="Удалить"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+
                             <button 
                                 onClick={() => { setSelectedNoteId(note.id); setAnalysis(null); }}
-                                className={`text-left w-full transition-all duration-300 ${selectedNoteId === note.id ? 'opacity-100' : 'opacity-60 hover:opacity-90'}`}
+                                className={`text-left w-full transition-all duration-300 pr-6 ${selectedNoteId === note.id ? 'opacity-100' : 'opacity-60 hover:opacity-90'}`}
                             >
                                 <div className="text-[10px] font-mono text-slate-400 mb-1 flex items-center gap-2">
                                     {new Date(note.createdAt).toLocaleDateString(undefined, {day:'2-digit', month:'2-digit'})}
-                                    <Sparkles size={8} className={selectedNoteId === note.id ? "text-indigo-500" : "text-transparent"} />
                                 </div>
                                 <div className={`text-sm font-serif leading-snug line-clamp-3 ${selectedNoteId === note.id ? 'text-slate-900 dark:text-white font-medium' : 'text-slate-600 dark:text-slate-400'}`}>
                                     {note.content}
