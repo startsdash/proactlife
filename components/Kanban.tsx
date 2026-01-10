@@ -1628,7 +1628,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     return (
     <div className="mt-2 mb-2">
         <CollapsibleSection
-            title="Чек-лист"
+            title={`Чек-лист ${subtasksTotal > 0 ? `(${subtasksDone}/${subtasksTotal})` : ''}`}
             icon={<ListTodo size={12}/>}
             isCard
         >
@@ -1964,6 +1964,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                         {generatingChallengeFor === task.id ? (
                                                             <div className="relative w-4 h-4 flex items-center justify-center">
                                                                 <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                                <div className="w-1.5 h-1.5 bg-current rounded-[1px]" />
                                                             </div>
                                                         ) : (
                                                             <Zap size={16} />
@@ -1984,6 +1985,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                        {generatingTherapyFor === task.id ? (
                                                             <div className="relative w-4 h-4 flex items-center justify-center">
                                                                 <div className="absolute inset-0 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                                <div className="w-1.5 h-1.5 bg-current rounded-[1px]" />
                                                             </div>
                                                        ) : (
                                                            <Bot size={16} /> 
@@ -2375,7 +2377,7 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                             )}
 
                                             {(task.subtasks && task.subtasks.length > 0 || !isDone) && (
-                                                <CollapsibleSection title="Чек-лист" icon={<ListTodo size={14}/>}>
+                                                <CollapsibleSection title={`Чек-лист ${subtasksTotal > 0 ? `(${subtasksDone}/${subtasksTotal})` : ''}`} icon={<ListTodo size={14}/>}>
                                                     {subtasksTotal > 0 && <SegmentedProgressBar total={subtasksTotal} current={subtasksDone} color={sphereColorClass} />}
                                                     <div className="space-y-1">
                                                         {task.subtasks?.map(s => (
