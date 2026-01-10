@@ -675,41 +675,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 
                 <div className="relative z-10 w-full px-4 md:px-8 pt-4 pb-2">
                     <div className="max-w-3xl mx-auto w-full">
-                        <div className="flex justify-between items-center mb-2">
-                            {/* Tools (Right aligned) */}
-                            <div className="flex items-center gap-2 ml-auto">
-                                {hasMentorTool && (
-                                    <>
-                                        <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="bottom" disabled={isAnalyzing}>
-                                            <button 
-                                                onClick={handleAnalyzePath} 
-                                                disabled={displayedEntries.length === 0} 
-                                                className={`flex items-center justify-center p-2 rounded-lg border transition-all shadow-sm ${
-                                                    'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
-                                                } ${isAnalyzing ? 'animate-pulse' : ''}`}
-                                            >
-                                                {isAnalyzing ? (
-                                                    <div className="relative w-3.5 h-3.5 flex items-center justify-center">
-                                                        <Loader2 size={14} className="animate-spin absolute inset-0" />
-                                                        <div className="w-1.5 h-1.5 bg-current rounded-[1px] relative z-10" />
-                                                    </div>
-                                                ) : (
-                                                    <Sparkles size={16} strokeWidth={1} />
-                                                )}
-                                            </button>
-                                        </Tooltip>
-
-                                        <Tooltip content="История диалогов" side="left">
-                                            <button onClick={() => setShowHistory(true)} className="px-3 py-2 rounded-lg border transition-all flex items-center justify-center gap-2 bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm">
-                                                <History size={16} strokeWidth={1} />
-                                                <span className="text-xs font-medium hidden sm:inline">История</span>
-                                            </button>
-                                        </Tooltip>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                        
                         <div className="flex gap-2">
                             <div className="relative flex-1 group">
                                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" strokeWidth={1} />
@@ -768,64 +733,100 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
              {/* CREATION BLOCK (COLLAPSIBLE) */}
              <div className="w-full px-4 md:px-8 mb-10 z-30 relative">
-                <div className="max-w-3xl mx-auto w-full" ref={creationRef}>
-                    {!isCreationExpanded ? (
-                        <div 
-                            onClick={() => setIsCreationExpanded(true)}
-                            className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-sm p-4 cursor-text flex items-center justify-between group hover:shadow-md transition-all"
-                        >
-                            <span className="text-slate-400 dark:text-slate-500 font-serif italic text-base pl-2">Записать мысль...</span>
-                            <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 group-hover:text-indigo-500 transition-colors">
-                                <PenTool size={18} />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-lg p-5 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200 relative">
-                            {/* Expanded Form */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
-                                        <Link size={10} strokeWidth={1} /> Контекст
-                                    </label>
-                                    <TaskSelect tasks={availableTasks} selectedId={linkedTaskId} onSelect={setLinkedTaskId} />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
-                                        <Target size={10} strokeWidth={1} /> Сферы
-                                    </label>
-                                    <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
+                <div className="max-w-3xl mx-auto w-full flex gap-3 items-start">
+                    <div className="flex-1 min-w-0" ref={creationRef}>
+                        {!isCreationExpanded ? (
+                            <div 
+                                onClick={() => setIsCreationExpanded(true)}
+                                className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-sm p-4 cursor-text flex items-center justify-between group hover:shadow-md transition-all h-[52px]"
+                            >
+                                <span className="text-slate-400 dark:text-slate-500 font-serif italic text-base pl-2">Записать мысль...</span>
+                                <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 group-hover:text-indigo-500 transition-colors">
+                                    <PenTool size={18} />
                                 </div>
                             </div>
-                            
-                            <div className="relative">
-                                <textarea 
-                                    className="w-full h-40 md:h-56 resize-none outline-none text-base text-slate-800 dark:text-slate-200 bg-transparent p-1 placeholder:text-slate-400/50 dark:placeholder:text-slate-500/50 font-serif leading-relaxed" 
-                                    placeholder="О чем ты думаешь? Чему научило это событие? (Markdown поддерживается)" 
-                                    value={content} 
-                                    onChange={(e) => setContent(e.target.value)} 
-                                    autoFocus
-                                />
-                                <div className="absolute bottom-0 left-0 w-full h-px bg-slate-200/50 dark:bg-slate-700/50" />
+                        ) : (
+                            <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-lg p-5 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200 relative">
+                                {/* Expanded Form */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
+                                            <Link size={10} strokeWidth={1} /> Контекст
+                                        </label>
+                                        <TaskSelect tasks={availableTasks} selectedId={linkedTaskId} onSelect={setLinkedTaskId} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
+                                            <Target size={10} strokeWidth={1} /> Сферы
+                                        </label>
+                                        <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
+                                    </div>
+                                </div>
+                                
+                                <div className="relative">
+                                    <textarea 
+                                        className="w-full h-40 md:h-56 resize-none outline-none text-base text-slate-800 dark:text-slate-200 bg-transparent p-1 placeholder:text-slate-400/50 dark:placeholder:text-slate-500/50 font-serif leading-relaxed" 
+                                        placeholder="О чем ты думаешь? Чему научило это событие? (Markdown поддерживается)" 
+                                        value={content} 
+                                        onChange={(e) => setContent(e.target.value)} 
+                                        autoFocus
+                                    />
+                                    <div className="absolute bottom-0 left-0 w-full h-px bg-slate-200/50 dark:bg-slate-700/50" />
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={handlePost} 
+                                        disabled={!content.trim()} 
+                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium text-sm transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
+                                    >
+                                        <Send size={16} strokeWidth={1} /> 
+                                        <span className="font-serif">Записать мысль</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => setIsCreationExpanded(false)} 
+                                        className="px-4 py-3 rounded-xl border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                    >
+                                        <X size={20} strokeWidth={1} />
+                                    </button>
+                                </div>
                             </div>
-                            
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={handlePost} 
-                                    disabled={!content.trim()} 
-                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium text-sm transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
-                                >
-                                    <Send size={16} strokeWidth={1} /> 
-                                    <span className="font-serif">Записать мысль</span>
-                                </button>
-                                <button 
-                                    onClick={() => setIsCreationExpanded(false)} 
-                                    className="px-4 py-3 rounded-xl border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                                >
-                                    <X size={20} strokeWidth={1} />
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
+
+                    <div className="flex gap-2 shrink-0">
+                        {hasMentorTool && (
+                            <>
+                                <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="bottom" disabled={isAnalyzing}>
+                                    <button 
+                                        onClick={handleAnalyzePath} 
+                                        disabled={displayedEntries.length === 0} 
+                                        className={`flex items-center justify-center p-3.5 rounded-2xl border transition-all shadow-sm ${
+                                            'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
+                                        } ${isAnalyzing ? 'animate-pulse' : ''}`}
+                                    >
+                                        {isAnalyzing ? (
+                                            <div className="relative w-4 h-4 flex items-center justify-center">
+                                                <Loader2 size={16} className="animate-spin absolute inset-0" />
+                                                <div className="w-2 h-2 bg-current rounded-[1px] relative z-10" />
+                                            </div>
+                                        ) : (
+                                            <Sparkles size={20} strokeWidth={1.5} />
+                                        )}
+                                    </button>
+                                </Tooltip>
+
+                                <Tooltip content="История диалогов" side="bottom">
+                                    <button 
+                                        onClick={() => setShowHistory(true)} 
+                                        className="flex items-center justify-center p-3.5 rounded-2xl border transition-all shadow-sm bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border-white/40 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800"
+                                    >
+                                        <History size={20} strokeWidth={1.5} />
+                                    </button>
+                                </Tooltip>
+                            </>
+                        )}
+                    </div>
                 </div>
              </div>
 
