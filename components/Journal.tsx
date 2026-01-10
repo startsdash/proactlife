@@ -4,8 +4,8 @@ import ReactMarkdown from 'react-markdown';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem, PenTool } from 'lucide-react';
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 
@@ -442,6 +442,19 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const analysisAbortController = useRef<AbortController | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const { scrollY } = useScroll({ container: scrollContainerRef });
+
+  const [isCreationExpanded, setIsCreationExpanded] = useState(false);
+  const creationRef = useRef<HTMLDivElement>(null);
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+      const previous = scrollY.getPrevious() || 0;
+      const diff = latest - previous;
+      const isScrollingDown = diff > 0;
+      if (latest > 100 && isScrollingDown) setIsHeaderHidden(true);
+      else setIsHeaderHidden(false);
+  });
 
   const hasMentorTool = useMemo(() => {
       const tool = config.aiTools.find(t => t.id === 'journal_mentor');
@@ -457,6 +470,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       if (taskExists) {
         setLinkedTaskId(initialTaskId);
         onClearInitialTask?.();
+        setIsCreationExpanded(true); // Open creation if context passed
       }
     }
   }, [initialTaskId, tasks, onClearInitialTask]);
@@ -472,6 +486,22 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       }
       return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDatePicker]);
+
+  // Click outside creation block to close if empty
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        if (creationRef.current && !creationRef.current.contains(event.target as Node)) {
+            // Only close if no content and no context selected
+            if (!content.trim() && !linkedTaskId && selectedSpheres.length === 0) {
+                setIsCreationExpanded(false);
+            }
+        }
+    };
+    if (isCreationExpanded) {
+        document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isCreationExpanded, content, linkedTaskId, selectedSpheres]);
 
   const availableTasks = tasks.filter(t => !t.isArchived && (t.column === 'doing' || t.column === 'done') || t.id === linkedTaskId);
 
@@ -489,6 +519,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
     setContent('');
     setLinkedTaskId('');
     setSelectedSpheres([]);
+    setIsCreationExpanded(false);
   };
 
   const startEditing = (entry: JournalEntry) => {
@@ -606,72 +637,46 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-full overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]">
-      {/* LEFT PANEL: INPUT (Glass Refinement) */}
-      <div className="w-full md:w-1/3 flex flex-col p-4 md:p-8 md:border-r border-b md:border-b-0 border-slate-100 dark:border-slate-800/50 bg-[#f8fafc] dark:bg-[#0f172a] shrink-0 overflow-y-auto">
-        <header className="mb-6 md:mb-8">
-          <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">
-            Дневник
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Факты, эмоции, гипотезы</p>
-        </header>
+    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
         
-        <div className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-sm p-5 flex flex-col gap-5 relative z-10">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
-              <Link size={10} strokeWidth={1} /> Контекст
-            </label>
-            <TaskSelect tasks={availableTasks} selectedId={linkedTaskId} onSelect={setLinkedTaskId} />
-          </div>
-          <div>
-             <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
-               <Target size={10} strokeWidth={1} /> Сферы
-             </label>
-             <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
-          </div>
-          <div className="relative">
-             <textarea 
-                className="w-full h-40 md:h-56 resize-none outline-none text-base text-slate-800 dark:text-slate-200 bg-transparent p-1 placeholder:text-slate-400/50 dark:placeholder:text-slate-500/50 font-serif leading-relaxed" 
-                placeholder="О чем ты думаешь? Чему научило это событие? (Поддерживается Markdown)" 
-                value={content} 
-                onChange={(e) => setContent(e.target.value)} 
-              />
-              <div className="absolute bottom-0 left-0 w-full h-px bg-slate-200/50 dark:bg-slate-700/50" />
-          </div>
-          <button 
-            onClick={handlePost} 
-            disabled={!content.trim()} 
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium text-sm transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
-          >
-            <Send size={16} strokeWidth={1} /> 
-            <span className="font-serif">Записать мысль</span>
-          </button>
+        {/* HEADER (Main) */}
+        <div className="shrink-0 w-full px-4 md:px-8 pt-4 md:pt-8 mb-4 z-50">
+             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">
+                        Дневник
+                    </h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Факты, эмоции, гипотезы</p>
+                </div>
+             </header>
         </div>
-      </div>
 
-      {/* RIGHT PANEL: CHRONICLE (Glass Horizon) */}
-      <div 
-        className="flex-1 flex flex-col relative bg-slate-50/30 dark:bg-slate-900/30 min-h-0"
-        ref={scrollContainerRef}
-      >
-        {/* STICKY HEADER (Glass Horizon) */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar-light px-4 md:px-8 pb-20">
-            <div className="sticky top-0 z-30 w-full mb-6">
+        {/* MAIN SCROLL AREA */}
+        <div 
+            className="flex-1 flex flex-col relative overflow-y-auto custom-scrollbar-light px-4 md:px-8 pb-20"
+            ref={scrollContainerRef}
+        >
+             {/* Sticky Search/Toolbar */}
+             <motion.div 
+                className="sticky top-0 z-40 w-full mb-6 pt-2"
+                animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+             >
                  {/* FOG LAYER */}
                  <div className="absolute inset-0 h-[160%] pointer-events-none -z-10 -mx-8">
                     <div 
-                        className="absolute inset-0 backdrop-blur-xl bg-white/70 dark:bg-[#0f172a]/70"
+                        className="absolute inset-0 backdrop-blur-xl bg-[#f8fafc]/90 dark:bg-[#0f172a]/90"
                         style={{
                             maskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)',
                             WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)'
                         }}
                     />
                 </div>
-
-                <div className="pt-6 pb-2 max-w-4xl mx-auto w-full">
-                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-sans font-semibold text-[0.85rem] uppercase tracking-[0.15em] text-[#2F3437] dark:text-slate-200">Хроника</h3>
-                        <div className="flex items-center gap-2">
+                
+                <div className="max-w-4xl mx-auto w-full">
+                     <div className="flex justify-between items-center mb-2">
+                        {/* Tools (Right aligned) */}
+                        <div className="flex items-center gap-2 ml-auto">
                             {hasMentorTool && (
                                 <>
                                     <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="bottom" disabled={isAnalyzing}>
@@ -696,7 +701,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     <Tooltip content="История диалогов" side="left">
                                         <button onClick={() => setShowHistory(true)} className="px-3 py-2 rounded-lg border transition-all flex items-center justify-center gap-2 bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm">
                                             <History size={16} strokeWidth={1} />
-                                            <span className="text-xs font-medium">История</span>
+                                            <span className="text-xs font-medium hidden sm:inline">История</span>
                                         </button>
                                     </Tooltip>
                                 </>
@@ -711,13 +716,14 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 type="text" 
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Поиск..."
-                                className="w-full pl-9 pr-8 py-2 bg-slate-100/50 dark:bg-slate-800/50 border border-transparent focus:border-slate-200 dark:focus:border-slate-700 rounded-xl text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-800 transition-all font-serif placeholder:font-sans"
+                                placeholder="Поиск по записям..."
+                                className="w-full pl-9 pr-8 py-2 bg-slate-100/50 dark:bg-slate-800/50 border border-transparent focus:border-slate-200 dark:focus:border-slate-700 rounded-xl text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-800 transition-all font-serif placeholder:font-sans shadow-sm"
                             />
                             {searchQuery && (
                                 <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={14} /></button>
                             )}
                         </div>
+                        
                         <div className="relative" ref={datePickerRef}>
                             <Tooltip content="Фильтр по дате">
                                 <button 
@@ -756,7 +762,68 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                         </Tooltip>
                     </div>
                 </div>
-            </div>
+             </motion.div>
+
+             {/* CREATION BLOCK (COLLAPSIBLE) */}
+             <div className="max-w-4xl mx-auto w-full mb-10 z-30 relative" ref={creationRef}>
+                {!isCreationExpanded ? (
+                    <div 
+                        onClick={() => setIsCreationExpanded(true)}
+                        className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-sm p-4 cursor-text flex items-center justify-between group hover:shadow-md transition-all"
+                    >
+                        <span className="text-slate-400 dark:text-slate-500 font-serif italic text-base pl-2">Записать мысль...</span>
+                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 group-hover:text-indigo-500 transition-colors">
+                            <PenTool size={18} />
+                        </div>
+                    </div>
+                ) : (
+                    <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-lg p-5 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200 relative">
+                        {/* Expanded Form */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
+                                    <Link size={10} strokeWidth={1} /> Контекст
+                                </label>
+                                <TaskSelect tasks={availableTasks} selectedId={linkedTaskId} onSelect={setLinkedTaskId} />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
+                                    <Target size={10} strokeWidth={1} /> Сферы
+                                </label>
+                                <SphereSelector selected={selectedSpheres} onChange={setSelectedSpheres} />
+                            </div>
+                        </div>
+                        
+                        <div className="relative">
+                            <textarea 
+                                className="w-full h-40 md:h-56 resize-none outline-none text-base text-slate-800 dark:text-slate-200 bg-transparent p-1 placeholder:text-slate-400/50 dark:placeholder:text-slate-500/50 font-serif leading-relaxed" 
+                                placeholder="О чем ты думаешь? Чему научило это событие? (Markdown поддерживается)" 
+                                value={content} 
+                                onChange={(e) => setContent(e.target.value)} 
+                                autoFocus
+                            />
+                            <div className="absolute bottom-0 left-0 w-full h-px bg-slate-200/50 dark:bg-slate-700/50" />
+                        </div>
+                        
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={handlePost} 
+                                disabled={!content.trim()} 
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium text-sm transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
+                            >
+                                <Send size={16} strokeWidth={1} /> 
+                                <span className="font-serif">Записать мысль</span>
+                            </button>
+                            <button 
+                                onClick={() => setIsCreationExpanded(false)} 
+                                className="px-4 py-3 rounded-xl border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                            >
+                                <X size={20} strokeWidth={1} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+             </div>
 
             {displayedEntries.length === 0 ? (
             <div className="py-10">
@@ -888,7 +955,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
             </div>
             )}
         </div>
-      </div>
 
       {analysisResult && (
           <div className="fixed inset-0 z-[120] bg-slate-200/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setAnalysisResult(null)}>
