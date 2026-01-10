@@ -682,8 +682,8 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     type="text" 
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Поиск по записям..."
-                                    className="w-full pl-9 pr-8 py-2 bg-slate-100/50 dark:bg-slate-800/50 border border-transparent focus:border-slate-200 dark:focus:border-slate-700 rounded-xl text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-800 transition-all font-serif placeholder:font-sans shadow-sm"
+                                    placeholder="Поиск"
+                                    className="w-full pl-9 pr-8 py-2 bg-slate-100/50 dark:bg-slate-800/50 border border-transparent focus:border-slate-200 dark:focus:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-0 focus:bg-white dark:focus:bg-slate-800 transition-all font-serif placeholder:font-sans shadow-sm"
                                 />
                                 {searchQuery && (
                                     <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={14} /></button>
