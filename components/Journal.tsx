@@ -841,7 +841,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
             </div>
             ) : (
             <div className="w-full px-4 md:px-8">
-                <div className="max-w-6xl mx-auto relative">
+                <div className="w-full relative">
                     {/* The Ghost Line */}
                     <div className="absolute left-[3rem] md:left-[4rem] top-8 bottom-8 border-l border-slate-900/5 dark:border-white/5 width-px" />
 
