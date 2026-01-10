@@ -683,7 +683,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="Поиск"
-                                    className="w-full pl-9 pr-8 py-2 bg-slate-100/50 dark:bg-slate-800/50 border border-transparent focus:border-slate-200 dark:focus:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-0 focus:bg-white dark:focus:bg-slate-800 transition-colors font-serif placeholder:font-sans shadow-sm"
+                                    className="w-full pl-9 pr-8 py-2 bg-slate-100/50 dark:bg-slate-800/50 border-none rounded-xl text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 transition-all font-serif placeholder:font-sans shadow-sm"
                                 />
                                 {searchQuery && (
                                     <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={14} /></button>
@@ -840,7 +840,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 />
             </div>
             ) : (
-            <div className="w-full px-4 md:px-8">
+            <div className="w-full px-4 md:px-8 pt-6 pb-8">
                 <div className="w-full relative">
                     {/* The Ghost Line */}
                     <div className="absolute left-[3rem] md:left-[4rem] top-8 bottom-8 border-l border-slate-900/5 dark:border-white/5 width-px" />
