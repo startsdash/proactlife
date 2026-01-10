@@ -674,7 +674,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 </div>
                 
                 <div className="relative z-10 w-full px-4 md:px-8 pt-4 pb-2">
-                    <div className="max-w-6xl mx-auto w-full">
+                    <div className="max-w-3xl mx-auto w-full">
                         <div className="flex justify-between items-center mb-2">
                             {/* Tools (Right aligned) */}
                             <div className="flex items-center gap-2 ml-auto">
@@ -768,7 +768,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
              {/* CREATION BLOCK (COLLAPSIBLE) */}
              <div className="w-full px-4 md:px-8 mb-10 z-30 relative">
-                <div className="max-w-6xl mx-auto w-full" ref={creationRef}>
+                <div className="max-w-3xl mx-auto w-full" ref={creationRef}>
                     {!isCreationExpanded ? (
                         <div 
                             onClick={() => setIsCreationExpanded(true)}
@@ -840,7 +840,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
             </div>
             ) : (
             <div className="w-full px-4 md:px-8">
-                <div className="max-w-6xl mx-auto w-full relative">
+                <div className="w-full relative">
                     {/* The Ghost Line */}
                     <div className="absolute left-[3rem] md:left-[4rem] top-8 bottom-8 border-l border-slate-900/5 dark:border-white/5 width-px" />
 
