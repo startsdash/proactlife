@@ -2221,10 +2221,20 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                     </h3>
                                 )
                             ) : (
-                                <h3 className="text-2xl font-sans font-bold text-slate-900 dark:text-white leading-tight">
-                                    {activeModal.type === 'stuck' && <span className="flex items-center gap-2"><Bot size={24} className="text-violet-500"/> Личный консультант</span>}
-                                    {activeModal.type === 'challenge' && <span className="flex items-center gap-2"><Zap size={24} className="text-indigo-500"/> Новый вызов</span>}
-                                </h3>
+                                <>
+                                    {activeModal.type === 'stuck' && (
+                                        <div className="flex items-center gap-4">
+                                            <Bot size={18} strokeWidth={1.5} className="text-violet-500 opacity-80" />
+                                            <h3 className="font-sans text-xs font-bold tracking-[0.2em] uppercase text-slate-900/80 dark:text-slate-100/90">Личный консультант</h3>
+                                        </div>
+                                    )}
+                                    {activeModal.type === 'challenge' && (
+                                        <div className="flex items-center gap-4">
+                                            <Zap size={18} strokeWidth={1.5} className="text-indigo-500 opacity-80" />
+                                            <h3 className="font-sans text-xs font-bold tracking-[0.2em] uppercase text-slate-900/80 dark:text-slate-100/90">Новый вызов</h3>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                         <div className="flex items-center shrink-0 gap-1">
@@ -2402,8 +2412,26 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             );
                         })()}
                     </div>
-                    {activeModal.type === 'stuck' && aiResponse && (<div className="mt-6 flex justify-end gap-2 pt-4 border-t border-black/5 dark:border-white/5 pr-1"><button onClick={saveTherapyResponse} className="px-6 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg font-mono text-[10px] uppercase tracking-widest font-bold flex items-center justify-center gap-2 shadow-sm"><Save size={16} /> Сохранить в историю</button></div>)}
-                    {activeModal.type === 'challenge' && draftChallenge && (<div className="mt-6 flex justify-end gap-2 shrink-0 pt-4 border-t border-black/5 dark:border-white/5 pr-1"><button onClick={acceptDraftChallenge} className="px-6 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg font-mono text-[10px] uppercase tracking-widest font-bold flex items-center justify-center gap-2 shadow-sm"><Rocket size={18} /> Принять вызов</button></div>)}
+                    {activeModal.type === 'stuck' && aiResponse && (
+                        <div className="mt-8 flex justify-center">
+                            <button 
+                                onClick={saveTherapyResponse} 
+                                className="group flex items-center gap-3 px-8 py-3 rounded-full border border-slate-200/50 dark:border-slate-700/50 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-all duration-300"
+                            >
+                                <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Сохранить в историю</span>
+                            </button>
+                        </div>
+                    )}
+                    {activeModal.type === 'challenge' && draftChallenge && (
+                        <div className="mt-8 flex justify-center shrink-0">
+                            <button 
+                                onClick={acceptDraftChallenge} 
+                                className="group flex items-center gap-3 px-8 py-3 rounded-full border border-slate-200/50 dark:border-slate-700/50 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-all duration-300"
+                            >
+                                <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Принять вызов</span>
+                            </button>
+                        </div>
+                    )}
                 </motion.div>
             </div>
         </AnimatePresence>
