@@ -122,12 +122,15 @@ export interface Challenge {
 export interface JournalEntry {
   id: string;
   date: number;
+  title?: string;
   content: string;
   linkedTaskId?: string; 
   aiFeedback?: string;
   mentorId?: string;
   spheres?: string[];
   isInsight?: boolean;
+  color?: string;
+  coverUrl?: string;
   
   mood?: number;
   moodTags?: string[];

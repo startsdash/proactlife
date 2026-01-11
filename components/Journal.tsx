@@ -1,12 +1,13 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem, PenTool, RotateCcw, RotateCw, Bold, Italic, Eraser, Image as ImageIcon } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem, PenTool, RotateCcw, RotateCw, Bold, Italic, Eraser, Image as ImageIcon, Layout, Palette, ArrowRight, RefreshCw, Upload, Shuffle } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
@@ -26,7 +27,26 @@ interface Props {
   onNavigateToTask?: (taskId: string) => void;
 }
 
-// --- HELPER FUNCTIONS (Borrowed from Napkins for Consistency) ---
+const colors = [
+    { id: 'white', class: 'bg-white dark:bg-[#1e293b]', hex: '#ffffff' },
+    { id: 'red', class: 'bg-red-50 dark:bg-red-900/20', hex: '#fef2f2' },
+    { id: 'amber', class: 'bg-amber-50 dark:bg-amber-900/20', hex: '#fffbeb' },
+    { id: 'emerald', class: 'bg-emerald-50 dark:bg-emerald-900/20', hex: '#ecfdf5' },
+    { id: 'blue', class: 'bg-blue-50 dark:bg-blue-900/20', hex: '#eff6ff' },
+    { id: 'indigo', class: 'bg-indigo-50 dark:bg-indigo-900/20', hex: '#eef2ff' },
+    { id: 'purple', class: 'bg-purple-50 dark:bg-purple-900/20', hex: '#faf5ff' },
+];
+
+const UNSPLASH_PRESETS = [
+    'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=400&q=80',
+    'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&q=80',
+    'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=400&q=80',
+    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80',
+];
+
+const getJournalColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
+
+// --- HELPER FUNCTIONS ---
 
 const allowDataUrls = (url: string) => url;
 
@@ -119,6 +139,7 @@ const htmlToMarkdown = (html: string) => {
     };
     
     let md = walk(temp);
+    // Cleanup aggressive newlines but keep paragraphs
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
@@ -128,21 +149,28 @@ const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
     
+    // Headers
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    
+    // Formatting
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
     html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
     html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
     html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
     
+    // Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
     
+    // Improved Line Breaks: Wrap loose lines in divs to simulate standard contentEditable behavior
     const lines = html.split('\n');
     const processedLines = lines.map(line => {
+        // Leave block elements alone
         if (line.match(/^<(h1|h2|div|p|ul|ol|li|blockquote)/i)) return line;
+        // Wrap text lines in div
         return line.trim() ? `<div>${line}</div>` : '<div><br></div>';
     });
     
@@ -163,6 +191,157 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
         });
     }
     return children;
+};
+
+// Cover Picker
+const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => void, triggerRef: React.RefObject<HTMLElement> }> = ({ onSelect, onClose, triggerRef }) => {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS);
+    const [loading, setLoading] = useState(false);
+    const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
+    
+    useEffect(() => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const viewportH = window.innerHeight;
+            const viewportW = window.innerWidth;
+            const pickerHeight = 320; 
+            
+            const style: React.CSSProperties = {};
+            
+            const spaceBelow = viewportH - rect.bottom;
+            if (spaceBelow < pickerHeight && rect.top > spaceBelow) {
+                style.bottom = viewportH - rect.top + 8;
+                style.maxHeight = rect.top - 20;
+            } else {
+                style.top = rect.bottom + 8;
+                style.maxHeight = spaceBelow - 20;
+            }
+
+            if (rect.left + 320 > viewportW) {
+                style.right = 16;
+            } else {
+                style.left = rect.left;
+            }
+            
+            setPickerStyle(style);
+        }
+    }, [triggerRef]);
+    
+    const getUnsplashKey = () => {
+        const keys = [
+            'UNSPLASH_ACCESS_KEY', 
+            'VITE_UNSPLASH_ACCESS_KEY', 
+            'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY', 
+            'REACT_APP_UNSPLASH_ACCESS_KEY'
+        ];
+        
+        for (const k of keys) {
+            // @ts-ignore
+            if (typeof process !== 'undefined' && process.env?.[k]) return process.env[k];
+            // @ts-ignore
+            if (typeof import.meta !== 'undefined' && import.meta.env?.[k]) return import.meta.env[k];
+        }
+        return '';
+    };
+
+    const searchUnsplash = async (q?: string) => {
+        const key = getUnsplashKey();
+        if (!key) {
+            if (q) alert("Ключ Unsplash не найден.");
+            return;
+        }
+        
+        setLoading(true);
+        try {
+            const page = Math.floor(Math.random() * 10) + 1;
+            const endpoint = q 
+                ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&page=${page}&client_id=${key}`
+                : `https://api.unsplash.com/photos/random?count=20&client_id=${key}`;
+            
+            const res = await fetch(endpoint);
+            if (!res.ok) throw new Error("API Error");
+            const data = await res.json();
+            
+            const urls = q 
+                ? data.results.map((img: any) => img.urls.regular) 
+                : data.map((img: any) => img.urls.regular);
+            
+            setResults(urls);
+        } catch (e) {
+            console.error("Unsplash Fetch Error", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') searchUnsplash(query);
+    };
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            try { onSelect(await processImage(file)); onClose(); } catch (err) { console.error(err); }
+        }
+    };
+
+    return createPortal(
+        <>
+            <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+            <div 
+                className="fixed bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-[9999] w-80 flex flex-col gap-3 portal-popup" 
+                style={pickerStyle}
+                onMouseDown={e => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase font-sans">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
+                
+                <div className="relative">
+                    <input 
+                        type="text" 
+                        placeholder="Поиск Unsplash..." 
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-xs font-sans outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
+                    />
+                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <button 
+                        onClick={() => searchUnsplash(query)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
+                        title="Найти"
+                    >
+                        <ArrowRight size={12} />
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
+                    {loading ? (
+                        <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
+                            <RefreshCw size={16} className="animate-spin" />
+                        </div>
+                    ) : (
+                        results.map((url, i) => (
+                            <button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded overflow-hidden border border-slate-100 dark:border-slate-700 hover:ring-2 hover:ring-indigo-500 relative group bg-slate-100">
+                                <img src={url} className="w-full h-full object-cover" loading="lazy" />
+                            </button>
+                        ))
+                    )}
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded text-xs font-medium font-sans cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
+                        <Upload size={12} /> Своя 
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                    </label>
+                    <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded text-xs font-medium font-sans transition-colors text-slate-600 dark:text-slate-300">
+                        <Shuffle size={12} /> Случайные
+                    </button>
+                </div>
+            </div>
+        </>,
+        document.body
+    );
 };
 
 // --- LITERARY TYPOGRAPHY COMPONENTS (DEFAULT) ---
@@ -575,14 +754,32 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const [creationHistoryIndex, setCreationHistoryIndex] = useState(0);
   const creationHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const creationFileInputRef = useRef<HTMLInputElement>(null);
+  
+  // New Creation Fields
+  const [creationTitle, setCreationTitle] = useState('');
+  const [creationCover, setCreationCover] = useState<string | null>(null);
+  const [creationColor, setCreationColor] = useState('white');
+  const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
+  const [showCreationColorPicker, setShowCreationColorPicker] = useState(false);
+  const creationPickerTriggerRef = useRef<HTMLButtonElement>(null);
+  const creationColorTriggerRef = useRef<HTMLButtonElement>(null);
 
   // Edit Modal Editor State
   const editContentRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null); // Missing ref
   const [editHistory, setEditHistory] = useState<string[]>(['']);
   const [editHistoryIndex, setEditHistoryIndex] = useState(0);
   const [activeImage, setActiveImage] = useState<HTMLImageElement | null>(null);
   const lastSelectionRange = useRef<Range | null>(null);
   const editHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editPickerTriggerRef = useRef<HTMLButtonElement>(null);
+  
+  // New Edit Fields
+  const [editTitle, setEditTitle] = useState('');
+  const [editCover, setEditCover] = useState<string | null>(null);
+  const [editColor, setEditColor] = useState('white');
+  const [showEditCoverPicker, setShowEditCoverPicker] = useState(false);
+  const [showEditColorPicker, setShowEditColorPicker] = useState(false);
 
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -596,7 +793,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
   const [isCreationExpanded, setIsCreationExpanded] = useState(false);
   const creationRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
       const previous = scrollY.getPrevious() || 0;
@@ -640,9 +836,12 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   // Click outside creation block to close if empty
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+        // Prevent closing if any picker is active
+        if (showCreationCoverPicker || showCreationColorPicker) return;
+
         if (creationRef.current && !creationRef.current.contains(event.target as Node)) {
             // Only close if no content and no context selected
-            if (!hasCreationContent && !linkedTaskId && selectedSpheres.length === 0) {
+            if (!hasCreationContent && !linkedTaskId && selectedSpheres.length === 0 && !creationTitle) {
                 setIsCreationExpanded(false);
             }
         }
@@ -651,7 +850,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isCreationExpanded, hasCreationContent, linkedTaskId, selectedSpheres]);
+  }, [isCreationExpanded, hasCreationContent, linkedTaskId, selectedSpheres, creationTitle, showCreationCoverPicker, showCreationColorPicker]);
 
   // --- CREATION EDITOR HELPERS ---
   const saveCreationHistorySnapshot = useCallback((content: string) => {
@@ -891,6 +1090,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
           editContentRef.current.innerHTML = html;
           setEditHistory([html]);
           setEditHistoryIndex(0);
+          setEditTitle(selectedEntry.title || '');
+          setEditCover(selectedEntry.coverUrl || null);
+          setEditColor(selectedEntry.color || 'white');
       }
   }, [editingId, selectedEntry]);
 
@@ -901,15 +1103,18 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const handlePost = () => {
     const rawHtml = creationContentEditableRef.current?.innerHTML || '';
     const markdownContent = htmlToMarkdown(rawHtml);
-    if (!markdownContent.trim()) return;
+    if (!markdownContent.trim() && !creationTitle.trim()) return;
     
     const formattedContent = applyTypography(markdownContent);
     const newEntry: JournalEntry = {
       id: Date.now().toString(),
       date: Date.now(),
+      title: creationTitle.trim() ? applyTypography(creationTitle.trim()) : undefined,
       content: formattedContent,
       linkedTaskId: linkedTaskId || undefined,
-      spheres: selectedSpheres
+      spheres: selectedSpheres,
+      color: creationColor,
+      coverUrl: creationCover || undefined,
     };
     addEntry(newEntry);
     
@@ -919,6 +1124,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
     setCreationHistoryIndex(0);
     setLinkedTaskId('');
     setSelectedSpheres([]);
+    setCreationTitle('');
+    setCreationColor('white');
+    setCreationCover(null);
     setIsCreationExpanded(false);
   };
 
@@ -931,8 +1139,14 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         const rawHtml = editContentRef.current.innerHTML;
         const markdownContent = htmlToMarkdown(rawHtml);
         
-        if (markdownContent.trim()) {
-            updateEntry({ ...entry, content: markdownContent });
+        if (markdownContent.trim() || editTitle.trim()) {
+            updateEntry({ 
+                ...entry, 
+                content: markdownContent,
+                title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
+                color: editColor,
+                coverUrl: editCover || undefined
+            });
             setEditingId(null);
         }
     }
@@ -968,6 +1182,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         if (entry.date > toDate.getTime()) return false;
     }
     if (!query) return true;
+    if (entry.title?.toLowerCase().includes(query)) return true;
     if (entry.content.toLowerCase().includes(query)) return true;
     if (entry.aiFeedback?.toLowerCase().includes(query)) return true;
     const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
@@ -1139,7 +1354,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                         <div className="flex-1 min-w-0" ref={creationRef}>
                             {!isCreationExpanded ? (
                                 <div 
-                                    onClick={() => setIsCreationExpanded(true)}
+                                    onClick={() => { setIsCreationExpanded(true); setTimeout(() => creationContentEditableRef.current?.focus(), 100); }}
                                     className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-sm p-4 cursor-text flex items-center justify-between group hover:shadow-md transition-all h-[52px]"
                                 >
                                     <span className="text-slate-400 dark:text-slate-500 font-serif italic text-base pl-2">Записать мысль...</span>
@@ -1148,7 +1363,22 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     </div>
                                 </div>
                             ) : (
-                                <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-lg p-5 flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200 relative">
+                                <div className={`${getJournalColorClass(creationColor)} backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-lg p-5 flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200 relative`}>
+                                    {creationCover && (
+                                        <div className="relative w-full h-32 group rounded-t-xl overflow-hidden -mt-5 -mx-5 mb-3 w-[calc(100%_+_2.5rem)]">
+                                            <img src={creationCover} alt="Cover" className="w-full h-full object-cover" />
+                                            <button onClick={() => setCreationCover(null)} className="absolute top-3 right-3 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={14} /></button>
+                                        </div>
+                                    )}
+                                    
+                                    <input 
+                                        type="text" 
+                                        placeholder="Название" 
+                                        value={creationTitle}
+                                        onChange={(e) => setCreationTitle(e.target.value)}
+                                        className="w-full bg-transparent text-xl font-sans font-bold text-slate-900 dark:text-white outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 mb-2"
+                                    />
+
                                     {/* Expanded Form */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                                         <div>
@@ -1191,15 +1421,61 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
                                             <Tooltip content="Очистить"><button onMouseDown={handleClearCreationStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
                                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                            <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCreationImageUpload} /><ImageIcon size={16} /></label></Tooltip>
+                                            <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input ref={creationFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCreationImageUpload} /><ImageIcon size={16} /></label></Tooltip>
                                             {activeImage && creationContentEditableRef.current && creationContentEditableRef.current.contains(activeImage) && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                            <div className="relative">
+                                                <Tooltip content="Обложка">
+                                                    <button 
+                                                        ref={creationPickerTriggerRef}
+                                                        onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} 
+                                                        className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
+                                                    >
+                                                        <Layout size={16} />
+                                                    </button>
+                                                </Tooltip>
+                                                {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationPickerTriggerRef} />}
+                                            </div>
+                                            <div className="relative">
+                                                <Tooltip content="Фон записи">
+                                                    <button 
+                                                        ref={creationColorTriggerRef}
+                                                        onMouseDown={(e) => { e.preventDefault(); setShowCreationColorPicker(!showCreationColorPicker); }} 
+                                                        className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors ${creationColor !== 'white' ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
+                                                    >
+                                                        <Palette size={16} />
+                                                    </button>
+                                                </Tooltip>
+                                                {showCreationColorPicker && (
+                                                    <div className="fixed inset-0 z-[9998]" onClick={() => setShowCreationColorPicker(false)}>
+                                                        <div 
+                                                            className="absolute bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-[9999] flex-wrap max-w-[200px]" 
+                                                            style={{
+                                                                top: creationColorTriggerRef.current?.getBoundingClientRect().bottom! + 8,
+                                                                left: creationColorTriggerRef.current?.getBoundingClientRect().left!
+                                                            }}
+                                                            onMouseDown={e => e.stopPropagation()}
+                                                        >
+                                                            {colors.map(c => (
+                                                                <button 
+                                                                    key={c.id} 
+                                                                    onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowCreationColorPicker(false); }} 
+                                                                    className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} 
+                                                                    style={{ backgroundColor: c.hex }} 
+                                                                    title={c.id} 
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                     
                                     <div className="flex gap-2">
                                         <button 
                                             onClick={handlePost} 
-                                            disabled={!hasCreationContent} 
+                                            disabled={!hasCreationContent && !creationTitle} 
                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium text-sm transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
                                         >
                                             <Send size={16} strokeWidth={1} /> 
@@ -1301,14 +1577,19 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 {/* Entry Card */}
                                 <div 
                                     onClick={() => setSelectedEntryId(entry.id)} 
-                                    className={`relative p-6 md:p-8 rounded-2xl border transition-all duration-300 group cursor-pointer
+                                    className={`relative rounded-2xl border transition-all duration-300 group cursor-pointer overflow-hidden
                                         ${entry.isInsight 
                                             ? 'bg-gradient-to-br from-violet-50/80 via-fuchsia-50/50 to-white dark:from-violet-900/20 dark:via-fuchsia-900/10 dark:to-[#1e293b] border-violet-200/50 dark:border-violet-800/30 shadow-sm' 
-                                            : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md'
+                                            : `${getJournalColorClass(entry.color)} border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md`
                                         }
                                     `}
                                 >
-                                
+                                {entry.coverUrl && (
+                                    <div className="h-32 w-full relative overflow-hidden">
+                                        <img src={entry.coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                                    </div>
+                                )}
+                                <div className="p-6 md:p-8">
                                 {/* CARD HEADER - ALIGNED */}
                                 <div className="flex justify-between items-center mb-4">
                                     <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
@@ -1334,6 +1615,10 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                         )}
                                     </div>
                                 </div>
+
+                                {entry.title && (
+                                    <h3 className="font-sans text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">{entry.title}</h3>
+                                )}
 
                                 <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
                                     <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
@@ -1362,6 +1647,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
                                     </div>
                                 )}
+                                </div>
                                 </div>
                             </div>
                         );
@@ -1483,18 +1769,42 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="w-full max-w-lg bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden"
+                    className={`w-full max-w-lg bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden ${getJournalColorClass(editingId === selectedEntry.id ? editColor : selectedEntry.color)}`}
                     onClick={(e) => e.stopPropagation()}
                 >
+                    {(editingId === selectedEntry.id ? editCover : selectedEntry.coverUrl) && (
+                        <div className="h-40 shrink-0 relative mb-6 -mx-8 -mt-8 md:-mx-10 md:-mt-10 w-[calc(100%_+_4rem)] md:w-[calc(100%_+_5rem)] group overflow-hidden">
+                            <img src={editingId === selectedEntry.id ? editCover! : selectedEntry.coverUrl!} alt="Cover" className="w-full h-full object-cover" />
+                            {editingId === selectedEntry.id && (
+                                <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
+                    )}
+
                     {/* GLASS MODAL HEADER */}
                     <div className="flex justify-between items-start mb-6 shrink-0">
                         <div className="flex flex-col gap-1 pr-4 w-full">
                             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1 font-mono">
                                 {formatDate(selectedEntry.date)} <span className="opacity-50 mx-1">/</span> ID: {selectedEntry.id.slice(-4)}
                             </div>
-                            <h3 className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight break-words">
-                                Запись Дневника
-                            </h3>
+                            {editingId === selectedEntry.id ? (
+                                <input 
+                                    type="text" 
+                                    placeholder="Название" 
+                                    value={editTitle} 
+                                    onChange={(e) => setEditTitle(e.target.value)} 
+                                    className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full p-0 m-0 border-b border-transparent focus:border-slate-300 dark:focus:border-slate-600 transition-colors" 
+                                    autoFocus
+                                />
+                            ) : (
+                                selectedEntry.title ? (
+                                    <h3 className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight break-words">
+                                        {selectedEntry.title}
+                                    </h3>
+                                ) : null
+                            )}
                         </div>
                         <div className="flex items-center shrink-0 gap-1">
                             {!editingId && (
@@ -1523,6 +1833,52 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
                                             <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
                                             {activeImage && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                            <div className="relative">
+                                                <Tooltip content="Обложка">
+                                                    <button 
+                                                        ref={editPickerTriggerRef}
+                                                        onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} 
+                                                        className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors ${editCover ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
+                                                    >
+                                                        <Layout size={16} />
+                                                    </button>
+                                                </Tooltip>
+                                                {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editPickerTriggerRef} />}
+                                            </div>
+                                            <div className="relative">
+                                                <Tooltip content="Фон записи">
+                                                    <button 
+                                                        ref={creationColorTriggerRef}
+                                                        onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} 
+                                                        className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors ${editColor !== 'white' ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
+                                                    >
+                                                        <Palette size={16} />
+                                                    </button>
+                                                </Tooltip>
+                                                {showEditColorPicker && (
+                                                    <div className="fixed inset-0 z-[9998]" onClick={() => setShowEditColorPicker(false)}>
+                                                        <div 
+                                                            className="absolute bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-[9999] flex-wrap max-w-[200px]" 
+                                                            style={{
+                                                                top: creationColorTriggerRef.current?.getBoundingClientRect().bottom! + 8,
+                                                                left: creationColorTriggerRef.current?.getBoundingClientRect().left!
+                                                            }}
+                                                            onMouseDown={e => e.stopPropagation()}
+                                                        >
+                                                            {colors.map(c => (
+                                                                <button 
+                                                                    key={c.id} 
+                                                                    onMouseDown={(e) => { e.preventDefault(); setEditColor(c.id); setShowEditColorPicker(false); }} 
+                                                                    className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${editColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} 
+                                                                    style={{ backgroundColor: c.hex }} 
+                                                                    title={c.id} 
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                     <div 
@@ -1544,8 +1900,10 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                             </div>
                         ) : (
                             <div className="flex-1 flex flex-col">
-                                <div className="font-serif text-[1.1rem] leading-[1.8] text-[#2F3437] dark:text-slate-200">
-                                    <ReactMarkdown components={markdownComponents}>{selectedEntry.content}</ReactMarkdown>
+                                <div className="font-serif text-[#2F3437] dark:text-slate-200 leading-[1.8] text-base">
+                                    <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                        {selectedEntry.content.replace(/\n/g, '  \n')}
+                                    </ReactMarkdown>
                                 </div>
 
                                 {selectedEntry.aiFeedback && (
