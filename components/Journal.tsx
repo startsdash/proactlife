@@ -7,7 +7,7 @@ import remarkGfm from 'remark-gfm';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem, PenTool, RotateCcw, RotateCw, Bold, Italic, Eraser, Image as ImageIcon, Layout, Palette, ArrowRight, RefreshCw, Upload, Shuffle } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem, PenTool, RotateCcw, RotateCw, Bold, Italic, Eraser, Image as ImageIcon, Layout, Palette, ArrowRight, RefreshCw, Upload, Shuffle, Globe } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
@@ -49,6 +49,79 @@ const getJournalColorClass = (colorId?: string) => colors.find(c => c.id === col
 // --- HELPER FUNCTIONS ---
 
 const allowDataUrls = (url: string) => url;
+
+const findFirstUrl = (text: string): string | null => {
+    const maskedText = text.replace(/!\[.*?\]\((.*?)\)/g, ''); // Ignore images
+    const match = maskedText.match(/(https?:\/\/[^\s\)]+)/);
+    return match ? match[0] : null;
+};
+
+const LinkPreview = React.memo(({ url }: { url: string }) => {
+    const [data, setData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        let mounted = true;
+        setLoading(true);
+        setError(false);
+        fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`)
+            .then(res => res.json())
+            .then(json => {
+                if (mounted) {
+                    if (json.status === 'success') {
+                        setData(json.data);
+                    } else {
+                        setError(true);
+                    }
+                    setLoading(false);
+                }
+            })
+            .catch(() => {
+                if (mounted) {
+                    setError(true);
+                    setLoading(false);
+                }
+            });
+        return () => { mounted = false; };
+    }, [url]);
+
+    if (error || loading) return null;
+    if (!data || !data.title) return null;
+
+    return (
+        <a 
+            href={url} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            onClick={(e) => e.stopPropagation()} 
+            className="block mt-4 bg-white/60 dark:bg-slate-800/60 hover:bg-white/80 dark:hover:bg-slate-800 transition-all rounded-xl overflow-hidden group/link relative no-underline border border-slate-200/50 dark:border-slate-700/50 shadow-sm"
+        >
+            {data.image?.url && (
+                <div className="h-32 w-full overflow-hidden relative">
+                    <img 
+                        src={data.image.url} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover/link:scale-105 opacity-90 group-hover/link:opacity-100" 
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                </div>
+            )}
+            <div className="p-3">
+                <h4 className="font-sans font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-1 mb-1 leading-snug">{data.title}</h4>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-2 leading-relaxed font-sans">{data.description}</p>
+                <div className="flex items-center gap-2 text-[9px] text-slate-400 uppercase tracking-wider font-bold font-sans">
+                    {data.logo?.url ? (
+                        <img src={data.logo.url} className="w-3 h-3 rounded-full" alt="" />
+                    ) : (
+                        <Globe size={10} />
+                    )}
+                    <span className="truncate">{data.publisher || new URL(url).hostname}</span>
+                </div>
+            </div>
+        </a>
+    );
+});
 
 const processImage = (file: File | Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -1589,6 +1662,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                         const mentor = config.mentors.find(m => m.id === entry.mentorId);
                         const isEditing = editingId === entry.id;
                         const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
+                        const linkUrl = findFirstUrl(entry.content);
                         
                         const primarySphereId = entry.spheres?.[0];
                         const sphereConfig = SPHERES.find(s => s.id === primarySphereId);
@@ -1674,6 +1748,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                         {entry.content.replace(/\n/g, '  \n')}
                                     </ReactMarkdown>
                                 </div>
+                                {linkUrl && <LinkPreview url={linkUrl} />}
 
                                 {/* Context Link */}
                                 {linkedTask && !isEditing && (
@@ -1820,7 +1895,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className={`w-full max-w-lg bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden ${getJournalColorClass(editingId === selectedEntry.id ? editColor : selectedEntry.color)}`}
+                    className={`w-full max-w-lg backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden ${getJournalColorClass(editingId === selectedEntry.id ? editColor : selectedEntry.color)}`}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {(editingId === selectedEntry.id ? editCover : selectedEntry.coverUrl) && (
@@ -1956,6 +2031,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                         {selectedEntry.content.replace(/\n/g, '  \n')}
                                     </ReactMarkdown>
                                 </div>
+                                {(() => { const url = findFirstUrl(selectedEntry.content); return url ? <LinkPreview url={url} /> : null; })()}
 
                                 {selectedEntry.aiFeedback && (
                                     <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/5">
