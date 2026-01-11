@@ -2056,7 +2056,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                             </div>
                         ) : (
                             <div className="flex-1 flex flex-col">
-                                <div className="font-serif text-[#2F3437] dark:text-slate-200 leading-[1.8] text-base">
+                                <div className="flex-1 font-serif text-[#2F3437] dark:text-slate-200 leading-[1.8] text-base">
                                     <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                                         {selectedEntry.content.replace(/\n/g, '  \n')}
                                     </ReactMarkdown>
@@ -2076,7 +2076,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 )}
                                 
                                 {/* AETHER FOOTER REPLICA */}
-                                <div className="mt-auto pt-8 border-t border-black/5 dark:border-white/5 flex flex-col gap-6 shrink-0">
+                                <div className="mt-6 pt-4 border-t border-black/5 dark:border-white/5 flex flex-col gap-4 shrink-0">
                                     {selectedLinkedTask && !editingId && (
                                         <div className="font-mono text-[10px] text-slate-400 flex items-center gap-2 group/ctx">
                                             <span className="opacity-50">[ CONTEXT: </span>
