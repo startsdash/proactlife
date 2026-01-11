@@ -559,7 +559,7 @@ const StaticChallengeRenderer: React.FC<{
 };
 
 const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addEntry, deleteEntry, updateEntry, addMentorAnalysis, deleteMentorAnalysis, initialTaskId, onClearInitialTask, onNavigateToTask }) => {
-  const [content, setContent] = useState('');
+  const [hasCreationContent, setHasCreationContent] = useState(false);
   const [linkedTaskId, setLinkedTaskId] = useState<string>('');
   const [selectedSpheres, setSelectedSpheres] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
@@ -569,8 +569,15 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Rich Text Editor State
-  const [editContentRef] = useState(useRef<HTMLDivElement>(null));
+  // Creation Editor State
+  const creationContentEditableRef = useRef<HTMLDivElement>(null);
+  const [creationHistory, setCreationHistory] = useState<string[]>(['']);
+  const [creationHistoryIndex, setCreationHistoryIndex] = useState(0);
+  const creationHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const creationFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Edit Modal Editor State
+  const editContentRef = useRef<HTMLDivElement>(null);
   const [editHistory, setEditHistory] = useState<string[]>(['']);
   const [editHistoryIndex, setEditHistoryIndex] = useState(0);
   const [activeImage, setActiveImage] = useState<HTMLImageElement | null>(null);
@@ -613,7 +620,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       if (taskExists) {
         setLinkedTaskId(initialTaskId);
         onClearInitialTask?.();
-        setIsCreationExpanded(true); // Open creation if context passed
+        setIsCreationExpanded(true); 
       }
     }
   }, [initialTaskId, tasks, onClearInitialTask]);
@@ -635,7 +642,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
     const handleClickOutside = (event: MouseEvent) => {
         if (creationRef.current && !creationRef.current.contains(event.target as Node)) {
             // Only close if no content and no context selected
-            if (!content.trim() && !linkedTaskId && selectedSpheres.length === 0) {
+            if (!hasCreationContent && !linkedTaskId && selectedSpheres.length === 0) {
                 setIsCreationExpanded(false);
             }
         }
@@ -644,9 +651,72 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isCreationExpanded, content, linkedTaskId, selectedSpheres]);
+  }, [isCreationExpanded, hasCreationContent, linkedTaskId, selectedSpheres]);
 
-  // --- EDITOR LOGIC ---
+  // --- CREATION EDITOR HELPERS ---
+  const saveCreationHistorySnapshot = useCallback((content: string) => {
+      if (content === creationHistory[creationHistoryIndex]) return;
+      const newHistory = creationHistory.slice(0, creationHistoryIndex + 1);
+      newHistory.push(content);
+      if (newHistory.length > 50) newHistory.shift();
+      setCreationHistory(newHistory);
+      setCreationHistoryIndex(newHistory.length - 1);
+  }, [creationHistory, creationHistoryIndex]);
+
+  const handleCreationInput = () => {
+      if (creationContentEditableRef.current) {
+          setHasCreationContent(creationContentEditableRef.current.innerText.trim().length > 0 || !!creationContentEditableRef.current.querySelector('img'));
+      }
+      if (creationHistoryTimeoutRef.current) clearTimeout(creationHistoryTimeoutRef.current);
+      creationHistoryTimeoutRef.current = setTimeout(() => {
+          if (creationContentEditableRef.current) saveCreationHistorySnapshot(creationContentEditableRef.current.innerHTML);
+      }, 500); 
+  };
+
+  const execCreationCmd = (command: string, value: string | undefined = undefined) => {
+      document.execCommand(command, false, value);
+      if (creationContentEditableRef.current) {
+          creationContentEditableRef.current.focus();
+          saveCreationHistorySnapshot(creationContentEditableRef.current.innerHTML);
+      }
+  };
+
+  const execCreationUndo = () => {
+      if (creationHistoryIndex > 0) {
+          const prevIndex = creationHistoryIndex - 1;
+          setCreationHistoryIndex(prevIndex);
+          if (creationContentEditableRef.current) creationContentEditableRef.current.innerHTML = creationHistory[prevIndex];
+      }
+  };
+
+  const execCreationRedo = () => {
+      if (creationHistoryIndex < creationHistory.length - 1) {
+          const nextIndex = creationHistoryIndex + 1;
+          setCreationHistoryIndex(nextIndex);
+          if (creationContentEditableRef.current) creationContentEditableRef.current.innerHTML = creationHistory[nextIndex];
+      }
+  };
+
+  const handleClearCreationStyle = (e: React.MouseEvent) => {
+      e.preventDefault();
+      execCreationCmd('removeFormat');
+      execCreationCmd('formatBlock', 'div'); 
+  };
+
+  const handleCreationImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file && creationContentEditableRef.current) {
+          try {
+              const compressedBase64 = await processImage(file);
+              insertImageAtCursor(compressedBase64, creationContentEditableRef.current);
+              saveCreationHistorySnapshot(creationContentEditableRef.current.innerHTML);
+              setHasCreationContent(true);
+          } catch (err) { console.error("Image upload failed", err); }
+          e.target.value = '';
+      }
+  };
+
+  // --- EDIT MODAL EDITOR LOGIC ---
   const saveEditHistorySnapshot = useCallback((content: string) => {
       if (content === editHistory[editHistoryIndex]) return;
       const newHistory = editHistory.slice(0, editHistoryIndex + 1);
@@ -715,7 +785,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
         const sel = window.getSelection();
         sel?.removeAllRanges();
         sel?.addRange(range);
-        saveEditHistorySnapshot(targetEl.innerHTML); 
+        // Only save history if specific editor called it, usually handled by caller
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -724,6 +794,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
           try {
               const compressedBase64 = await processImage(file);
               insertImageAtCursor(compressedBase64, editContentRef.current);
+              saveEditHistorySnapshot(editContentRef.current.innerHTML);
           } catch (err) { console.error("Image upload failed", err); }
           e.target.value = '';
       }
@@ -733,7 +804,12 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
           const range = sel.getRangeAt(0);
+          // Check Edit Editor
           if (editContentRef.current && editContentRef.current.contains(range.commonAncestorContainer)) {
+              lastSelectionRange.current = range.cloneRange();
+          }
+          // Check Creation Editor
+          if (creationContentEditableRef.current && creationContentEditableRef.current.contains(range.commonAncestorContainer)) {
               lastSelectionRange.current = range.cloneRange();
           }
       }
@@ -756,20 +832,33 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const deleteActiveImage = (e?: React.MouseEvent) => {
       if(e) { e.preventDefault(); e.stopPropagation(); }
       if (activeImage) {
+          const isCreation = creationContentEditableRef.current && creationContentEditableRef.current.contains(activeImage);
+          const isEdit = editContentRef.current && editContentRef.current.contains(activeImage);
+
           activeImage.remove();
           setActiveImage(null);
-          if (editContentRef.current) saveEditHistorySnapshot(editContentRef.current.innerHTML);
+          
+          if (isEdit && editContentRef.current) saveEditHistorySnapshot(editContentRef.current.innerHTML);
+          if (isCreation && creationContentEditableRef.current) {
+              saveCreationHistorySnapshot(creationContentEditableRef.current.innerHTML);
+              setHasCreationContent(creationContentEditableRef.current.innerText.trim().length > 0 || !!creationContentEditableRef.current.querySelector('img'));
+          }
       }
   };
 
-  // Image Paste
+  // Image Paste Listener
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
-        if (!editContentRef.current || !editingId) return;
-        
-        // Ensure paste target is within our editor
         const target = e.target as HTMLElement;
-        if (!editContentRef.current.contains(target) && target !== editContentRef.current) return;
+        let activeEditor = null;
+        
+        if (editContentRef.current && (editContentRef.current === target || editContentRef.current.contains(target))) {
+            activeEditor = editContentRef.current;
+        } else if (creationContentEditableRef.current && (creationContentEditableRef.current === target || creationContentEditableRef.current.contains(target))) {
+            activeEditor = creationContentEditableRef.current;
+        }
+
+        if (!activeEditor) return;
 
         const items = e.clipboardData?.items;
         if (!items) return;
@@ -780,7 +869,12 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 if (blob) {
                     try {
                         const compressedBase64 = await processImage(blob);
-                        insertImageAtCursor(compressedBase64, editContentRef.current);
+                        insertImageAtCursor(compressedBase64, activeEditor);
+                        if (activeEditor === editContentRef.current) saveEditHistorySnapshot(activeEditor.innerHTML);
+                        else {
+                            saveCreationHistorySnapshot(activeEditor.innerHTML);
+                            setHasCreationContent(true);
+                        }
                     } catch (err) { console.error("Image paste failed", err); }
                 }
             }
@@ -788,7 +882,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
     };
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, [editingId]);
+  }, [editingId, isCreationExpanded]);
 
   // Init Editor Content
   useEffect(() => {
@@ -805,8 +899,11 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const availableTasks = tasks.filter(t => !t.isArchived && (t.column === 'doing' || t.column === 'done') || t.id === linkedTaskId);
 
   const handlePost = () => {
-    if (!content.trim()) return;
-    const formattedContent = applyTypography(content);
+    const rawHtml = creationContentEditableRef.current?.innerHTML || '';
+    const markdownContent = htmlToMarkdown(rawHtml);
+    if (!markdownContent.trim()) return;
+    
+    const formattedContent = applyTypography(markdownContent);
     const newEntry: JournalEntry = {
       id: Date.now().toString(),
       date: Date.now(),
@@ -815,7 +912,11 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       spheres: selectedSpheres
     };
     addEntry(newEntry);
-    setContent('');
+    
+    if (creationContentEditableRef.current) creationContentEditableRef.current.innerHTML = '';
+    setHasCreationContent(false);
+    setCreationHistory(['']);
+    setCreationHistoryIndex(0);
     setLinkedTaskId('');
     setSelectedSpheres([]);
     setIsCreationExpanded(false);
@@ -1047,9 +1148,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     </div>
                                 </div>
                             ) : (
-                                <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-lg p-5 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200 relative">
+                                <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-lg p-5 flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200 relative">
                                     {/* Expanded Form */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                                         <div>
                                             <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2 pl-1 tracking-widest font-mono">
                                                 <Link size={10} strokeWidth={1} /> Контекст
@@ -1065,20 +1166,40 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     </div>
                                     
                                     <div className="relative">
-                                        <textarea 
-                                            className="w-full h-40 md:h-56 resize-none outline-none text-base text-slate-800 dark:text-slate-200 bg-transparent p-1 placeholder:text-slate-400/50 dark:placeholder:text-slate-500/50 font-serif leading-relaxed" 
-                                            placeholder="О чем ты думаешь? Чему научило это событие? (Markdown поддерживается)" 
-                                            value={content} 
-                                            onChange={(e) => setContent(e.target.value)} 
-                                            autoFocus
+                                        <div 
+                                            ref={creationContentEditableRef}
+                                            contentEditable 
+                                            onInput={handleCreationInput} 
+                                            onClick={handleEditorClick}
+                                            onBlur={saveSelection}
+                                            onMouseUp={saveSelection}
+                                            onKeyUp={saveSelection}
+                                            className="w-full h-40 md:h-56 overflow-y-auto outline-none text-base text-slate-800 dark:text-slate-200 bg-transparent p-1 font-serif leading-relaxed custom-scrollbar-ghost [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:dark:text-slate-500"
+                                            data-placeholder="О чем ты думаешь? Чему научило это событие?"
                                         />
                                         <div className="absolute bottom-0 left-0 w-full h-px bg-slate-200/50 dark:bg-slate-700/50" />
+                                    </div>
+
+                                    {/* TOOLBAR */}
+                                    <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-white/5 mb-1">
+                                        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none mask-fade-right">
+                                            <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execCreationUndo(); }} disabled={creationHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
+                                            <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execCreationRedo(); }} disabled={creationHistoryIndex >= creationHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
+                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                            <Tooltip content="Очистить"><button onMouseDown={handleClearCreationStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                            <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCreationImageUpload} /><ImageIcon size={16} /></label></Tooltip>
+                                            {activeImage && creationContentEditableRef.current && creationContentEditableRef.current.contains(activeImage) && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
+                                        </div>
                                     </div>
                                     
                                     <div className="flex gap-2">
                                         <button 
                                             onClick={handlePost} 
-                                            disabled={!content.trim()} 
+                                            disabled={!hasCreationContent} 
                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium text-sm transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
                                         >
                                             <Send size={16} strokeWidth={1} /> 
