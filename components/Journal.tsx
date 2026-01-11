@@ -1527,7 +1527,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
              <div className="w-full px-4 md:px-8 pt-6 pb-8 relative z-10">
                 {/* CREATION BLOCK (COLLAPSIBLE) */}
                 <div className="max-w-3xl mx-auto w-full mb-8 relative z-30">
-                    <div className="flex gap-3 items-start">
+                    <div className={`flex gap-2 ${!isCreationExpanded ? 'items-center' : 'items-start'}`}>
                         <div className="flex-1 min-w-0" ref={creationRef}>
                             {!isCreationExpanded ? (
                                 <div 
@@ -1669,7 +1669,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                                     <div className="w-2 h-2 bg-current rounded-[1px] relative z-10" />
                                                 </div>
                                             ) : (
-                                                <Sparkles size={20} strokeWidth={1.5} />
+                                                <Sparkles size={18} strokeWidth={1.5} />
                                             )}
                                         </button>
                                     </Tooltip>
@@ -1679,7 +1679,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             onClick={() => setShowHistory(true)} 
                                             className={actionButtonStyle}
                                         >
-                                            <History size={20} strokeWidth={1.5} />
+                                            <History size={18} strokeWidth={1.5} />
                                         </button>
                                     </Tooltip>
                                 </>
