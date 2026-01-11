@@ -547,17 +547,57 @@ const JournalEntrySphereSelector: React.FC<{
     direction?: 'up' | 'down'
 }> = ({ entry, updateEntry, align = 'right', direction = 'down' }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const [style, setStyle] = useState<React.CSSProperties>({});
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
+            if (triggerRef.current && triggerRef.current.contains(event.target as Node)) {
+                return;
             }
+            if ((event.target as Element).closest('.sphere-selector-dropdown')) {
+                return;
+            }
+            setIsOpen(false);
         };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+        
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            window.addEventListener('scroll', () => setIsOpen(false), true);
+            window.addEventListener('resize', () => setIsOpen(false));
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('scroll', () => setIsOpen(false), true);
+            window.removeEventListener('resize', () => setIsOpen(false));
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (isOpen && triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const width = 192; // w-48 = 12rem = 192px
+
+            let top = direction === 'down' ? rect.bottom + 8 : rect.top - 8;
+            let left = align === 'left' ? rect.left : rect.right - width;
+
+            const newStyle: React.CSSProperties = {
+                position: 'fixed',
+                left: left,
+                zIndex: 9999,
+                minWidth: width,
+            };
+
+            if (direction === 'up') {
+                newStyle.top = rect.top - 8;
+                newStyle.transform = 'translateY(-100%)';
+            } else {
+                newStyle.top = rect.bottom + 8;
+            }
+
+            setStyle(newStyle);
+        }
+    }, [isOpen, direction, align]);
     
     const toggleSphere = (sphereId: string) => {
         const current = entry.spheres || [];
@@ -568,8 +608,9 @@ const JournalEntrySphereSelector: React.FC<{
     };
 
     return (
-        <div className="relative" ref={dropdownRef}>
+        <>
             <button 
+                ref={triggerRef}
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
                 className="flex items-center gap-1.5 font-mono text-[9px] font-bold text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent px-2 py-1 rounded transition-colors uppercase tracking-widest"
             >
@@ -592,9 +633,10 @@ const JournalEntrySphereSelector: React.FC<{
                 <span>Сфера</span>
             </button>
             
-            {isOpen && (
+            {isOpen && createPortal(
                 <div 
-                    className={`absolute ${direction === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'} ${align === 'left' ? 'left-0' : 'right-0'} w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5`} 
+                    className="sphere-selector-dropdown absolute bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5"
+                    style={style}
                     onClick={e => e.stopPropagation()}
                 >
                     {SPHERES.map(s => {
@@ -612,9 +654,10 @@ const JournalEntrySphereSelector: React.FC<{
                             </button>
                         );
                     })}
-                </div>
+                </div>,
+                document.body
             )}
-        </div>
+        </>
     );
 };
 
@@ -766,7 +809,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
   // Edit Modal Editor State
   const editContentRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null); // Missing ref
+  const fileInputRef = useRef<HTMLInputElement>(null); 
   const [editHistory, setEditHistory] = useState<string[]>(['']);
   const [editHistoryIndex, setEditHistoryIndex] = useState(0);
   const [activeImage, setActiveImage] = useState<HTMLImageElement | null>(null);
@@ -780,6 +823,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const [editColor, setEditColor] = useState('white');
   const [showEditCoverPicker, setShowEditCoverPicker] = useState(false);
   const [showEditColorPicker, setShowEditColorPicker] = useState(false);
+  const editColorTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -1621,7 +1665,14 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 )}
 
                                 <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
-                                    <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
+                                    <ReactMarkdown 
+                                        components={markdownComponents} 
+                                        urlTransform={allowDataUrls} 
+                                        remarkPlugins={[remarkGfm]} 
+                                        rehypePlugins={[rehypeRaw]}
+                                    >
+                                        {entry.content.replace(/\n/g, '  \n')}
+                                    </ReactMarkdown>
                                 </div>
 
                                 {/* Context Link */}
@@ -1849,7 +1900,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             <div className="relative">
                                                 <Tooltip content="Фон записи">
                                                     <button 
-                                                        ref={creationColorTriggerRef}
+                                                        ref={editColorTriggerRef}
                                                         onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} 
                                                         className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors ${editColor !== 'white' ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
                                                     >
@@ -1861,8 +1912,8 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                                         <div 
                                                             className="absolute bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-[9999] flex-wrap max-w-[200px]" 
                                                             style={{
-                                                                top: creationColorTriggerRef.current?.getBoundingClientRect().bottom! + 8,
-                                                                left: creationColorTriggerRef.current?.getBoundingClientRect().left!
+                                                                top: editColorTriggerRef.current?.getBoundingClientRect().bottom! + 8,
+                                                                left: editColorTriggerRef.current?.getBoundingClientRect().left!
                                                             }}
                                                             onMouseDown={e => e.stopPropagation()}
                                                         >
