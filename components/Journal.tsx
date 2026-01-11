@@ -2076,7 +2076,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 )}
                                 
                                 {/* AETHER FOOTER REPLICA */}
-                                <div className="mt-auto pt-6 border-t border-black/5 dark:border-white/5 flex flex-col gap-4 shrink-0">
+                                <div className="mt-auto pt-8 border-t border-black/5 dark:border-white/5 flex flex-col gap-6 shrink-0">
                                     {selectedLinkedTask && !editingId && (
                                         <div className="font-mono text-[10px] text-slate-400 flex items-center gap-2 group/ctx">
                                             <span className="opacity-50">[ CONTEXT: </span>
