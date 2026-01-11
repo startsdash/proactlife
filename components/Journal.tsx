@@ -1,10 +1,12 @@
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
 import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem, PenTool } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem, PenTool, RotateCcw, RotateCw, Bold, Italic, Eraser, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
@@ -24,6 +26,129 @@ interface Props {
   onNavigateToTask?: (taskId: string) => void;
 }
 
+// --- HELPER FUNCTIONS (Borrowed from Napkins for Consistency) ---
+
+const allowDataUrls = (url: string) => url;
+
+const processImage = (file: File | Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        if (!file.type.startsWith('image/')) {
+            reject(new Error('File is not an image'));
+            return;
+        }
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                const MAX_HEIGHT = 800;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    resolve(dataUrl);
+                } else {
+                    reject(new Error('Canvas context failed'));
+                }
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+};
+
+const htmlToMarkdown = (html: string) => {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+
+    const wrap = (text: string, marker: string) => {
+        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
+        if (match && match[2]) {
+            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
+        }
+        return text.trim() ? `${marker}${text}${marker}` : '';
+    };
+
+    const walk = (node: Node): string => {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            const tag = el.tagName.toLowerCase();
+            let content = '';
+            el.childNodes.forEach(child => content += walk(child));
+            
+            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
+            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
+            if (el.style.fontStyle === 'italic') return wrap(content, '*');
+            
+            switch (tag) {
+                case 'b': case 'strong': return wrap(content, '**');
+                case 'i': case 'em': return wrap(content, '*');
+                case 'u': return content.trim() ? `<u>${content}</u>` : '';
+                case 'code': return `\`${content}\``;
+                case 'h1': return `\n# ${content}\n`;
+                case 'h2': return `\n## ${content}\n`;
+                case 'div': return content ? `\n${content}` : '\n'; 
+                case 'p': return `\n${content}\n`;
+                case 'br': return '\n';
+                case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
+                default: return content;
+            }
+        }
+        return '';
+    };
+    
+    let md = walk(temp);
+    md = md.replace(/\n{3,}/g, '\n\n').trim();
+    md = md.replace(/&nbsp;/g, ' ');
+    return applyTypography(md);
+};
+
+const markdownToHtml = (md: string) => {
+    if (!md) return '';
+    let html = md;
+    
+    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
+    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
+    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
+    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
+        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
+    });
+    
+    const lines = html.split('\n');
+    const processedLines = lines.map(line => {
+        if (line.match(/^<(h1|h2|div|p|ul|ol|li|blockquote)/i)) return line;
+        return line.trim() ? `<div>${line}</div>` : '<div><br></div>';
+    });
+    
+    return processedLines.join('');
+};
+
 const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     if (typeof children === 'string') return children.replace(/:\s*$/, '');
     if (Array.isArray(children)) {
@@ -42,20 +167,21 @@ const cleanHeader = (children: React.ReactNode): React.ReactNode => {
 
 // --- LITERARY TYPOGRAPHY COMPONENTS (DEFAULT) ---
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-3 last:mb-0 text-base text-[#2F3437] dark:text-slate-300 leading-relaxed font-serif" {...props} />,
-    a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 underline underline-offset-2 decoration-1" target="_blank" rel="noopener noreferrer" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-5 mb-3 space-y-1 text-sm text-[#2F3437] dark:text-slate-300 font-serif" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 mb-3 space-y-1 text-sm text-[#2F3437] dark:text-slate-300 font-serif" {...props} />,
-    li: ({node, ...props}: any) => <li className="pl-1 leading-relaxed" {...props} />,
-    h1: ({node, children, ...props}: any) => <h1 className="text-lg font-bold mt-4 mb-2 text-[#2F3437] dark:text-slate-100 font-sans tracking-tight" {...props}>{cleanHeader(children)}</h1>,
-    h2: ({node, children, ...props}: any) => <h2 className="text-base font-bold mt-3 mb-2 text-[#2F3437] dark:text-slate-100 font-sans tracking-tight" {...props}>{cleanHeader(children)}</h2>,
-    h3: ({node, children, ...props}: any) => <h3 className="text-sm font-bold mt-3 mb-1 text-slate-500 dark:text-slate-400 uppercase tracking-widest font-sans" {...props}>{cleanHeader(children)}</h3>,
-    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 dark:border-slate-600 pl-4 py-1 my-3 text-sm text-slate-500 italic font-serif" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
+    a: ({node, ...props}: any) => <a className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer underline-offset-4 decoration-slate-300 dark:decoration-slate-600 transition-colors font-sans text-sm font-medium relative z-20 break-all" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
+    li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
+    h1: ({node, ...props}: any) => <h1 className="font-sans font-bold text-2xl mt-4 mb-2 text-slate-900 dark:text-slate-100 leading-tight" {...props} />,
+    h2: ({node, ...props}: any) => <h2 className="font-sans font-bold text-xl mt-3 mb-2 text-slate-900 dark:text-slate-100 leading-tight" {...props} />,
+    h3: ({node, ...props}: any) => <h3 className="font-sans font-bold text-lg mt-2 mb-1 text-slate-900 dark:text-slate-100 leading-tight" {...props} />,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 dark:border-slate-600 pl-4 italic text-slate-500 dark:text-slate-400 my-3 font-serif" {...props} />,
     code: ({node, inline, className, children, ...props}: any) => {
          return inline 
-            ? <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase tracking-wide" {...props}>{children}</code>
-            : <code className="block bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 p-3 rounded-lg text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
-    }
+            ? <code className="bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
+            : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-3 rounded-xl text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+    },
+    img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
 };
 
 // --- HOLOGRAM MARKDOWN COMPONENTS (FOR ANALYSIS MODAL) ---
@@ -242,6 +368,17 @@ const JournalEntrySphereSelector: React.FC<{
     direction?: 'up' | 'down'
 }> = ({ entry, updateEntry, align = 'right', direction = 'down' }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
     
     const toggleSphere = (sphereId: string) => {
         const current = entry.spheres || [];
@@ -252,7 +389,7 @@ const JournalEntrySphereSelector: React.FC<{
     };
 
     return (
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
             <button 
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
                 className="flex items-center gap-1.5 font-mono text-[9px] font-bold text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent px-2 py-1 rounded transition-colors uppercase tracking-widest"
@@ -277,29 +414,26 @@ const JournalEntrySphereSelector: React.FC<{
             </button>
             
             {isOpen && (
-                <>
-                    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
-                    <div 
-                        className={`absolute ${direction === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'} ${align === 'left' ? 'left-0' : 'right-0'} w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5`} 
-                        onClick={e => e.stopPropagation()}
-                    >
-                        {SPHERES.map(s => {
-                            const isSelected = entry.spheres?.includes(s.id);
-                            const Icon = ICON_MAP[s.icon];
-                            return (
-                                <button
-                                    key={s.id}
-                                    onClick={() => toggleSphere(s.id)}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                                >
-                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} strokeWidth={1} />}
-                                    <span className="flex-1">{s.label}</span>
-                                    {isSelected && <Check size={12} className="text-indigo-500" strokeWidth={1} />}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </>
+                <div 
+                    className={`absolute ${direction === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'} ${align === 'left' ? 'left-0' : 'right-0'} w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5`} 
+                    onClick={e => e.stopPropagation()}
+                >
+                    {SPHERES.map(s => {
+                        const isSelected = entry.spheres?.includes(s.id);
+                        const Icon = ICON_MAP[s.icon];
+                        return (
+                            <button
+                                key={s.id}
+                                onClick={() => toggleSphere(s.id)}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                            >
+                                {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} strokeWidth={1} />}
+                                <span className="flex-1">{s.label}</span>
+                                {isSelected && <Check size={12} className="text-indigo-500" strokeWidth={1} />}
+                            </button>
+                        );
+                    })}
+                </div>
             )}
         </div>
     );
@@ -434,7 +568,15 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const [dateRange, setDateRange] = useState<{from: string, to: string}>({from: '', to: ''});
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState('');
+  
+  // Rich Text Editor State
+  const [editContentRef] = useState(useRef<HTMLDivElement>(null));
+  const [editHistory, setEditHistory] = useState<string[]>(['']);
+  const [editHistoryIndex, setEditHistoryIndex] = useState(0);
+  const [activeImage, setActiveImage] = useState<HTMLImageElement | null>(null);
+  const lastSelectionRange = useRef<Range | null>(null);
+  const editHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
@@ -447,6 +589,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
   const [isCreationExpanded, setIsCreationExpanded] = useState(false);
   const creationRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
       const previous = scrollY.getPrevious() || 0;
@@ -503,6 +646,162 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isCreationExpanded, content, linkedTaskId, selectedSpheres]);
 
+  // --- EDITOR LOGIC ---
+  const saveEditHistorySnapshot = useCallback((content: string) => {
+      if (content === editHistory[editHistoryIndex]) return;
+      const newHistory = editHistory.slice(0, editHistoryIndex + 1);
+      newHistory.push(content);
+      if (newHistory.length > 50) newHistory.shift();
+      setEditHistory(newHistory);
+      setEditHistoryIndex(newHistory.length - 1);
+  }, [editHistory, editHistoryIndex]);
+
+  const handleEditorInput = () => {
+      if (editHistoryTimeoutRef.current) clearTimeout(editHistoryTimeoutRef.current);
+      editHistoryTimeoutRef.current = setTimeout(() => {
+          if (editContentRef.current) saveEditHistorySnapshot(editContentRef.current.innerHTML);
+      }, 500); 
+  };
+
+  const execCmd = (command: string, value: string | undefined = undefined) => {
+      document.execCommand(command, false, value);
+      if (editContentRef.current) {
+          editContentRef.current.focus();
+          saveEditHistorySnapshot(editContentRef.current.innerHTML);
+      }
+  };
+
+  const execUndo = () => {
+      if (editHistoryIndex > 0) {
+          const prevIndex = editHistoryIndex - 1;
+          setEditHistoryIndex(prevIndex);
+          if (editContentRef.current) editContentRef.current.innerHTML = editHistory[prevIndex];
+      }
+  };
+
+  const execRedo = () => {
+      if (editHistoryIndex < editHistory.length - 1) {
+          const nextIndex = editHistoryIndex + 1;
+          setEditHistoryIndex(nextIndex);
+          if (editContentRef.current) editContentRef.current.innerHTML = editHistory[nextIndex];
+      }
+  };
+
+  const handleClearStyle = (e: React.MouseEvent) => {
+      e.preventDefault();
+      execCmd('removeFormat');
+      execCmd('formatBlock', 'div'); 
+  };
+
+  const insertImageAtCursor = (base64: string, targetEl: HTMLElement) => {
+        targetEl.focus();
+        let range = lastSelectionRange.current;
+        if (!range || !targetEl.contains(range.commonAncestorContainer)) {
+             range = document.createRange();
+             range.selectNodeContents(targetEl);
+             range.collapse(false);
+        }
+        const img = document.createElement('img');
+        img.src = base64;
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '8px';
+        img.style.display = 'block';
+        img.style.margin = '8px 0';
+        img.style.cursor = 'pointer';
+        range.deleteContents();
+        range.insertNode(img);
+        range.setStartAfter(img);
+        range.setEndAfter(img);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        saveEditHistorySnapshot(targetEl.innerHTML); 
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file && editContentRef.current) {
+          try {
+              const compressedBase64 = await processImage(file);
+              insertImageAtCursor(compressedBase64, editContentRef.current);
+          } catch (err) { console.error("Image upload failed", err); }
+          e.target.value = '';
+      }
+  };
+
+  const saveSelection = () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          if (editContentRef.current && editContentRef.current.contains(range.commonAncestorContainer)) {
+              lastSelectionRange.current = range.cloneRange();
+          }
+      }
+  };
+
+  const handleEditorClick = (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG') {
+          if (activeImage && activeImage !== target) activeImage.style.outline = 'none';
+          const img = target as HTMLImageElement;
+          img.style.outline = '3px solid #6366f1'; 
+          img.style.borderRadius = '4px';
+          setActiveImage(img);
+      } else {
+          if (activeImage) { activeImage.style.outline = 'none'; setActiveImage(null); }
+      }
+      saveSelection();
+  };
+
+  const deleteActiveImage = (e?: React.MouseEvent) => {
+      if(e) { e.preventDefault(); e.stopPropagation(); }
+      if (activeImage) {
+          activeImage.remove();
+          setActiveImage(null);
+          if (editContentRef.current) saveEditHistorySnapshot(editContentRef.current.innerHTML);
+      }
+  };
+
+  // Image Paste
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+        if (!editContentRef.current || !editingId) return;
+        
+        // Ensure paste target is within our editor
+        const target = e.target as HTMLElement;
+        if (!editContentRef.current.contains(target) && target !== editContentRef.current) return;
+
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                e.preventDefault();
+                const blob = items[i].getAsFile();
+                if (blob) {
+                    try {
+                        const compressedBase64 = await processImage(blob);
+                        insertImageAtCursor(compressedBase64, editContentRef.current);
+                    } catch (err) { console.error("Image paste failed", err); }
+                }
+            }
+        }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [editingId]);
+
+  // Init Editor Content
+  useEffect(() => {
+      if (editingId && selectedEntry && editContentRef.current) {
+          const html = markdownToHtml(selectedEntry.content);
+          editContentRef.current.innerHTML = html;
+          setEditHistory([html]);
+          setEditHistoryIndex(0);
+      }
+  }, [editingId, selectedEntry]);
+
+  // ----------------------
+
   const availableTasks = tasks.filter(t => !t.isArchived && (t.column === 'doing' || t.column === 'done') || t.id === linkedTaskId);
 
   const handlePost = () => {
@@ -524,21 +823,22 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
   const startEditing = (entry: JournalEntry) => {
     setEditingId(entry.id);
-    setEditContent(entry.content);
   };
 
   const saveEdit = (entry: JournalEntry) => {
-    if (editContent.trim()) {
-        const formattedContent = applyTypography(editContent);
-        updateEntry({ ...entry, content: formattedContent });
-        setEditingId(null);
-        setEditContent('');
+    if (editContentRef.current) {
+        const rawHtml = editContentRef.current.innerHTML;
+        const markdownContent = htmlToMarkdown(rawHtml);
+        
+        if (markdownContent.trim()) {
+            updateEntry({ ...entry, content: markdownContent });
+            setEditingId(null);
+        }
     }
   };
 
   const cancelEditing = () => {
     setEditingId(null);
-    setEditContent('');
   };
 
   const toggleInsight = (entry: JournalEntry) => {
@@ -548,9 +848,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   const handleCloseModal = (e?: React.MouseEvent) => {
       if (e) e.stopPropagation();
       setSelectedEntryId(null);
-      // Clear edit mode state to prevent persistence
       setEditingId(null);
-      setEditContent('');
   };
 
   const RenderIcon = ({ name, className }: { name: string, className?: string }) => {
@@ -916,19 +1214,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                     </div>
                                 </div>
 
-                                {isEditing ? (
-                                    <div className="mb-4" onClick={(e) => e.stopPropagation()}>
-                                        <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none font-mono" placeholder="Markdown..." />
-                                        <div className="flex flex-col-reverse md:flex-row justify-end gap-2 mt-2">
-                                            <button onClick={cancelEditing} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><X size={12} /> Отмена</button>
-                                            <button onClick={() => saveEdit(entry)} className="px-3 py-1.5 text-xs font-medium bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-700 rounded flex items-center justify-center gap-1 w-full md:w-auto"><Check size={12} /> Сохранить</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
-                                        <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
-                                    </div>
-                                )}
+                                <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
+                                    <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
+                                </div>
 
                                 {/* Context Link */}
                                 {linkedTask && !isEditing && (
@@ -1067,99 +1355,125 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
       )}
 
       {selectedEntry && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseModal}>
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                className="w-full max-w-lg bg-white/75 dark:bg-[#1e293b]/75 backdrop-blur-[35px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* AETHER HEADER */}
-                <div className="flex justify-between items-center mb-8 shrink-0">
-                    <div className="font-mono text-[10px] text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                        {formatDate(selectedEntry.date)}
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="right" direction="down" />
-                        <button onClick={handleCloseModal} className="text-slate-300 hover:text-slate-600 dark:text-slate-600 dark:hover:text-slate-300 transition-colors">
-                            <X size={20} strokeWidth={1} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* AETHER BODY */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-2 -mr-2">
-                    {editingId === selectedEntry.id ? (
-                      <div className="mb-4">
-                          <textarea 
-                            value={editContent} 
-                            onChange={(e) => setEditContent(e.target.value)} 
-                            className="w-full h-40 p-0 bg-transparent border-none text-[1.1rem] leading-[1.8] font-serif text-[#2F3437] dark:text-slate-200 outline-none resize-none placeholder:text-slate-300" 
-                            placeholder="Напиши что-нибудь..." 
-                            autoFocus
-                          />
-                          <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5">
-                              <button onClick={cancelEditing} className="font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Отмена</button>
-                              <button onClick={() => saveEdit(selectedEntry)} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 transition-colors">Сохранить</button>
-                          </div>
-                      </div>
-                    ) : (
-                      <div className="font-serif text-[1.1rem] leading-[1.8] text-[#2F3437] dark:text-slate-200">
-                          <ReactMarkdown components={markdownComponents}>{selectedEntry.content}</ReactMarkdown>
-                      </div>
-                    )}
-
-                    {selectedEntry.aiFeedback && (
-                        <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/5">
-                             <div className="flex items-center gap-2 mb-3">
-                                <Sparkles size={12} className="text-indigo-400" />
-                                <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400">Ментор</span>
-                             </div>
-                             <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed font-serif">
-                                <ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown>
-                             </div>
+        <AnimatePresence>
+            <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseModal}>
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="w-full max-w-lg bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* GLASS MODAL HEADER */}
+                    <div className="flex justify-between items-start mb-6 shrink-0">
+                        <div className="flex flex-col gap-1 pr-4 w-full">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1 font-mono">
+                                {formatDate(selectedEntry.date)} <span className="opacity-50 mx-1">/</span> ID: {selectedEntry.id.slice(-4)}
+                            </div>
+                            <h3 className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight break-words">
+                                Запись Дневника
+                            </h3>
                         </div>
-                    )}
-                </div>
-
-                {/* AETHER FOOTER */}
-                <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/5 flex flex-col gap-4 shrink-0">
-                    {selectedLinkedTask && editingId !== selectedEntry.id && (
-                        <div className="font-mono text-[10px] text-slate-400 flex items-center gap-2 group/ctx">
-                            <span className="opacity-50">[ CONTEXT: </span>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(selectedLinkedTask.id); }}
-                                className="hover:text-indigo-500 underline decoration-dotted underline-offset-4 truncate max-w-[200px] transition-colors"
-                            >
-                                {selectedLinkedTask.content}
-                            </button>
-                            <span className="opacity-50"> ]</span>
+                        <div className="flex items-center shrink-0 gap-1">
+                            {!editingId && (
+                                <>
+                                    <Tooltip content="Редактировать"><button onClick={() => startEditing(selectedEntry)} className="p-2 text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={16} /></button></Tooltip>
+                                    <Tooltip content="Удалить"><button onClick={() => { if(confirm("Удалить запись?")) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors"><Trash2 size={16} /></button></Tooltip>
+                                </>
+                            )}
+                            <button onClick={handleCloseModal} className="p-2 text-slate-300 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg ml-2"><X size={20}/></button>
                         </div>
-                    )}
+                    </div>
 
-                    <div className="flex justify-between items-center">
-                        {!editingId && (
-                            <button 
-                                onClick={() => toggleInsight(selectedEntry)} 
-                                className={`font-mono text-[10px] uppercase tracking-widest transition-colors flex items-center gap-2 ${selectedEntry.isInsight ? 'text-violet-500' : 'text-slate-300 hover:text-slate-500'}`}
-                            >
-                                <Gem size={12} className={selectedEntry.isInsight ? "fill-current" : ""} />
-                                {selectedEntry.isInsight ? "Insight" : "Mark Insight"}
-                            </button>
-                        )}
-                        
-                        {!editingId && (
-                            <div className="flex gap-6">
-                                <button onClick={() => startEditing(selectedEntry)} className="font-mono text-[10px] uppercase tracking-widest text-slate-300 hover:text-indigo-500 transition-colors">Edit</button>
-                                <button onClick={() => { if(confirm("Удалить запись?")) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="font-mono text-[10px] uppercase tracking-widest text-slate-300 hover:text-red-500 transition-colors">Delete</button>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar-ghost min-h-0 pr-1 -mr-2 flex flex-col">
+                        {editingId === selectedEntry.id ? (
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                <div className="relative flex-1 overflow-hidden flex flex-col">
+                                    <div className="flex items-center justify-between mb-2 gap-2 shrink-0">
+                                        <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
+                                            <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
+                                            <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
+                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Очистить"><button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
+                                            {activeImage && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
+                                        </div>
+                                    </div>
+                                    <div 
+                                        ref={editContentRef} 
+                                        contentEditable 
+                                        onInput={handleEditorInput} 
+                                        onClick={handleEditorClick} 
+                                        onBlur={saveSelection} 
+                                        onMouseUp={saveSelection} 
+                                        onKeyUp={saveSelection} 
+                                        className="w-full flex-1 bg-transparent p-1 text-base leading-relaxed text-slate-800 dark:text-slate-200 outline-none overflow-y-auto font-serif custom-scrollbar-ghost [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                    />
+                                </div>
+                                
+                                <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5 shrink-0">
+                                    <button onClick={cancelEditing} className="font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">Отмена</button>
+                                    <button onClick={() => saveEdit(selectedEntry)} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold">Сохранить</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex-1 flex flex-col">
+                                <div className="font-serif text-[1.1rem] leading-[1.8] text-[#2F3437] dark:text-slate-200">
+                                    <ReactMarkdown components={markdownComponents}>{selectedEntry.content}</ReactMarkdown>
+                                </div>
+
+                                {selectedEntry.aiFeedback && (
+                                    <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/5">
+                                         <div className="flex items-center gap-2 mb-3">
+                                            <Sparkles size={12} className="text-indigo-400" />
+                                            <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400">Ментор</span>
+                                         </div>
+                                         <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed font-serif">
+                                            <ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown>
+                                         </div>
+                                    </div>
+                                )}
+                                
+                                {/* AETHER FOOTER REPLICA */}
+                                <div className="mt-auto pt-6 border-t border-black/5 dark:border-white/5 flex flex-col gap-4 shrink-0">
+                                    {selectedLinkedTask && !editingId && (
+                                        <div className="font-mono text-[10px] text-slate-400 flex items-center gap-2 group/ctx">
+                                            <span className="opacity-50">[ CONTEXT: </span>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(selectedLinkedTask.id); }}
+                                                className="hover:text-indigo-500 underline decoration-dotted underline-offset-4 truncate max-w-[200px] transition-colors"
+                                            >
+                                                {selectedLinkedTask.content}
+                                            </button>
+                                            <span className="opacity-50"> ]</span>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-between items-center">
+                                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="left" direction="up" />
+                                        
+                                        {!editingId && (
+                                            <button 
+                                                onClick={() => toggleInsight(selectedEntry)} 
+                                                className={`font-mono text-[10px] uppercase tracking-widest transition-colors flex items-center gap-2 ${selectedEntry.isInsight ? 'text-violet-500' : 'text-slate-300 hover:text-slate-500'}`}
+                                            >
+                                                <Gem size={12} className={selectedEntry.isInsight ? "fill-current" : ""} />
+                                                {selectedEntry.isInsight ? "Insight" : "Mark Insight"}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
-                </div>
-            </motion.div>
-        </div>
+                </motion.div>
+            </div>
+        </AnimatePresence>
       )}
 
       {viewingTask && (
