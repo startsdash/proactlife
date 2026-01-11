@@ -417,6 +417,66 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
     );
 };
 
+// Color Picker Popover
+const ColorPickerPopover: React.FC<{
+    onSelect: (colorId: string) => void,
+    onClose: () => void,
+    triggerRef: React.RefObject<HTMLElement>
+}> = ({ onSelect, onClose, triggerRef }) => {
+    const [style, setStyle] = useState<React.CSSProperties>({});
+
+    useEffect(() => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            // Default to showing below, flip up if near bottom
+            const viewportH = window.innerHeight;
+            const spaceBelow = viewportH - rect.bottom;
+            const height = 60; // Approx height
+
+            let top = rect.bottom + 8;
+            let left = rect.left;
+            
+            // If right edge goes offscreen, align to right
+            if (left + 240 > window.innerWidth) {
+                left = window.innerWidth - 256;
+            }
+
+            if (spaceBelow < height) {
+                top = rect.top - height - 8;
+            }
+
+            setStyle({
+                position: 'fixed',
+                top,
+                left,
+                zIndex: 9999,
+            });
+        }
+    }, [triggerRef]);
+
+    return createPortal(
+        <>
+            <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+            <div
+                className="fixed bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-[9999] flex-wrap max-w-[240px]"
+                style={style}
+                onMouseDown={e => e.stopPropagation()}
+            >
+                {colors.map(c => (
+                    <button
+                        key={c.id}
+                        onMouseDown={(e) => { e.preventDefault(); onSelect(c.id); onClose(); }}
+                        className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform`}
+                        style={{ backgroundColor: c.hex }}
+                        title={c.id}
+                    />
+                ))}
+            </div>
+        </>,
+        document.body
+    );
+};
+
 // --- LITERARY TYPOGRAPHY COMPONENTS (DEFAULT) ---
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
@@ -1564,26 +1624,11 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                                     </button>
                                                 </Tooltip>
                                                 {showCreationColorPicker && (
-                                                    <div className="fixed inset-0 z-[9998]" onClick={() => setShowCreationColorPicker(false)}>
-                                                        <div 
-                                                            className="absolute bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-[9999] flex-wrap max-w-[200px]" 
-                                                            style={{
-                                                                top: creationColorTriggerRef.current?.getBoundingClientRect().bottom! + 8,
-                                                                left: creationColorTriggerRef.current?.getBoundingClientRect().left!
-                                                            }}
-                                                            onMouseDown={e => e.stopPropagation()}
-                                                        >
-                                                            {colors.map(c => (
-                                                                <button 
-                                                                    key={c.id} 
-                                                                    onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowCreationColorPicker(false); }} 
-                                                                    className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} 
-                                                                    style={{ backgroundColor: c.hex }} 
-                                                                    title={c.id} 
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    </div>
+                                                    <ColorPickerPopover
+                                                        onSelect={setCreationColor}
+                                                        onClose={() => setShowCreationColorPicker(false)}
+                                                        triggerRef={creationColorTriggerRef}
+                                                    />
                                                 )}
                                             </div>
                                         </div>
@@ -1983,26 +2028,11 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                                     </button>
                                                 </Tooltip>
                                                 {showEditColorPicker && (
-                                                    <div className="fixed inset-0 z-[9998]" onClick={() => setShowEditColorPicker(false)}>
-                                                        <div 
-                                                            className="absolute bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-[9999] flex-wrap max-w-[200px]" 
-                                                            style={{
-                                                                top: editColorTriggerRef.current?.getBoundingClientRect().bottom! + 8,
-                                                                left: editColorTriggerRef.current?.getBoundingClientRect().left!
-                                                            }}
-                                                            onMouseDown={e => e.stopPropagation()}
-                                                        >
-                                                            {colors.map(c => (
-                                                                <button 
-                                                                    key={c.id} 
-                                                                    onMouseDown={(e) => { e.preventDefault(); setEditColor(c.id); setShowEditColorPicker(false); }} 
-                                                                    className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${editColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} 
-                                                                    style={{ backgroundColor: c.hex }} 
-                                                                    title={c.id} 
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    </div>
+                                                    <ColorPickerPopover
+                                                        onSelect={setEditColor}
+                                                        onClose={() => setShowEditColorPicker(false)}
+                                                        triggerRef={editColorTriggerRef}
+                                                    />
                                                 )}
                                             </div>
                                         </div>
