@@ -93,8 +93,9 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
     .filter(t => t.isArchived)
     .sort((a, b) => b.createdAt - a.createdAt);
 
+  // CHANGED: Filter by 'trash' status for deleted notes
   const archivedNotes = notes
-    .filter(n => n.status === 'archived')
+    .filter(n => n.status === 'trash')
     .sort((a, b) => b.createdAt - a.createdAt);
 
   const archivedJournal = journal
@@ -121,17 +122,17 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={task.id} 
-                    className={`bg-white dark:bg-[#1e293b] backdrop-blur-md rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 relative group overflow-hidden mb-6`}
+                    className={`bg-white dark:bg-[#1e293b] backdrop-blur-md rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 relative group overflow-hidden mb-6`}
                   >
                     {task.coverUrl && (
-                        <div className="h-32 w-full shrink-0 relative overflow-hidden"><img src={task.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
+                        <div className="h-40 w-full shrink-0 relative overflow-hidden"><img src={task.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
                     )}
 
-                    <div className="p-5 flex flex-col gap-0 h-full">
+                    <div className="p-8 pb-16 flex flex-col gap-0 h-full">
                         <div className="flex justify-between items-start gap-2 mb-2">
                              <div className="flex-1 pt-0.5 min-w-0">
                                 {task.title && (
-                                    <h4 className="font-sans text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug break-words tracking-tight">
+                                    <h4 className="font-sans text-xl font-medium text-slate-800 dark:text-slate-200 leading-tight break-words tracking-tight">
                                         {applyTypography(task.title)}
                                     </h4>
                                 )}
@@ -144,41 +145,43 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                         </div>
 
                         <div className="mb-3">
-                            <div className="text-slate-700 dark:text-slate-400 font-sans text-sm leading-relaxed line-clamp-4">
+                            <div className="text-slate-700 dark:text-slate-400 font-sans text-base leading-relaxed line-clamp-4">
                                  <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
                             </div>
                         </div>
+                    </div>
 
-                        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between opacity-50 group-hover:opacity-100 transition-opacity">
-                            <div className="flex items-center gap-1">
-                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sphereColor }} />
-                                <span className="text-[10px] text-slate-400">{new Date(task.createdAt).toLocaleDateString()}</span>
-                            </div>
-                            
-                            <div className="flex gap-2">
-                                <Tooltip content="Вернуть в спринты">
-                                   <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (window.confirm("Вернуть в спринты?")) restoreTask(task.id);
-                                      }}
-                                      className="p-1.5 rounded-full text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-                                   >
-                                      <RotateCcw size={14} />
-                                   </button>
-                               </Tooltip>
-                               <Tooltip content="Удалить навсегда">
-                                   <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (window.confirm("Удалить задачу из истории навсегда?")) deleteTask(task.id);
-                                      }}
-                                      className="p-1.5 rounded-full text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                   >
-                                      <Trash2 size={14} />
-                                   </button>
-                               </Tooltip>
-                            </div>
+                    {/* Footer: Ghost Style - Hover Only */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
+                        <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
+                            <Tooltip content="Вернуть в спринты">
+                                <button 
+                                    onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm("Вернуть в спринты?")) restoreTask(task.id);
+                                    }}
+                                    className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
+                                >
+                                    <RotateCcw size={16} strokeWidth={1.5} />
+                                </button>
+                            </Tooltip>
+                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                            <Tooltip content="Удалить навсегда">
+                                <button 
+                                    onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm("Удалить задачу из истории навсегда?")) deleteTask(task.id);
+                                    }}
+                                    className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
+                                >
+                                    <Trash2 size={16} strokeWidth={1.5} />
+                                </button>
+                            </Tooltip>
+                        </div>
+                        
+                        <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sphereColor }} />
+                            {new Date(task.createdAt).toLocaleDateString()}
                         </div>
                     </div>
                   </div>
@@ -195,8 +198,8 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
           <div className="py-10">
               <EmptyState 
                   icon={StickyNote} 
-                  title="Библиотека пуста" 
-                  description="Сюда попадают мысли из «На скорости мысли», которые ты решил сохранить" 
+                  title="Корзина пуста" 
+                  description="Здесь будут удаленные заметки" 
                   color="indigo"
               />
           </div>
@@ -210,18 +213,18 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={note.id} 
-                    className={`${getNoteColorClass(note.color)} rounded-3xl transition-all relative overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800`}
+                    className={`${getNoteColorClass(note.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800`}
                   >
                     <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
                     {note.coverUrl && (
-                        <div className="h-32 w-full shrink-0 relative z-10"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
+                        <div className="h-40 w-full shrink-0 relative z-10"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
                     )}
                     
-                    <div className="p-6 relative z-10 flex-1">
+                    <div className="p-8 pb-16 relative z-10 flex-1">
                         <div className="block w-full mb-2">
-                            {note.title && <h3 className={`font-sans text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2 leading-tight break-words`}>{applyTypography(note.title)}</h3>}
-                            <div className={`text-slate-700 dark:text-slate-300 font-serif text-sm leading-relaxed overflow-hidden break-words relative max-h-[300px]`}>
+                            {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-2 leading-tight break-words`}>{applyTypography(note.title)}</h3>}
+                            <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words relative max-h-[300px]`}>
                                 <ReactMarkdown 
                                     components={markdownComponents} 
                                     urlTransform={allowDataUrls} 
@@ -250,15 +253,20 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                         </div>
                     </div>
 
-                    <div className="px-6 py-4 flex items-center justify-between border-t border-black/5 dark:border-white/5 relative z-20 bg-white/30 dark:bg-black/10">
-                        <span className="text-[10px] font-mono text-slate-400">{new Date(note.createdAt).toLocaleDateString()}</span>
-                        <div className="flex gap-1">
-                            <Tooltip content="Вернуть в заметки">
-                                <button onClick={(e) => { e.stopPropagation(); if(confirm("Вернуть в заметки?")) moveNoteToInbox(note.id); }} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-colors"><RotateCcw size={16} /></button>
+                    {/* Footer: Ghost Style - Hover Only */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
+                        <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
+                            <Tooltip content="Восстановить">
+                                <button onClick={(e) => { e.stopPropagation(); if(confirm("Восстановить заметку?")) moveNoteToInbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><RotateCcw size={16} strokeWidth={1.5} /></button>
                             </Tooltip>
+                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                             <Tooltip content="Удалить навсегда">
-                                <button onClick={(e) => { e.stopPropagation(); if(confirm('Удалить навсегда?')) deleteNote(note.id); }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"><Trash2 size={16} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); if(confirm('Удалить навсегда?')) deleteNote(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Trash2 size={16} strokeWidth={1.5} /></button>
                             </Tooltip>
+                        </div>
+                        
+                        <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
+                            {new Date(note.createdAt).toLocaleDateString()}
                         </div>
                     </div>
                   </div>
@@ -289,15 +297,15 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={entry.id} 
-                    className={`${getJournalColorClass(entry.color)} rounded-3xl transition-all relative overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800`}
+                    className={`${getJournalColorClass(entry.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800`}
                   >
                     <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
                     {entry.coverUrl && (
-                        <div className="h-32 w-full shrink-0 relative z-10"><img src={entry.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
+                        <div className="h-40 w-full shrink-0 relative z-10"><img src={entry.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
                     )}
                     
-                    <div className="p-6 relative z-10 flex-1">
+                    <div className="p-8 pb-16 relative z-10 flex-1">
                         <div className="block w-full mb-2">
                             <div className="flex justify-between items-center mb-3">
                                 <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">{new Date(entry.date).toLocaleDateString()}</span>
@@ -305,7 +313,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                             </div>
 
                             {entry.title && <h3 className={`font-sans text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2 leading-tight break-words`}>{applyTypography(entry.title)}</h3>}
-                            <div className={`text-slate-700 dark:text-slate-300 font-serif text-sm leading-relaxed overflow-hidden break-words relative max-h-[300px]`}>
+                            <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words relative max-h-[300px]`}>
                                 <ReactMarkdown 
                                     components={markdownComponents} 
                                     urlTransform={allowDataUrls} 
@@ -325,15 +333,20 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                         </div>
                     </div>
 
-                    <div className="px-6 py-4 flex items-center justify-between border-t border-black/5 dark:border-white/5 relative z-20 bg-white/30 dark:bg-black/10">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Удалено</span>
-                        <div className="flex gap-1">
+                    {/* Footer: Ghost Style - Hover Only */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
+                        <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                             <Tooltip content="Вернуть в дневник">
-                                <button onClick={(e) => { e.stopPropagation(); if(confirm("Вернуть в дневник?")) restoreJournalEntry(entry.id); }} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-colors"><RotateCcw size={16} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); if(confirm("Вернуть в дневник?")) restoreJournalEntry(entry.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><RotateCcw size={16} strokeWidth={1.5} /></button>
                             </Tooltip>
+                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                             <Tooltip content="Удалить навсегда">
-                                <button onClick={(e) => { e.stopPropagation(); if(confirm('Удалить навсегда?')) deleteJournalEntry(entry.id); }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"><Trash2 size={16} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); if(confirm('Удалить навсегда?')) deleteJournalEntry(entry.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Trash2 size={16} strokeWidth={1.5} /></button>
                             </Tooltip>
+                        </div>
+                        
+                        <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
+                            {new Date(entry.date).toLocaleDateString()}
                         </div>
                     </div>
                   </div>
@@ -365,7 +378,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
             onClick={() => setActiveTab('notes')} 
             className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'notes' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
         >
-            <StickyNote size={16} /> Заметки
+            <Trash2 size={16} /> Корзина (Заметки)
         </button>
         <button 
             onClick={() => setActiveTab('journal')} 

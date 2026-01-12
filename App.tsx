@@ -247,7 +247,22 @@ const App: React.FC = () => {
 
   const moveNoteToInbox = (id: string) => setData(p => ({ ...p, notes: p.notes.map(n => n.id === id ? { ...n, status: 'inbox' } : n) }));
   const archiveNote = (id: string) => setData(p => ({ ...p, notes: p.notes.map(n => n.id === id ? { ...n, status: 'archived' } : n) }));
-  const deleteNote = (id: string) => setData(p => ({ ...p, notes: p.notes.filter(n => n.id !== id) }));
+  
+  // Soft Delete
+  const deleteNote = (id: string) => setData(p => ({ 
+      ...p, 
+      notes: p.notes.map(n => n.id === id ? { ...n, status: 'trash', previousStatus: n.status === 'trash' ? n.previousStatus : n.status } : n) 
+  }));
+  
+  // Hard Delete
+  const hardDeleteNote = (id: string) => setData(p => ({ ...p, notes: p.notes.filter(n => n.id !== id) }));
+  
+  // Restore Note
+  const restoreNote = (id: string) => setData(p => ({ 
+      ...p, 
+      notes: p.notes.map(n => n.id === id ? { ...n, status: n.previousStatus || 'inbox', previousStatus: undefined } : n) 
+  }));
+
   const updateNote = (n: Note) => setData(p => ({ ...p, notes: p.notes.map(x => x.id === n.id ? n : x) }));
   const reorderNote = (draggedId: string, targetId: string) => setData(p => {
       const notes = [...p.notes];
@@ -428,13 +443,22 @@ const App: React.FC = () => {
     >
       <Onboarding onClose={() => setShowOnboarding(false)} />
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
-      {module === Module.DASHBOARD && <Dashboard notes={data.notes.filter(n => n.status !== 'archived')} tasks={data.tasks.filter(t => !t.isArchived)} habits={data.habits} journal={data.journal.filter(j => !j.isArchived)} onNavigate={handleNavigate} flashcards={data.flashcards} />}
+      {module === Module.DASHBOARD && <Dashboard notes={data.notes.filter(n => n.status !== 'archived' && n.status !== 'trash')} tasks={data.tasks.filter(t => !t.isArchived)} habits={data.habits} journal={data.journal.filter(j => !j.isArchived)} onNavigate={handleNavigate} flashcards={data.flashcards} />}
       
       {module === Module.NAPKINS && (
           <Napkins 
-            notes={data.notes} config={visibleConfig} addNote={addNote} moveNoteToSandbox={moveNoteToSandbox} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} reorderNote={reorderNote} updateNote={updateNote} archiveNote={archiveNote} onAddTask={addTask} 
+            notes={data.notes.filter(n => n.status !== 'trash')} 
+            config={visibleConfig} 
+            addNote={addNote} 
+            moveNoteToSandbox={moveNoteToSandbox} 
+            moveNoteToInbox={moveNoteToInbox} 
+            deleteNote={deleteNote} // Use soft delete
+            reorderNote={reorderNote} 
+            updateNote={updateNote} 
+            archiveNote={archiveNote} 
+            onAddTask={addTask} 
             onAddJournalEntry={addJournalEntry}
-            addSketchItem={addSketchItem} // Needed for "To Sketchpad" button inside Note Card
+            addSketchItem={addSketchItem} 
           />
       )}
       
@@ -449,7 +473,7 @@ const App: React.FC = () => {
 
       {module === Module.ETHER && (
           <Ether 
-            notes={data.notes.filter(n => n.status !== 'archived')} 
+            notes={data.notes.filter(n => n.status !== 'archived' && n.status !== 'trash')} 
             onUpdateNote={updateNote} 
           />
       )}
@@ -460,7 +484,21 @@ const App: React.FC = () => {
       {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
       {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
       {module === Module.MOODBAR && <Moodbar entries={data.journal.filter(j => !j.isArchived)} onAddEntry={addJournalEntry} />}
-      {module === Module.ARCHIVE && <Archive tasks={data.tasks} notes={data.notes} journal={data.journal} restoreTask={restoreTask} deleteTask={deleteTask} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} deleteJournalEntry={deleteJournalEntry} restoreJournalEntry={restoreJournalEntry} />}
+      
+      {module === Module.ARCHIVE && (
+          <Archive 
+            tasks={data.tasks} 
+            notes={data.notes} 
+            journal={data.journal} 
+            restoreTask={restoreTask} 
+            deleteTask={deleteTask} 
+            moveNoteToInbox={restoreNote} // Restore soft-deleted notes
+            deleteNote={hardDeleteNote} // Permanently delete notes
+            deleteJournalEntry={deleteJournalEntry} 
+            restoreJournalEntry={restoreJournalEntry} 
+          />
+      )}
+      
       {module === Module.PROFILE && <Profile notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} flashcards={data.flashcards} config={data.profileConfig || { role: 'architect', manifesto: '...' }} onUpdateConfig={updateProfileConfig} />}
       {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
       {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}

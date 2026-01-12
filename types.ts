@@ -30,7 +30,8 @@ export interface Note {
   content: string;
   tags: string[];
   createdAt: number;
-  status: 'inbox' | 'sandbox' | 'archived';
+  status: 'inbox' | 'sandbox' | 'archived' | 'trash';
+  previousStatus?: 'inbox' | 'sandbox' | 'archived';
   isPinned?: boolean;
   color?: string;
   coverUrl?: string;
