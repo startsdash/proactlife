@@ -1,16 +1,32 @@
-
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Task } from '../types';
-import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, MessageCircle, Circle, XCircle, Archive as ArchiveIcon, Minus, Plus } from 'lucide-react';
+import { Task, Note, JournalEntry } from '../types';
+import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, MessageCircle, Circle, XCircle, Archive as ArchiveIcon, Minus, Plus, CakeSlice, StickyNote, Book, Tag } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 
 interface Props {
   tasks: Task[];
+  notes: Note[];
+  journal: JournalEntry[];
   restoreTask: (id: string) => void;
   deleteTask: (id: string) => void;
+  moveNoteToInbox: (id: string) => void;
+  deleteNote: (id: string) => void;
+  deleteJournalEntry: (id: string) => void;
 }
+
+const colors = [
+    { id: 'white', class: 'bg-white dark:bg-[#1e293b]' },
+    { id: 'red', class: 'bg-red-50 dark:bg-red-900/20' },
+    { id: 'amber', class: 'bg-amber-50 dark:bg-amber-900/20' },
+    { id: 'emerald', class: 'bg-emerald-50 dark:bg-emerald-900/20' },
+    { id: 'blue', class: 'bg-blue-50 dark:bg-blue-900/20' },
+    { id: 'indigo', class: 'bg-indigo-50 dark:bg-indigo-900/20' },
+    { id: 'purple', class: 'bg-purple-50 dark:bg-purple-900/20' },
+];
+
+const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 const cleanHeader = (children: React.ReactNode): React.ReactNode => {
     if (typeof children === 'string') return children.replace(/:\s*$/, '');
@@ -145,24 +161,26 @@ const StaticChallengeRenderer: React.FC<{
     return <>{renderedParts}</>;
 };
 
-const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
+const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTask, moveNoteToInbox, deleteNote, deleteJournalEntry }) => {
+  const [activeTab, setActiveTab] = useState<'hall_of_fame' | 'notes' | 'journal'>('hall_of_fame');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
 
+  // --- DATA FILTERING ---
   const archivedTasks = tasks
     .filter(t => t.isArchived)
     .sort((a, b) => b.createdAt - a.createdAt);
 
-  return (
-    <div className="h-full p-4 md:p-8 flex flex-col overflow-hidden relative">
-      <header className="mb-6 shrink-0">
-        <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">
-            Архив
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Выполненные миссии</p>
-      </header>
+  const archivedNotes = notes
+    .filter(n => n.status === 'archived')
+    .sort((a, b) => b.createdAt - a.createdAt);
 
-      <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar-light">
-        {archivedTasks.length === 0 ? (
+  const journalEntries = [...journal].sort((a, b) => b.date - a.date);
+
+  const renderHallOfFame = () => (
+    <>
+      {archivedTasks.length === 0 ? (
           <div className="py-10">
               <EmptyState 
                   icon={ArchiveIcon} 
@@ -171,7 +189,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                   color="amber"
               />
           </div>
-        ) : (
+      ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {archivedTasks.map(task => (
               <div 
@@ -194,15 +212,6 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
                 <div className="text-slate-800 dark:text-slate-200 text-sm font-normal leading-relaxed mb-4 line-clamp-4">
                   <ReactMarkdown components={markdownComponents}>{task.content}</ReactMarkdown>
                 </div>
-
-                {task.description && (
-                  <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700">
-                    <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase font-bold mb-1">
-                      <FileText size={10} /> Источник
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{task.description}</p>
-                  </div>
-                )}
 
                 <div className="flex justify-end gap-2 pt-3 border-t border-slate-50 dark:border-slate-700">
                    <Tooltip content="Восстановить в Спринты">
@@ -231,9 +240,150 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
               </div>
             ))}
           </div>
-        )}
+      )}
+    </>
+  );
+
+  const renderNotes = () => (
+    <>
+      {archivedNotes.length === 0 ? (
+          <div className="py-10">
+              <EmptyState 
+                  icon={StickyNote} 
+                  title="Библиотека пуста" 
+                  description="Сюда попадают мысли из «На скорости мысли», которые ты решил сохранить" 
+                  color="indigo"
+              />
+          </div>
+      ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {archivedNotes.map(note => (
+              <div 
+                key={note.id} 
+                onClick={() => setSelectedNote(note)}
+                className={`${getNoteColorClass(note.color)} p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow relative group cursor-pointer flex flex-col`}
+              >
+                {note.coverUrl && (
+                    <div className="h-24 w-full shrink-0 relative overflow-hidden rounded-lg mb-3">
+                        <img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                    </div>
+                )}
+                
+                <div className="flex-1">
+                    {note.title && (
+                        <h3 className="font-bold text-slate-900 dark:text-slate-100 mb-2 line-clamp-1">{note.title}</h3>
+                    )}
+                    <div className="text-slate-700 dark:text-slate-300 text-sm font-serif leading-relaxed line-clamp-4">
+                      <ReactMarkdown components={markdownComponents}>{note.content}</ReactMarkdown>
+                    </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between pt-3 border-t border-black/5 dark:border-white/5">
+                    <span className="text-[10px] text-slate-400">{new Date(note.createdAt).toLocaleDateString()}</span>
+                    <div className="flex gap-1">
+                        <Tooltip content="Вернуть в заметки">
+                            <button onClick={(e) => { e.stopPropagation(); moveNoteToInbox(note.id); }} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-colors"><RotateCcw size={14} /></button>
+                        </Tooltip>
+                        <Tooltip content="Удалить">
+                            <button onClick={(e) => { e.stopPropagation(); if(confirm('Удалить навсегда?')) deleteNote(note.id); }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"><Trash2 size={14} /></button>
+                        </Tooltip>
+                    </div>
+                </div>
+              </div>
+            ))}
+          </div>
+      )}
+    </>
+  );
+
+  const renderJournal = () => (
+    <>
+      {journalEntries.length === 0 ? (
+          <div className="py-10">
+              <EmptyState 
+                  icon={Book} 
+                  title="Чистый лист" 
+                  description="История пишется сегодня. Перейди в Дневник, чтобы сделать запись." 
+                  color="cyan"
+              />
+          </div>
+      ) : (
+          <div className="space-y-4 max-w-3xl mx-auto">
+            {journalEntries.map(entry => (
+              <div 
+                key={entry.id} 
+                onClick={() => setSelectedEntry(entry)}
+                className="bg-white dark:bg-[#1e293b] p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex gap-4"
+              >
+                 <div className="flex flex-col items-center min-w-[50px] pt-1">
+                     <span className="text-lg font-bold text-slate-700 dark:text-slate-300">{new Date(entry.date).getDate()}</span>
+                     <span className="text-[10px] uppercase text-slate-400 font-bold">{new Date(entry.date).toLocaleDateString(undefined, {month: 'short'})}</span>
+                 </div>
+                 <div className="flex-1 min-w-0">
+                     {entry.title && <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-1 truncate">{entry.title}</h3>}
+                     <div className="text-sm text-slate-600 dark:text-slate-400 font-serif line-clamp-2 leading-relaxed">
+                         <ReactMarkdown components={markdownComponents}>{entry.content}</ReactMarkdown>
+                     </div>
+                     <div className="mt-2 flex items-center justify-between">
+                         <div className="flex items-center gap-2">
+                             {entry.mood && <span className="text-xs">Настроение: {entry.mood}/5</span>}
+                             {entry.isInsight && <span className="text-[10px] bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Insight</span>}
+                         </div>
+                         <button 
+                            onClick={(e) => { e.stopPropagation(); if(confirm('Удалить запись?')) deleteJournalEntry(entry.id); }} 
+                            className="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                         >
+                             <Trash2 size={14} />
+                         </button>
+                     </div>
+                 </div>
+              </div>
+            ))}
+          </div>
+      )}
+    </>
+  );
+
+  return (
+    <div className="h-full p-4 md:p-8 flex flex-col overflow-hidden relative bg-[#f8fafc] dark:bg-[#0f172a]">
+      <header className="mb-6 shrink-0">
+        <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">
+            Архив
+        </h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Хранилище опыта и достижений</p>
+      </header>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none shrink-0">
+        <button 
+            onClick={() => setActiveTab('hall_of_fame')} 
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'hall_of_fame' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
+        >
+            <CakeSlice size={16} /> Зал славы
+        </button>
+        <button 
+            onClick={() => setActiveTab('notes')} 
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'notes' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
+        >
+            <StickyNote size={16} /> Заметки
+        </button>
+        <button 
+            onClick={() => setActiveTab('journal')} 
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'journal' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
+        >
+            <Book size={16} /> Дневник
+        </button>
       </div>
 
+      <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar-light">
+        {activeTab === 'hall_of_fame' && renderHallOfFame()}
+        {activeTab === 'notes' && renderNotes()}
+        {activeTab === 'journal' && renderJournal()}
+      </div>
+
+      {/* --- MODALS --- */}
+
+      {/* Task Modal */}
       {selectedTask && (
         <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedTask(null)}>
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -305,6 +455,76 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
             </div>
         </div>
       )}
+
+      {/* Note Modal */}
+      {selectedNote && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
+            <div className={`w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto ${getNoteColorClass(selectedNote.color)}`} onClick={(e) => e.stopPropagation()}>
+                {selectedNote.coverUrl && (
+                    <div className="h-40 w-full shrink-0 relative mb-6 -mx-8 -mt-8 md:-mx-8 md:-mt-8 w-[calc(100%_+_4rem)] group overflow-hidden">
+                        <img src={selectedNote.coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                    </div>
+                )}
+                
+                <div className="flex justify-between items-start mb-4">
+                    <div>
+                        <div className="text-[10px] text-slate-400 uppercase tracking-widest mb-1">{new Date(selectedNote.createdAt).toLocaleDateString()}</div>
+                        {selectedNote.title && <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{selectedNote.title}</h3>}
+                    </div>
+                    <button onClick={() => setSelectedNote(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button>
+                </div>
+
+                <div className="text-slate-800 dark:text-slate-200 font-serif text-base leading-relaxed mb-6">
+                    <ReactMarkdown components={markdownComponents}>{selectedNote.content}</ReactMarkdown>
+                </div>
+
+                {selectedNote.tags && selectedNote.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-4 border-t border-black/5 dark:border-white/5">
+                        {selectedNote.tags.map(tag => (
+                            <span key={tag} className="text-[10px] bg-black/5 dark:bg-white/10 px-2 py-1 rounded text-slate-500 dark:text-slate-400 font-mono uppercase">
+                                #{tag.replace(/^#/, '')}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+      )}
+
+      {/* Journal Entry Modal */}
+      {selectedEntry && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedEntry(null)}>
+            <div className={`w-full max-w-lg bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+                {selectedEntry.coverUrl && (
+                    <div className="h-40 w-full shrink-0 relative mb-6 -mx-8 -mt-8 md:-mx-8 md:-mt-8 w-[calc(100%_+_4rem)] group overflow-hidden">
+                        <img src={selectedEntry.coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                    </div>
+                )}
+                
+                <div className="flex justify-between items-start mb-4">
+                    <div>
+                        <div className="text-[10px] text-slate-400 uppercase tracking-widest mb-1">{new Date(selectedEntry.date).toLocaleString()}</div>
+                        {selectedEntry.title && <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{selectedEntry.title}</h3>}
+                    </div>
+                    <button onClick={() => setSelectedEntry(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button>
+                </div>
+
+                <div className="text-slate-800 dark:text-slate-200 font-serif text-base leading-relaxed mb-6">
+                    <ReactMarkdown components={markdownComponents}>{selectedEntry.content}</ReactMarkdown>
+                </div>
+
+                {selectedEntry.aiFeedback && (
+                    <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                        <div className="text-[10px] font-bold uppercase text-slate-400 mb-2 flex items-center gap-2"><Zap size={10} /> Ментор</div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400 italic font-serif">
+                            <ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+      )}
+
     </div>
   );
 };

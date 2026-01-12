@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
@@ -456,7 +454,7 @@ const App: React.FC = () => {
       {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
       {module === Module.JOURNAL && <Journal entries={data.journal} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={deleteJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
       {module === Module.MOODBAR && <Moodbar entries={data.journal} onAddEntry={addJournalEntry} />}
-      {module === Module.ARCHIVE && <Archive tasks={data.tasks} restoreTask={restoreTask} deleteTask={deleteTask} />}
+      {module === Module.ARCHIVE && <Archive tasks={data.tasks} notes={data.notes} journal={data.journal} restoreTask={restoreTask} deleteTask={deleteTask} moveNoteToInbox={moveNoteToInbox} deleteNote={deleteNote} deleteJournalEntry={deleteJournalEntry} />}
       {module === Module.PROFILE && <Profile notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} flashcards={data.flashcards} config={data.profileConfig || { role: 'architect', manifesto: '...' }} onUpdateConfig={updateProfileConfig} />}
       {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
       {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}
