@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -34,6 +35,7 @@ const colors = [
 
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 const getJournalColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
+const getTaskColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E")`;
 
@@ -93,7 +95,6 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
     .filter(t => t.isArchived)
     .sort((a, b) => b.createdAt - a.createdAt);
 
-  // CHANGED: Filter by 'trash' status for deleted notes
   const archivedNotes = notes
     .filter(n => n.status === 'trash')
     .sort((a, b) => b.createdAt - a.createdAt);
@@ -122,17 +123,17 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={task.id} 
-                    className={`bg-white dark:bg-[#1e293b] backdrop-blur-md rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 relative group overflow-hidden mb-6`}
+                    className={`${getTaskColorClass(task.color)} backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group overflow-hidden mb-6`}
                   >
                     {task.coverUrl && (
-                        <div className="h-40 w-full shrink-0 relative overflow-hidden"><img src={task.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
+                        <div className="h-32 w-full shrink-0 relative overflow-hidden"><img src={task.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
                     )}
 
-                    <div className="p-8 pb-16 flex flex-col gap-0 h-full">
+                    <div className="p-5 pb-16 flex flex-col gap-0 h-full">
                         <div className="flex justify-between items-start gap-2 mb-2">
                              <div className="flex-1 pt-0.5 min-w-0">
                                 {task.title && (
-                                    <h4 className="font-sans text-xl font-medium text-slate-800 dark:text-slate-200 leading-tight break-words tracking-tight">
+                                    <h4 className="font-sans text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug break-words tracking-tight">
                                         {applyTypography(task.title)}
                                     </h4>
                                 )}
@@ -145,7 +146,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                         </div>
 
                         <div className="mb-3">
-                            <div className="text-slate-700 dark:text-slate-400 font-sans text-base leading-relaxed line-clamp-4">
+                            <div className="text-slate-700 dark:text-slate-400 font-sans text-sm leading-relaxed line-clamp-4">
                                  <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
                             </div>
                         </div>
@@ -293,6 +294,9 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
             {archivedJournal.map(entry => {
                 const previewText = getPreviewContent(entry.content);
                 const hasTask = !!entry.linkedTaskId;
+                
+                const sphere = entry.spheres?.[0];
+                const sphereColor = sphere && sphere === 'productivity' ? '#6366f1' : sphere === 'growth' ? '#10b981' : sphere === 'relationships' ? '#f43f5e' : null;
 
                 return (
                   <div 
@@ -345,7 +349,8 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                             </Tooltip>
                         </div>
                         
-                        <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
+                        <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest flex items-center gap-2">
+                            {sphereColor && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sphereColor }} />}
                             {new Date(entry.date).toLocaleDateString()}
                         </div>
                     </div>
