@@ -5,11 +5,11 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { Task, Note, JournalEntry } from '../types';
-import { RotateCcw, Trash2, Calendar, CheckCircle2, FileText, X, Zap, Circle, Archive as ArchiveIcon, CakeSlice, StickyNote, Book, Link } from 'lucide-react';
+import { RotateCcw, Trash2, Calendar, CheckCircle2, FileText, X, Zap, Circle, Archive as ArchiveIcon, CakeSlice, StickyNote, Book, Link, ListTodo, History, MessageCircle, Bot, Plus, Minus, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { applyTypography } from '../constants';
+import { applyTypography, SPHERES, ICON_MAP } from '../constants';
 
 interface Props {
   tasks: Task[];
@@ -22,6 +22,8 @@ interface Props {
   deleteJournalEntry: (id: string) => void;
   restoreJournalEntry: (id: string) => void;
 }
+
+// --- UTILS & STYLES ---
 
 const colors = [
     { id: 'white', class: 'bg-white dark:bg-[#1e293b]', hex: '#ffffff' },
@@ -87,8 +89,119 @@ const markdownComponents = {
     img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
 };
 
+// --- LOCAL HELPERS FOR DETAIL VIEW ---
+
+const CollapsibleSection: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+  isCard?: boolean;
+}> = ({ title, children, icon, isCard = false }) => {
+  const [isOpen, setIsOpen] = useState(true); // Default open in read-only
+
+  return (
+    <div className={`${isCard ? 'bg-slate-50/50 dark:bg-slate-800/30 mb-2' : 'bg-transparent mb-4'} rounded-xl ${isCard ? 'border border-slate-100 dark:border-slate-700/50' : ''} overflow-hidden`}>
+      <div 
+        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} 
+        className={`w-full flex items-center justify-between ${isCard ? 'p-2' : 'p-0 pb-2'} cursor-pointer ${isCard ? 'hover:bg-slate-100/50 dark:hover:bg-slate-700/30' : ''} transition-colors group/header`}
+      >
+        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+           {icon}
+           {title}
+        </div>
+        <div className="text-slate-500 dark:text-slate-400 group-hover/header:text-indigo-500 transition-colors">
+            {isOpen ? <Minus size={12} /> : <Plus size={12} />}
+        </div>
+      </div>
+      {isOpen && (
+        <div className={`${isCard ? 'px-2 pb-2' : 'px-0 pb-2'} pt-0 animate-in slide-in-from-top-1 duration-200`}>
+           <div className={`pt-2 ${isCard ? 'border-t border-slate-200/30 dark:border-slate-700/30' : ''} text-sm`}>
+             {children}
+           </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const StaticChallengeRenderer: React.FC<{ 
+    content: string,
+    mode: 'draft' | 'history'
+}> = ({ content, mode }) => {
+    const cleanContent = content.trim().replace(/^#+\s*[^\n]*(\n+|$)/, '').trim();
+    const lines = cleanContent.split('\n');
+    const renderedParts: React.ReactNode[] = [];
+    let textBuffer = '';
+
+    const flushBuffer = (keyPrefix: string) => {
+        if (textBuffer) {
+             const trimmedBuffer = textBuffer.trim();
+             if (trimmedBuffer) {
+                renderedParts.push(
+                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-[#2F3437] dark:text-slate-300 font-sans mb-1 last:mb-0">
+                        <ReactMarkdown components={markdownComponents}>{applyTypography(textBuffer)}</ReactMarkdown>
+                    </div>
+                );
+             }
+            textBuffer = '';
+        }
+    };
+
+    lines.forEach((line, i) => {
+        const match = line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
+        if (match) {
+            flushBuffer(`line-${i}`);
+            const isChecked = match[1].toLowerCase() === 'x';
+            const label = match[2];
+            const leadingSpaces = line.search(/\S|$/);
+            const indent = leadingSpaces * 4; 
+
+            let Icon = Circle;
+            let iconClass = "text-slate-300 dark:text-slate-600";
+            
+            if (isChecked) {
+                Icon = CheckCircle2;
+                iconClass = "text-emerald-500";
+            } else if (mode === 'history') {
+                Icon = XCircle;
+                iconClass = "text-red-400";
+            } else {
+                Icon = Circle;
+                iconClass = "text-slate-300 dark:text-slate-600";
+            }
+
+            renderedParts.push(
+                <div 
+                    key={`cb-${i}`}
+                    className="flex items-start gap-2 w-full text-left py-1 px-1 mb-0.5 cursor-default"
+                    style={{ marginLeft: `${indent}px` }}
+                >
+                    <div className={`mt-0.5 shrink-0 ${iconClass}`}>
+                        <Icon size={16} />
+                    </div>
+                    <span className={`text-sm text-[#2F3437] dark:text-slate-300 font-sans`}>
+                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{applyTypography(label)}</ReactMarkdown>
+                    </span>
+                </div>
+            );
+        } else {
+            textBuffer += line + '\n';
+        }
+    });
+    flushBuffer('end');
+    return <>{renderedParts}</>;
+};
+
+// --- MAIN COMPONENT ---
+
+type SelectedItem = 
+  | { type: 'task', data: Task }
+  | { type: 'note', data: Note }
+  | { type: 'journal', data: JournalEntry };
+
 const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTask, moveNoteToInbox, deleteNote, deleteJournalEntry, restoreJournalEntry }) => {
   const [activeTab, setActiveTab] = useState<'hall_of_fame' | 'notes' | 'journal'>('hall_of_fame');
+  const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
 
   // --- DATA FILTERING ---
   const archivedTasks = tasks
@@ -123,7 +236,8 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={task.id} 
-                    className={`${getTaskColorClass(task.color)} backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group overflow-hidden mb-6`}
+                    onClick={() => setSelectedItem({ type: 'task', data: task })}
+                    className={`${getTaskColorClass(task.color)} backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group overflow-hidden mb-6 cursor-pointer hover:shadow-md transition-all`}
                   >
                     {task.coverUrl && (
                         <div className="h-32 w-full shrink-0 relative overflow-hidden"><img src={task.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
@@ -214,7 +328,8 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={note.id} 
-                    className={`${getNoteColorClass(note.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800`}
+                    onClick={() => setSelectedItem({ type: 'note', data: note })}
+                    className={`${getNoteColorClass(note.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800 cursor-pointer hover:shadow-md`}
                   >
                     <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
@@ -301,7 +416,8 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={entry.id} 
-                    className={`${getJournalColorClass(entry.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800`}
+                    onClick={() => setSelectedItem({ type: 'journal', data: entry })}
+                    className={`${getJournalColorClass(entry.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800 cursor-pointer hover:shadow-md`}
                   >
                     <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
@@ -405,6 +521,177 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
             {activeTab === 'journal' && renderJournal()}
         </motion.div>
       </div>
+
+      {/* DETAIL MODAL (Read-Only) */}
+      <AnimatePresence>
+        {selectedItem && (
+            <div className="fixed inset-0 z-[150] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                    className={`
+                        w-full max-w-lg backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden
+                        ${selectedItem.type === 'note' ? getNoteColorClass(selectedItem.data.color) : selectedItem.type === 'task' ? getTaskColorClass(selectedItem.data.color) : getJournalColorClass(selectedItem.data.color)}
+                    `}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Header Image */}
+                    {selectedItem.data.coverUrl && (
+                        <div className="h-40 shrink-0 relative mb-6 -mx-8 -mt-8 md:-mx-10 md:-mt-10 w-[calc(100%_+_4rem)] md:w-[calc(100%_+_5rem)] group overflow-hidden">
+                            <img src={selectedItem.data.coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                        </div>
+                    )}
+
+                    {/* Metadata Header */}
+                    <div className="flex justify-between items-start mb-6 shrink-0">
+                        <div className="flex flex-col gap-1 pr-4 w-full">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1 font-mono">
+                                {selectedItem.type === 'journal' ? new Date((selectedItem.data as JournalEntry).date).toLocaleDateString() : new Date((selectedItem.data as any).createdAt).toLocaleDateString()}
+                                <span className="opacity-50 mx-1">/</span> ID: {selectedItem.data.id.slice(-4)}
+                            </div>
+                            <h3 className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight break-words">
+                                {selectedItem.data.title || (selectedItem.type === 'journal' ? 'Без названия' : 'Заметка')}
+                            </h3>
+                        </div>
+                        <button onClick={() => setSelectedItem(null)} className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"><X size={20}/></button>
+                    </div>
+
+                    {/* Content Body */}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar-ghost min-h-0 pr-1 -mr-2">
+                        {/* TASK SPECIFIC UI */}
+                        {selectedItem.type === 'task' && (() => {
+                            const task = selectedItem.data as Task;
+                            const subtasksTotal = task.subtasks?.length || 0;
+                            const subtasksDone = task.subtasks?.filter(s => s.isCompleted).length || 0;
+                            
+                            return (
+                                <div className="space-y-6">
+                                    {task.spheres && task.spheres.length > 0 && (
+                                        <div className="flex gap-2">
+                                            {task.spheres.map(sid => {
+                                                const s = SPHERES.find(x => x.id === sid);
+                                                if (!s) return null;
+                                                return (
+                                                    <div key={sid} className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${s.bg} ${s.text} ${s.border}`}>
+                                                        {s.label}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {task.description && (
+                                        <CollapsibleSection title="Контекст" icon={<FileText size={12}/>}>
+                                            <div className="text-xs text-[#6B6E70] dark:text-slate-400 leading-relaxed font-sans">
+                                                <ReactMarkdown components={markdownComponents}>{applyTypography(task.description)}</ReactMarkdown>
+                                            </div>
+                                        </CollapsibleSection>
+                                    )}
+                                    
+                                    <div className="text-slate-700 dark:text-slate-300 text-sm font-normal leading-relaxed font-sans">
+                                        <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
+                                    </div>
+
+                                    {task.subtasks && task.subtasks.length > 0 && (
+                                        <CollapsibleSection title={`Чек-лист (${subtasksDone}/${subtasksTotal})`} icon={<ListTodo size={14}/>}>
+                                            <div className="space-y-1">
+                                                {task.subtasks.map(s => (
+                                                    <div key={s.id} className="flex items-start gap-3 p-2 rounded-lg opacity-70">
+                                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${s.isCompleted ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300 dark:border-slate-600'}`}>
+                                                            {s.isCompleted && <CheckCircle2 size={10} className="text-white" />}
+                                                        </div>
+                                                        <span className={`text-sm flex-1 leading-relaxed ${s.isCompleted ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-200"}`}>{s.text}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </CollapsibleSection>
+                                    )}
+
+                                    {task.activeChallenge && (
+                                        <CollapsibleSection title={task.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} icon={<Zap size={14}/>}>
+                                            <div className="text-slate-700 dark:text-slate-300 font-sans text-sm leading-relaxed">
+                                                <StaticChallengeRenderer content={task.activeChallenge} mode={task.isChallengeCompleted ? 'history' : 'draft'} />
+                                            </div>
+                                        </CollapsibleSection>
+                                    )}
+
+                                    {((task.challengeHistory && task.challengeHistory.length > 0) || (task.consultationHistory && task.consultationHistory.length > 0)) && (
+                                        <CollapsibleSection title="История" icon={<History size={14}/>}>
+                                            <div className="space-y-4">
+                                                {task.challengeHistory?.map((h, i) => (<div key={`ch-${i}`} className="text-sm bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50"><div className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Zap size={10}/> Архивный челлендж</div><StaticChallengeRenderer content={h} mode="history" /></div>))}
+                                                {task.consultationHistory?.map((h, i) => (<div key={`cons-${i}`} className="text-sm bg-violet-50/30 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-800/30"><div className="text-[9px] font-bold text-violet-400 mb-2 uppercase tracking-wider flex items-center gap-1"><Bot size={10}/> Консультация</div><ReactMarkdown components={markdownComponents}>{applyTypography(h)}</ReactMarkdown></div>))}
+                                            </div>
+                                        </CollapsibleSection>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
+                        {/* NOTE SPECIFIC UI */}
+                        {selectedItem.type === 'note' && (() => {
+                            const note = selectedItem.data as Note;
+                            return (
+                                <div className="space-y-4">
+                                    <div className="text-slate-800 dark:text-slate-200 text-base leading-relaxed font-serif font-normal min-h-[4rem]">
+                                        <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                            {note.content.replace(/\n/g, '  \n')}
+                                        </ReactMarkdown>
+                                    </div>
+                                    {note.tags && note.tags.length > 0 && (
+                                        <div className="flex flex-wrap gap-3 pt-4 border-t border-black/5 dark:border-white/5">
+                                            {note.tags.map(tag => <span key={tag} className="text-[9px] text-slate-500/80 dark:text-slate-400/80 font-sans uppercase tracking-[0.15em]">#{tag.replace(/^#/, '')}</span>)}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
+                        {/* JOURNAL SPECIFIC UI */}
+                        {selectedItem.type === 'journal' && (() => {
+                            const entry = selectedItem.data as JournalEntry;
+                            return (
+                                <div className="space-y-6">
+                                    <div className="font-serif text-[#2F3437] dark:text-slate-200 leading-[1.8] text-base">
+                                        <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                            {entry.content.replace(/\n/g, '  \n')}
+                                        </ReactMarkdown>
+                                    </div>
+                                    
+                                    {entry.spheres && entry.spheres.length > 0 && (
+                                        <div className="flex gap-2 pt-2">
+                                            {entry.spheres.map(sid => {
+                                                const s = SPHERES.find(x => x.id === sid);
+                                                if (!s) return null;
+                                                return (
+                                                    <div key={sid} className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${s.bg} ${s.text} ${s.border}`}>
+                                                        {s.label}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {entry.aiFeedback && (
+                                        <div className="mt-6 pt-6 border-t border-black/5 dark:border-white/5">
+                                             <div className="flex items-center gap-2 mb-3">
+                                                <Bot size={12} className="text-indigo-400" />
+                                                <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400">Ментор</span>
+                                             </div>
+                                             <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed font-serif">
+                                                <ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown>
+                                             </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+                    </div>
+                </motion.div>
+            </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
