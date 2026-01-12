@@ -5,7 +5,7 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { Task, Note, JournalEntry } from '../types';
-import { RotateCcw, Trash2, Calendar, CheckCircle2, FileText, X, Zap, Circle, Archive as ArchiveIcon, CakeSlice, StickyNote, Book, Link } from 'lucide-react';
+import { RotateCcw, Trash2, Calendar, CheckCircle2, FileText, X, Zap, Circle, Archive as ArchiveIcon, Trophy, StickyNote, Book, Link } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
@@ -199,7 +199,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
           <div className="py-10">
               <EmptyState 
                   icon={StickyNote} 
-                  title="Корзина пуста" 
+                  title="Архив пуст" 
                   description="Здесь будут удаленные заметки" 
                   color="indigo"
               />
@@ -257,8 +257,8 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                     {/* Footer: Ghost Style - Hover Only */}
                     <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                         <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
-                            <Tooltip content="Восстановить">
-                                <button onClick={(e) => { e.stopPropagation(); if(confirm("Восстановить заметку?")) moveNoteToInbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><RotateCcw size={16} strokeWidth={1.5} /></button>
+                            <Tooltip content="Вернуть в заметки">
+                                <button onClick={(e) => { e.stopPropagation(); if(confirm("Вернуть в заметки?")) moveNoteToInbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><RotateCcw size={16} strokeWidth={1.5} /></button>
                             </Tooltip>
                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                             <Tooltip content="Удалить навсегда">
@@ -284,7 +284,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
           <div className="py-10">
               <EmptyState 
                   icon={Book} 
-                  title="Корзина пуста" 
+                  title="Архив пуст" 
                   description="Здесь будут удаленные записи из дневника" 
                   color="cyan"
               />
@@ -375,21 +375,21 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none shrink-0">
         <button 
             onClick={() => setActiveTab('hall_of_fame')} 
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'hall_of_fame' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'hall_of_fame' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
         >
-            <CakeSlice size={16} /> Зал славы
+            <Trophy size={16} /> Зал славы
         </button>
         <button 
             onClick={() => setActiveTab('notes')} 
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'notes' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'notes' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
         >
-            <Trash2 size={16} /> Корзина (Заметки)
+            <StickyNote size={16} /> Архив заметок
         </button>
         <button 
             onClick={() => setActiveTab('journal')} 
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'journal' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'journal' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
         >
-            <Book size={16} /> Дневник
+            <Book size={16} /> Архив дневника
         </button>
       </div>
 
