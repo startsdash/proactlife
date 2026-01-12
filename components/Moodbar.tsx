@@ -364,7 +364,6 @@ const Moodbar: React.FC<Props> = ({ entries, onAddEntry }) => {
   };
 
   const activeMoodConfig = selectedMood ? MOODS[selectedMood - 1] : null;
-  const numericAverageMood = averageMood === '-' ? 0 : parseFloat(averageMood);
 
   return (
     <div className={`h-full overflow-y-auto custom-scrollbar-light p-4 md:p-8 bg-[#f8fafc] dark:bg-[#0f172a] transition-colors duration-700 ${activeMoodConfig ? activeMoodConfig.bg.replace('/20', '/10') : ''}`}>
@@ -537,15 +536,11 @@ const Moodbar: React.FC<Props> = ({ entries, onAddEntry }) => {
                         <div className="bg-indigo-600 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10" />
                             <h3 className="text-xs font-bold uppercase tracking-wider opacity-80 mb-1">Текущий статус</h3>
-                            <div className="text-3xl font-bold mb-4">
-                                {numericAverageMood === 0 ? 'Анализ...' : numericAverageMood >= 4 ? 'На подъеме 🚀' : numericAverageMood >= 3 ? 'Стабильно ⚓️' : 'Нужен отдых 🔋'}
-                            </div>
+                            <div className="text-3xl font-bold mb-4">{averageMood >= 4 ? 'На подъеме 🚀' : averageMood >= 3 ? 'Стабильно ⚓️' : 'Нужен отдых 🔋'}</div>
                             <div className="text-sm opacity-90 leading-relaxed">
-                                {numericAverageMood === 0 
-                                    ? "Начни отмечать настроение, чтобы получить рекомендации." 
-                                    : numericAverageMood >= 4 
-                                        ? "Отличное время для сложных задач и творчества. Используй этот импульс!" 
-                                        : "Фокусируйся на восстановлении и рутине. Не требуй от себя невозможного."}
+                                {averageMood >= 4 
+                                    ? "Отличное время для сложных задач и творчества. Используй этот импульс!" 
+                                    : "Фокусируйся на восстановлении и рутине. Не требуй от себя невозможного."}
                             </div>
                         </div>
 
