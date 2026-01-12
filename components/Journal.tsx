@@ -1441,6 +1441,25 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Факты, эмоции, гипотезы</p>
                 </div>
+                {hasMentorTool && (
+                    <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
+                        <button 
+                            onClick={handleAnalyzePath} 
+                            disabled={displayedEntries.length === 0} 
+                            className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${isAnalyzing ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm animate-pulse' : 'text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 shadow-sm'}`}
+                        >
+                            {isAnalyzing ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                            <span className="hidden md:inline">Наставник (ИИ)</span>
+                        </button>
+                        <button 
+                            onClick={() => setShowHistory(true)} 
+                            className="flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 shadow-sm"
+                        >
+                            <History size={16} />
+                            <span className="hidden md:inline">Архив</span>
+                        </button>
+                    </div>
+                )}
              </header>
         </div>
 
@@ -1527,7 +1546,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
              <div className="w-full pr-4 pl-2 md:pr-8 md:pl-4 pt-6 pb-8 relative z-10">
                 {/* CREATION BLOCK (COLLAPSIBLE) */}
                 <div className="max-w-3xl mx-auto w-full mb-8 relative z-30">
-                    <div className={`flex gap-2 ${!isCreationExpanded ? 'items-center' : 'items-start'}`}>
+                    <div className="flex gap-2 items-center">
                         <div className="flex-1 min-w-0" ref={creationRef}>
                             {!isCreationExpanded ? (
                                 <div 
@@ -1651,38 +1670,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                         </button>
                                     </div>
                                 </div>
-                            )}
-                        </div>
-
-                        <div className="flex gap-2 shrink-0">
-                            {hasMentorTool && (
-                                <>
-                                    <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="bottom" disabled={isAnalyzing}>
-                                        <button 
-                                            onClick={handleAnalyzePath} 
-                                            disabled={displayedEntries.length === 0} 
-                                            className={`${actionButtonStyle} ${isAnalyzing ? 'animate-pulse' : ''}`}
-                                        >
-                                            {isAnalyzing ? (
-                                                <div className="relative w-4 h-4 flex items-center justify-center">
-                                                    <Loader2 size={16} className="animate-spin absolute inset-0" />
-                                                    <div className="w-2 h-2 bg-current rounded-[1px] relative z-10" />
-                                                </div>
-                                            ) : (
-                                                <Sparkles size={18} strokeWidth={1.5} />
-                                            )}
-                                        </button>
-                                    </Tooltip>
-
-                                    <Tooltip content="Архив наставника" side="bottom">
-                                        <button 
-                                            onClick={() => setShowHistory(true)} 
-                                            className={actionButtonStyle}
-                                        >
-                                            <History size={18} strokeWidth={1.5} />
-                                        </button>
-                                    </Tooltip>
-                                </>
                             )}
                         </div>
                     </div>
