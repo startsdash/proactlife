@@ -171,7 +171,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                                 <button 
                                     onClick={(e) => {
                                     e.stopPropagation();
-                                    if (window.confirm("Удалить задачу из истории навсегда?")) deleteTask(task.id);
+                                    if (window.confirm("Удалить навсегда?")) deleteTask(task.id);
                                     }}
                                     className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
                                 >
@@ -375,9 +375,9 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none shrink-0">
         <button 
             onClick={() => setActiveTab('hall_of_fame')} 
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'hall_of_fame' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-amber-600 dark:text-amber-500' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'hall_of_fame' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
         >
-            <Trophy size={16} /> Зал славы
+            <Trophy size={16} className={activeTab === 'hall_of_fame' ? "text-amber-600 dark:text-amber-500" : ""} /> Зал славы
         </button>
         <button 
             onClick={() => setActiveTab('notes')} 
