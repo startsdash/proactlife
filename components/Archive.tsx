@@ -108,7 +108,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
       {archivedTasks.length === 0 ? (
           <div className="py-10">
               <EmptyState 
-                  icon={ArchiveIcon} 
+                  icon={Trophy} 
                   title="Все впереди!" 
                   description="Заверши первую миссию, чтобы начать историю побед" 
                   color="amber"
@@ -147,7 +147,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
 
                         <div className="mb-3">
                             <div className="text-slate-700 dark:text-slate-400 font-sans text-sm leading-relaxed line-clamp-4">
-                                 <ReactMarkdown components={markdownComponents}>{applyTypography(task.content)}</ReactMarkdown>
+                                 <ReactMarkdown components={markdownComponents}>{applyTypography(task.content).replace(/\n/g, '  \n')}</ReactMarkdown>
                             </div>
                         </div>
                     </div>
@@ -232,7 +232,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                                     remarkPlugins={[remarkGfm]} 
                                     rehypePlugins={[rehypeRaw]}
                                 >
-                                    {previewText}
+                                    {previewText.replace(/\n/g, '  \n')}
                                 </ReactMarkdown>
                             </div>
                             
@@ -324,7 +324,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                                     remarkPlugins={[remarkGfm]} 
                                     rehypePlugins={[rehypeRaw]}
                                 >
-                                    {previewText}
+                                    {previewText.replace(/\n/g, '  \n')}
                                 </ReactMarkdown>
                             </div>
 
@@ -375,7 +375,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none shrink-0">
         <button 
             onClick={() => setActiveTab('hall_of_fame')} 
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'hall_of_fame' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === 'hall_of_fame' ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-amber-600 dark:text-amber-500' : 'text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent'}`}
         >
             <Trophy size={16} /> Зал славы
         </button>
