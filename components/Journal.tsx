@@ -1715,45 +1715,54 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 {/* Entry Card */}
                                 <div 
                                     onClick={() => setSelectedEntryId(entry.id)} 
-                                    className={`relative rounded-2xl border transition-all duration-300 group cursor-pointer overflow-hidden flex flex-col md:flex-row
+                                    className={`relative rounded-2xl border transition-all duration-300 group cursor-pointer overflow-hidden flex flex-col
                                         ${entry.isInsight 
                                             ? 'bg-gradient-to-br from-violet-50/80 via-fuchsia-50/50 to-white dark:from-violet-900/20 dark:via-fuchsia-900/10 dark:to-[#1e293b] border-violet-200/50 dark:border-violet-800/30 shadow-sm' 
                                             : `${getJournalColorClass(entry.color)} border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md`
                                         }
                                     `}
                                 >
-                                    {/* Left Column: Timeline Info */}
-                                    <div className="md:w-20 w-full shrink-0 flex md:flex-col flex-row items-center md:py-6 p-4 md:border-r md:border-b-0 border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/20 gap-3 justify-between md:justify-start">
-                                        <div className="text-center">
-                                            <span className="font-mono text-xl font-bold text-slate-700 dark:text-slate-300 block leading-none">{tDate.day}</span>
-                                            <span className="font-mono text-[9px] text-slate-400 uppercase font-bold tracking-wider">{tDate.month}</span>
+                                    {/* Cover Image - Top Full Width */}
+                                    {entry.coverUrl && (
+                                        <div className="h-40 w-full relative overflow-hidden shrink-0 border-b border-slate-100 dark:border-slate-800/50">
+                                            <img src={entry.coverUrl} alt="Cover" className="w-full h-full object-cover" />
                                         </div>
-                                        <div className="hidden md:block w-px h-8 bg-slate-200 dark:bg-slate-700" />
-                                        <div className="md:mt-1">
-                                            {entry.isInsight ? (
-                                                <div className="p-1.5 bg-violet-100 dark:bg-violet-900/30 rounded-full text-violet-500 shadow-sm">
-                                                    <Gem size={14} strokeWidth={2} />
+                                    )}
+
+                                    {/* Body Container */}
+                                    <div className="flex flex-col md:flex-row flex-1">
+                                        
+                                        {/* Left Column: Timeline Info (Centered Vertically) */}
+                                        <div className="md:w-24 w-full shrink-0 flex md:flex-col flex-row items-center justify-center md:py-6 p-4 relative border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800/50">
+                                            {/* Vertical Line */}
+                                            <div className="hidden md:block absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px bg-slate-200/50 dark:bg-slate-700/50" />
+                                            
+                                            {/* Date Content - On top of line */}
+                                            <div className={`relative z-10 flex flex-col items-center gap-2 p-2 rounded-xl backdrop-blur-sm shadow-sm border border-slate-100/50 dark:border-slate-800/50
+                                                ${entry.isInsight ? 'bg-violet-50/50 dark:bg-violet-900/20' : 'bg-white/50 dark:bg-slate-900/50'}
+                                            `}>
+                                                <div className="text-center leading-none">
+                                                    <span className="font-mono text-xl font-bold text-slate-700 dark:text-slate-300 block">{tDate.day}</span>
+                                                    <span className="font-mono text-[9px] text-slate-400 uppercase font-bold tracking-wider">{tDate.month}</span>
                                                 </div>
-                                            ) : (
-                                                <div className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600 border-2 border-white dark:border-slate-800 shadow-sm" />
-                                            )}
-                                        </div>
-                                        {/* Mobile Extra Info */}
-                                        <div className="md:hidden flex-1 text-right">
-                                            <span className="font-mono text-[9px] text-slate-400">{formatDate(entry.date).split(',')[0]}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Main Content */}
-                                    <div className="flex-1 flex flex-col min-w-0 relative">
-                                        {/* Cover Image in right pane */}
-                                        {entry.coverUrl && (
-                                            <div className="h-32 w-full relative overflow-hidden border-b border-slate-100 dark:border-slate-800/50">
-                                                <img src={entry.coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                                                
+                                                {entry.isInsight ? (
+                                                    <div className="text-violet-500">
+                                                        <Gem size={14} strokeWidth={2} className="fill-current/20" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 border border-white dark:border-slate-800" />
+                                                )}
                                             </div>
-                                        )}
 
-                                        <div className="p-5 md:p-6 flex-1 flex flex-col">
+                                            {/* Mobile Extra Info */}
+                                            <div className="md:hidden flex-1 text-right ml-auto">
+                                                <span className="font-mono text-[9px] text-slate-400">{formatDate(entry.date).split(',')[0]}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Main Content */}
+                                        <div className="flex-1 flex flex-col min-w-0 p-5 md:p-6">
                                             {/* Header Actions (Insight/Edit) */}
                                             <div className="flex justify-between items-start mb-3">
                                                 {entry.title ? (
