@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task } from '../types';
-import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, MessageCircle, Circle, XCircle, Trophy, Minus, Plus } from 'lucide-react';
+import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, MessageCircle, Circle, XCircle, Archive as ArchiveIcon, Minus, Plus } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 
@@ -156,7 +156,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
     <div className="h-full p-4 md:p-8 flex flex-col overflow-hidden relative">
       <header className="mb-6 shrink-0">
         <h1 className="text-2xl md:text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">
-            Зал славы
+            Архив
         </h1>
         <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Выполненные миссии</p>
       </header>
@@ -165,7 +165,7 @@ const Archive: React.FC<Props> = ({ tasks, restoreTask, deleteTask }) => {
         {archivedTasks.length === 0 ? (
           <div className="py-10">
               <EmptyState 
-                  icon={Trophy} 
+                  icon={ArchiveIcon} 
                   title="Все впереди!" 
                   description="Заверши первую миссию, чтобы начать историю побед" 
                   color="amber"

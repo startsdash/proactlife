@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Module, SyncStatus, IdentityRole, Habit, AppConfig, AccessControl } from '../types';
-import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Trophy, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Fingerprint, Diamond, Activity, Tablet, BrainCircuit, User } from 'lucide-react';
+import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Settings, Cloud, CloudOff, RefreshCw, CheckCircle2, AlertCircle, Archive, Book, FlaskConical, PanelLeftClose, PanelLeftOpen, Shield, Menu, Flame, LayoutDashboard, Fingerprint, Diamond, Activity, Tablet, BrainCircuit, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip } from './Tooltip';
 
@@ -35,9 +36,9 @@ const NAV_GROUPS = [
     ]
   },
   {
-    id: '03_АРХИВЫ',
+    id: '03_ИСТОРИЯ',
     items: [
-      { id: Module.ARCHIVE, icon: Trophy, label: 'Зал славы' },
+      { id: Module.ARCHIVE, icon: Archive, label: 'Архив' },
     ]
   },
   {
