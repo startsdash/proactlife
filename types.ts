@@ -134,6 +134,7 @@ export interface JournalEntry {
   
   mood?: number;
   moodTags?: string[];
+  isArchived?: boolean; // NEW: Support for archiving journal entries
 }
 
 export interface MentorAnalysis {
