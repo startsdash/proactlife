@@ -1524,7 +1524,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 </div>
              </motion.div>
 
-             <div className="w-full px-4 md:px-8 pt-6 pb-8 relative z-10">
+             <div className="w-full pr-4 pl-2 md:pr-8 md:pl-4 pt-6 pb-8 relative z-10">
                 {/* CREATION BLOCK (COLLAPSIBLE) */}
                 <div className="max-w-3xl mx-auto w-full mb-8 relative z-30">
                     <div className={`flex gap-2 ${!isCreationExpanded ? 'items-center' : 'items-start'}`}>
@@ -1700,7 +1700,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 ) : (
                 <div className="w-full relative">
                     {/* The Ghost Line */}
-                    <div className="absolute left-[3rem] md:left-[4rem] top-8 bottom-8 border-l border-slate-900/5 dark:border-white/5 width-px" />
+                    <div className="absolute left-8 md:left-12 top-8 bottom-8 border-l border-slate-900/5 dark:border-white/5 width-px" />
 
                     <div className="space-y-8">
                         {displayedEntries.map(entry => {
@@ -1717,9 +1717,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                         const iconColorClass = 'text-violet-500';
 
                         return (
-                            <div key={entry.id} className="relative pl-20 md:pl-28 group">
+                            <div key={entry.id} className="relative pl-14 md:pl-24 group">
                                 {/* Time Label */}
-                                <div className="absolute left-0 top-[2.25rem] w-[2.5rem] md:w-[3.5rem] text-right pr-2 select-none">
+                                <div className="absolute left-0 top-[2.25rem] w-8 md:w-12 text-right pr-2 select-none">
                                     <span className="font-mono text-[9px] text-slate-300 dark:text-slate-600 font-bold tracking-tighter block leading-none">
                                         {formatTimelineDate(entry.date).split(' ')[0]}
                                     </span>
@@ -1729,7 +1729,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 </div>
 
                                 {/* Node Marker */}
-                                <div className="absolute left-[3rem] md:left-[4rem] top-[2.25rem] -translate-x-1/2 -translate-y-1/2 z-10 bg-[#f8fafc] dark:bg-[#0f172a] p-1.5 transition-colors duration-300">
+                                <div className="absolute left-8 md:left-12 top-[2.25rem] -translate-x-1/2 -translate-y-1/2 z-10 bg-[#f8fafc] dark:bg-[#0f172a] p-1.5 transition-colors duration-300">
                                     {entry.isInsight ? (
                                         <Gem size={10} strokeWidth={2} className={iconColorClass} />
                                     ) : (
