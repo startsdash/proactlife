@@ -1424,7 +1424,11 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
   };
 
   const formatTimelineDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' }).toUpperCase().replace('.', '');
+    const d = new Date(timestamp);
+    return {
+        day: d.getDate(),
+        month: d.toLocaleString('ru-RU', { month: 'short' }).toUpperCase().replace('.', '')
+    }
   };
 
   const actionButtonStyle = "p-3 rounded-2xl border transition-all flex items-center justify-center aspect-square bg-white dark:bg-[#1e293b] border-transparent shadow-sm text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20";
@@ -1467,7 +1471,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 </div>
                 
                 <div className="relative z-10 w-full px-4 md:px-8 pb-2">
-                    <div className="max-w-4xl mx-auto w-full pl-14 md:pl-24">
+                    <div className="max-w-3xl mx-auto w-full">
                         <div className="flex gap-2">
                             <div className="relative flex-1 group">
                                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" strokeWidth={1} />
@@ -1526,7 +1530,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
              <div className="w-full px-4 md:px-8 pt-6 pb-8 relative z-10">
                 {/* CREATION BLOCK (COLLAPSIBLE) */}
-                <div className="max-w-4xl mx-auto w-full mb-8 relative z-30 pl-14 md:pl-24">
+                <div className="max-w-3xl mx-auto w-full mb-8 relative z-30">
                     <div className={`flex gap-2 ${!isCreationExpanded ? 'items-center' : 'items-start'}`}>
                         <div className="flex-1 min-w-0" ref={creationRef}>
                             {!isCreationExpanded ? (
@@ -1698,132 +1702,131 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     />
                 </div>
                 ) : (
-                <div className="w-full max-w-4xl mx-auto relative">
-                    {/* The Ghost Line */}
-                    <div className="absolute left-8 md:left-12 top-8 bottom-8 border-l border-slate-900/5 dark:border-white/5 width-px" />
-
-                    <div className="space-y-8">
-                        {displayedEntries.map(entry => {
+                <div className="w-full max-w-3xl mx-auto relative space-y-6">
+                    {displayedEntries.map(entry => {
                         const mentor = config.mentors.find(m => m.id === entry.mentorId);
                         const isEditing = editingId === entry.id;
                         const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
                         const linkUrl = findFirstUrl(entry.content);
+                        const tDate = formatTimelineDate(entry.date);
                         
-                        const primarySphereId = entry.spheres?.[0];
-                        const sphereConfig = SPHERES.find(s => s.id === primarySphereId);
-                        const nodeColorClass = sphereConfig 
-                            ? sphereConfig.text.replace('text-', 'border-') 
-                            : 'border-slate-300 dark:border-slate-600';
-                        const iconColorClass = 'text-violet-500';
-
                         return (
-                            <div key={entry.id} className="relative pl-14 md:pl-24 group">
-                                {/* Time Label */}
-                                <div className="absolute left-0 top-[2.25rem] w-8 md:w-12 text-right pr-2 select-none">
-                                    <span className="font-mono text-[9px] text-slate-300 dark:text-slate-600 font-bold tracking-tighter block leading-none">
-                                        {formatTimelineDate(entry.date).split(' ')[0]}
-                                    </span>
-                                    <span className="font-mono text-slate-300 dark:text-slate-600 font-bold tracking-tighter block leading-none text-[8px] uppercase">
-                                        {formatTimelineDate(entry.date).split(' ')[1]}
-                                    </span>
-                                </div>
-
-                                {/* Node Marker */}
-                                <div className="absolute left-8 md:left-12 top-[2.25rem] -translate-x-1/2 -translate-y-1/2 z-10 bg-[#f8fafc] dark:bg-[#0f172a] p-1.5 transition-colors duration-300">
-                                    {entry.isInsight ? (
-                                        <Gem size={10} strokeWidth={2} className={iconColorClass} />
-                                    ) : (
-                                        <div className={`w-1.5 h-1.5 rounded-full bg-transparent border-[1.5px] ${nodeColorClass}`} />
-                                    )}
-                                </div>
-
+                            <div key={entry.id} className="relative group">
                                 {/* Entry Card */}
                                 <div 
                                     onClick={() => setSelectedEntryId(entry.id)} 
-                                    className={`relative rounded-2xl border transition-all duration-300 group cursor-pointer overflow-hidden
+                                    className={`relative rounded-2xl border transition-all duration-300 group cursor-pointer overflow-hidden flex flex-col md:flex-row
                                         ${entry.isInsight 
                                             ? 'bg-gradient-to-br from-violet-50/80 via-fuchsia-50/50 to-white dark:from-violet-900/20 dark:via-fuchsia-900/10 dark:to-[#1e293b] border-violet-200/50 dark:border-violet-800/30 shadow-sm' 
                                             : `${getJournalColorClass(entry.color)} border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md`
                                         }
                                     `}
                                 >
-                                {entry.coverUrl && (
-                                    <div className="h-32 w-full relative overflow-hidden">
-                                        <img src={entry.coverUrl} alt="Cover" className="w-full h-full object-cover" />
-                                    </div>
-                                )}
-                                <div className="p-6 md:p-8">
-                                {/* CARD HEADER - ALIGNED */}
-                                <div className="flex justify-between items-center mb-4">
-                                    <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-widest uppercase flex items-center gap-2">
-                                        <span>{formatDate(entry.date)}</span>
+                                    {/* Left Column: Timeline Info */}
+                                    <div className="md:w-20 w-full shrink-0 flex md:flex-col flex-row items-center md:py-6 p-4 md:border-r md:border-b-0 border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/20 gap-3 justify-between md:justify-start">
+                                        <div className="text-center">
+                                            <span className="font-mono text-xl font-bold text-slate-700 dark:text-slate-300 block leading-none">{tDate.day}</span>
+                                            <span className="font-mono text-[9px] text-slate-400 uppercase font-bold tracking-wider">{tDate.month}</span>
+                                        </div>
+                                        <div className="hidden md:block w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                                        <div className="md:mt-1">
+                                            {entry.isInsight ? (
+                                                <div className="p-1.5 bg-violet-100 dark:bg-violet-900/30 rounded-full text-violet-500 shadow-sm">
+                                                    <Gem size={14} strokeWidth={2} />
+                                                </div>
+                                            ) : (
+                                                <div className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600 border-2 border-white dark:border-slate-800 shadow-sm" />
+                                            )}
+                                        </div>
+                                        {/* Mobile Extra Info */}
+                                        <div className="md:hidden flex-1 text-right">
+                                            <span className="font-mono text-[9px] text-slate-400">{formatDate(entry.date).split(',')[0]}</span>
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                        {!isEditing && (
-                                            <button 
-                                                onClick={() => toggleInsight(entry)} 
-                                                className={`p-1.5 rounded-lg transition-all ${
-                                                    entry.isInsight 
-                                                    ? "text-violet-600 dark:text-violet-300 bg-gradient-to-tr from-violet-100 via-fuchsia-50 to-cyan-50 dark:from-violet-900/30 dark:via-fuchsia-900/20 dark:to-cyan-900/20 shadow-[0_0_12px_rgba(139,92,246,0.3)]" 
-                                                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                                                }`}
-                                            >
-                                                <Gem 
-                                                    size={16} 
-                                                    strokeWidth={1.5} 
-                                                    className={entry.isInsight ? "fill-violet-200/50" : "fill-transparent"} 
-                                                />
-                                            </button>
+                                    {/* Main Content */}
+                                    <div className="flex-1 flex flex-col min-w-0 relative">
+                                        {/* Cover Image in right pane */}
+                                        {entry.coverUrl && (
+                                            <div className="h-32 w-full relative overflow-hidden border-b border-slate-100 dark:border-slate-800/50">
+                                                <img src={entry.coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                                            </div>
                                         )}
-                                    </div>
-                                </div>
 
-                                {entry.title && (
-                                    <h3 className="font-sans text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">{entry.title}</h3>
-                                )}
+                                        <div className="p-5 md:p-6 flex-1 flex flex-col">
+                                            {/* Header Actions (Insight/Edit) */}
+                                            <div className="flex justify-between items-start mb-3">
+                                                {entry.title ? (
+                                                    <h3 className="font-sans text-lg font-bold text-slate-900 dark:text-slate-100 leading-tight">{entry.title}</h3>
+                                                ) : <div />}
+                                                
+                                                <div className="flex items-center gap-2 -mt-1 ml-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                    {!isEditing && (
+                                                        <button 
+                                                            onClick={() => toggleInsight(entry)} 
+                                                            className={`p-1.5 rounded-lg transition-all ${
+                                                                entry.isInsight 
+                                                                ? "text-violet-600 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/20" 
+                                                                : "text-slate-300 hover:text-slate-500 dark:hover:text-slate-400"
+                                                            }`}
+                                                        >
+                                                            <Gem 
+                                                                size={16} 
+                                                                strokeWidth={1.5} 
+                                                                className={entry.isInsight ? "fill-violet-200/50" : "fill-transparent"} 
+                                                            />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
 
-                                <div className="font-serif text-[#2F3437] dark:text-slate-300 leading-relaxed text-base">
-                                    <ReactMarkdown 
-                                        components={markdownComponents} 
-                                        urlTransform={allowDataUrls} 
-                                        remarkPlugins={[remarkGfm]} 
-                                        rehypePlugins={[rehypeRaw]}
-                                    >
-                                        {entry.content.replace(/\n/g, '  \n')}
-                                    </ReactMarkdown>
-                                </div>
-                                {linkUrl && <LinkPreview url={linkUrl} />}
+                                            <div className="font-serif text-[#2F3437] dark:text-slate-200 leading-[1.7] text-sm md:text-base flex-1">
+                                                <ReactMarkdown 
+                                                    components={markdownComponents} 
+                                                    urlTransform={allowDataUrls} 
+                                                    remarkPlugins={[remarkGfm]} 
+                                                    rehypePlugins={[rehypeRaw]}
+                                                >
+                                                    {entry.content.replace(/\n/g, '  \n')}
+                                                </ReactMarkdown>
+                                            </div>
+                                            {linkUrl && <LinkPreview url={linkUrl} />}
 
-                                {/* Context Link */}
-                                {linkedTask && !isEditing && (
-                                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
-                                            className="font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
-                                        >
-                                            <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                                                [ CONTEXT: <span className="truncate max-w-[200px] inline-block align-bottom">{linkedTask.content}</span> ]
-                                            </span>
-                                        </button>
-                                    </div>
-                                )}
+                                            {/* Context Link */}
+                                            {linkedTask && !isEditing && (
+                                                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
+                                                        className="font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                                                    >
+                                                        <Link size={10} className="shrink-0" />
+                                                        <span className="truncate max-w-full block">
+                                                            CONTEXT: {linkedTask.content}
+                                                        </span>
+                                                    </button>
+                                                </div>
+                                            )}
 
-                                {entry.aiFeedback && (
-                                    <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
-                                        <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
+                                            {entry.aiFeedback && (
+                                                <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
+                                                        <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
+                                                    </div>
+                                                    <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
+                                                </div>
+                                            )}
+                                            
+                                            {/* Footer Spheres */}
+                                            <div className="mt-4 flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                                <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} align="right" direction="up" />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
-                                    </div>
-                                )}
-                                </div>
                                 </div>
                             </div>
                         );
-                        })}
-                    </div>
+                    })}
                 </div>
                 )}
             </div>
