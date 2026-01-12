@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Task, Note, JournalEntry } from '../types';
 import { RotateCcw, Trash2, History, Calendar, CheckCircle2, FileText, X, Zap, MessageCircle, Circle, XCircle, Archive as ArchiveIcon, Minus, Plus, CakeSlice, StickyNote, Book, Tag } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 
@@ -376,17 +378,31 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar-light">
-        {activeTab === 'hall_of_fame' && renderHallOfFame()}
-        {activeTab === 'notes' && renderNotes()}
-        {activeTab === 'journal' && renderJournal()}
+        <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+        >
+            {activeTab === 'hall_of_fame' && renderHallOfFame()}
+            {activeTab === 'notes' && renderNotes()}
+            {activeTab === 'journal' && renderJournal()}
+        </motion.div>
       </div>
 
       {/* --- MODALS --- */}
 
       {/* Task Modal */}
+      <AnimatePresence>
       {selectedTask && (
         <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedTask(null)}>
-            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto" 
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="flex justify-between items-start mb-6">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Детали задачи</h3>
                     <button onClick={() => setSelectedTask(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} /></button>
@@ -452,14 +468,22 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 <div className="mt-8 flex justify-end">
                     <button onClick={() => setSelectedTask(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium">Закрыть</button>
                 </div>
-            </div>
+            </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
       {/* Note Modal */}
+      <AnimatePresence>
       {selectedNote && (
         <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
-            <div className={`w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto ${getNoteColorClass(selectedNote.color)}`} onClick={(e) => e.stopPropagation()}>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className={`w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto ${getNoteColorClass(selectedNote.color)}`} 
+                onClick={(e) => e.stopPropagation()}
+            >
                 {selectedNote.coverUrl && (
                     <div className="h-40 w-full shrink-0 relative mb-6 -mx-8 -mt-8 md:-mx-8 md:-mt-8 w-[calc(100%_+_4rem)] group overflow-hidden">
                         <img src={selectedNote.coverUrl} alt="Cover" className="w-full h-full object-cover" />
@@ -487,14 +511,22 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                         ))}
                     </div>
                 )}
-            </div>
+            </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
       {/* Journal Entry Modal */}
+      <AnimatePresence>
       {selectedEntry && (
         <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedEntry(null)}>
-            <div className={`w-full max-w-lg bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className={`w-full max-w-lg bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto`} 
+                onClick={(e) => e.stopPropagation()}
+            >
                 {selectedEntry.coverUrl && (
                     <div className="h-40 w-full shrink-0 relative mb-6 -mx-8 -mt-8 md:-mx-8 md:-mt-8 w-[calc(100%_+_4rem)] group overflow-hidden">
                         <img src={selectedEntry.coverUrl} alt="Cover" className="w-full h-full object-cover" />
@@ -521,9 +553,10 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                         </div>
                     </div>
                 )}
-            </div>
+            </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
     </div>
   );
