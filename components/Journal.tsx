@@ -1467,7 +1467,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                 </div>
                 
                 <div className="relative z-10 w-full px-4 md:px-8 pb-2">
-                    <div className="max-w-4xl mx-auto w-full">
+                    <div className="max-w-4xl mx-auto w-full pl-14 md:pl-24">
                         <div className="flex gap-2">
                             <div className="relative flex-1 group">
                                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" strokeWidth={1} />
@@ -1526,7 +1526,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
              <div className="w-full px-4 md:px-8 pt-6 pb-8 relative z-10">
                 {/* CREATION BLOCK (COLLAPSIBLE) */}
-                <div className="max-w-4xl mx-auto w-full mb-8 relative z-30">
+                <div className="max-w-4xl mx-auto w-full mb-8 relative z-30 pl-14 md:pl-24">
                     <div className={`flex gap-2 ${!isCreationExpanded ? 'items-center' : 'items-start'}`}>
                         <div className="flex-1 min-w-0" ref={creationRef}>
                             {!isCreationExpanded ? (
