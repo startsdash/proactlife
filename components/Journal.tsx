@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -1698,7 +1697,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     />
                 </div>
                 ) : (
-                <div className="w-full relative">
+                <div className="w-full relative max-w-3xl mx-auto">
                     {/* The Ghost Line */}
                     <div className="absolute left-8 md:left-12 top-8 bottom-8 border-l border-slate-900/5 dark:border-white/5 width-px" />
 
