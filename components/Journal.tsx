@@ -1753,13 +1753,13 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                         </div>
 
                                         {/* Main Content */}
-                                        <div className="flex-1 flex flex-col min-w-0 p-6 md:p-8 relative">
+                                        <div className="flex-1 flex flex-col min-w-0 p-6 md:p-8 relative"> {/* added relative */}
                                             {/* Header Actions (Insight/Edit) */}
                                             {entry.title ? (
-                                                <div className="mb-4 relative">
-                                                    <h3 className="font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 leading-tight pr-10">{entry.title}</h3>
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <h3 className="font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 leading-tight">{entry.title}</h3>
                                                     
-                                                    <div className="absolute top-0 right-0 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex items-center gap-2 -mt-1 ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                                         {!isEditing && (
                                                             <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
                                                                 <button 
