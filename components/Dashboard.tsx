@@ -1,5 +1,5 @@
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Note, Task, Habit, JournalEntry, Module, Flashcard } from '../types';
 import { motion } from 'framer-motion';
 import { 
@@ -7,17 +7,16 @@ import {
   Target, 
   BrainCircuit, 
   TrendingUp, 
-  Calendar, 
   Clock, 
-  CheckCircle2, 
   Trophy, 
   Activity,
   Flame,
   ArrowRight,
   Sparkles,
-  Layout,
   Dumbbell,
-  RotateCw as RotateCwIcon // Renamed to avoid collision with helper if needed, or just use as is
+  Atom,
+  Dna,
+  Fingerprint
 } from 'lucide-react';
 import { SPHERES } from '../constants';
 
@@ -31,9 +30,8 @@ interface Props {
 }
 
 // --- CONSTANTS ---
-const GLASS_PANEL = "bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl border border-white/40 dark:border-white/5 shadow-sm transition-all duration-300 hover:shadow-md hover:border-white/60 dark:hover:border-white/10";
+const GLASS_PANEL = "bg-white/40 dark:bg-[#0f172a]/60 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-xl transition-all duration-500 hover:shadow-2xl hover:border-white/40 dark:hover:border-white/10 group";
 
-// --- UTILS ---
 const getLocalDateKey = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -43,450 +41,446 @@ const getLocalDateKey = (date: Date) => {
 
 // --- WIDGETS ---
 
-// 1. ENERGY PULSAR (HERO)
-const EnergyPulsar = ({ tasks, habits, journal }: { tasks: Task[], habits: Habit[], journal: JournalEntry[] }) => {
+// 1. ENERGY PLASMA CORE
+const EnergyPlasma = ({ tasks, habits, journal }: { tasks: Task[], habits: Habit[], journal: JournalEntry[] }) => {
     const todayStr = getLocalDateKey(new Date());
     
     // Metrics
-    const completedTasksToday = tasks.filter(t => t.column === 'done' && getLocalDateKey(new Date(t.createdAt)) === todayStr).length; 
-    
     const totalTasks = tasks.filter(t => !t.isArchived).length;
     const doneTasks = tasks.filter(t => t.column === 'done' && !t.isArchived).length;
     const taskRate = totalTasks > 0 ? (doneTasks / totalTasks) : 0;
 
-    // Habits Today
     const activeHabits = habits.filter(h => !h.isArchived);
     const habitsDoneToday = activeHabits.filter(h => h.history[todayStr]).length;
     const habitRate = activeHabits.length > 0 ? (habitsDoneToday / activeHabits.length) : 0;
 
-    // Journal Pulse
     const hasJournalEntry = journal.some(j => getLocalDateKey(new Date(j.date)) === todayStr);
     const journalRate = hasJournalEntry ? 1 : 0;
 
-    // Composite Energy Score (0-100)
     const energyScore = Math.round(((taskRate * 0.4) + (habitRate * 0.4) + (journalRate * 0.2)) * 100);
 
-    // Dominant Sphere Color
-    const counts: Record<string, number> = { productivity: 0, growth: 0, relationships: 0 };
-    tasks.filter(t => t.column === 'done').forEach(t => t.spheres?.forEach(s => counts[s] = (counts[s] || 0) + 1));
-    const dominantSphere = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b, 'productivity');
+    // Color Logic based on Energy
+    let coreColor = "text-indigo-500";
+    let glowColor = "rgba(99,102,241,"; // Indigo
     
-    let ringColor = '#6366f1'; // Indigo
-    if (dominantSphere === 'growth') ringColor = '#10b981'; // Emerald
-    if (dominantSphere === 'relationships') ringColor = '#f43f5e'; // Rose
+    if (energyScore > 75) {
+        coreColor = "text-emerald-400";
+        glowColor = "rgba(52,211,153,"; // Emerald
+    } else if (energyScore > 40) {
+        coreColor = "text-amber-400";
+        glowColor = "rgba(251,191,36,"; // Amber
+    } else {
+        coreColor = "text-rose-500";
+        glowColor = "rgba(244,63,94,"; // Rose
+    }
 
     return (
-        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-8 relative overflow-hidden flex flex-col items-center justify-center group`}>
-            <div className="absolute top-4 left-6 flex items-center gap-2">
-                <Zap size={16} className="text-amber-500 fill-amber-500 animate-pulse" />
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Энергия дня</span>
+        <div className={`h-full ${GLASS_PANEL} rounded-[40px] p-8 relative overflow-hidden flex flex-col items-center justify-center`}>
+            <div className="absolute top-6 left-6 flex items-center gap-2 z-20">
+                <Atom size={16} className={`${coreColor} animate-spin-slow`} />
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Core Reactor</span>
             </div>
 
-            <div className="relative w-48 h-48 flex items-center justify-center">
-                {/* Background Glow */}
-                <div 
-                    className="absolute inset-0 rounded-full blur-3xl opacity-20 transition-colors duration-1000"
-                    style={{ backgroundColor: ringColor }}
+            <div className="relative w-64 h-64 flex items-center justify-center">
+                {/* Outer Field */}
+                <motion.div 
+                    animate={{ rotate: 360, scale: [1, 1.05, 1] }}
+                    transition={{ rotate: { duration: 20, repeat: Infinity, ease: "linear" }, scale: { duration: 4, repeat: Infinity, ease: "easeInOut" } }}
+                    className="absolute inset-0 rounded-full blur-3xl opacity-20"
+                    style={{ background: `radial-gradient(circle, ${glowColor}0.8) 0%, transparent 70%)` }}
                 />
+                
+                {/* Plasma Layers */}
+                <svg className="w-full h-full relative z-10 overflow-visible">
+                    <defs>
+                        <filter id="plasmaGlow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur stdDeviation="10" result="coloredBlur"/>
+                            <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                    </defs>
 
-                <svg className="w-full h-full transform -rotate-90">
-                    {/* Track */}
-                    <circle cx="96" cy="96" r="88" fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-200 dark:text-slate-700" />
-                    <circle cx="96" cy="96" r="72" fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-200 dark:text-slate-700" />
-                    <circle cx="96" cy="96" r="56" fill="none" stroke="currentColor" strokeWidth="1" className="text-slate-200 dark:text-slate-700" />
+                    {/* Orbit 1 */}
+                    <motion.circle 
+                        cx="128" cy="128" r="80" 
+                        fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="4 8"
+                        className={`${coreColor} opacity-30`}
+                        animate={{ rotate: -360 }}
+                        transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+                    />
+                    
+                    {/* Orbit 2 */}
+                    <motion.circle 
+                        cx="128" cy="128" r="60" 
+                        fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="20 40"
+                        className={`${coreColor} opacity-50`}
+                        animate={{ rotate: 180 }}
+                        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                    />
 
-                    {/* Progress Rings */}
-                    {/* Habits Ring (Outer) */}
+                    {/* The Core */}
                     <motion.circle 
-                        cx="96" cy="96" r="88" fill="none" stroke={ringColor} strokeWidth="6" strokeLinecap="round"
-                        initial={{ pathLength: 0 }} animate={{ pathLength: habitRate }} transition={{ duration: 1.5, ease: "circOut" }}
-                        className="opacity-80"
-                    />
-                    {/* Tasks Ring (Middle) */}
-                    <motion.circle 
-                        cx="96" cy="96" r="72" fill="none" stroke={ringColor} strokeWidth="6" strokeLinecap="round"
-                        initial={{ pathLength: 0 }} animate={{ pathLength: taskRate }} transition={{ duration: 1.5, delay: 0.2, ease: "circOut" }}
-                        className="opacity-60"
-                    />
-                    {/* Journal Ring (Inner) */}
-                    <motion.circle 
-                        cx="96" cy="96" r="56" fill="none" stroke={ringColor} strokeWidth="6" strokeLinecap="round"
-                        initial={{ pathLength: 0 }} animate={{ pathLength: journalRate }} transition={{ duration: 1.5, delay: 0.4, ease: "circOut" }}
-                        className="opacity-40"
+                        cx="128" cy="128" r={40 + (energyScore * 0.2)} 
+                        fill={`url(#grad-${energyScore})`} 
+                        filter="url(#plasmaGlow)"
+                        className={`${coreColor} fill-current`}
+                        animate={{ r: [40, 45 + (energyScore * 0.1), 40], opacity: [0.8, 1, 0.8] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                     />
                 </svg>
 
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-4xl md:text-5xl font-light text-slate-800 dark:text-white tracking-tighter">
+                {/* Data Readout */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none mix-blend-difference text-white">
+                    <span className="text-6xl font-thin tracking-tighter filter drop-shadow-lg">
                         {energyScore}%
                     </span>
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-1">Заряд</span>
+                    <span className="text-[9px] font-mono font-bold uppercase tracking-[0.3em] opacity-80 mt-2">Output</span>
                 </div>
             </div>
 
-            <div className="mt-8 text-center max-w-[200px]">
-                <p className="text-sm font-serif italic text-slate-500 dark:text-slate-400 leading-relaxed">
-                    {energyScore < 30 ? "Начинаем разгон..." : energyScore < 70 ? "Хороший темп, так держать!" : "Пиковая производительность!"}
+            <div className="mt-4 text-center z-10 max-w-[240px]">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                    <span className={`h-1.5 w-1.5 rounded-full ${energyScore > 50 ? 'bg-emerald-400' : 'bg-rose-400'} animate-pulse`} />
+                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+                        {energyScore < 30 ? "SYSTEM_LOW" : energyScore < 70 ? "SYSTEM_NOMINAL" : "SYSTEM_PEAK"}
+                    </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-serif italic opacity-80">
+                    {energyScore < 30 ? "Необходима дозаправка. Выполни ритуал." : energyScore < 70 ? "Реактор стабилен. Наращивай темп." : "Энергия переполняет. Время для прорыва."}
                 </p>
             </div>
         </div>
     );
 };
 
-// 2. HABIT EQUALIZER (UPDATED: Kinetic Reactors)
-const HabitEqualizer = ({ habits }: { habits: Habit[] }) => {
-    // Last 7 days
-    const days = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
-        return { date: d, key: getLocalDateKey(d) };
-    });
-
+// 2. HABIT HEARTBEAT (ECG)
+const HabitHeartbeat = ({ habits }: { habits: Habit[] }) => {
+    // Generate data for last 7 days
     const activeHabits = habits.filter(h => !h.isArchived);
-    
-    return (
-        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 flex flex-col relative`}>
-            <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2">
-                    <Flame size={16} className="text-orange-500 animate-pulse" />
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Ритм привычек</span>
-                </div>
-            </div>
-
-            <div className="flex-1 flex items-end justify-between gap-3 px-1">
-                {days.map((day, i) => {
-                    let completed = 0;
-                    activeHabits.forEach(h => {
-                        if (h.history[day.key]) completed++;
-                    });
-                    const total = activeHabits.length;
-                    const percent = total > 0 ? (completed / total) : 0;
-                    const isToday = i === 6;
-                    
-                    // Kinetic Energy Colors
-                    let gradient = "from-slate-300 to-slate-200 dark:from-slate-700 dark:to-slate-600";
-                    
-                    if (percent > 0) {
-                        gradient = "from-orange-500 via-amber-500 to-yellow-400";
-                    }
-                    if (percent >= 0.8) {
-                        gradient = "from-rose-600 via-orange-500 to-amber-300";
-                    }
-
-                    return (
-                        <div key={day.key} className="flex-1 h-full flex flex-col items-center gap-2 group min-w-[20px]">
-                            {/* Reactor Tube */}
-                            <div className="relative w-full h-full min-h-[60px] bg-slate-100/50 dark:bg-slate-800/30 rounded-full border border-slate-200/50 dark:border-white/5 overflow-hidden backdrop-blur-sm shadow-inner transition-all duration-500 hover:border-white/20">
-                                {/* Inner Glow (Container) */}
-                                <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-transparent dark:from-black/20 pointer-events-none" />
-                                
-                                {/* Liquid Fill */}
-                                <div className="absolute bottom-0 left-0 right-0 top-0 flex items-end p-[3px]">
-                                    <motion.div 
-                                        className={`w-full rounded-full bg-gradient-to-t ${gradient} relative overflow-hidden`}
-                                        initial={{ height: 0 }}
-                                        animate={{ height: `${percent * 100}%` }}
-                                        transition={{ duration: 1.2, type: "spring", bounce: 0, delay: i * 0.05 }}
-                                    >
-                                        {/* Pulse Core if active */}
-                                        {percent > 0 && (
-                                            <motion.div 
-                                                className="absolute inset-0 bg-white/30 blur-md"
-                                                animate={{ opacity: [0, 0.5, 0] }}
-                                                transition={{ duration: 2 + Math.random(), repeat: Infinity, ease: "easeInOut" }}
-                                            />
-                                        )}
-                                        
-                                        {/* Bubbles / Energy Particles (CSS) */}
-                                        {percent > 0.5 && (
-                                            <div className="absolute inset-0 w-full h-full opacity-50">
-                                                <div className="absolute bottom-0 left-1/4 w-1 h-1 bg-white rounded-full animate-[rise_2s_infinite_linear]" />
-                                                <div className="absolute bottom-0 right-1/4 w-1 h-1 bg-white rounded-full animate-[rise_3s_infinite_linear_0.5s]" />
-                                            </div>
-                                        )}
-
-                                        {/* Top surface highlight */}
-                                        <div className="absolute top-0 left-1 right-1 h-[2px] bg-white/60 rounded-full blur-[1px]" />
-                                    </motion.div>
-                                </div>
-                                
-                                {/* Glass Reflection */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent pointer-events-none rounded-full" />
-                            </div>
-
-                            {/* Label */}
-                            <div className="text-center h-4 flex items-center justify-center">
-                                <span className={`text-[9px] font-bold uppercase tracking-wider transition-colors ${isToday ? 'text-orange-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-slate-400'}`}>
-                                    {day.date.toLocaleDateString('ru-RU', { weekday: 'short' })}
-                                </span>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-            
-            <style>{`
-                @keyframes rise {
-                    0% { transform: translateY(100%); opacity: 0; }
-                    50% { opacity: 1; }
-                    100% { transform: translateY(-200%); opacity: 0; }
-                }
-            `}</style>
-        </div>
-    );
-};
-
-// 3. MIND SPARKLINE
-const MindSparkline = ({ notes }: { notes: Note[] }) => {
-    // Last 7 days note counts
     const data = Array.from({ length: 7 }, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - (6 - i));
         const key = getLocalDateKey(d);
-        const count = notes.filter(n => getLocalDateKey(new Date(n.createdAt)) === key).length;
-        return count;
+        
+        let completed = 0;
+        activeHabits.forEach(h => { if(h.history[key]) completed++; });
+        
+        const total = activeHabits.length;
+        const percent = total > 0 ? completed / total : 0;
+        
+        return { date: d, percent };
     });
 
-    const totalLast7 = data.reduce((a,b) => a + b, 0);
-    const max = Math.max(...data, 1);
+    // Generate Path
+    const height = 60;
+    const width = 280;
+    const step = width / 6;
     
-    // SVG Path
-    const width = 100;
-    const height = 40;
-    const points = data.map((val, i) => {
-        const x = (i / (data.length - 1)) * width;
-        const y = height - (val / max) * height;
-        return `${x},${y}`;
-    }).join(' ');
+    // ECG Logic: Flat if 0, Spike if > 0. Height of spike depends on percent.
+    let path = `M 0,${height} `;
+    
+    data.forEach((d, i) => {
+        const x = i * step;
+        const spikeHeight = d.percent * height * 0.8; // Max 80% height
+        const baseY = height - 5;
+        
+        // Create a "pulse" shape for each day
+        if (d.percent > 0) {
+            path += `L ${x + step * 0.2},${baseY} `; // Start of beat
+            path += `L ${x + step * 0.4},${baseY - spikeHeight} `; // Peak
+            path += `L ${x + step * 0.6},${baseY + 5} `; // Dip
+            path += `L ${x + step * 0.8},${baseY} `; // Return
+        } else {
+            path += `L ${x + step},${baseY} `; // Flatline
+        }
+    });
 
-    const areaPath = `${points} L ${width},${height} L 0,${height} Z`;
+    const isAlive = data[6].percent > 0;
 
     return (
-        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 flex flex-col justify-between`}>
-            <div className="flex items-center gap-2">
-                <BrainCircuit size={16} className="text-violet-500" />
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Мысли</span>
-            </div>
-
-            <div>
-                <div className="text-4xl font-bold text-slate-800 dark:text-slate-100 tracking-tighter mb-1">
-                    {totalLast7}
+        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 flex flex-col justify-between relative overflow-hidden`}>
+            <div className="flex justify-between items-center z-10">
+                <div className="flex items-center gap-2">
+                    <Activity size={16} className={`${isAlive ? 'text-emerald-500' : 'text-slate-400'} animate-pulse`} />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Rhythm</span>
                 </div>
-                <div className="text-[9px] text-slate-400">за 7 дней</div>
+                <div className="font-mono text-[10px] text-slate-500">7 DAYS</div>
             </div>
 
-            <div className="h-12 w-full relative overflow-hidden">
+            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+                <div className="w-full h-px bg-emerald-500" />
+            </div>
+
+            <div className="h-20 w-full relative flex items-end">
                 <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
                     <defs>
-                        <linearGradient id="mindGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.5" />
-                            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
-                        </linearGradient>
+                        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur stdDeviation="2" result="blur" />
+                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
                     </defs>
                     <motion.path 
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}
-                        d={`M ${points}`} fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke"
-                    />
-                    <motion.path 
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}
-                        d={areaPath} fill="url(#mindGradient)" vectorEffect="non-scaling-stroke"
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        transition={{ duration: 2, ease: "linear" }}
+                        d={path} 
+                        fill="none" 
+                        stroke={isAlive ? "#10b981" : "#94a3b8"} 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                        filter="url(#glow)"
                     />
                 </svg>
+                {/* Scanning line animation */}
+                <motion.div 
+                    className="absolute top-0 bottom-0 w-[2px] bg-white/50 shadow-[0_0_10px_white]"
+                    animate={{ left: ['0%', '100%'], opacity: [0, 1, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                />
+            </div>
+            
+            <div className="flex justify-between px-1 mt-2">
+                {data.map((d, i) => (
+                    <div key={i} className="text-[8px] font-bold text-slate-400 uppercase">{d.date.toLocaleDateString('ru-RU', {weekday: 'short'})}</div>
+                ))}
             </div>
         </div>
     );
 };
 
-// 4. CHRONOS RADAR
-const ChronosRadar = ({ tasks }: { tasks: Task[] }) => {
-    // Buckets: 0-4, 4-8, 8-12, 12-16, 16-20, 20-24
-    const buckets = [0, 0, 0, 0, 0, 0]; 
-    const labels = ["00", "04", "08", "12", "16", "20"];
-    
-    tasks.filter(t => t.column === 'done').forEach(t => {
-        // Use completion time if available (using createdAt as proxy if not, but ideally should be updatedAt or completedAt)
-        // Since we don't have completedAt, let's pretend createdAt is the activity time for now or use current time if just moved. 
-        // For accurate history, we need a 'completedAt' field. 
-        // Assuming createdAt reflects 'activity' for analysis purposes in this demo context.
-        const hour = new Date(t.createdAt).getHours();
-        const bucketIdx = Math.floor(hour / 4);
-        buckets[bucketIdx]++;
-    });
-
-    const max = Math.max(...buckets, 1);
-    const normalized = buckets.map(v => v / max);
-
-    // Radar Points Calculation
-    const center = 50;
-    const radius = 40;
-    const angleStep = (Math.PI * 2) / 6;
-    
-    const points = normalized.map((val, i) => {
-        const angle = i * angleStep - Math.PI / 2; // Start at top
-        // Min radius 10% so it's visible
-        const r = (val * 0.9 + 0.1) * radius; 
-        const x = center + r * Math.cos(angle);
-        const y = center + r * Math.sin(angle);
-        return `${x},${y}`;
-    }).join(' ');
-
-    // Find Peak
-    const peakIdx = buckets.indexOf(Math.max(...buckets));
-    const peakLabel = labels[peakIdx];
-    const nextLabel = labels[(peakIdx + 1) % 6];
+// 3. NEURAL SPARK FIELD (Notes)
+const NeuralField = ({ notes }: { notes: Note[] }) => {
+    // Generate spark points
+    const sparks = useMemo(() => {
+        // Last 7 days
+        const limit = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const recentNotes = notes.filter(n => n.createdAt > limit);
+        
+        return recentNotes.map(n => ({
+            id: n.id,
+            // Random positions for "Field" effect
+            x: Math.random() * 100, 
+            y: Math.random() * 100,
+            size: Math.random() * 3 + 2,
+            opacity: Math.random() * 0.5 + 0.5,
+            delay: Math.random() * 2
+        }));
+    }, [notes.length]);
 
     return (
-        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 relative flex flex-col md:flex-row items-center gap-6`}>
-            <div className="absolute top-6 left-6 flex items-center gap-2">
-                <Clock size={16} className="text-slate-400" />
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Хронотип активности</span>
-                <button className="ml-auto text-slate-400 hover:text-slate-600"><RotateCw size={12} /></button>
+        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 flex flex-col justify-between relative overflow-hidden group`}>
+            <div className="flex justify-between items-start z-10">
+                <div className="flex items-center gap-2">
+                    <BrainCircuit size={16} className="text-violet-500" />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Synapses</span>
+                </div>
+                <div className="text-2xl font-light text-slate-800 dark:text-white">{sparks.length}</div>
             </div>
 
-            <div className="flex-1 flex items-center justify-center w-full h-48 md:h-auto mt-8 md:mt-0">
-                <svg viewBox="0 0 100 100" className="w-48 h-48 overflow-visible">
-                    {/* Grid Levels */}
-                    {[0.33, 0.66, 1].map((scale, i) => (
-                        <polygon 
-                            key={i}
-                            points={Array.from({length: 6}).map((_, j) => {
-                                const angle = j * angleStep - Math.PI / 2;
-                                const r = radius * scale;
-                                return `${center + r * Math.cos(angle)},${center + r * Math.sin(angle)}`;
-                            }).join(' ')}
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="0.5"
-                            className="text-slate-200 dark:text-slate-700"
-                            strokeDasharray={i < 2 ? "2 2" : ""}
-                        />
-                    ))}
-                    
-                    {/* Axes */}
-                    {Array.from({length: 6}).map((_, i) => {
-                        const angle = i * angleStep - Math.PI / 2;
-                        const x = center + radius * Math.cos(angle);
-                        const y = center + radius * Math.sin(angle);
+            {/* The Field */}
+            <div className="absolute inset-0 z-0">
+                {sparks.map(spark => (
+                    <motion.div
+                        key={spark.id}
+                        className="absolute rounded-full bg-violet-400 shadow-[0_0_8px_rgba(167,139,250,0.8)]"
+                        style={{ 
+                            left: `${spark.x}%`, 
+                            top: `${spark.y}%`, 
+                            width: spark.size, 
+                            height: spark.size 
+                        }}
+                        animate={{ 
+                            opacity: [0.2, spark.opacity, 0.2],
+                            scale: [1, 1.5, 1]
+                        }}
+                        transition={{ 
+                            duration: 3 + Math.random() * 2, 
+                            repeat: Infinity, 
+                            delay: spark.delay,
+                            ease: "easeInOut"
+                        }}
+                    />
+                ))}
+                {/* Connecting Lines (Fake Constellation) */}
+                <svg className="absolute inset-0 w-full h-full opacity-20 pointer-events-none">
+                    {sparks.slice(0, 5).map((s, i) => {
+                        if (i === sparks.length - 1) return null;
+                        const next = sparks[i+1];
                         return (
-                            <g key={i}>
-                                <line x1={center} y1={center} x2={x} y2={y} stroke="currentColor" strokeWidth="0.5" className="text-slate-200 dark:text-slate-700" />
-                                <text x={x * 1.15 - 7} y={y * 1.15 - 7} className="text-[4px] font-mono fill-slate-400 font-bold">{labels[i]}</text>
-                            </g>
+                            <line 
+                                key={i}
+                                x1={`${s.x}%`} y1={`${s.y}%`} 
+                                x2={`${next.x}%`} y2={`${next.y}%`} 
+                                stroke="#a78bfa" 
+                                strokeWidth="0.5" 
+                            />
+                        )
+                    })}
+                </svg>
+            </div>
+            
+            <div className="z-10 mt-auto">
+                <div className="text-[9px] text-slate-400 text-right">Last 7 Days</div>
+            </div>
+        </div>
+    );
+};
+
+// 4. CHRONOS SUN-PATH
+const ChronosSun = ({ tasks }: { tasks: Task[] }) => {
+    // Distribute completed tasks into 24 hours
+    const hours = new Array(24).fill(0);
+    tasks.filter(t => t.column === 'done').forEach(t => {
+        const h = new Date(t.createdAt).getHours();
+        hours[h]++;
+    });
+    
+    const max = Math.max(...hours, 1);
+    
+    // Golden Time (00-04) highlight
+    const isNightOwl = hours.slice(0, 5).reduce((a,b) => a+b, 0) > hours.slice(8, 18).reduce((a,b) => a+b, 0) * 0.5;
+
+    return (
+        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 relative flex flex-col md:flex-row items-center gap-6 overflow-hidden`}>
+            {/* Background Gradient for Day/Night */}
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-amber-500/5 pointer-events-none" />
+
+            <div className="absolute top-6 left-6 flex items-center gap-2 z-10">
+                <Clock size={16} className="text-slate-400" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Chronos</span>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center w-full h-48 md:h-auto mt-8 md:mt-0 relative z-10">
+                {/* Sun Path Visualization */}
+                <div className="relative w-40 h-40">
+                    {/* Ring */}
+                    <div className="absolute inset-0 rounded-full border border-slate-200 dark:border-slate-700" />
+                    
+                    {/* Hour Bars */}
+                    {hours.map((count, h) => {
+                        const angle = (h / 24) * 360 - 90; // Start at 12 AM (top) -> No, standard clock 0 is usually top but 00:00 is midnight.
+                        // Let's put 00:00 at bottom (Night) and 12:00 at top (Day)?
+                        // Or standard 24h clock: 0 at top.
+                        // Let's do 0 at bottom (Midnight) for "Sun Path" metaphor.
+                        // So 12 (Noon) is Top.
+                        const sunAngle = ((h - 12) / 24) * 360 - 90; 
+                        
+                        const height = (count / max) * 20 + 5;
+                        const isGolden = h >= 0 && h < 4; // 00-04
+
+                        return (
+                            <motion.div
+                                key={h}
+                                className={`absolute w-1 rounded-full origin-bottom ${isGolden ? 'bg-indigo-500 shadow-[0_0_8px_#6366f1]' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                style={{
+                                    height: `${height}px`,
+                                    left: '50%',
+                                    top: '50%',
+                                    transform: `rotate(${sunAngle + 90}deg) translateY(-50px)` // Push out from center radius 50
+                                }}
+                                initial={{ height: 0 }}
+                                animate={{ height: `${height}px` }}
+                                transition={{ delay: h * 0.05 }}
+                            />
                         );
                     })}
-
-                    {/* Data Blob */}
-                    <motion.polygon 
-                        initial={{ opacity: 0, scale: 0 }}
-                        animate={{ opacity: 0.6, scale: 1 }}
-                        transition={{ duration: 1, type: "spring" }}
-                        points={points}
-                        fill="rgba(99,102,241, 0.2)"
-                        stroke="#6366f1"
-                        strokeWidth="1.5"
-                    />
-                    {/* Points */}
-                    {normalized.map((val, i) => {
-                        const angle = i * angleStep - Math.PI / 2;
-                        const r = (val * 0.9 + 0.1) * radius; 
-                        const x = center + r * Math.cos(angle);
-                        const y = center + r * Math.sin(angle);
-                        return <circle key={i} cx={x} cy={y} r="1.5" className="fill-indigo-500" />
-                    })}
-                </svg>
+                    
+                    {/* Central Star */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-200 to-amber-100 dark:from-indigo-900 dark:to-slate-800 shadow-inner flex items-center justify-center">
+                            {isNightOwl ? <Sparkles size={24} className="text-indigo-400" /> : <Flame size={24} className="text-amber-500" />}
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div className="w-full md:w-40 flex flex-col justify-center items-center md:items-start text-center md:text-left gap-1 pb-4 md:pb-0">
-                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Пик продуктивности</div>
-                <div className="text-2xl font-bold text-slate-800 dark:text-white">
-                    {peakLabel}:00 <span className="text-slate-400 text-sm font-normal">– {nextLabel}:00</span>
+            <div className="w-full md:w-32 flex flex-col justify-center items-center md:items-start text-center md:text-left gap-1 pb-4 md:pb-0 z-10">
+                <div className="text-[9px] uppercase font-bold text-slate-400 tracking-widest">Active Mode</div>
+                <div className="text-lg font-bold text-slate-800 dark:text-white">
+                    {isNightOwl ? "Night Owl" : "Day Walker"}
                 </div>
-                <div className="text-xs text-slate-500 mt-2 leading-relaxed">
-                    Ваше «золотое время». Планируйте сложные задачи именно на этот слот.
+                <div className="text-[10px] text-slate-500 leading-relaxed mt-1">
+                    {isNightOwl ? "Фокус в тишине ночи. Глубокая работа." : "Энергия солнца. Социальная активность."}
                 </div>
             </div>
         </div>
     );
 };
 
-// 5. CHALLENGES WIDGET
-const ChallengesWidget = ({ tasks }: { tasks: Task[] }) => {
-    const activeChallenges = tasks.filter(t => t.activeChallenge && !t.isChallengeCompleted && !t.isArchived);
-    const completedChallenges = tasks.reduce((acc, t) => acc + (t.challengeHistory?.length || 0) + (t.isChallengeCompleted ? 1 : 0), 0);
-
-    return (
-        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 flex flex-col`}>
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-2">
-                    <Zap size={16} className="text-indigo-500" />
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Вызовы</span>
-                </div>
-            </div>
-
-            <div className="flex-1 flex flex-col justify-center items-center text-center gap-2 py-4">
-                {activeChallenges.length > 0 ? (
-                    <div className="w-full space-y-4">
-                        {activeChallenges.slice(0, 2).map(t => (
-                            <div key={t.id} className="text-left bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
-                                <div className="text-[10px] font-bold text-indigo-500 uppercase mb-1 truncate">Active Challenge</div>
-                                <div className="text-xs text-slate-700 dark:text-slate-300 line-clamp-2 font-serif italic">
-                                    {t.activeChallenge?.split('\n')[0].replace(/^[#\-* ]+/, '')}
-                                </div>
-                            </div>
-                        ))}
-                        {activeChallenges.length > 2 && (
-                            <div className="text-[10px] text-slate-400">и еще {activeChallenges.length - 2} активных</div>
-                        )}
-                    </div>
-                ) : (
-                    <div className="opacity-50">
-                        <Trophy size={48} className="mx-auto mb-2 text-slate-300 dark:text-slate-600" strokeWidth={1} />
-                        <div className="text-xs text-slate-400">Нет активных вызовов</div>
-                    </div>
-                )}
-            </div>
-
-            <div className="mt-auto pt-4 border-t border-slate-100 dark:border-white/5 text-center">
-                <span className="text-[10px] text-slate-400 uppercase tracking-widest">Зал славы: {completedChallenges} побед</span>
-            </div>
-        </div>
-    );
-};
-
-// 6. BALANCE SPHERES MINI
-const BalanceMini = ({ tasks, habits }: { tasks: Task[], habits: Habit[] }) => {
-    // Count items by sphere
+// 5. BIO-BALANCE DNA
+const BioBalance = ({ tasks, habits }: { tasks: Task[], habits: Habit[] }) => {
+    // Calculate Sphere Distribution
     const counts: Record<string, number> = { productivity: 0, growth: 0, relationships: 0 };
     let total = 0;
     
-    // Count done tasks & active habits
-    tasks.filter(t => t.column === 'done').forEach(t => t.spheres?.forEach(s => { counts[s] = (counts[s]||0)+1; total++; }));
-    habits.filter(h => !h.isArchived).forEach(h => h.spheres?.forEach(s => { counts[s] = (counts[s]||0)+1; total++; }));
+    [...tasks.filter(t => t.column === 'done'), ...habits.filter(h => !h.isArchived)].forEach(item => {
+        item.spheres?.forEach(s => {
+            counts[s] = (counts[s] || 0) + 1;
+            total++;
+        });
+    });
 
     const data = SPHERES.map(s => ({
         ...s,
-        percent: total > 0 ? (counts[s.id] || 0) / total * 100 : 0
+        val: total > 0 ? (counts[s.id] || 0) / total : 0
     }));
 
+    // DNA Animation Lines
+    // Simplified visual: 3 intertwining sine waves
+    const width = 200;
+    const height = 100;
+    
     return (
-        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 flex flex-col justify-between`}>
-            <div className="flex items-center gap-2 mb-2">
-                <Target size={16} className="text-slate-400" />
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Баланс (7 дн)</span>
+        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 flex flex-col justify-between relative overflow-hidden`}>
+            <div className="flex items-center gap-2 mb-2 z-10">
+                <Dna size={16} className="text-rose-500" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Bio-Balance</span>
             </div>
             
-            <div className="space-y-3">
+            {/* DNA Visualization */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
+                 <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                     {[0, 1, 2].map(i => {
+                         const sphere = data[i];
+                         const amplitude = 30 * (sphere.val + 0.2); // Min amplitude
+                         const offset = i * (Math.PI * 2 / 3);
+                         const color = sphere.id === 'productivity' ? '#6366f1' : sphere.id === 'growth' ? '#10b981' : '#f43f5e';
+                         
+                         // Generate Path
+                         let d = `M 0,${height/2} `;
+                         for(let x=0; x<=width; x+=5) {
+                             const y = height/2 + Math.sin(x * 0.05 + offset) * amplitude;
+                             d += `L ${x},${y} `;
+                         }
+
+                         return (
+                             <motion.path 
+                                key={sphere.id}
+                                d={d}
+                                fill="none"
+                                stroke={color}
+                                strokeWidth={2 + sphere.val * 4}
+                                initial={{ pathLength: 0, opacity: 0 }}
+                                animate={{ pathLength: 1, opacity: sphere.val > 0 ? 1 : 0.2 }}
+                                transition={{ duration: 2, ease: "easeInOut" }}
+                             />
+                         )
+                     })}
+                 </svg>
+            </div>
+
+            <div className="space-y-3 z-10 mt-auto">
                 {data.map(s => (
-                    <div key={s.id} className="space-y-1">
-                        <div className="flex justify-between text-[9px] uppercase font-bold text-slate-500">
-                            <span>{s.label}</span>
-                            <span>{Math.round(s.percent)}%</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div key={s.id} className="flex items-center justify-between">
+                        <span className={`text-[9px] font-bold uppercase tracking-wider ${s.text}`}>{s.label}</span>
+                        <div className="w-24 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                             <motion.div 
-                                className={`h-full rounded-full ${s.bg.replace('50', '500').replace('/30','')}`}
+                                className={`h-full ${s.bg.replace('50', '500').replace('/30','')}`}
                                 initial={{ width: 0 }}
-                                animate={{ width: `${s.percent}%` }}
+                                animate={{ width: `${s.val * 100}%` }}
                                 transition={{ duration: 1 }}
                             />
                         </div>
@@ -497,95 +491,118 @@ const BalanceMini = ({ tasks, habits }: { tasks: Task[], habits: Habit[] }) => {
     );
 };
 
-// --- MAIN DASHBOARD ---
+// --- MAIN DASHBOARD COMPONENT ---
 
 const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate, flashcards }) => {
   return (
     <div className="h-full w-full bg-[#f8fafc] dark:bg-[#0f172a] relative overflow-hidden flex flex-col">
-        {/* Background Grid */}
+        {/* Kinetic Grid Background */}
         <div 
-            className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-10" 
+            className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-15" 
             style={{ 
-                backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)',
+                backgroundImage: 'radial-gradient(circle at 1px 1px, #94a3b8 1px, transparent 0)',
                 backgroundSize: '32px 32px'
             }} 
         />
         
+        {/* Ambient Depth Glow */}
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
+
         <div className="flex-1 overflow-y-auto custom-scrollbar-light p-4 md:p-8 relative z-10">
             <div className="max-w-7xl mx-auto">
                 <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                     <div>
-                        <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight">Обзор</h1>
-                        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Пульс твоей продуктивности</p>
+                        <h1 className="text-4xl font-extralight text-slate-800 dark:text-white tracking-tight">
+                            Control Deck
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-mono uppercase tracking-widest">
+                            System Status: Online
+                        </p>
                     </div>
                 </header>
 
-                {/* BENTO GRID LAYOUT */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-20">
+                {/* KINETIC GRID LAYOUT */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-24">
                     
-                    {/* Hero: Energy Pulsar (Tall) */}
-                    <div className="lg:col-span-1 lg:row-span-2 min-h-[350px]">
-                        <EnergyPulsar tasks={tasks} habits={habits} journal={journal} />
+                    {/* 1. PLASMA CORE (Large Hero) */}
+                    <div className="lg:col-span-1 lg:row-span-2 min-h-[400px]">
+                        <EnergyPlasma tasks={tasks} habits={habits} journal={journal} />
                     </div>
 
-                    {/* Habit Rhythm (Wide) */}
-                    <div className="lg:col-span-2 min-h-[180px]">
-                        <HabitEqualizer habits={habits} />
+                    {/* 2. HABIT HEARTBEAT (Wide) */}
+                    <div className="lg:col-span-2 min-h-[200px]">
+                        <HabitHeartbeat habits={habits} />
                     </div>
 
-                    {/* Mind Sparkline (Small) */}
-                    <div className="lg:col-span-1 min-h-[180px]">
-                        <MindSparkline notes={notes} />
+                    {/* 3. NEURAL FIELD (Compact) */}
+                    <div className="lg:col-span-1 min-h-[200px]">
+                        <NeuralField notes={notes} />
                     </div>
 
-                    {/* Chronos Radar (Wide) */}
-                    <div className="lg:col-span-2 min-h-[250px]">
-                        <ChronosRadar tasks={tasks} />
+                    {/* 4. CHRONOS SUN (Wide) */}
+                    <div className="lg:col-span-2 min-h-[260px]">
+                        <ChronosSun tasks={tasks} />
                     </div>
 
-                    {/* Challenges (Small) */}
-                    <div className="lg:col-span-1 min-h-[250px]">
-                        <ChallengesWidget tasks={tasks} />
+                    {/* 5. CHALLENGES & WINS (Standard) */}
+                    <div className="lg:col-span-1 min-h-[260px]">
+                        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 flex flex-col justify-center items-center text-center gap-4`}>
+                            <Trophy size={48} className="text-amber-400 drop-shadow-md" strokeWidth={1} />
+                            <div>
+                                <div className="text-3xl font-bold text-slate-800 dark:text-white">
+                                    {tasks.filter(t => t.isChallengeCompleted).length}
+                                </div>
+                                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Victory Points</div>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Extra Row: Quick Links or Balance */}
-                    <div className="lg:col-span-1 min-h-[180px]">
-                        <BalanceMini tasks={tasks} habits={habits} />
+                    {/* 6. BIO BALANCE (Compact) */}
+                    <div className="lg:col-span-1 min-h-[200px]">
+                        <BioBalance tasks={tasks} habits={habits} />
                     </div>
-                    
-                    {/* Insights Button (Banner) */}
-                    <div className="lg:col-span-3 min-h-[180px]">
+
+                    {/* 7. INSIGHTS BANNER (Full Width Action) */}
+                    <div className="lg:col-span-3 min-h-[160px]">
                         <button 
                             onClick={() => onNavigate(Module.JOURNAL)}
-                            className="w-full h-full bg-gradient-to-r from-indigo-600 to-purple-600 rounded-[32px] p-8 text-white relative overflow-hidden group shadow-lg hover:shadow-indigo-500/30 transition-all"
+                            className="w-full h-full bg-gradient-to-r from-[#0f172a] to-[#1e293b] dark:from-indigo-900 dark:to-purple-900 rounded-[32px] p-8 text-white relative overflow-hidden group shadow-xl hover:shadow-2xl transition-all border border-white/10"
                         >
-                            <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-110 transition-transform duration-700">
+                            {/* Stars BG */}
+                            <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 0)', backgroundSize: '20px 20px' }} />
+                            
+                            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-1000">
                                 <Sparkles size={120} />
                             </div>
+                            
                             <div className="relative z-10 flex flex-col justify-between h-full items-start">
                                 <div>
-                                    <div className="text-xs font-bold uppercase tracking-widest opacity-80 mb-2">Наставник</div>
-                                    <h3 className="text-3xl font-light">Инсайты</h3>
+                                    <div className="flex items-center gap-2 mb-2 text-indigo-300">
+                                        <Fingerprint size={16} />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest">Mentor Access</span>
+                                    </div>
+                                    <h3 className="text-3xl font-light tracking-wide">Deep Dive Protocol</h3>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm font-medium bg-white/20 px-4 py-2 rounded-full backdrop-blur-md hover:bg-white/30 transition-colors">
-                                    Перейти в Дневник <ArrowRight size={16} />
+                                <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest bg-white/10 px-5 py-3 rounded-full backdrop-blur-md hover:bg-white/20 transition-colors border border-white/10">
+                                    Initiate Reflection <ArrowRight size={14} />
                                 </div>
                             </div>
                         </button>
                     </div>
 
-                    {/* SKILLS SHORTCUT (Simple) */}
+                    {/* 8. SKILLS SHORTCUT */}
                     <div className="lg:col-span-1 lg:col-start-1 min-h-[100px]">
                          <button 
                             onClick={() => onNavigate(Module.MENTAL_GYM)}
                             className={`w-full h-full ${GLASS_PANEL} rounded-[32px] p-6 flex items-center justify-between group`}
                         >
                             <div className="flex flex-col text-left">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">База знаний</span>
-                                <span className="text-xl font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-500 transition-colors">Скиллы</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Database</span>
+                                <span className="text-xl font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-500 transition-colors">Skills</span>
                             </div>
-                            <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
-                                <Dumbbell size={24} />
+                            <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm">
+                                <Dumbbell size={20} />
                             </div>
                         </button>
                     </div>
@@ -596,12 +613,5 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate,
     </div>
   );
 };
-
-// Helper for rotate button (mock refresh)
-function RotateCw({size, className}: {size:number, className?: string}) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-    )
-}
 
 export default Dashboard;
