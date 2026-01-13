@@ -1,7 +1,7 @@
 
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Note, Task, Habit, JournalEntry, Module, Flashcard } from '../types';
-import { motion, useAnimation, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Zap, 
   Target, 
@@ -21,8 +21,7 @@ import {
   Radar,
   Crosshair,
   AlertTriangle,
-  Terminal,
-  Star
+  Terminal
 } from 'lucide-react';
 import { SPHERES } from '../constants';
 
@@ -47,26 +46,34 @@ const getLocalDateKey = (date: Date) => {
 
 // --- WIDGETS ---
 
-// 1. KINETIC RADAR INTERFACE
+// 1. KINETIC RADAR INTERFACE (Replaces Core Reactor)
 const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits: Habit[], journal: JournalEntry[], notes: Note[] }) => {
     const todayStr = getLocalDateKey(new Date());
     
     // --- DATA CALCULATION ---
+    
+    // 1. Rituals (Top) - Daily Habit Completion
     const activeHabits = habits.filter(h => !h.isArchived);
     const habitsDoneToday = activeHabits.filter(h => h.history[todayStr]).length;
     const ritualRate = activeHabits.length > 0 ? (habitsDoneToday / activeHabits.length) : 0;
 
+    // 2. Tasks (Right) - Sprint Completion
     const activeSprintTasks = tasks.filter(t => !t.isArchived);
     const doneSprintTasks = activeSprintTasks.filter(t => t.column === 'done').length;
     const taskRate = activeSprintTasks.length > 0 ? (doneSprintTasks / activeSprintTasks.length) : 0;
 
+    // 3. Thoughts (Bottom) - Note Volume (Normalized to target of 20 active/recent notes)
+    // We count notes from the last 7 days for "Current Mental Load"
     const recentNotes = notes.filter(n => n.createdAt > Date.now() - 7 * 86400000);
     const synapseVolume = Math.min(recentNotes.length / 20, 1);
 
+    // 4. Insights (Left) - Qualitative Depth
+    // Ratio of Insight entries to total Journal entries (or just raw count normalized to 5)
     const recentJournal = journal.filter(j => j.date > Date.now() - 7 * 86400000);
     const insightCount = recentJournal.filter(j => j.isInsight).length;
     const insightDepth = Math.min(insightCount / 5, 1);
 
+    // Aggregate Energy Score (0-100)
     const energyScore = Math.round(((ritualRate * 0.3) + (taskRate * 0.3) + (synapseVolume * 0.2) + (insightDepth * 0.2)) * 100);
 
     // --- VISUALIZATION CONSTANTS ---
@@ -74,6 +81,8 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
     const center = size / 2;
     const radius = 90;
     
+    // Calculate Polygon Points
+    // Order: Top (Rituals), Right (Tasks), Bottom (Synapses), Left (Insights)
     const p1 = { x: center, y: center - (radius * ritualRate) };
     const p2 = { x: center + (radius * taskRate), y: center };
     const p3 = { x: center, y: center + (radius * synapseVolume) };
@@ -81,6 +90,7 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
     
     const radarPath = `M ${p1.x},${p1.y} L ${p2.x},${p2.y} L ${p3.x},${p3.y} L ${p4.x},${p4.y} Z`;
 
+    // Telemetry Logic
     const pendingTasks = activeSprintTasks.filter(t => t.column !== 'done').length;
     
     let statusColor = "text-[#A0A0A0]";
@@ -146,17 +156,21 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
                         </filter>
                     </defs>
 
+                    {/* Grid Lines (Diamond) */}
                     <path d={`M ${center},${center-radius} L ${center+radius},${center} L ${center},${center+radius} L ${center-radius},${center} Z`} fill="none" stroke="#E0E0E0" strokeOpacity="0.2" strokeWidth="0.5" />
                     <path d={`M ${center},${center-radius*0.5} L ${center+radius*0.5},${center} L ${center},${center+radius*0.5} L ${center-radius*0.5},${center} Z`} fill="none" stroke="#E0E0E0" strokeOpacity="0.1" strokeWidth="0.5" />
                     
+                    {/* Axes */}
                     <line x1={center} y1={center-radius} x2={center} y2={center+radius} stroke="#E0E0E0" strokeOpacity="0.1" />
                     <line x1={center-radius} y1={center} x2={center+radius} y2={center} stroke="#E0E0E0" strokeOpacity="0.1" />
 
+                    {/* Labels */}
                     <text x={center} y={center - radius - 10} textAnchor="middle" className="text-[8px] fill-slate-400 uppercase font-mono tracking-widest">Rituals</text>
                     <text x={center + radius + 15} y={center + 3} textAnchor="start" className="text-[8px] fill-slate-400 uppercase font-mono tracking-widest">Tasks</text>
                     <text x={center} y={center + radius + 15} textAnchor="middle" className="text-[8px] fill-slate-400 uppercase font-mono tracking-widest">Synapses</text>
                     <text x={center - radius - 15} y={center + 3} textAnchor="end" className="text-[8px] fill-slate-400 uppercase font-mono tracking-widest">Insights</text>
 
+                    {/* The Data Shape */}
                     <motion.path 
                         d={radarPath} 
                         fill="url(#radarGradient)" 
@@ -168,6 +182,7 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
                         transition={{ type: "spring", stiffness: 50, damping: 15 }}
                     />
                     
+                    {/* Data Points */}
                     <circle cx={p1.x} cy={p1.y} r="2" className="fill-white" />
                     <circle cx={p2.x} cy={p2.y} r="2" className="fill-white" />
                     <circle cx={p3.x} cy={p3.y} r="2" className="fill-white" />
@@ -175,6 +190,7 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
                 </svg>
             </div>
 
+            {/* Telemetry Log */}
             <div className="p-6 pt-0 mt-auto relative z-20">
                 <div className="bg-black/5 dark:bg-black/40 rounded-xl p-4 border border-slate-200/20 dark:border-white/5 font-mono text-[10px] leading-relaxed shadow-inner">
                     <div className={`font-bold mb-1 ${statusColor} opacity-90`}>
@@ -202,18 +218,23 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
 
 // 2. HABIT HEARTBEAT (ECG)
 const HabitHeartbeat = ({ habits }: { habits: Habit[] }) => {
+    // Generate data for last 7 days
     const activeHabits = habits.filter(h => !h.isArchived);
     const data = Array.from({ length: 7 }, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - (6 - i));
         const key = getLocalDateKey(d);
+        
         let completed = 0;
         activeHabits.forEach(h => { if(h.history[key]) completed++; });
+        
         const total = activeHabits.length;
         const percent = total > 0 ? completed / total : 0;
+        
         return { date: d, percent };
     });
 
+    // Generate Path
     const height = 50;
     const width = 200;
     const step = width / 6;
@@ -274,6 +295,7 @@ const HabitHeartbeat = ({ habits }: { habits: Habit[] }) => {
                         filter="url(#glow)"
                     />
                 </svg>
+                {/* Scanning line animation */}
                 <motion.div 
                     className="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_8px_white]"
                     animate={{ left: ['0%', '100%'], opacity: [0, 1, 0] }}
@@ -290,230 +312,76 @@ const HabitHeartbeat = ({ habits }: { habits: Habit[] }) => {
     );
 };
 
-// 3. REACTIVE NEURAL FIELD (Physics + Impulse)
-interface NodePoint {
-    id: string;
-    x: number;
-    y: number;
-    size: number;
-    opacity: number;
-    delay: number;
-    isInsight: boolean;
-    isNew: boolean;
-}
-
+// 3. NEURAL SPARK FIELD (Notes)
 const NeuralField = ({ notes }: { notes: Note[] }) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const mouseX = useMotionValue(0);
-    const mouseY = useMotionValue(0);
-    const [points, setPoints] = useState<NodePoint[]>([]);
-    const [links, setLinks] = useState<{source: NodePoint, target: NodePoint, id: string}[]>([]);
-    const prevNotesLength = useRef(notes.length);
-
-    // Activity level for impulse speed (High notes count = Faster)
-    const isHighActivity = useMemo(() => {
-        const recentCount = notes.filter(n => n.createdAt > Date.now() - 24 * 60 * 60 * 1000).length;
-        return recentCount > 5;
-    }, [notes]);
-
-    // Handle Mouse Move for Repulsion
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!containerRef.current) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        mouseX.set(e.clientX - rect.left);
-        mouseY.set(e.clientY - rect.top);
-    };
-
-    // Generate Topology
-    useEffect(() => {
+    // Generate spark points
+    const sparks = useMemo(() => {
         const limit = Date.now() - 7 * 24 * 60 * 60 * 1000;
-        const recentNotes = notes.filter(n => n.createdAt > limit).slice(0, 15); // Limit visual noise
+        const recentNotes = notes.filter(n => n.createdAt > limit);
         
-        // Detect New Note
-        const isNewNoteAdded = notes.length > prevNotesLength.current;
-        prevNotesLength.current = notes.length;
-
-        // Generate Nodes
-        const newPoints = recentNotes.map((n, i) => {
-            // Check if it's the newest one
-            const isNew = isNewNoteAdded && i === 0;
-            // Insight Heuristic: Tagged notes or long notes
-            const isInsight = (n.tags && n.tags.length > 1) || n.content.length > 500;
-
-            return {
-                id: n.id,
-                x: Math.random() * 80 + 10, // 10-90% padding
-                y: Math.random() * 80 + 10,
-                size: isInsight ? 6 : Math.random() * 2 + 3,
-                opacity: Math.random() * 0.5 + 0.5,
-                delay: Math.random() * 2,
-                isInsight,
-                isNew
-            };
-        });
-
-        // Generate Links (Nearest Neighbors)
-        const newLinks: {source: NodePoint, target: NodePoint, id: string}[] = [];
-        newPoints.forEach((p1, i) => {
-            // Find closest neighbor
-            let closest = null;
-            let minDist = Infinity;
-            
-            newPoints.forEach((p2, j) => {
-                if (i === j) return;
-                const dist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-                if (dist < minDist) {
-                    minDist = dist;
-                    closest = p2;
-                }
-            });
-
-            if (closest && minDist < 40) { // Only connect if relatively close
-                // Avoid duplicates
-                const id = [p1.id, closest.id].sort().join('-');
-                if (!newLinks.find(l => l.id === id)) {
-                    newLinks.push({ source: p1, target: closest, id });
-                }
-            }
-        });
-
-        setPoints(newPoints);
-        setLinks(newLinks);
-
-    }, [notes]);
+        return recentNotes.map(n => ({
+            id: n.id,
+            x: Math.random() * 100, 
+            y: Math.random() * 100,
+            size: Math.random() * 2 + 1,
+            opacity: Math.random() * 0.5 + 0.5,
+            delay: Math.random() * 2
+        }));
+    }, [notes.length]);
 
     return (
-        <div 
-            className={`h-full ${GLASS_PANEL} rounded-[32px] p-5 flex flex-col justify-between relative overflow-hidden group`}
-            onMouseMove={handleMouseMove}
-            ref={containerRef}
-        >
-            <div className="flex justify-between items-start z-10 pointer-events-none">
+        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-5 flex flex-col justify-between relative overflow-hidden group`}>
+            <div className="flex justify-between items-start z-10">
                 <div className="flex items-center gap-2">
                     <BrainCircuit size={14} className="text-violet-500" />
                     <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400">Synapses</span>
                 </div>
-                <div className="text-xl font-light text-slate-800 dark:text-white">{points.length}</div>
+                <div className="text-xl font-light text-slate-800 dark:text-white">{sparks.length}</div>
             </div>
 
             {/* The Field */}
-            <div className="absolute inset-0 z-0 overflow-hidden">
-                <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                    {/* Connections */}
-                    {links.map((link) => (
-                        <g key={link.id}>
-                            <motion.path
-                                d={`M ${link.source.x}% ${link.source.y}% L ${link.target.x}% ${link.target.y}%`}
-                                stroke="#a78bfa"
-                                strokeWidth="0.5"
-                                strokeOpacity="0.3"
-                                fill="none"
-                            />
-                            {/* Neural Impulse */}
-                            <circle r="1.5" fill="#fff">
-                                <animateMotion 
-                                    dur={isHighActivity ? "2s" : "5s"} 
-                                    repeatCount="indefinite" 
-                                    path={`M ${link.source.x}% ${link.source.y}% L ${link.target.x}% ${link.target.y}%`}
-                                    calcMode="linear"
-                                />
-                            </circle>
-                        </g>
-                    ))}
-                </svg>
-
-                {/* Nodes */}
-                {points.map(point => (
-                    <NeuralNode 
-                        key={point.id} 
-                        point={point} 
-                        mouseX={mouseX} 
-                        mouseY={mouseY}
-                        containerRef={containerRef}
+            <div className="absolute inset-0 z-0 top-8 bottom-4 left-4 right-4">
+                {sparks.map(spark => (
+                    <motion.div
+                        key={spark.id}
+                        className="absolute rounded-full bg-violet-400 shadow-[0_0_4px_rgba(167,139,250,0.8)]"
+                        style={{ 
+                            left: `${spark.x}%`, 
+                            top: `${spark.y}%`, 
+                            width: spark.size, 
+                            height: spark.size 
+                        }}
+                        animate={{ 
+                            opacity: [0.2, spark.opacity, 0.2],
+                            scale: [1, 1.5, 1]
+                        }}
+                        transition={{ 
+                            duration: 3 + Math.random() * 2, 
+                            repeat: Infinity, 
+                            delay: spark.delay,
+                            ease: "easeInOut"
+                        }}
                     />
                 ))}
+                {/* Connecting Lines (Electric) */}
+                <svg className="absolute inset-0 w-full h-full opacity-30 pointer-events-none">
+                    {sparks.slice(0, 5).map((s, i) => {
+                        if (i === sparks.length - 1) return null;
+                        const next = sparks[i+1];
+                        return (
+                            <line 
+                                key={i}
+                                x1={`${s.x}%`} y1={`${s.y}%`} 
+                                x2={`${next.x}%`} y2={`${next.y}%`} 
+                                stroke="#a78bfa" 
+                                strokeWidth="0.5"
+                                className="drop-shadow-[0_0_2px_rgba(167,139,250,0.8)]"
+                            />
+                        )
+                    })}
+                </svg>
             </div>
         </div>
-    );
-};
-
-// Sub-component for individual Node Physics
-const NeuralNode = ({ point, mouseX, mouseY, containerRef }: { point: NodePoint, mouseX: any, mouseY: any, containerRef: React.RefObject<HTMLDivElement> }) => {
-    // Physics: Repulsion
-    const x = useTransform(mouseX, (mx: number) => {
-        if (!containerRef.current) return 0;
-        const rect = containerRef.current.getBoundingClientRect();
-        const px = (point.x / 100) * rect.width;
-        const dist = mx - px;
-        // Repel if within 100px
-        if (Math.abs(dist) < 100) return -dist * 0.2; 
-        return 0;
-    });
-
-    const y = useTransform(mouseY, (my: number) => {
-        if (!containerRef.current) return 0;
-        const rect = containerRef.current.getBoundingClientRect();
-        const py = (point.y / 100) * rect.height;
-        const dist = my - py;
-        if (Math.abs(dist) < 100) return -dist * 0.2;
-        return 0;
-    });
-
-    // Spring physics for smooth movement
-    const springX = useSpring(x, { stiffness: 150, damping: 20 });
-    const springY = useSpring(y, { stiffness: 150, damping: 20 });
-
-    return (
-        <motion.div
-            style={{ 
-                left: `${point.x}%`, 
-                top: `${point.y}%`, 
-                x: springX,
-                y: springY
-            }}
-            className="absolute -translate-x-1/2 -translate-y-1/2"
-        >
-            {/* New Thought Shockwave */}
-            {point.isNew && (
-                <motion.div 
-                    initial={{ scale: 0, opacity: 1 }}
-                    animate={{ scale: 4, opacity: 0 }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    className="absolute inset-0 rounded-full border border-violet-400"
-                />
-            )}
-
-            {/* The Node Itself */}
-            <motion.div 
-                animate={{ 
-                    scale: point.isInsight ? [1, 1.2, 1] : 1,
-                    opacity: point.isInsight ? [0.8, 1, 0.8] : [0.4, 0.7, 0.4],
-                    y: [0, -3, 0] // Floating effect
-                }}
-                transition={{
-                    opacity: { duration: point.delay + 2, repeat: Infinity, repeatType: "reverse" },
-                    scale: { duration: 2, repeat: Infinity, repeatType: "reverse" },
-                    y: { duration: 4 + point.delay, repeat: Infinity, ease: "easeInOut" }
-                }}
-                className={`
-                    relative flex items-center justify-center
-                    ${point.isInsight ? 'text-violet-500' : 'bg-violet-400'}
-                `}
-                initial={point.isNew ? { scale: 0 } : { scale: 1 }}
-            >
-                {point.isInsight ? (
-                    <div className="relative">
-                        <div className="absolute inset-0 bg-violet-500 blur-sm opacity-50 rounded-full" />
-                        <Star size={10} fill="currentColor" strokeWidth={0} />
-                    </div>
-                ) : (
-                    <div 
-                        className="rounded-full shadow-[0_0_4px_rgba(167,139,250,0.8)]" 
-                        style={{ width: point.size, height: point.size }} 
-                    />
-                )}
-            </motion.div>
-        </motion.div>
     );
 };
 
