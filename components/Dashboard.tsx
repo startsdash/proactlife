@@ -21,7 +21,8 @@ import {
   Radar,
   Crosshair,
   AlertTriangle,
-  Terminal
+  Terminal,
+  Droplets
 } from 'lucide-react';
 import { SPHERES } from '../constants';
 
@@ -35,7 +36,13 @@ interface Props {
 }
 
 // --- CONSTANTS ---
-const GLASS_PANEL = "bg-white/40 dark:bg-[#0f172a]/60 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-xl transition-all duration-500 hover:shadow-2xl hover:border-white/40 dark:hover:border-white/10 group";
+const GLASS_PANEL = "bg-white/40 dark:bg-[#0f172a]/60 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] transition-all duration-500 hover:shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] hover:border-white/40 dark:hover:border-white/10 group";
+
+const NEON_PALETTE: Record<string, string> = {
+    productivity: '#4D77FF', // Electric Blue
+    growth: '#00D26A',       // Mint Green
+    relationships: '#F83062' // Neon Red
+};
 
 const getLocalDateKey = (date: Date) => {
     const year = date.getFullYear();
@@ -46,53 +53,26 @@ const getLocalDateKey = (date: Date) => {
 
 // --- WIDGETS ---
 
-// 1. KINETIC RADAR INTERFACE (Replaces Core Reactor)
+// 1. KINETIC RADAR INTERFACE
 const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits: Habit[], journal: JournalEntry[], notes: Note[] }) => {
     const todayStr = getLocalDateKey(new Date());
     
     // --- DATA CALCULATION ---
-    
-    // 1. Rituals (Top) - Daily Habit Completion
     const activeHabits = habits.filter(h => !h.isArchived);
     const habitsDoneToday = activeHabits.filter(h => h.history[todayStr]).length;
     const ritualRate = activeHabits.length > 0 ? (habitsDoneToday / activeHabits.length) : 0;
 
-    // 2. Tasks (Right) - Sprint Completion
     const activeSprintTasks = tasks.filter(t => !t.isArchived);
     const doneSprintTasks = activeSprintTasks.filter(t => t.column === 'done').length;
     const taskRate = activeSprintTasks.length > 0 ? (doneSprintTasks / activeSprintTasks.length) : 0;
 
-    // 3. Thoughts (Bottom) - Note Volume (Normalized to target of 20 active/recent notes)
-    // We count notes from the last 7 days for "Current Mental Load"
     const recentNotes = notes.filter(n => n.createdAt > Date.now() - 7 * 86400000);
     const synapseVolume = Math.min(recentNotes.length / 20, 1);
 
-    // 4. Insights (Left) - Qualitative Depth
-    // Ratio of Insight entries to total Journal entries (or just raw count normalized to 5)
     const recentJournal = journal.filter(j => j.date > Date.now() - 7 * 86400000);
     const insightCount = recentJournal.filter(j => j.isInsight).length;
     const insightDepth = Math.min(insightCount / 5, 1);
 
-    // Sphere Calc for Telemetry
-    const counts: Record<string, number> = { productivity: 0, growth: 0, relationships: 0 };
-    let totalSphere = 0;
-    [...tasks.filter(t => t.column === 'done'), ...habits.filter(h => !h.isArchived)].forEach(item => {
-        item.spheres?.forEach(s => { counts[s] = (counts[s] || 0) + 1; totalSphere++; });
-    });
-    
-    // Determine Lagging Sphere
-    let minCount = Infinity;
-    let laggingSphere = SPHERES[0];
-    
-    SPHERES.forEach(s => {
-        const val = counts[s.id] || 0;
-        if (val < minCount) {
-            minCount = val;
-            laggingSphere = s;
-        }
-    });
-
-    // Aggregate Energy Score (0-100)
     const energyScore = Math.round(((ritualRate * 0.3) + (taskRate * 0.3) + (synapseVolume * 0.2) + (insightDepth * 0.2)) * 100);
 
     // --- VISUALIZATION CONSTANTS ---
@@ -100,8 +80,6 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
     const center = size / 2;
     const radius = 90;
     
-    // Calculate Polygon Points
-    // Order: Top (Rituals), Right (Tasks), Bottom (Synapses), Left (Insights)
     const p1 = { x: center, y: center - (radius * ritualRate) };
     const p2 = { x: center + (radius * taskRate), y: center };
     const p3 = { x: center, y: center + (radius * synapseVolume) };
@@ -109,23 +87,18 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
     
     const radarPath = `M ${p1.x},${p1.y} L ${p2.x},${p2.y} L ${p3.x},${p3.y} L ${p4.x},${p4.y} Z`;
 
-    // Telemetry Logic
-    const pendingTasks = activeSprintTasks.filter(t => t.column !== 'done').length;
-    
     let statusColor = "text-[#A0A0A0]";
     let statusTitle = "ЛОГ_СИСТЕМЫ_V2.0";
     let statusText = "СТАТУС: НОМИНАЛЬНЫЙ";
-    let statusDetail = `[БИО-БАЛАНС]: ОБНАРУЖЕНА ДЕГРАДАЦИЯ В СЕКТОРЕ "${laggingSphere.label.toUpperCase()}"`;
-    let statusNote = "[СИНХРОНИЗАЦИЯ]: АКТИВИРОВАН РЕЖИМ ВНИМАНИЯ...";
-
+    
     if (energyScore < 30) {
         statusColor = "text-[#FF4B2B]";
-        statusTitle = "КРИТИЧЕСКИЙ_СБОЙ_ЯДРА";
-        statusText = "СТАТУС: ТРЕБУЕТСЯ ДОЗАПРАВКА";
+        statusTitle = "СБОЙ_ЯДРА";
+        statusText = "ТРЕБУЕТСЯ ДОЗАПРАВКА";
     } else if (energyScore > 70) {
         statusColor = "text-emerald-400";
-        statusTitle = "ПРОТОКОЛ_ПИКОВОЙ_НАГРУЗКИ";
-        statusText = "СТАТУС: ПРЕВОСХОДНО";
+        statusTitle = "ПИКОВАЯ_НАГРУЗКА";
+        statusText = "СОСТОЯНИЕ: ПРЕВОСХОДНО";
     }
 
     return (
@@ -159,8 +132,8 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
                 <svg width={size} height={size} className="relative z-10 overflow-visible">
                     <defs>
                         <radialGradient id="radarGradient" cx="0.5" cy="0.5" r="0.5">
-                            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.6" />
-                            <stop offset="100%" stopColor="#34d399" stopOpacity="0.1" />
+                            <stop offset="0%" stopColor="#4D77FF" stopOpacity="0.6" />
+                            <stop offset="100%" stopColor="#00D26A" stopOpacity="0.1" />
                         </radialGradient>
                         <filter id="glow">
                             <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
@@ -218,11 +191,7 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
                         </div>
                         <div className="flex gap-2">
                             <span className="opacity-50">{">"}</span>
-                            <span>{statusDetail}</span>
-                        </div>
-                        <div className="flex gap-2">
-                            <span className="opacity-50">{">"}</span>
-                            <span className="opacity-80 italic">{statusNote}</span>
+                            <span className="text-slate-500">[BIOMETRIC_SCAN]: СЕКТОР "ЛЮДИ" — КРИТИЧЕСКИЙ УРОВЕНЬ ФЛЮИДА.</span>
                         </div>
                     </div>
                 </div>
@@ -231,7 +200,7 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
     );
 };
 
-// 2. HABIT HEARTBEAT (ECG)
+// 2. HABIT HEARTBEAT
 const HabitHeartbeat = ({ habits }: { habits: Habit[] }) => {
     // Generate data for last 7 days
     const activeHabits = habits.filter(h => !h.isArchived);
@@ -249,7 +218,6 @@ const HabitHeartbeat = ({ habits }: { habits: Habit[] }) => {
         return { date: d, percent };
     });
 
-    // Generate Path
     const height = 50;
     const width = 200;
     const step = width / 6;
@@ -303,7 +271,7 @@ const HabitHeartbeat = ({ habits }: { habits: Habit[] }) => {
                         transition={{ duration: 2, ease: "linear" }}
                         d={path} 
                         fill="none" 
-                        stroke={isAlive ? "#10b981" : "#94a3b8"} 
+                        stroke={isAlive ? "#00D26A" : "#94a3b8"} 
                         strokeWidth="1.5" 
                         strokeLinecap="round" 
                         strokeLinejoin="round"
@@ -327,7 +295,7 @@ const HabitHeartbeat = ({ habits }: { habits: Habit[] }) => {
     );
 };
 
-// 3. NEURAL SPARK FIELD (Notes)
+// 3. NEURAL SPARK FIELD
 const NeuralField = ({ notes }: { notes: Note[] }) => {
     // Generate spark points
     const sparks = useMemo(() => {
@@ -400,7 +368,7 @@ const NeuralField = ({ notes }: { notes: Note[] }) => {
     );
 };
 
-// 4. BIOMETRIC SYNC (Chronos + BioBalance)
+// 4. BIOMETRIC SYNC (Chronos + BioBalance Test Tubes)
 const BiometricSync = ({ tasks, habits }: { tasks: Task[], habits: Habit[] }) => {
     // Chronos Data
     const hours = new Array(24).fill(0);
@@ -423,51 +391,44 @@ const BiometricSync = ({ tasks, habits }: { tasks: Task[], habits: Habit[] }) =>
         return { ...s, val };
     });
 
-    const maxVal = Math.max(...sphereData.map(s => s.val), 0.01); // Avoid 0 div
+    const maxVal = Math.max(...sphereData.map(s => s.val), 0.01);
     const minVal = Math.min(...sphereData.map(s => s.val));
-
-    // Gradient Mappings
-    const gradients: Record<string, string> = {
-        indigo: 'bg-gradient-to-r from-indigo-500 to-blue-500 shadow-[0_0_15px_rgba(99,102,241,0.6)]',
-        emerald: 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_15px_rgba(16,185,129,0.6)]',
-        rose: 'bg-gradient-to-r from-rose-500 to-pink-500 shadow-[0_0_15px_rgba(244,63,94,0.6)]'
-    };
 
     return (
         <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 relative flex flex-col gap-4 overflow-hidden`}>
             <div className="absolute top-6 left-6 z-10 flex items-center gap-2">
-                <Dna size={16} className="text-rose-500" />
+                <Dna size={16} className="text-[#F83062]" />
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Biometric Sync</span>
             </div>
 
-            <div className="flex-1 flex gap-6 items-center mt-6">
+            <div className="flex-1 flex gap-8 items-center mt-6">
                 
-                {/* Left: Chronos Dial */}
-                <div className="w-1/2 flex flex-col items-center justify-center relative">
-                    <div className="relative w-28 h-28 flex items-center justify-center">
+                {/* Left: Chronos Dial (Enlarged) */}
+                <div className="flex-1 flex flex-col items-center justify-center relative">
+                    <div className="relative w-36 h-36 flex items-center justify-center">
                         {/* Clock Face Dots */}
                         {Array.from({length: 12}).map((_, i) => (
                             <div 
                                 key={i} 
                                 className="absolute w-0.5 h-0.5 bg-slate-400 dark:bg-slate-600 rounded-full"
-                                style={{ transform: `rotate(${i * 30}deg) translateY(-48px)` }}
+                                style={{ transform: `rotate(${i * 30}deg) translateY(-60px)` }}
                             />
                         ))}
                         
                         {/* Hour Bars */}
                         {hours.map((count, h) => {
                             const sunAngle = ((h - 12) / 24) * 360 - 90; 
-                            const barHeight = (count / maxHour) * 18 + 2;
+                            const barHeight = (count / maxHour) * 24 + 4;
                             const isGolden = h >= 0 && h < 4;
                             return (
                                 <motion.div
                                     key={h}
-                                    className={`absolute w-0.5 rounded-full origin-bottom ${isGolden ? 'bg-indigo-500 shadow-[0_0_4px_#6366f1]' : 'bg-slate-300 dark:bg-slate-700'}`}
+                                    className={`absolute w-0.5 rounded-full origin-bottom ${isGolden ? 'bg-[#4D77FF] shadow-[0_0_4px_#4D77FF]' : 'bg-slate-300 dark:bg-slate-700'}`}
                                     style={{
                                         height: `${barHeight}px`,
                                         left: '50%',
                                         top: '50%',
-                                        transform: `rotate(${sunAngle + 90}deg) translateY(-32px)`
+                                        transform: `rotate(${sunAngle + 90}deg) translateY(-40px)`
                                     }}
                                     initial={{ height: 0 }}
                                     animate={{ height: `${barHeight}px` }}
@@ -478,21 +439,21 @@ const BiometricSync = ({ tasks, habits }: { tasks: Task[], habits: Habit[] }) =>
                         
                         {/* Center Icon */}
                         <div className="absolute inset-0 flex items-center justify-center">
-                            {isNightOwl ? <Sparkles size={18} className="text-indigo-400 animate-pulse" /> : <Flame size={18} className="text-amber-500 animate-pulse" />}
+                            {isNightOwl ? <Sparkles size={20} className="text-[#4D77FF] animate-pulse" /> : <Flame size={20} className="text-[#F83062] animate-pulse" />}
                         </div>
                     </div>
-                    <div className="text-[9px] uppercase font-bold text-slate-500 mt-2">{isNightOwl ? 'Night Owl' : 'Day Walker'}</div>
+                    <div className="text-[9px] uppercase font-bold text-slate-500 mt-4 tracking-wider">{isNightOwl ? 'Night Owl' : 'Day Walker'}</div>
                 </div>
 
                 {/* Vertical Divider */}
-                <div className="w-px h-32 bg-gradient-to-b from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
+                <div className="w-px h-40 bg-gradient-to-b from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
 
-                {/* Right: Bio-Balance Bars (Neon Glass Tubes) */}
-                <div className="w-1/2 flex flex-col justify-center gap-4">
+                {/* Right: Bio-Balance Fluorescent Tubes */}
+                <div className="w-2/5 flex flex-col justify-center gap-5">
                     {sphereData.map(s => {
                         const isLeader = s.val === maxVal && s.val > 0;
                         const isLagging = s.val === minVal || s.val === 0;
-                        const gradientClass = gradients[s.color] || gradients.indigo;
+                        const neonColor = NEON_PALETTE[s.id] || NEON_PALETTE.productivity;
 
                         return (
                             <div key={s.id} className="flex flex-col gap-1.5">
@@ -500,34 +461,44 @@ const BiometricSync = ({ tasks, habits }: { tasks: Task[], habits: Habit[] }) =>
                                     <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{s.label}</span>
                                     <span className="text-[9px] font-mono text-slate-500">{Math.round(s.val * 100)}%</span>
                                 </div>
-                                {/* Glass Tube Container */}
-                                <div className="w-full h-2.5 bg-slate-200/50 dark:bg-slate-800/50 rounded-full relative overflow-hidden backdrop-blur-sm border border-white/20 dark:border-white/5">
-                                    {/* Neon Fill */}
+                                {/* Glass Tube */}
+                                <div className="w-full h-3 bg-slate-200/20 dark:bg-slate-800/30 rounded-full relative overflow-hidden backdrop-blur-md border border-white/20 dark:border-white/5 shadow-inner">
+                                    {/* Neon Liquid Fill */}
                                     <motion.div 
-                                        className={`h-full absolute left-0 top-0 rounded-full ${gradientClass}`}
+                                        className="h-full absolute left-0 top-0 rounded-full relative"
+                                        style={{ 
+                                            background: `linear-gradient(90deg, ${neonColor}44 0%, ${neonColor} 100%)`,
+                                            boxShadow: `0 0 10px ${neonColor}66`
+                                        }}
                                         initial={{ width: 0 }}
-                                        animate={{ width: `${s.val * 100}%` }}
-                                        transition={{ duration: 1, ease: "easeOut" }}
+                                        animate={{ width: `${Math.max(s.val * 100, 5)}%` }} // Minimum visual width
+                                        transition={{ duration: 1.5, ease: "easeOut" }}
                                     >
+                                        {/* Meniscus / Leading Edge Highlight */}
+                                        <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/80 blur-[1px] rounded-full" />
+                                        
                                         {/* Breathing Glow for Leader */}
                                         {isLeader && (
                                             <motion.div 
-                                                className="absolute inset-0 bg-white/30"
-                                                animate={{ opacity: [0, 0.5, 0] }}
-                                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                                className="absolute inset-0 bg-white/20"
+                                                animate={{ opacity: [0, 0.4, 0] }}
+                                                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                                            />
+                                        )}
+                                        
+                                        {/* Glitching Arc for Lagging */}
+                                        {isLagging && (
+                                            <motion.div 
+                                                className="absolute right-0 top-0 bottom-0 w-2 bg-white z-10"
+                                                animate={{ opacity: [0, 1, 0, 1, 0] }}
+                                                transition={{ duration: 0.2, repeat: Infinity, repeatDelay: Math.random() * 2 + 1 }}
+                                                style={{ boxShadow: `0 0 8px white` }}
                                             />
                                         )}
                                     </motion.div>
                                     
-                                    {/* Stuttering Attention Tip for Lagging */}
-                                    {isLagging && (
-                                        <motion.div 
-                                            className="absolute h-full w-0.5 bg-white shadow-[0_0_8px_white] z-10"
-                                            style={{ left: `${Math.max(s.val * 100, 2)}%` }}
-                                            animate={{ opacity: [0.2, 1, 0.2] }}
-                                            transition={{ duration: 0.15, repeat: Infinity, repeatDelay: 1 }}
-                                        />
-                                    )}
+                                    {/* Glass Gloss Overlay */}
+                                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none rounded-full" />
                                 </div>
                             </div>
                         );
@@ -555,12 +526,12 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
         />
         
         {/* Ambient Depth Glow */}
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#4D77FF]/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#00D26A]/10 blur-[120px] rounded-full pointer-events-none" />
 
         <div className="flex-1 overflow-y-auto custom-scrollbar-light p-4 md:p-6 lg:p-8 relative z-10">
             <div className="max-w-7xl mx-auto h-full flex flex-col">
-                <header className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 shrink-0">
+                <header className="mb-6 flex flex-col md:flex-row justify-between items-start gap-4 shrink-0 relative">
                     <div>
                         <h1 className="text-4xl font-extralight text-slate-800 dark:text-white tracking-tight">
                             Control Deck
@@ -569,8 +540,8 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
                             System Status: Online
                         </p>
                     </div>
-                    {/* XP Badge */}
-                    <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-200/20 dark:border-white/10 shadow-sm self-start md:self-center">
+                    {/* XP Badge - Positioned Top Right */}
+                    <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-200/20 dark:border-white/10 shadow-sm md:absolute md:top-2 md:right-0">
                         <Trophy size={14} className="text-amber-500 fill-amber-500" />
                         <span className="text-xs font-mono font-bold text-slate-700 dark:text-amber-200">{victoryPoints} XP</span>
                     </div>
@@ -579,7 +550,7 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
                 {/* 3-COLUMN COMPACT LAYOUT */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pb-4 h-full">
                     
-                    {/* LEFT COLUMN: KINETIC RADAR (Fixed Height Logic for alignment) */}
+                    {/* LEFT COLUMN: KINETIC RADAR */}
                     <div className="lg:col-span-1 h-auto lg:h-[520px]">
                         <KineticRadar tasks={tasks} habits={habits} journal={journal} notes={notes} />
                     </div>
@@ -593,8 +564,8 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
                             <NeuralField notes={notes} />
                         </div>
 
-                        {/* ROW 2: BIOMETRIC SYNC (Fills remaining height) */}
-                        <div className="flex-1 min-h-[200px]">
+                        {/* ROW 2: BIOMETRIC SYNC */}
+                        <div className="flex-1">
                             <BiometricSync tasks={tasks} habits={habits} />
                         </div>
                     </div>
