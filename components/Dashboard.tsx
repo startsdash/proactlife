@@ -73,6 +73,25 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
     const insightCount = recentJournal.filter(j => j.isInsight).length;
     const insightDepth = Math.min(insightCount / 5, 1);
 
+    // Sphere Calc for Telemetry
+    const counts: Record<string, number> = { productivity: 0, growth: 0, relationships: 0 };
+    let totalSphere = 0;
+    [...tasks.filter(t => t.column === 'done'), ...habits.filter(h => !h.isArchived)].forEach(item => {
+        item.spheres?.forEach(s => { counts[s] = (counts[s] || 0) + 1; totalSphere++; });
+    });
+    
+    // Determine Lagging Sphere
+    let minCount = Infinity;
+    let laggingSphere = SPHERES[0];
+    
+    SPHERES.forEach(s => {
+        const val = counts[s.id] || 0;
+        if (val < minCount) {
+            minCount = val;
+            laggingSphere = s;
+        }
+    });
+
     // Aggregate Energy Score (0-100)
     const energyScore = Math.round(((ritualRate * 0.3) + (taskRate * 0.3) + (synapseVolume * 0.2) + (insightDepth * 0.2)) * 100);
 
@@ -96,21 +115,17 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
     let statusColor = "text-[#A0A0A0]";
     let statusTitle = "ЛОГ_СИСТЕМЫ_V2.0";
     let statusText = "СТАТУС: НОМИНАЛЬНЫЙ";
-    let statusDetail = `СИНХРОНИЗАЦИЯ: МЫСЛИ (${recentNotes.length}) >> ИНСАЙТЫ (${insightCount})`;
-    let statusNote = "ЗАМЕТКА: ТЕМП РОСТА В ПРЕДЕЛАХ НОРМЫ.";
+    let statusDetail = `[БИО-БАЛАНС]: ОБНАРУЖЕНА ДЕГРАДАЦИЯ В СЕКТОРЕ "${laggingSphere.label.toUpperCase()}"`;
+    let statusNote = "[СИНХРОНИЗАЦИЯ]: АКТИВИРОВАН РЕЖИМ ВНИМАНИЯ...";
 
     if (energyScore < 30) {
         statusColor = "text-[#FF4B2B]";
         statusTitle = "КРИТИЧЕСКИЙ_СБОЙ_ЯДРА";
         statusText = "СТАТУС: ТРЕБУЕТСЯ ДОЗАПРАВКА";
-        statusDetail = `ВНИМАНИЕ: ЗАДАЧИ ПРОСТАИВАЮТ (ЦУ: +${pendingTasks})`;
-        statusNote = "РЕКОМЕНДАЦИЯ: ВЫПОЛНИТЕ БЛИЖАЙШИЙ РИТУАЛ.";
     } else if (energyScore > 70) {
         statusColor = "text-emerald-400";
         statusTitle = "ПРОТОКОЛ_ПИКОВОЙ_НАГРУЗКИ";
         statusText = "СТАТУС: ПРЕВОСХОДНО";
-        statusDetail = "ЭНЕРГИЯ: МАКСИМАЛЬНЫЙ ВЫХОД";
-        statusNote = "ВНИМАНИЕ: ОБНАРУЖЕНА ВЫСОКАЯ КОНЦЕНТРАЦИЯ ПОБЕД.";
     }
 
     return (
@@ -192,7 +207,7 @@ const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits
 
             {/* Telemetry Log */}
             <div className="p-6 pt-0 mt-auto relative z-20">
-                <div className="bg-black/5 dark:bg-black/40 rounded-xl p-4 border border-slate-200/20 dark:border-white/5 font-mono text-[10px] leading-relaxed shadow-inner">
+                <div className="bg-black/5 dark:bg-black/40 rounded-xl p-4 border border-slate-200/20 dark:border-white/5 font-mono text-[9px] md:text-[10px] leading-relaxed shadow-inner">
                     <div className={`font-bold mb-1 ${statusColor} opacity-90`}>
                         [{statusTitle}]
                     </div>
@@ -402,7 +417,21 @@ const BiometricSync = ({ tasks, habits }: { tasks: Task[], habits: Habit[] }) =>
     [...tasks.filter(t => t.column === 'done'), ...habits.filter(h => !h.isArchived)].forEach(item => {
         item.spheres?.forEach(s => { counts[s] = (counts[s] || 0) + 1; totalSphere++; });
     });
-    const sphereData = SPHERES.map(s => ({ ...s, val: totalSphere > 0 ? (counts[s.id] || 0) / totalSphere : 0 }));
+    
+    const sphereData = SPHERES.map(s => {
+        const val = totalSphere > 0 ? (counts[s.id] || 0) / totalSphere : 0;
+        return { ...s, val };
+    });
+
+    const maxVal = Math.max(...sphereData.map(s => s.val), 0.01); // Avoid 0 div
+    const minVal = Math.min(...sphereData.map(s => s.val));
+
+    // Gradient Mappings
+    const gradients: Record<string, string> = {
+        indigo: 'bg-gradient-to-r from-indigo-500 to-blue-500 shadow-[0_0_15px_rgba(99,102,241,0.6)]',
+        emerald: 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_15px_rgba(16,185,129,0.6)]',
+        rose: 'bg-gradient-to-r from-rose-500 to-pink-500 shadow-[0_0_15px_rgba(244,63,94,0.6)]'
+    };
 
     return (
         <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 relative flex flex-col gap-4 overflow-hidden`}>
@@ -414,21 +443,21 @@ const BiometricSync = ({ tasks, habits }: { tasks: Task[], habits: Habit[] }) =>
             <div className="flex-1 flex gap-6 items-center mt-6">
                 
                 {/* Left: Chronos Dial */}
-                <div className="w-1/2 flex flex-col items-center relative">
-                    <div className="relative w-24 h-24 flex items-center justify-center">
+                <div className="w-1/2 flex flex-col items-center justify-center relative">
+                    <div className="relative w-28 h-28 flex items-center justify-center">
                         {/* Clock Face Dots */}
                         {Array.from({length: 12}).map((_, i) => (
                             <div 
                                 key={i} 
                                 className="absolute w-0.5 h-0.5 bg-slate-400 dark:bg-slate-600 rounded-full"
-                                style={{ transform: `rotate(${i * 30}deg) translateY(-40px)` }}
+                                style={{ transform: `rotate(${i * 30}deg) translateY(-48px)` }}
                             />
                         ))}
                         
                         {/* Hour Bars */}
                         {hours.map((count, h) => {
                             const sunAngle = ((h - 12) / 24) * 360 - 90; 
-                            const barHeight = (count / maxHour) * 15 + 2;
+                            const barHeight = (count / maxHour) * 18 + 2;
                             const isGolden = h >= 0 && h < 4;
                             return (
                                 <motion.div
@@ -438,7 +467,7 @@ const BiometricSync = ({ tasks, habits }: { tasks: Task[], habits: Habit[] }) =>
                                         height: `${barHeight}px`,
                                         left: '50%',
                                         top: '50%',
-                                        transform: `rotate(${sunAngle + 90}deg) translateY(-28px)`
+                                        transform: `rotate(${sunAngle + 90}deg) translateY(-32px)`
                                     }}
                                     initial={{ height: 0 }}
                                     animate={{ height: `${barHeight}px` }}
@@ -449,79 +478,71 @@ const BiometricSync = ({ tasks, habits }: { tasks: Task[], habits: Habit[] }) =>
                         
                         {/* Center Icon */}
                         <div className="absolute inset-0 flex items-center justify-center">
-                            {isNightOwl ? <Sparkles size={16} className="text-indigo-400" /> : <Flame size={16} className="text-amber-500" />}
+                            {isNightOwl ? <Sparkles size={18} className="text-indigo-400 animate-pulse" /> : <Flame size={18} className="text-amber-500 animate-pulse" />}
                         </div>
                     </div>
-                    <div className="text-[9px] uppercase font-bold text-slate-500 mt-1">{isNightOwl ? 'Night Owl' : 'Day Walker'}</div>
+                    <div className="text-[9px] uppercase font-bold text-slate-500 mt-2">{isNightOwl ? 'Night Owl' : 'Day Walker'}</div>
                 </div>
 
                 {/* Vertical Divider */}
-                <div className="w-px h-20 bg-gradient-to-b from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
+                <div className="w-px h-32 bg-gradient-to-b from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
 
-                {/* Right: Bio-Balance Bars */}
-                <div className="w-1/2 flex flex-col justify-center gap-2">
-                    {sphereData.map(s => (
-                        <div key={s.id} className="flex flex-col gap-1">
-                            <div className="flex justify-between items-center">
-                                <span className="text-[8px] font-bold uppercase tracking-wider text-slate-400">{s.label}</span>
-                                <span className="text-[8px] font-mono text-slate-500">{Math.round(s.val * 100)}%</span>
+                {/* Right: Bio-Balance Bars (Neon Glass Tubes) */}
+                <div className="w-1/2 flex flex-col justify-center gap-4">
+                    {sphereData.map(s => {
+                        const isLeader = s.val === maxVal && s.val > 0;
+                        const isLagging = s.val === minVal || s.val === 0;
+                        const gradientClass = gradients[s.color] || gradients.indigo;
+
+                        return (
+                            <div key={s.id} className="flex flex-col gap-1.5">
+                                <div className="flex justify-between items-center px-1">
+                                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{s.label}</span>
+                                    <span className="text-[9px] font-mono text-slate-500">{Math.round(s.val * 100)}%</span>
+                                </div>
+                                {/* Glass Tube Container */}
+                                <div className="w-full h-2.5 bg-slate-200/50 dark:bg-slate-800/50 rounded-full relative overflow-hidden backdrop-blur-sm border border-white/20 dark:border-white/5">
+                                    {/* Neon Fill */}
+                                    <motion.div 
+                                        className={`h-full absolute left-0 top-0 rounded-full ${gradientClass}`}
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${s.val * 100}%` }}
+                                        transition={{ duration: 1, ease: "easeOut" }}
+                                    >
+                                        {/* Breathing Glow for Leader */}
+                                        {isLeader && (
+                                            <motion.div 
+                                                className="absolute inset-0 bg-white/30"
+                                                animate={{ opacity: [0, 0.5, 0] }}
+                                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                            />
+                                        )}
+                                    </motion.div>
+                                    
+                                    {/* Stuttering Attention Tip for Lagging */}
+                                    {isLagging && (
+                                        <motion.div 
+                                            className="absolute h-full w-0.5 bg-white shadow-[0_0_8px_white] z-10"
+                                            style={{ left: `${Math.max(s.val * 100, 2)}%` }}
+                                            animate={{ opacity: [0.2, 1, 0.2] }}
+                                            transition={{ duration: 0.15, repeat: Infinity, repeatDelay: 1 }}
+                                        />
+                                    )}
+                                </div>
                             </div>
-                            <div className="w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                <motion.div 
-                                    className={`h-full ${s.bg.replace('50', '500').replace('/30','')}`}
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${s.val * 100}%` }}
-                                    transition={{ duration: 1 }}
-                                />
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         </div>
     );
 };
 
-// 5. STRATEGIC INTELLIGENCE (Bottom Banner)
-const StrategicIntelligence = ({ tasks, onNavigate }: { tasks: Task[], onNavigate: (m: Module) => void }) => {
-    const victoryPoints = tasks.filter(t => t.isChallengeCompleted).length;
-
-    return (
-        <button 
-            onClick={() => onNavigate(Module.JOURNAL)}
-            className="w-full h-full bg-gradient-to-r from-[#0f172a] to-[#1e293b] dark:from-indigo-950 dark:to-slate-900 rounded-[32px] p-6 text-white relative overflow-hidden group shadow-xl hover:shadow-2xl transition-all border border-white/10 flex flex-col justify-between"
-        >
-            {/* Background Texture */}
-            <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-            
-            <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform duration-1000">
-                <Target size={100} />
-            </div>
-
-            {/* Victory Points Badge */}
-            <div className="absolute top-6 right-6 flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-[0_0_15px_rgba(251,191,36,0.3)] animate-pulse">
-                <Trophy size={14} className="text-amber-400 fill-amber-400" />
-                <span className="text-xs font-mono font-bold text-amber-200">{victoryPoints} XP</span>
-            </div>
-            
-            <div className="relative z-10 text-left">
-                <div className="flex items-center gap-2 mb-2 text-indigo-300">
-                    <Fingerprint size={16} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Strategic Intelligence</span>
-                </div>
-                <h3 className="text-2xl font-light tracking-wide text-white/90">Deep Dive Protocol</h3>
-            </div>
-
-            <div className="relative z-10 flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest bg-white/10 px-4 py-2 rounded-full backdrop-blur-md hover:bg-white/20 transition-colors border border-white/10 w-fit mt-4">
-                Initiate Reflection <ArrowRight size={12} />
-            </div>
-        </button>
-    );
-};
-
 // --- MAIN DASHBOARD COMPONENT ---
 
 const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate }) => {
+  const victoryPoints = tasks.filter(t => t.isChallengeCompleted).length;
+
   return (
     <div className="h-full w-full bg-[#f8fafc] dark:bg-[#0f172a] relative overflow-hidden flex flex-col">
         {/* Kinetic Grid Background */}
@@ -548,33 +569,33 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
                             System Status: Online
                         </p>
                     </div>
+                    {/* XP Badge */}
+                    <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-200/20 dark:border-white/10 shadow-sm self-start md:self-center">
+                        <Trophy size={14} className="text-amber-500 fill-amber-500" />
+                        <span className="text-xs font-mono font-bold text-slate-700 dark:text-amber-200">{victoryPoints} XP</span>
+                    </div>
                 </header>
 
                 {/* 3-COLUMN COMPACT LAYOUT */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pb-4 h-full">
                     
-                    {/* LEFT COLUMN: KINETIC RADAR (Full Height) */}
-                    <div className="lg:col-span-1 h-auto lg:h-[520px] min-h-[400px]">
+                    {/* LEFT COLUMN: KINETIC RADAR (Fixed Height Logic for alignment) */}
+                    <div className="lg:col-span-1 h-auto lg:h-[520px]">
                         <KineticRadar tasks={tasks} habits={habits} journal={journal} notes={notes} />
                     </div>
 
                     {/* RIGHT COLUMN: MODULES GRID */}
-                    <div className="lg:col-span-2 flex flex-col gap-4">
+                    <div className="lg:col-span-2 flex flex-col gap-4 lg:h-[520px]">
                         
                         {/* ROW 1: RHYTHM & SYNAPSES */}
-                        <div className="grid grid-cols-2 gap-4 h-[180px]">
+                        <div className="grid grid-cols-2 gap-4 h-[180px] shrink-0">
                             <HabitHeartbeat habits={habits} />
                             <NeuralField notes={notes} />
                         </div>
 
-                        {/* ROW 2: BIOMETRIC SYNC */}
-                        <div className="h-[180px]">
+                        {/* ROW 2: BIOMETRIC SYNC (Fills remaining height) */}
+                        <div className="flex-1 min-h-[200px]">
                             <BiometricSync tasks={tasks} habits={habits} />
-                        </div>
-
-                        {/* ROW 3: STRATEGIC INTELLIGENCE */}
-                        <div className="flex-1 min-h-[140px]">
-                            <StrategicIntelligence tasks={tasks} onNavigate={onNavigate} />
                         </div>
                     </div>
 
