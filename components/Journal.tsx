@@ -1672,7 +1672,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             {isAnalyzing ? (
                                                 <div className="relative w-4 h-4 flex items-center justify-center">
                                                     <Loader2 size={16} className="animate-spin absolute inset-0" />
-                                                    <div className="w-2 h-2 bg-current rounded-[1px]" relative z-10" />
+                                                    <div className="w-2 h-2 bg-current rounded-[1px] relative z-10" />
                                                 </div>
                                             ) : (
                                                 <Sparkles size={18} strokeWidth={1.5} />
