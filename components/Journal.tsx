@@ -1751,11 +1751,11 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                         </div>
 
                                         {/* Main Content */}
-                                        <div className="flex-1 flex flex-col min-w-0 p-5 md:p-6">
+                                        <div className="flex-1 flex flex-col min-w-0 p-6 md:p-8">
                                             {/* Header Actions (Insight/Edit) */}
-                                            <div className="flex justify-between items-start mb-3">
+                                            <div className="flex justify-between items-start mb-4">
                                                 {entry.title ? (
-                                                    <h3 className="font-sans text-lg font-bold text-slate-900 dark:text-slate-100 leading-tight">{entry.title}</h3>
+                                                    <h3 className="font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 leading-tight">{entry.title}</h3>
                                                 ) : <div />}
                                                 
                                                 <div className="flex items-center gap-2 -mt-1 ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
@@ -1958,7 +1958,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                     )}
 
                     {/* GLASS MODAL HEADER */}
-                    <div className="flex justify-between items-start mb-6 shrink-0">
+                    <div className="flex justify-between items-start mb-4 shrink-0">
                         <div className="flex flex-col gap-1 pr-4 w-full">
                             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1 font-mono">
                                 {formatDate(selectedEntry.date)} <span className="opacity-50 mx-1">/</span> ID: {selectedEntry.id.slice(-4)}
