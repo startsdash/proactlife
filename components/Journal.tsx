@@ -1876,20 +1876,19 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                   </div>
 
                   {/* HOLOGRAM CONTENT */}
-                  <div className="flex-1 overflow-y-auto custom-scrollbar-ghost p-8 pt-6">
+                  <div className="flex-1 overflow-y-auto custom-scrollbar-ghost p-8 pt-6 pb-0">
                       <ReactMarkdown components={HologramMarkdown}>
                           {analysisResult}
                       </ReactMarkdown>
                   </div>
 
                   {/* HOLOGRAM FOOTER */}
-                  <div className="p-8 pt-0 flex justify-center shrink-0">
+                  <div className="mt-8 mb-8 flex justify-center shrink-0">
                       <button 
                         onClick={handleSaveAnalysis} 
                         className="group flex items-center gap-3 px-8 py-3 rounded-full border border-slate-200/50 dark:border-slate-700/50 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-all duration-300"
                       >
-                          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Принять в историю</span>
-                          <Save size={16} strokeWidth={1} className="group-hover:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Сохранить в историю</span>
                       </button>
                   </div>
               </div>
