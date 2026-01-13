@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -745,7 +744,7 @@ const JournalEntrySphereSelector: React.FC<{
             <button 
                 ref={triggerRef}
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="flex items-center gap-1.5 font-mono text-[9px] font-bold text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent px-2 py-1 rounded transition-colors uppercase tracking-widest"
+                className="flex items-center gap-1.5 font-mono text-[9px] font-bold text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent pl-0 pr-2 py-1 rounded transition-colors uppercase tracking-widest"
             >
                 {entry.spheres && entry.spheres.length > 0 ? (
                     <div className="flex -space-x-1">
@@ -1805,7 +1804,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                                 </div>
                                             )}
 
-                                            <div className={`font-serif text-[#2F3437] dark:text-slate-200 leading-[1.7] text-sm md:text-base flex-1 ${entry.title ? '' : 'mt-1'}`}>
+                                            <div className={`font-serif text-[#2F3437] dark:text-slate-200 leading-[1.8] text-sm md:text-base flex-1 ${entry.title ? '' : 'mt-1'}`}>
                                                 <ReactMarkdown 
                                                     components={markdownComponents} 
                                                     urlTransform={allowDataUrls} 
@@ -2075,107 +2074,60 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                         onBlur={saveSelection} 
                                         onMouseUp={saveSelection} 
                                         onKeyUp={saveSelection} 
-                                        className="w-full flex-1 bg-transparent p-1 text-base leading-relaxed text-slate-800 dark:text-slate-200 outline-none overflow-y-auto font-serif custom-scrollbar-ghost [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                        className="w-full flex-1 bg-transparent p-1 text-base leading-relaxed text-slate-800 dark:text-slate-200 outline-none overflow-y-auto font-serif custom-scrollbar-ghost [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
+                                        style={{ whiteSpace: 'pre-wrap' }}
+                                        data-placeholder="Текст записи..."
                                     />
                                 </div>
-                                
+                                <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
+                                    <JournalEntrySphereSelector entry={{...selectedEntry, spheres: selectedEntry.spheres}} updateEntry={(updated) => updateEntry({...updated, id: selectedEntry.id})} />
+                                </div>
                                 <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5 shrink-0">
                                     <button onClick={cancelEditing} className="font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">Отмена</button>
                                     <button onClick={() => saveEdit(selectedEntry)} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold">Сохранить</button>
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex-1 flex flex-col">
-                                <div className="flex-1 font-serif text-[#2F3437] dark:text-slate-200 leading-[1.8] text-base">
-                                    <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                            <>
+                                <div className={`font-serif text-slate-800 dark:text-slate-200 text-lg leading-relaxed flex-1 overflow-y-auto custom-scrollbar-ghost ${selectedEntry.title ? '' : 'mt-2'}`}>
+                                    <ReactMarkdown 
+                                        components={markdownComponents} 
+                                        urlTransform={allowDataUrls} 
+                                        remarkPlugins={[remarkGfm]} 
+                                        rehypePlugins={[rehypeRaw]}
+                                    >
                                         {selectedEntry.content.replace(/\n/g, '  \n')}
                                     </ReactMarkdown>
                                 </div>
-                                {(() => { const url = findFirstUrl(selectedEntry.content); return url ? <LinkPreview url={url} /> : null; })()}
-
-                                {selectedEntry.aiFeedback && (
-                                    <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/5">
-                                         <div className="flex items-center gap-2 mb-3">
-                                            <Sparkles size={12} className="text-indigo-400" />
-                                            <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400">Ментор</span>
-                                         </div>
-                                         <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed font-serif">
-                                            <ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown>
-                                         </div>
-                                    </div>
-                                )}
                                 
-                                {/* AETHER FOOTER REPLICA */}
-                                <div className="mt-6 pt-4 border-t border-black/5 dark:border-white/5 flex flex-col gap-4 shrink-0">
-                                    {selectedLinkedTask && !editingId && (
-                                        <div className="font-mono text-[10px] text-slate-400 flex items-center gap-2 group/ctx">
-                                            <span className="opacity-50">[ CONTEXT: </span>
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(selectedLinkedTask.id); }}
-                                                className="hover:text-indigo-500 underline decoration-dotted underline-offset-4 truncate max-w-[200px] transition-colors"
-                                            >
-                                                {selectedLinkedTask.content}
-                                            </button>
-                                            <span className="opacity-50"> ]</span>
+                                <div className="mt-6 pt-6 border-t border-black/5 dark:border-white/5 space-y-4 shrink-0">
+                                    {/* Task Link */}
+                                    {selectedLinkedTask && (
+                                        <div className="flex items-center gap-3 text-xs bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                                            <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                                                <Link size={14} />
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-slate-700 dark:text-slate-300 mb-0.5">Связанная задача</div>
+                                                <div className="text-slate-500 dark:text-slate-400 line-clamp-1">{selectedLinkedTask.content}</div>
+                                            </div>
                                         </div>
                                     )}
 
-                                    <div className="flex justify-start items-center">
-                                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="left" direction="up" />
-                                    </div>
+                                    {/* Spheres */}
+                                    {selectedEntry.spheres && selectedEntry.spheres.length > 0 && (
+                                        <div>
+                                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 font-mono">Сферы</div>
+                                            <SphereBadgeList spheres={selectedEntry.spheres} />
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+                            </>
                         )}
                     </div>
                 </motion.div>
             </div>
         </AnimatePresence>
-      )}
-
-      {viewingTask && (
-        <div className="fixed inset-0 z-[110] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setViewingTask(null)}>
-            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">Контекст мысли</h3><button onClick={() => setViewingTask(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} strokeWidth={1} /></button></div>
-                <div className="space-y-4">
-                    <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
-                        <div className="flex justify-between items-center mb-3"><span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${viewingTask.column === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.column === 'done' ? <CheckCircle2 size={12} strokeWidth={1} /> : <Circle size={12} strokeWidth={1} />}{viewingTask.column === 'done' ? 'Сделано' : 'В процессе'}{viewingTask.isArchived && " (В архиве)"}</span></div>
-                        <div className="text-sm text-slate-800 dark:text-slate-200 font-normal leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.content}</ReactMarkdown></div>
-                        {viewingTask.spheres && viewingTask.spheres.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
-                                <SphereBadgeList spheres={viewingTask.spheres} />
-                            </div>
-                        )}
-                    </div>
-                    {viewingTask.description && (<CollapsibleSection title="Источник" icon={<FileText size={14}/>}><div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.description}</ReactMarkdown></div></CollapsibleSection>)}
-                    {viewingTask.activeChallenge && (
-                      <CollapsibleSection title={viewingTask.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} icon={<Zap size={14}/>}>
-                         <div className={`p-3 rounded-lg border ${viewingTask.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${viewingTask.isChallengeCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}</span>
-                            <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200"><StaticChallengeRenderer content={viewingTask.activeChallenge} mode={viewingTask.isChallengeCompleted ? 'history' : 'draft'} /></div>
-                         </div>
-                      </CollapsibleSection>
-                    )}
-                     {viewingTask.challengeHistory && viewingTask.challengeHistory.length > 0 && (
-                        <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
-                            <div className="space-y-4">
-                                {viewingTask.challengeHistory.map((challenge, index) => (
-                                   <div key={index} className="py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
-                                      <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
-                                         <StaticChallengeRenderer content={challenge} mode="history" />
-                                      </div>
-                                   </div>
-                                ))}
-                             </div>
-                        </CollapsibleSection>
-                     )}
-                    {viewingTask.consultationHistory && viewingTask.consultationHistory.length > 0 && (
-                       <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}><ul className="space-y-4">{viewingTask.consultationHistory.map((consultation, index) => (<li key={index} className="text-sm text-slate-900 dark:text-slate-200 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0"><ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown></li>))}</ul></CollapsibleSection>
-                    )}
-                </div>
-                <div className="mt-8 flex justify-end"><button onClick={() => setViewingTask(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button></div>
-            </div>
-        </div>
       )}
     </div>
   );
