@@ -479,7 +479,7 @@ const ColorPickerPopover: React.FC<{
 
 // --- LITERARY TYPOGRAPHY COMPONENTS (DEFAULT) ---
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-inherit pl-0 ml-0" {...props} />,
     a: ({node, ...props}: any) => <a className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer underline-offset-4 decoration-slate-300 dark:decoration-slate-600 transition-colors font-sans text-sm font-medium relative z-20 break-all" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
@@ -1672,7 +1672,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             {isAnalyzing ? (
                                                 <div className="relative w-4 h-4 flex items-center justify-center">
                                                     <Loader2 size={16} className="animate-spin absolute inset-0" />
-                                                    <div className="w-2 h-2 bg-current rounded-[1px]" relative z-10" />
+                                                    <div className="w-2 h-2 bg-current rounded-[1px] relative z-10" />
                                                 </div>
                                             ) : (
                                                 <Sparkles size={18} strokeWidth={1.5} />
@@ -2178,4 +2178,5 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
     </div>
   );
 };
+
 export default Journal;
