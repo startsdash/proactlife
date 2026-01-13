@@ -1751,15 +1751,36 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                         </div>
 
                                         {/* Main Content */}
-                                        <div className="flex-1 flex flex-col min-w-0 p-6 md:p-8">
+                                        <div className="flex-1 flex flex-col min-w-0 p-6 md:p-8 relative"> {/* added relative */}
                                             {/* Header Actions (Insight/Edit) */}
-                                            <div className="flex justify-between items-start mb-4">
-                                                {entry.title ? (
+                                            {entry.title ? (
+                                                <div className="flex justify-between items-start mb-4">
                                                     <h3 className="font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 leading-tight">{entry.title}</h3>
-                                                ) : <div />}
-                                                
-                                                <div className="flex items-center gap-2 -mt-1 ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                                    {!isEditing && (
+                                                    
+                                                    <div className="flex items-center gap-2 -mt-1 ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                        {!isEditing && (
+                                                            <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
+                                                                <button 
+                                                                    onClick={() => toggleInsight(entry)} 
+                                                                    className={`p-1.5 rounded-lg transition-all ${
+                                                                        entry.isInsight 
+                                                                        ? "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20" 
+                                                                        : "text-slate-300 hover:text-slate-500 dark:hover:text-slate-400"
+                                                                    }`}
+                                                                >
+                                                                    <Gem 
+                                                                        size={16} 
+                                                                        strokeWidth={1.5} 
+                                                                        className={entry.isInsight ? "fill-indigo-200/50" : "fill-transparent"} 
+                                                                    />
+                                                                </button>
+                                                            </Tooltip>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="absolute top-6 right-6 md:top-8 md:right-8 z-10 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                     {!isEditing && (
                                                         <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
                                                             <button 
                                                                 onClick={() => toggleInsight(entry)} 
@@ -1778,9 +1799,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                                         </Tooltip>
                                                     )}
                                                 </div>
-                                            </div>
+                                            )}
 
-                                            <div className="font-serif text-[#2F3437] dark:text-slate-200 leading-[1.7] text-sm md:text-base flex-1">
+                                            <div className={`font-serif text-[#2F3437] dark:text-slate-200 leading-[1.7] text-sm md:text-base flex-1 ${entry.title ? '' : 'mt-1'}`}>
                                                 <ReactMarkdown 
                                                     components={markdownComponents} 
                                                     urlTransform={allowDataUrls} 
