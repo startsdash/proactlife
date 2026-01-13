@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Note, Task, Habit, JournalEntry, Module, Flashcard } from '../types';
 import { motion } from 'framer-motion';
 import { 
@@ -17,7 +17,11 @@ import {
   Atom,
   Dna,
   Fingerprint,
-  Users
+  Users,
+  Radar,
+  Crosshair,
+  AlertTriangle,
+  Terminal
 } from 'lucide-react';
 import { SPHERES } from '../constants';
 
@@ -42,60 +46,109 @@ const getLocalDateKey = (date: Date) => {
 
 // --- WIDGETS ---
 
-// 1. ENERGY PLASMA CORE
-const EnergyPlasma = ({ tasks, habits, journal }: { tasks: Task[], habits: Habit[], journal: JournalEntry[] }) => {
+// 1. KINETIC RADAR INTERFACE (Replaces Core Reactor)
+const KineticRadar = ({ tasks, habits, journal, notes }: { tasks: Task[], habits: Habit[], journal: JournalEntry[], notes: Note[] }) => {
     const todayStr = getLocalDateKey(new Date());
     
-    // Metrics
-    const totalTasks = tasks.filter(t => !t.isArchived).length;
-    const doneTasks = tasks.filter(t => t.column === 'done' && !t.isArchived).length;
-    const taskRate = totalTasks > 0 ? (doneTasks / totalTasks) : 0;
-
+    // --- DATA CALCULATION ---
+    
+    // 1. Rituals (Top) - Daily Habit Completion
     const activeHabits = habits.filter(h => !h.isArchived);
     const habitsDoneToday = activeHabits.filter(h => h.history[todayStr]).length;
-    const habitRate = activeHabits.length > 0 ? (habitsDoneToday / activeHabits.length) : 0;
+    const ritualRate = activeHabits.length > 0 ? (habitsDoneToday / activeHabits.length) : 0;
 
-    const hasJournalEntry = journal.some(j => getLocalDateKey(new Date(j.date)) === todayStr);
-    const journalRate = hasJournalEntry ? 1 : 0;
+    // 2. Tasks (Right) - Sprint Completion
+    const activeSprintTasks = tasks.filter(t => !t.isArchived);
+    const doneSprintTasks = activeSprintTasks.filter(t => t.column === 'done').length;
+    const taskRate = activeSprintTasks.length > 0 ? (doneSprintTasks / activeSprintTasks.length) : 0;
 
-    const energyScore = Math.round(((taskRate * 0.4) + (habitRate * 0.4) + (journalRate * 0.2)) * 100);
+    // 3. Thoughts (Bottom) - Note Volume (Normalized to target of 20 active/recent notes)
+    // We count notes from the last 7 days for "Current Mental Load"
+    const recentNotes = notes.filter(n => n.createdAt > Date.now() - 7 * 86400000);
+    const synapseVolume = Math.min(recentNotes.length / 20, 1);
 
-    // Color Logic based on Energy
-    let coreColor = "text-indigo-500";
-    let glowColor = "rgba(99,102,241,"; // Indigo
+    // 4. Insights (Left) - Qualitative Depth
+    // Ratio of Insight entries to total Journal entries (or just raw count normalized to 5)
+    const recentJournal = journal.filter(j => j.date > Date.now() - 7 * 86400000);
+    const insightCount = recentJournal.filter(j => j.isInsight).length;
+    const insightDepth = Math.min(insightCount / 5, 1);
+
+    // Aggregate Energy Score (0-100)
+    const energyScore = Math.round(((ritualRate * 0.3) + (taskRate * 0.3) + (synapseVolume * 0.2) + (insightDepth * 0.2)) * 100);
+
+    // --- VISUALIZATION CONSTANTS ---
+    const size = 260;
+    const center = size / 2;
+    const radius = 90;
     
-    if (energyScore > 75) {
-        coreColor = "text-emerald-400";
-        glowColor = "rgba(52,211,153,"; // Emerald
-    } else if (energyScore > 40) {
-        coreColor = "text-amber-400";
-        glowColor = "rgba(251,191,36,"; // Amber
-    } else {
-        coreColor = "text-rose-500";
-        glowColor = "rgba(244,63,94,"; // Rose
+    // Calculate Polygon Points
+    // Order: Top (Rituals), Right (Tasks), Bottom (Synapses), Left (Insights)
+    const p1 = { x: center, y: center - (radius * ritualRate) };
+    const p2 = { x: center + (radius * taskRate), y: center };
+    const p3 = { x: center, y: center + (radius * synapseVolume) };
+    const p4 = { x: center - (radius * insightDepth), y: center };
+    
+    const radarPath = `M ${p1.x},${p1.y} L ${p2.x},${p2.y} L ${p3.x},${p3.y} L ${p4.x},${p4.y} Z`;
+
+    // Telemetry Logic
+    const pendingTasks = activeSprintTasks.filter(t => t.column !== 'done').length;
+    
+    let statusColor = "text-[#A0A0A0]";
+    let statusTitle = "ЛОГ_СИСТЕМЫ_V2.0";
+    let statusText = "СТАТУС: НОМИНАЛЬНЫЙ";
+    let statusDetail = `СИНХРОНИЗАЦИЯ: МЫСЛИ (${recentNotes.length}) >> ИНСАЙТЫ (${insightCount})`;
+    let statusNote = "ЗАМЕТКА: ТЕМП РОСТА В ПРЕДЕЛАХ НОРМЫ.";
+
+    if (energyScore < 30) {
+        statusColor = "text-[#FF4B2B]";
+        statusTitle = "КРИТИЧЕСКИЙ_СБОЙ_ЯДРА";
+        statusText = "СТАТУС: ТРЕБУЕТСЯ ДОЗАПРАВКА";
+        statusDetail = `ВНИМАНИЕ: ЗАДАЧИ ПРОСТАИВАЮТ (ЦУ: +${pendingTasks})`;
+        statusNote = "РЕКОМЕНДАЦИЯ: ВЫПОЛНИТЕ БЛИЖАЙШИЙ РИТУАЛ.";
+    } else if (energyScore > 70) {
+        statusColor = "text-emerald-400";
+        statusTitle = "ПРОТОКОЛ_ПИКОВОЙ_НАГРУЗКИ";
+        statusText = "СТАТУС: ПРЕВОСХОДНО";
+        statusDetail = "ЭНЕРГИЯ: МАКСИМАЛЬНЫЙ ВЫХОД";
+        statusNote = "ВНИМАНИЕ: ОБНАРУЖЕНА ВЫСОКАЯ КОНЦЕНТРАЦИЯ ПОБЕД.";
     }
 
     return (
-        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 relative overflow-hidden flex flex-col items-center justify-center`}>
+        <div className={`h-full ${GLASS_PANEL} rounded-[32px] relative overflow-hidden flex flex-col`}>
+            {/* Header */}
             <div className="absolute top-6 left-6 flex items-center gap-2 z-20">
-                <Atom size={16} className={`${coreColor} animate-spin-slow`} />
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Core Reactor</span>
+                <Radar size={16} className={`${statusColor} animate-pulse`} />
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Kinetic Radar</span>
             </div>
 
-            <div className="relative w-full max-w-[200px] aspect-square flex items-center justify-center">
-                {/* Outer Field */}
-                <motion.div 
-                    animate={{ rotate: 360, scale: [1, 1.05, 1] }}
-                    transition={{ rotate: { duration: 20, repeat: Infinity, ease: "linear" }, scale: { duration: 4, repeat: Infinity, ease: "easeInOut" } }}
-                    className="absolute inset-0 rounded-full blur-3xl opacity-20"
-                    style={{ background: `radial-gradient(circle, ${glowColor}0.8) 0%, transparent 70%)` }}
-                />
-                
-                {/* Plasma Layers */}
-                <svg className="w-full h-full relative z-10 overflow-visible">
+            <div className="absolute top-6 right-6 z-20">
+                <span className={`text-xl font-mono font-bold ${statusColor}`}>{energyScore}%</span>
+            </div>
+
+            {/* Radar Visual */}
+            <div className="flex-1 relative flex items-center justify-center min-h-[220px]">
+                {/* Active Orbitals (Background) */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                    <motion.div 
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+                        className="w-[200px] h-[200px] border border-dashed border-slate-400 rounded-full"
+                    />
+                    <motion.div 
+                        animate={{ rotate: -360 }}
+                        transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+                        className="absolute w-[140px] h-[140px] border border-dotted border-slate-500 rounded-full opacity-50"
+                    />
+                </div>
+
+                <svg width={size} height={size} className="relative z-10 overflow-visible">
                     <defs>
-                        <filter id="plasmaGlow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                        <radialGradient id="radarGradient" cx="0.5" cy="0.5" r="0.5">
+                            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.6" />
+                            <stop offset="100%" stopColor="#34d399" stopOpacity="0.1" />
+                        </radialGradient>
+                        <filter id="glow">
+                            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
                             <feMerge>
                                 <feMergeNode in="coloredBlur"/>
                                 <feMergeNode in="SourceGraphic"/>
@@ -103,56 +156,61 @@ const EnergyPlasma = ({ tasks, habits, journal }: { tasks: Task[], habits: Habit
                         </filter>
                     </defs>
 
-                    {/* Orbit 1 */}
-                    <motion.circle 
-                        cx="50%" cy="50%" r="40%" 
-                        fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="4 8"
-                        className={`${coreColor} opacity-30`}
-                        animate={{ rotate: -360 }}
-                        transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-                        style={{ transformOrigin: 'center' }}
+                    {/* Grid Lines (Diamond) */}
+                    <path d={`M ${center},${center-radius} L ${center+radius},${center} L ${center},${center+radius} L ${center-radius},${center} Z`} fill="none" stroke="#E0E0E0" strokeOpacity="0.2" strokeWidth="0.5" />
+                    <path d={`M ${center},${center-radius*0.5} L ${center+radius*0.5},${center} L ${center},${center+radius*0.5} L ${center-radius*0.5},${center} Z`} fill="none" stroke="#E0E0E0" strokeOpacity="0.1" strokeWidth="0.5" />
+                    
+                    {/* Axes */}
+                    <line x1={center} y1={center-radius} x2={center} y2={center+radius} stroke="#E0E0E0" strokeOpacity="0.1" />
+                    <line x1={center-radius} y1={center} x2={center+radius} y2={center} stroke="#E0E0E0" strokeOpacity="0.1" />
+
+                    {/* Labels */}
+                    <text x={center} y={center - radius - 10} textAnchor="middle" className="text-[8px] fill-slate-400 uppercase font-mono tracking-widest">Rituals</text>
+                    <text x={center + radius + 15} y={center + 3} textAnchor="start" className="text-[8px] fill-slate-400 uppercase font-mono tracking-widest">Tasks</text>
+                    <text x={center} y={center + radius + 15} textAnchor="middle" className="text-[8px] fill-slate-400 uppercase font-mono tracking-widest">Synapses</text>
+                    <text x={center - radius - 15} y={center + 3} textAnchor="end" className="text-[8px] fill-slate-400 uppercase font-mono tracking-widest">Insights</text>
+
+                    {/* The Data Shape */}
+                    <motion.path 
+                        d={radarPath} 
+                        fill="url(#radarGradient)" 
+                        stroke="url(#radarGradient)"
+                        strokeWidth="1.5"
+                        filter="url(#glow)"
+                        initial={{ d: `M ${center},${center} L ${center},${center} L ${center},${center} L ${center},${center} Z` }}
+                        animate={{ d: radarPath }}
+                        transition={{ type: "spring", stiffness: 50, damping: 15 }}
                     />
                     
-                    {/* Orbit 2 */}
-                    <motion.circle 
-                        cx="50%" cy="50%" r="30%" 
-                        fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="20 40"
-                        className={`${coreColor} opacity-50`}
-                        animate={{ rotate: 180 }}
-                        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                        style={{ transformOrigin: 'center' }}
-                    />
-
-                    {/* The Core */}
-                    <motion.circle 
-                        cx="50%" cy="50%" r={20 + (energyScore * 0.1)} 
-                        fill={`url(#grad-${energyScore})`} 
-                        filter="url(#plasmaGlow)"
-                        className={`${coreColor} fill-current`}
-                        animate={{ r: [20, 22 + (energyScore * 0.05), 20], opacity: [0.8, 1, 0.8] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    />
+                    {/* Data Points */}
+                    <circle cx={p1.x} cy={p1.y} r="2" className="fill-white" />
+                    <circle cx={p2.x} cy={p2.y} r="2" className="fill-white" />
+                    <circle cx={p3.x} cy={p3.y} r="2" className="fill-white" />
+                    <circle cx={p4.x} cy={p4.y} r="2" className="fill-white" />
                 </svg>
-
-                {/* Data Readout */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none mix-blend-difference text-white">
-                    <span className="text-5xl font-thin tracking-tighter filter drop-shadow-lg">
-                        {energyScore}%
-                    </span>
-                    <span className="text-[8px] font-mono font-bold uppercase tracking-[0.3em] opacity-80 mt-1">Output</span>
-                </div>
             </div>
 
-            <div className="mt-2 text-center z-10 max-w-[200px]">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                    <span className={`h-1.5 w-1.5 rounded-full ${energyScore > 50 ? 'bg-emerald-400' : 'bg-rose-400'} animate-pulse`} />
-                    <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-                        {energyScore < 30 ? "SYSTEM_LOW" : energyScore < 70 ? "SYSTEM_NOMINAL" : "SYSTEM_PEAK"}
-                    </span>
+            {/* Telemetry Log */}
+            <div className="p-6 pt-0 mt-auto relative z-20">
+                <div className="bg-black/5 dark:bg-black/40 rounded-xl p-4 border border-slate-200/20 dark:border-white/5 font-mono text-[10px] leading-relaxed shadow-inner">
+                    <div className={`font-bold mb-1 ${statusColor} opacity-90`}>
+                        [{statusTitle}]
+                    </div>
+                    <div className="text-slate-600 dark:text-slate-400 space-y-1">
+                        <div className="flex gap-2">
+                            <span className="opacity-50">{">"}</span>
+                            <span>{statusText}</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <span className="opacity-50">{">"}</span>
+                            <span>{statusDetail}</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <span className="opacity-50">{">"}</span>
+                            <span className="opacity-80 italic">{statusNote}</span>
+                        </div>
+                    </div>
                 </div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono opacity-70 leading-relaxed uppercase tracking-wide">
-                    {energyScore < 30 ? ">> REFUEL REQUIRED" : energyScore < 70 ? ">> REACTOR STABLE" : ">> MAX POWER OUTPUT"}
-                </p>
             </div>
         </div>
     );
@@ -217,8 +275,11 @@ const HabitHeartbeat = ({ habits }: { habits: Habit[] }) => {
                 <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
                     <defs>
                         <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feGaussianBlur stdDeviation="2" result="blur" />
-                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                            <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
                         </filter>
                     </defs>
                     <motion.path 
@@ -438,8 +499,8 @@ const StrategicIntelligence = ({ tasks, onNavigate }: { tasks: Task[], onNavigat
             </div>
 
             {/* Victory Points Badge */}
-            <div className="absolute top-6 right-6 flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-                <Trophy size={14} className="text-amber-400" />
+            <div className="absolute top-6 right-6 flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-[0_0_15px_rgba(251,191,36,0.3)] animate-pulse">
+                <Trophy size={14} className="text-amber-400 fill-amber-400" />
                 <span className="text-xs font-mono font-bold text-amber-200">{victoryPoints} XP</span>
             </div>
             
@@ -492,9 +553,9 @@ const Dashboard: React.FC<Props> = ({ notes, tasks, habits, journal, onNavigate 
                 {/* 3-COLUMN COMPACT LAYOUT */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pb-4 h-full">
                     
-                    {/* LEFT COLUMN: CORE REACTOR (Full Height) */}
-                    <div className="lg:col-span-1 h-[400px] lg:h-auto min-h-[400px]">
-                        <EnergyPlasma tasks={tasks} habits={habits} journal={journal} />
+                    {/* LEFT COLUMN: KINETIC RADAR (Full Height) */}
+                    <div className="lg:col-span-1 h-auto lg:h-[520px] min-h-[400px]">
+                        <KineticRadar tasks={tasks} habits={habits} journal={journal} notes={notes} />
                     </div>
 
                     {/* RIGHT COLUMN: MODULES GRID */}
