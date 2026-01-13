@@ -1716,10 +1716,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                 <div 
                                     onClick={() => setSelectedEntryId(entry.id)} 
                                     className={`relative rounded-2xl border transition-all duration-300 group cursor-pointer overflow-hidden flex flex-col
-                                        ${entry.isInsight 
-                                            ? 'bg-gradient-to-br from-violet-50/80 via-fuchsia-50/50 to-white dark:from-violet-900/20 dark:via-fuchsia-900/10 dark:to-[#1e293b] border-violet-200/50 dark:border-violet-800/30 shadow-sm' 
-                                            : `${getJournalColorClass(entry.color)} border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md`
-                                        }
+                                        ${getJournalColorClass(entry.color)} border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md
                                     `}
                                 >
                                     {/* Cover Image - Top Full Width */}
@@ -1738,21 +1735,13 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             <div className="hidden md:block absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px bg-slate-200/50 dark:bg-slate-700/50" />
                                             
                                             {/* Date Content - On top of line */}
-                                            <div className={`relative z-10 flex flex-col items-center gap-2 p-2 rounded-xl backdrop-blur-sm shadow-sm border border-slate-100/50 dark:border-slate-800/50
-                                                ${entry.isInsight ? 'bg-violet-50/50 dark:bg-violet-900/20' : 'bg-white/50 dark:bg-slate-900/50'}
-                                            `}>
+                                            <div className={`relative z-10 flex flex-col items-center gap-2 p-2 rounded-xl backdrop-blur-sm shadow-sm border border-slate-100/50 dark:border-slate-800/50 bg-white/50 dark:bg-slate-900/50`}>
                                                 <div className="text-center leading-none">
-                                                    <span className="font-mono text-xl font-bold text-slate-700 dark:text-slate-300 block">{tDate.day}</span>
+                                                    <span className="font-mono text-xl font-bold text-slate-400 dark:text-slate-500 block">{tDate.day}</span>
                                                     <span className="font-mono text-[9px] text-slate-400 uppercase font-bold tracking-wider">{tDate.month}</span>
                                                 </div>
                                                 
-                                                {entry.isInsight ? (
-                                                    <div className="text-violet-500">
-                                                        <Gem size={14} strokeWidth={2} className="fill-current/20" />
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 border border-white dark:border-slate-800" />
-                                                )}
+                                                <div className={`w-2 h-2 rounded-full border border-white dark:border-slate-800 transition-all duration-500 ${entry.isInsight ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse' : 'bg-slate-300 dark:bg-slate-600'}`} />
                                             </div>
 
                                             {/* Mobile Extra Info */}
@@ -1769,22 +1758,24 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                                     <h3 className="font-sans text-lg font-bold text-slate-900 dark:text-slate-100 leading-tight">{entry.title}</h3>
                                                 ) : <div />}
                                                 
-                                                <div className="flex items-center gap-2 -mt-1 ml-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center gap-2 -mt-1 ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                                     {!isEditing && (
-                                                        <button 
-                                                            onClick={() => toggleInsight(entry)} 
-                                                            className={`p-1.5 rounded-lg transition-all ${
-                                                                entry.isInsight 
-                                                                ? "text-violet-600 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/20" 
-                                                                : "text-slate-300 hover:text-slate-500 dark:hover:text-slate-400"
-                                                            }`}
-                                                        >
-                                                            <Gem 
-                                                                size={16} 
-                                                                strokeWidth={1.5} 
-                                                                className={entry.isInsight ? "fill-violet-200/50" : "fill-transparent"} 
-                                                            />
-                                                        </button>
+                                                        <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
+                                                            <button 
+                                                                onClick={() => toggleInsight(entry)} 
+                                                                className={`p-1.5 rounded-lg transition-all ${
+                                                                    entry.isInsight 
+                                                                    ? "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20" 
+                                                                    : "text-slate-300 hover:text-slate-500 dark:hover:text-slate-400"
+                                                                }`}
+                                                            >
+                                                                <Gem 
+                                                                    size={16} 
+                                                                    strokeWidth={1.5} 
+                                                                    className={entry.isInsight ? "fill-indigo-200/50" : "fill-transparent"} 
+                                                                />
+                                                            </button>
+                                                        </Tooltip>
                                                     )}
                                                 </div>
                                             </div>
@@ -2104,16 +2095,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
                                     <div className="flex justify-between items-center">
                                         <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="left" direction="up" />
-                                        
-                                        {!editingId && (
-                                            <button 
-                                                onClick={() => toggleInsight(selectedEntry)} 
-                                                className={`font-mono text-[10px] uppercase tracking-widest transition-colors flex items-center gap-2 ${selectedEntry.isInsight ? 'text-violet-500' : 'text-slate-300 hover:text-slate-500'}`}
-                                            >
-                                                <Gem size={12} className={selectedEntry.isInsight ? "fill-current" : ""} />
-                                                {selectedEntry.isInsight ? "Insight" : "Mark Insight"}
-                                            </button>
-                                        )}
                                     </div>
                                 </div>
                             </div>
