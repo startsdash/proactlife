@@ -1757,7 +1757,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             {/* Header Actions (Insight/Edit) */}
                                             {entry.title ? (
                                                 <div className="flex justify-between items-start mb-4">
-                                                    <h3 className="font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 leading-tight">{entry.title}</h3>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 leading-tight break-words">{entry.title}</h3>
+                                                    </div>
                                                     
                                                     <div className="flex items-center gap-2 -mt-1 ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                                         {!isEditing && (
