@@ -1604,7 +1604,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
                                             <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input ref={creationFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCreationImageUpload} /><ImageIcon size={16} /></label></Tooltip>
                                             {activeImage && creationContentEditableRef.current && creationContentEditableRef.current.contains(activeImage) && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
-                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                        </div>
+                                        {/* Right Container for Styling */}
+                                        <div className="flex items-center gap-1 shrink-0 ml-2">
                                             <div className="relative">
                                                 <Tooltip content="Обложка">
                                                     <button 
@@ -1670,7 +1672,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             {isAnalyzing ? (
                                                 <div className="relative w-4 h-4 flex items-center justify-center">
                                                     <Loader2 size={16} className="animate-spin absolute inset-0" />
-                                                    <div className="w-2 h-2 bg-current rounded-[1px] relative z-10" />
+                                                    <div className="w-2 h-2 bg-current rounded-[1px]" relative z-10" />
                                                 </div>
                                             ) : (
                                                 <Sparkles size={18} strokeWidth={1.5} />
@@ -1839,8 +1841,8 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             )}
                                             
                                             {/* Footer Spheres */}
-                                            <div className="mt-4 flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                                                <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} align="right" direction="up" />
+                                            <div className="mt-4 flex justify-start items-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                                <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} align="left" direction="up" />
                                             </div>
                                         </div>
                                     </div>
@@ -2028,7 +2030,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
                                             <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
                                             {activeImage && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
-                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                        </div>
+                                        {/* Right Container for Styling */}
+                                        <div className="flex items-center gap-1 shrink-0">
                                             <div className="relative">
                                                 <Tooltip content="Обложка">
                                                     <button 
@@ -2114,7 +2118,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                         </div>
                                     )}
 
-                                    <div className="flex justify-between items-center">
+                                    <div className="flex justify-start items-center">
                                         <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="left" direction="up" />
                                     </div>
                                 </div>
