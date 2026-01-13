@@ -16,7 +16,8 @@ import {
   ArrowRight,
   Sparkles,
   Layout,
-  Dumbbell
+  Dumbbell,
+  RotateCw as RotateCwIcon // Renamed to avoid collision with helper if needed, or just use as is
 } from 'lucide-react';
 import { SPHERES } from '../constants';
 
@@ -47,10 +48,8 @@ const EnergyPulsar = ({ tasks, habits, journal }: { tasks: Task[], habits: Habit
     const todayStr = getLocalDateKey(new Date());
     
     // Metrics
-    const completedTasksToday = tasks.filter(t => t.column === 'done' && getLocalDateKey(new Date(t.createdAt)) === todayStr).length; // Approximation for demo, ideally track completionDate
-    // Better approximation for tasks done today: check 'done' column tasks (assuming simplified logic for now or needs completion timestamp in Task)
-    // For this visual, let's use: Active Tasks Completed Ratio (Total Done / Total Tasks) or Daily Goal proxy.
-    // Let's use: Tasks in 'done' column vs Total.
+    const completedTasksToday = tasks.filter(t => t.column === 'done' && getLocalDateKey(new Date(t.createdAt)) === todayStr).length; 
+    
     const totalTasks = tasks.filter(t => !t.isArchived).length;
     const doneTasks = tasks.filter(t => t.column === 'done' && !t.isArchived).length;
     const taskRate = totalTasks > 0 ? (doneTasks / totalTasks) : 0;
@@ -134,7 +133,7 @@ const EnergyPulsar = ({ tasks, habits, journal }: { tasks: Task[], habits: Habit
     );
 };
 
-// 2. HABIT EQUALIZER
+// 2. HABIT EQUALIZER (UPDATED: Kinetic Reactors)
 const HabitEqualizer = ({ habits }: { habits: Habit[] }) => {
     // Last 7 days
     const days = Array.from({ length: 7 }, (_, i) => {
@@ -146,15 +145,15 @@ const HabitEqualizer = ({ habits }: { habits: Habit[] }) => {
     const activeHabits = habits.filter(h => !h.isArchived);
     
     return (
-        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 flex flex-col`}>
-            <div className="flex justify-between items-center mb-6">
+        <div className={`h-full ${GLASS_PANEL} rounded-[32px] p-6 flex flex-col relative`}>
+            <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
-                    <Flame size={16} className="text-orange-500" />
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Ритм привычек (Неделя)</span>
+                    <Flame size={16} className="text-orange-500 animate-pulse" />
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Ритм привычек</span>
                 </div>
             </div>
 
-            <div className="flex-1 flex items-end justify-between gap-2 md:gap-4 px-2">
+            <div className="flex-1 flex items-end justify-between gap-3 px-1">
                 {days.map((day, i) => {
                     let completed = 0;
                     activeHabits.forEach(h => {
@@ -163,24 +162,76 @@ const HabitEqualizer = ({ habits }: { habits: Habit[] }) => {
                     const total = activeHabits.length;
                     const percent = total > 0 ? (completed / total) : 0;
                     const isToday = i === 6;
+                    
+                    // Kinetic Energy Colors
+                    let gradient = "from-slate-300 to-slate-200 dark:from-slate-700 dark:to-slate-600";
+                    
+                    if (percent > 0) {
+                        gradient = "from-orange-500 via-amber-500 to-yellow-400";
+                    }
+                    if (percent >= 0.8) {
+                        gradient = "from-rose-600 via-orange-500 to-amber-300";
+                    }
 
                     return (
-                        <div key={day.key} className="flex-1 flex flex-col items-center gap-2 group">
-                            <div className="w-full relative h-24 md:h-32 bg-slate-100 dark:bg-slate-800/50 rounded-xl overflow-hidden flex items-end">
-                                <motion.div 
-                                    className={`w-full ${isToday ? 'bg-gradient-to-t from-orange-500 to-amber-300' : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-orange-400/70'} transition-colors`}
-                                    initial={{ height: 0 }}
-                                    animate={{ height: `${percent * 100}%` }}
-                                    transition={{ duration: 0.8, delay: i * 0.1 }}
-                                />
+                        <div key={day.key} className="flex-1 h-full flex flex-col items-center gap-2 group min-w-[20px]">
+                            {/* Reactor Tube */}
+                            <div className="relative w-full h-full min-h-[60px] bg-slate-100/50 dark:bg-slate-800/30 rounded-full border border-slate-200/50 dark:border-white/5 overflow-hidden backdrop-blur-sm shadow-inner transition-all duration-500 hover:border-white/20">
+                                {/* Inner Glow (Container) */}
+                                <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-transparent dark:from-black/20 pointer-events-none" />
+                                
+                                {/* Liquid Fill */}
+                                <div className="absolute bottom-0 left-0 right-0 top-0 flex items-end p-[3px]">
+                                    <motion.div 
+                                        className={`w-full rounded-full bg-gradient-to-t ${gradient} relative overflow-hidden`}
+                                        initial={{ height: 0 }}
+                                        animate={{ height: `${percent * 100}%` }}
+                                        transition={{ duration: 1.2, type: "spring", bounce: 0, delay: i * 0.05 }}
+                                    >
+                                        {/* Pulse Core if active */}
+                                        {percent > 0 && (
+                                            <motion.div 
+                                                className="absolute inset-0 bg-white/30 blur-md"
+                                                animate={{ opacity: [0, 0.5, 0] }}
+                                                transition={{ duration: 2 + Math.random(), repeat: Infinity, ease: "easeInOut" }}
+                                            />
+                                        )}
+                                        
+                                        {/* Bubbles / Energy Particles (CSS) */}
+                                        {percent > 0.5 && (
+                                            <div className="absolute inset-0 w-full h-full opacity-50">
+                                                <div className="absolute bottom-0 left-1/4 w-1 h-1 bg-white rounded-full animate-[rise_2s_infinite_linear]" />
+                                                <div className="absolute bottom-0 right-1/4 w-1 h-1 bg-white rounded-full animate-[rise_3s_infinite_linear_0.5s]" />
+                                            </div>
+                                        )}
+
+                                        {/* Top surface highlight */}
+                                        <div className="absolute top-0 left-1 right-1 h-[2px] bg-white/60 rounded-full blur-[1px]" />
+                                    </motion.div>
+                                </div>
+                                
+                                {/* Glass Reflection */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent pointer-events-none rounded-full" />
                             </div>
-                            <span className={`text-[9px] font-bold uppercase tracking-wider ${isToday ? 'text-orange-500' : 'text-slate-400'}`}>
-                                {day.date.toLocaleDateString('ru-RU', { weekday: 'short' })}
-                            </span>
+
+                            {/* Label */}
+                            <div className="text-center h-4 flex items-center justify-center">
+                                <span className={`text-[9px] font-bold uppercase tracking-wider transition-colors ${isToday ? 'text-orange-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-slate-400'}`}>
+                                    {day.date.toLocaleDateString('ru-RU', { weekday: 'short' })}
+                                </span>
+                            </div>
                         </div>
                     );
                 })}
             </div>
+            
+            <style>{`
+                @keyframes rise {
+                    0% { transform: translateY(100%); opacity: 0; }
+                    50% { opacity: 1; }
+                    100% { transform: translateY(-200%); opacity: 0; }
+                }
+            `}</style>
         </div>
     );
 };
@@ -554,4 +605,3 @@ function RotateCw({size, className}: {size:number, className?: string}) {
 }
 
 export default Dashboard;
-    
