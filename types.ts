@@ -126,6 +126,7 @@ export interface JournalEntry {
   title?: string;
   content: string;
   linkedTaskId?: string; 
+  linkedNoteId?: string; // Added to link back to notes
   aiFeedback?: string;
   mentorId?: string;
   spheres?: string[];
@@ -135,7 +136,7 @@ export interface JournalEntry {
   
   mood?: number;
   moodTags?: string[];
-  isArchived?: boolean; // NEW: Support for archiving journal entries
+  isArchived?: boolean; 
 }
 
 export interface MentorAnalysis {
@@ -228,7 +229,7 @@ export interface AppState {
   mentorAnalyses: MentorAnalysis[]; 
   config: AppConfig; 
   user?: UserProfile; 
-  profileConfig?: UserProfileConfig; // NEW
+  profileConfig?: UserProfileConfig; 
 }
 
 export type SyncStatus = 'disconnected' | 'syncing' | 'synced' | 'error';

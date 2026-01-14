@@ -1,13 +1,14 @@
 
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
-import { JournalEntry, Task, AppConfig, MentorAnalysis } from '../types';
+import { JournalEntry, Task, AppConfig, MentorAnalysis, Note } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem, PenTool, RotateCcw, RotateCw, Bold, Italic, Eraser, Image as ImageIcon, Layout, Palette, ArrowRight, RefreshCw, Upload, Shuffle, Globe } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem, PenTool, RotateCcw, RotateCw, Bold, Italic, Eraser, Image as ImageIcon, Layout, Palette, ArrowRight, RefreshCw, Upload, Shuffle, Globe, StickyNote } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
@@ -16,6 +17,7 @@ interface Props {
   entries: JournalEntry[];
   mentorAnalyses: MentorAnalysis[];
   tasks: Task[];
+  notes: Note[];
   config: AppConfig;
   addEntry: (entry: JournalEntry) => void;
   deleteEntry: (id: string) => void;
@@ -25,6 +27,7 @@ interface Props {
   initialTaskId?: string | null;
   onClearInitialTask?: () => void;
   onNavigateToTask?: (taskId: string) => void;
+  onNavigateToNote?: (noteId: string) => void;
 }
 
 const colors = [
@@ -479,7 +482,7 @@ const ColorPickerPopover: React.FC<{
 
 // --- LITERARY TYPOGRAPHY COMPONENTS (DEFAULT) ---
 const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-inherit pl-0 ml-0" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
     a: ({node, ...props}: any) => <a className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer underline-offset-4 decoration-slate-300 dark:decoration-slate-600 transition-colors font-sans text-sm font-medium relative z-20 break-all" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
@@ -913,7 +916,7 @@ const StaticChallengeRenderer: React.FC<{
     return <>{renderedParts}</>;
 };
 
-const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addEntry, deleteEntry, updateEntry, addMentorAnalysis, deleteMentorAnalysis, initialTaskId, onClearInitialTask, onNavigateToTask }) => {
+const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, config, addEntry, deleteEntry, updateEntry, addMentorAnalysis, deleteMentorAnalysis, initialTaskId, onClearInitialTask, onNavigateToTask, onNavigateToNote }) => {
   const [hasCreationContent, setHasCreationContent] = useState(false);
   const [linkedTaskId, setLinkedTaskId] = useState<string>('');
   const [selectedSpheres, setSelectedSpheres] = useState<string[]>([]);
@@ -986,6 +989,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
 
   const selectedEntry = useMemo(() => entries.find(e => e.id === selectedEntryId), [entries, selectedEntryId]);
   const selectedLinkedTask = useMemo(() => selectedEntry ? tasks.find(t => t.id === selectedEntry.linkedTaskId) : null, [selectedEntry, tasks]);
+  const selectedLinkedNote = useMemo(() => selectedEntry ? notes.find(n => n.id === selectedEntry.linkedNoteId) : null, [selectedEntry, notes]);
 
   useEffect(() => {
     if (initialTaskId) {
@@ -1709,6 +1713,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                         const mentor = config.mentors.find(m => m.id === entry.mentorId);
                         const isEditing = editingId === entry.id;
                         const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
+                        const linkedNote = notes.find(n => n.id === entry.linkedNoteId);
                         const linkUrl = findFirstUrl(entry.content);
                         const tDate = formatTimelineDate(entry.date);
                         
@@ -1817,19 +1822,36 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                             </div>
                                             {linkUrl && <LinkPreview url={linkUrl} />}
 
-                                            {/* Context Link */}
-                                            {linkedTask && !isEditing && (
-                                                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
-                                                        className="font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
-                                                    >
-                                                        <Link size={10} className="shrink-0" />
-                                                        <span className="truncate max-w-full block">
-                                                            CONTEXT: {linkedTask.content}
-                                                        </span>
-                                                    </button>
-                                                </div>
+                                            {/* Context Links */}
+                                            {!isEditing && (
+                                                <>
+                                                    {linkedTask && (
+                                                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
+                                                                className="font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                                                            >
+                                                                <Link size={10} className="shrink-0" />
+                                                                <span className="truncate max-w-full block">
+                                                                    CONTEXT: {linkedTask.content}
+                                                                </span>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {linkedNote && (
+                                                        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); onNavigateToNote?.(linkedNote.id); }}
+                                                                className="font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                                                            >
+                                                                <StickyNote size={10} className="shrink-0" />
+                                                                <span className="truncate max-w-full block">
+                                                                    NOTE: {linkedNote.title || linkedNote.content}
+                                                                </span>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
 
                                             {entry.aiFeedback && (
@@ -2074,6 +2096,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                                         onBlur={saveSelection} 
                                         onMouseUp={saveSelection} 
                                         onKeyUp={saveSelection} 
+                                        onScroll={() => setActiveImage(null)} 
                                         className="w-full flex-1 bg-transparent p-1 text-base leading-relaxed text-slate-800 dark:text-slate-200 outline-none overflow-y-auto font-serif custom-scrollbar-ghost [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
                                     />
                                 </div>
@@ -2086,95 +2109,34 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, config, addE
                         ) : (
                             <div className="flex-1 flex flex-col">
                                 <div className="flex-1 font-serif text-[#2F3437] dark:text-slate-200 leading-[1.8] text-base">
-                                    <ReactMarkdown components={markdownComponents} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                    <ReactMarkdown 
+                                        components={markdownComponents} 
+                                        urlTransform={allowDataUrls} 
+                                        remarkPlugins={[remarkGfm]} 
+                                        rehypePlugins={[rehypeRaw]}
+                                    >
                                         {selectedEntry.content.replace(/\n/g, '  \n')}
                                     </ReactMarkdown>
                                 </div>
-                                {(() => { const url = findFirstUrl(selectedEntry.content); return url ? <LinkPreview url={url} /> : null; })()}
-
                                 {selectedEntry.aiFeedback && (
-                                    <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/5">
-                                         <div className="flex items-center gap-2 mb-3">
-                                            <Sparkles size={12} className="text-indigo-400" />
-                                            <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400">Ментор</span>
-                                         </div>
-                                         <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed font-serif">
+                                    <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-4 mt-6 border border-slate-100 dark:border-slate-700/50">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="p-1 rounded bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                                                <RenderIcon name="User" className="w-3 h-3" />
+                                            </div>
+                                            <span className="text-xs font-bold uppercase text-indigo-600 dark:text-indigo-400">Наставник</span>
+                                        </div>
+                                        <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed font-serif">
                                             <ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown>
-                                         </div>
+                                        </div>
                                     </div>
                                 )}
-                                
-                                {/* AETHER FOOTER REPLICA */}
-                                <div className="mt-6 pt-4 border-t border-black/5 dark:border-white/5 flex flex-col gap-4 shrink-0">
-                                    {selectedLinkedTask && !editingId && (
-                                        <div className="font-mono text-[10px] text-slate-400 flex items-center gap-2 group/ctx">
-                                            <span className="opacity-50">[ CONTEXT: </span>
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(selectedLinkedTask.id); }}
-                                                className="hover:text-indigo-500 underline decoration-dotted underline-offset-4 truncate max-w-[200px] transition-colors"
-                                            >
-                                                {selectedLinkedTask.content}
-                                            </button>
-                                            <span className="opacity-50"> ]</span>
-                                        </div>
-                                    )}
-
-                                    <div className="flex justify-start items-center">
-                                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="left" direction="up" />
-                                    </div>
-                                </div>
                             </div>
                         )}
                     </div>
                 </motion.div>
             </div>
         </AnimatePresence>
-      )}
-
-      {viewingTask && (
-        <div className="fixed inset-0 z-[110] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setViewingTask(null)}>
-            <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-between items-start mb-6"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">Контекст мысли</h3><button onClick={() => setViewingTask(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={24} strokeWidth={1} /></button></div>
-                <div className="space-y-4">
-                    <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
-                        <div className="flex justify-between items-center mb-3"><span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${viewingTask.column === 'done' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.column === 'done' ? <CheckCircle2 size={12} strokeWidth={1} /> : <Circle size={12} strokeWidth={1} />}{viewingTask.column === 'done' ? 'Сделано' : 'В процессе'}{viewingTask.isArchived && " (В архиве)"}</span></div>
-                        <div className="text-sm text-slate-800 dark:text-slate-200 font-normal leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.content}</ReactMarkdown></div>
-                        {viewingTask.spheres && viewingTask.spheres.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Сферы</label>
-                                <SphereBadgeList spheres={viewingTask.spheres} />
-                            </div>
-                        )}
-                    </div>
-                    {viewingTask.description && (<CollapsibleSection title="Источник" icon={<FileText size={14}/>}><div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><ReactMarkdown components={markdownComponents}>{viewingTask.description}</ReactMarkdown></div></CollapsibleSection>)}
-                    {viewingTask.activeChallenge && (
-                      <CollapsibleSection title={viewingTask.isChallengeCompleted ? "Финальный челлендж" : "Активный челлендж"} icon={<Zap size={14}/>}>
-                         <div className={`p-3 rounded-lg border ${viewingTask.isChallengeCompleted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800'}`}>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${viewingTask.isChallengeCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>{viewingTask.isChallengeCompleted ? 'Статус: Выполнен' : 'Статус: Активен'}</span>
-                            <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200"><StaticChallengeRenderer content={viewingTask.activeChallenge} mode={viewingTask.isChallengeCompleted ? 'history' : 'draft'} /></div>
-                         </div>
-                      </CollapsibleSection>
-                    )}
-                     {viewingTask.challengeHistory && viewingTask.challengeHistory.length > 0 && (
-                        <CollapsibleSection title="История Челленджей" icon={<History size={14}/>}>
-                            <div className="space-y-4">
-                                {viewingTask.challengeHistory.map((challenge, index) => (
-                                   <div key={index} className="py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
-                                      <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-200">
-                                         <StaticChallengeRenderer content={challenge} mode="history" />
-                                      </div>
-                                   </div>
-                                ))}
-                             </div>
-                        </CollapsibleSection>
-                     )}
-                    {viewingTask.consultationHistory && viewingTask.consultationHistory.length > 0 && (
-                       <CollapsibleSection title="История консультаций" icon={<MessageCircle size={14}/>}><ul className="space-y-4">{viewingTask.consultationHistory.map((consultation, index) => (<li key={index} className="text-sm text-slate-900 dark:text-slate-200 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0"><ReactMarkdown components={markdownComponents}>{consultation}</ReactMarkdown></li>))}</ul></CollapsibleSection>
-                    )}
-                </div>
-                <div className="mt-8 flex justify-end"><button onClick={() => setViewingTask(null)} className="px-6 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-indigo-700 font-medium text-sm">Закрыть</button></div>
-            </div>
-        </div>
       )}
     </div>
   );

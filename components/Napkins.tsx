@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -30,6 +31,8 @@ interface Props {
   deleteSketchItem?: (id: string) => void;
   updateSketchItem?: (item: SketchItem) => void;
   defaultTab?: 'inbox' | 'library';
+  initialNoteId?: string | null;
+  onClearInitialNote?: () => void;
 }
 
 const colors = [
@@ -715,7 +718,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 id: Date.now().toString(),
                 date: Date.now(),
                 content: note.content,
-                isInsight: false
+                isInsight: false,
+                linkedNoteId: note.id
             };
             handlers.onAddJournalEntry(entry);
         }
@@ -855,7 +859,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -909,6 +913,16 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab as any);
   }, [defaultTab]);
+
+  useEffect(() => {
+    if (initialNoteId) {
+      const note = notes.find(n => n.id === initialNoteId);
+      if (note) {
+        setSelectedNote(note);
+      }
+      onClearInitialNote?.();
+    }
+  }, [initialNoteId, notes, onClearInitialNote]);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
       const previous = scrollY.getPrevious() || 0;
