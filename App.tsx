@@ -98,6 +98,7 @@ const App: React.FC = () => {
   const [hasLoadedFromCloud, setHasLoadedFromCloud] = useState(false); // Guard state
   const [journalContextTaskId, setJournalContextTaskId] = useState<string | null>(null); // Context for navigation (Journal)
   const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
+  const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null); // Context for navigation (Napkins)
   
   // INVITE CODE LOGIC
   const [inviteCodeInput, setInviteCodeInput] = useState('');
@@ -326,6 +327,11 @@ const App: React.FC = () => {
     handleNavigate(Module.KANBAN);
   };
 
+  const handleNavigateToNote = (noteId: string) => {
+    setNapkinsContextNoteId(noteId);
+    handleNavigate(Module.NAPKINS);
+  };
+
   const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
   const updateProfileConfig = (newProfileConfig: UserProfileConfig) => setData(p => ({ ...p, profileConfig: newProfileConfig }));
   
@@ -459,6 +465,8 @@ const App: React.FC = () => {
             onAddTask={addTask} 
             onAddJournalEntry={addJournalEntry}
             addSketchItem={addSketchItem} 
+            initialNoteId={napkinsContextNoteId}
+            onClearInitialNote={() => setNapkinsContextNoteId(null)}
           />
       )}
       
@@ -482,7 +490,7 @@ const App: React.FC = () => {
       {module === Module.KANBAN && <Kanban tasks={data.tasks.filter(t => !t.isArchived)} journalEntries={data.journal.filter(j => !j.isArchived)} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={archiveTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
       {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
-      {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} />}
+      {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} notes={data.notes} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} onNavigateToNote={handleNavigateToNote} />}
       {module === Module.MOODBAR && <Moodbar entries={data.journal.filter(j => !j.isArchived)} onAddEntry={addJournalEntry} />}
       
       {module === Module.ARCHIVE && (
