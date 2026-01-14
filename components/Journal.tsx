@@ -1976,7 +1976,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                             {!editingId && (
                                 <>
                                     <Tooltip content="Редактировать"><button onClick={() => startEditing(selectedEntry)} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={18} /></button></Tooltip>
-                                    <Tooltip content="В архив"><button onClick={() => { if(window.confirm('Отправить запись в архив?')) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18} /></button></Tooltip>
+                                    <Tooltip content="Отправить в архив"><button onClick={() => { if(window.confirm('Отправить в архив?')) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18} /></button></Tooltip>
                                 </>
                             )}
                             <button onClick={(e) => handleCloseModal(e)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors ml-1"><X size={20} /></button>
