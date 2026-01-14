@@ -663,10 +663,25 @@ const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }
         <div className="relative">
             <button 
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="p-1.5 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 transition-colors opacity-0 group-hover:opacity-100"
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors opacity-0 group-hover:opacity-100"
                 title="Сфера"
             >
-                <Target size={14} strokeWidth={1.5} />
+                {task.spheres && task.spheres.length > 0 ? (
+                    <div className="flex -space-x-1.5">
+                        {task.spheres.map(s => {
+                            const sp = SPHERES.find(x => x.id === s);
+                            return sp ? (
+                                <div 
+                                    key={s} 
+                                    className={`w-3 h-3 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
+                                    style={{ borderWidth: '1.5px' }}
+                                />
+                            ) : null;
+                        })}
+                    </div>
+                ) : (
+                    <Target size={14} strokeWidth={1.5} className="text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400" />
+                )}
             </button>
             
             {isOpen && (
@@ -2047,6 +2062,69 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
             </AnimatePresence>
         </div>
     </div>
+    );
+  };
+
+  // --- CARD SPHERE SELECTOR COMPONENT (UPDATED) ---
+  const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }> = ({ task, updateTask }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    const toggleSphere = (sphereId: string) => {
+        const current = task.spheres || [];
+        const newSpheres = current.includes(sphereId) 
+            ? current.filter(s => s !== sphereId)
+            : [...current, sphereId];
+        updateTask({ ...task, spheres: newSpheres });
+    };
+
+    return (
+        <div className="relative">
+            <button 
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors opacity-0 group-hover:opacity-100"
+                title="Сфера"
+            >
+                {task.spheres && task.spheres.length > 0 ? (
+                    <div className="flex -space-x-1.5">
+                        {task.spheres.map(s => {
+                            const sp = SPHERES.find(x => x.id === s);
+                            return sp ? (
+                                <div 
+                                    key={s} 
+                                    className={`w-3 h-3 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
+                                    style={{ borderWidth: '1.5px' }}
+                                />
+                            ) : null;
+                        })}
+                    </div>
+                ) : (
+                    <Target size={14} strokeWidth={1.5} className="text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400" />
+                )}
+            </button>
+            
+            {isOpen && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
+                    <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
+                        {SPHERES.map(s => {
+                            const isSelected = task.spheres?.includes(s.id);
+                            const Icon = ICON_MAP[s.icon];
+                            return (
+                                <button
+                                    key={s.id}
+                                    onClick={() => toggleSphere(s.id)}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-[#2F3437] dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                >
+                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-[#6B6E70]'} />}
+                                    <span className="flex-1">{s.label}</span>
+                                    {isSelected && <Check size={12} className="text-indigo-500" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
+        </div>
     );
   };
 
