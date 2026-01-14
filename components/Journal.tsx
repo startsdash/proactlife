@@ -7,7 +7,7 @@ import remarkGfm from 'remark-gfm';
 import { JournalEntry, Task, AppConfig, MentorAnalysis, Note } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
-import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem, PenTool, RotateCcw, RotateCw, Bold, Italic, Eraser, Image as ImageIcon, Layout, Palette, ArrowRight, RefreshCw, Upload, Shuffle, Globe, StickyNote } from 'lucide-react';
+import { Book, Zap, Calendar, Trash2, ChevronDown, CheckCircle2, Circle, Link, Edit3, X, Check, ArrowDown, ArrowUp, Search, Filter, Eye, FileText, Plus, Minus, MessageCircle, History, Kanban, Loader2, Save, Send, Target, Sparkle, Sparkles, Star, XCircle, Gem, PenTool, RotateCcw, RotateCw, Bold, Italic, Eraser, Image as ImageIcon, Layout, Palette, ArrowRight, RefreshCw, Upload, Shuffle, Globe, StickyNote, Unlink } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
@@ -44,6 +44,14 @@ const UNSPLASH_PRESETS = [
     'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&q=80',
     'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=400&q=80',
     'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80',
+];
+
+const MOODS = [
+    { value: 1, label: 'Ужасно', emoji: '😖', color: 'from-rose-500 to-red-600', text: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/20' },
+    { value: 2, label: 'Плохо', emoji: '😕', color: 'from-orange-400 to-red-500', text: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
+    { value: 3, label: 'Нормально', emoji: '😐', color: 'from-yellow-400 to-orange-400', text: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+    { value: 4, label: 'Хорошо', emoji: '🙂', color: 'from-teal-400 to-emerald-500', text: 'text-teal-500', bg: 'bg-teal-50 dark:bg-teal-900/20' },
+    { value: 5, label: 'Отлично', emoji: '🤩', color: 'from-indigo-400 to-purple-500', text: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-900/20' },
 ];
 
 const getJournalColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
@@ -685,127 +693,6 @@ const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => 
     );
 };
 
-const JournalEntrySphereSelector: React.FC<{ 
-    entry: JournalEntry, 
-    updateEntry: (e: JournalEntry) => void,
-    align?: 'left' | 'right',
-    direction?: 'up' | 'down'
-}> = ({ entry, updateEntry, align = 'right', direction = 'down' }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const triggerRef = useRef<HTMLButtonElement>(null);
-    const [style, setStyle] = useState<React.CSSProperties>({});
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (triggerRef.current && triggerRef.current.contains(event.target as Node)) {
-                return;
-            }
-            if ((event.target as Element).closest('.sphere-selector-dropdown')) {
-                return;
-            }
-            setIsOpen(false);
-        };
-        
-        if (isOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-            window.addEventListener('scroll', () => setIsOpen(false), true);
-            window.addEventListener('resize', () => setIsOpen(false));
-        }
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-            window.removeEventListener('scroll', () => setIsOpen(false), true);
-            window.removeEventListener('resize', () => setIsOpen(false));
-        };
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (isOpen && triggerRef.current) {
-            const rect = triggerRef.current.getBoundingClientRect();
-            const width = 192; // w-48 = 12rem = 192px
-
-            let top = direction === 'down' ? rect.bottom + 8 : rect.top - 8;
-            let left = align === 'left' ? rect.left : rect.right - width;
-
-            const newStyle: React.CSSProperties = {
-                position: 'fixed',
-                left: left,
-                zIndex: 9999,
-                minWidth: width,
-            };
-
-            if (direction === 'up') {
-                newStyle.top = rect.top - 8;
-                newStyle.transform = 'translateY(-100%)';
-            } else {
-                newStyle.top = rect.bottom + 8;
-            }
-
-            setStyle(newStyle);
-        }
-    }, [isOpen, direction, align]);
-    
-    const toggleSphere = (sphereId: string) => {
-        const current = entry.spheres || [];
-        const newSpheres = current.includes(sphereId) 
-            ? current.filter(s => s !== sphereId)
-            : [...current, sphereId];
-        updateEntry({ ...entry, spheres: newSpheres });
-    };
-
-    return (
-        <>
-            <button 
-                ref={triggerRef}
-                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="flex items-center gap-1.5 font-mono text-[9px] font-bold text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent px-2 py-1 rounded transition-colors uppercase tracking-widest"
-            >
-                {entry.spheres && entry.spheres.length > 0 ? (
-                    <div className="flex -space-x-1">
-                        {entry.spheres.map(s => {
-                            const sp = SPHERES.find(x => x.id === s);
-                            return sp ? (
-                                <div 
-                                    key={s} 
-                                    className={`w-2 h-2 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
-                                    style={{ borderWidth: '1px' }}
-                                />
-                            ) : null;
-                        })}
-                    </div>
-                ) : (
-                    <Target size={10} strokeWidth={1.5} />
-                )}
-                <span>Сфера</span>
-            </button>
-            
-            {isOpen && createPortal(
-                <div 
-                    className="sphere-selector-dropdown absolute bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5"
-                    style={style}
-                    onClick={e => e.stopPropagation()}
-                >
-                    {SPHERES.map(s => {
-                        const isSelected = entry.spheres?.includes(s.id);
-                        const Icon = ICON_MAP[s.icon];
-                        return (
-                            <button
-                                key={s.id}
-                                onClick={() => toggleSphere(s.id)}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                            >
-                                {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} strokeWidth={1} />}
-                                <span className="flex-1">{s.label}</span>
-                                {isSelected && <Check size={12} className="text-indigo-500" strokeWidth={1} />}
-                            </button>
-                        );
-                    })}
-                </div>,
-                document.body
-            )}
-        </>
-    );
-};
-
 const SphereBadgeList: React.FC<{ spheres: string[] }> = ({ spheres }) => {
     return (
         <div className="flex flex-wrap gap-2">
@@ -822,107 +709,6 @@ const SphereBadgeList: React.FC<{ spheres: string[] }> = ({ spheres }) => {
             })}
         </div>
     );
-};
-
-const CollapsibleSection: React.FC<{
-  title: string;
-  children: React.ReactNode;
-  icon?: React.ReactNode;
-  actions?: React.ReactNode;
-}> = ({ title, children, icon, actions }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden mb-3">
-      <div 
-        onClick={() => setIsOpen(!isOpen)} 
-        className="w-full flex items-center justify-between p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-      >
-        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-           {icon}
-           {title}
-        </div>
-        <div className="flex items-center gap-2">
-            {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
-            <div className="text-slate-400">
-                {isOpen ? <Minus size={14} strokeWidth={1} /> : <Plus size={14} strokeWidth={1} />}
-            </div>
-        </div>
-      </div>
-      {isOpen && (
-        <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-1 duration-200">
-           <div className="pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-sm">
-             {children}
-           </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const StaticChallengeRenderer: React.FC<{ 
-    content: string,
-    mode: 'draft' | 'history'
-}> = ({ content, mode }) => {
-    const cleanContent = content.trim().replace(/^#+\s*[^\n]*(\n+|$)/, '').trim();
-    const lines = cleanContent.split('\n');
-    const renderedParts: React.ReactNode[] = [];
-    let textBuffer = '';
-
-    const flushBuffer = (keyPrefix: string) => {
-        if (textBuffer) {
-            const trimmedBuffer = textBuffer.trim();
-            if (trimmedBuffer) {
-                renderedParts.push(
-                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 dark:text-slate-200 mb-1 last:mb-0">
-                        <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
-                    </div>
-                );
-            }
-            textBuffer = '';
-        }
-    };
-
-    lines.forEach((line, i) => {
-        const match = line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
-        if (match) {
-            flushBuffer(`line-${i}`);
-            const isChecked = match[1].toLowerCase() === 'x';
-            const label = match[2];
-            const leadingSpaces = line.search(/\S|$/);
-            const indent = leadingSpaces * 4; 
-            let Icon = Circle;
-            let iconClass = "text-slate-300 dark:text-slate-600";
-            if (isChecked) {
-                Icon = CheckCircle2;
-                iconClass = "text-emerald-500";
-            } else if (mode === 'history') {
-                Icon = XCircle;
-                iconClass = "text-red-400";
-            } else {
-                Icon = Circle;
-                iconClass = "text-slate-300 dark:text-slate-600";
-            }
-            renderedParts.push(
-                <div 
-                    key={`cb-${i}`}
-                    className="flex items-start gap-2 w-full text-left py-1 px-1 mb-0.5 cursor-default"
-                    style={{ marginLeft: `${indent}px` }}
-                >
-                    <div className={`mt-0.5 shrink-0 ${iconClass}`}>
-                        <Icon size={16} strokeWidth={1} />
-                    </div>
-                    <span className={`text-sm text-slate-700 dark:text-slate-300`}>
-                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
-                    </span>
-                </div>
-            );
-        } else {
-            textBuffer += line + '\n';
-        }
-    });
-    flushBuffer('end');
-    return <>{renderedParts}</>;
 };
 
 const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, config, addEntry, deleteEntry, updateEntry, addMentorAnalysis, deleteMentorAnalysis, initialTaskId, onClearInitialTask, onNavigateToTask, onNavigateToNote }) => {
@@ -954,7 +740,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
 
   // Edit Modal Editor State
   const editContentRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null); 
   const [editHistory, setEditHistory] = useState<string[]>(['']);
   const [editHistoryIndex, setEditHistoryIndex] = useState(0);
   const [activeImage, setActiveImage] = useState<HTMLImageElement | null>(null);
@@ -970,7 +755,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
   const [showEditColorPicker, setShowEditColorPicker] = useState(false);
   const editColorTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -997,8 +781,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
   }, [config.aiTools]);
 
   const selectedEntry = useMemo(() => entries.find(e => e.id === selectedEntryId), [entries, selectedEntryId]);
-  const selectedLinkedTask = useMemo(() => selectedEntry ? tasks.find(t => t.id === selectedEntry.linkedTaskId) : null, [selectedEntry, tasks]);
-  const selectedLinkedNote = useMemo(() => selectedEntry ? notes.find(n => n.id === selectedEntry.linkedNoteId) : null, [selectedEntry, notes]);
 
   useEffect(() => {
     if (initialTaskId) {
@@ -1174,7 +956,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
         const sel = window.getSelection();
         sel?.removeAllRanges();
         sel?.addRange(range);
-        // Only save history if specific editor called it, usually handled by caller
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1348,17 +1129,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
 
   const toggleInsight = (entry: JournalEntry) => {
       updateEntry({ ...entry, isInsight: !entry.isInsight });
-  };
-
-  const handleCloseModal = (e?: React.MouseEvent) => {
-      if (e) e.stopPropagation();
-      setSelectedEntryId(null);
-      setEditingId(null);
-  };
-
-  const RenderIcon = ({ name, className }: { name: string, className?: string }) => {
-    const Icon = ICON_MAP[name] || ICON_MAP['User'];
-    return <Icon className={className} size={14} strokeWidth={1} />;
   };
 
   const filteredEntries = entries.filter(entry => {
@@ -1719,7 +1489,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                 ) : (
                 <div className="w-full max-w-3xl mx-auto relative space-y-6">
                     {displayedEntries.map(entry => {
-                        const mentor = config.mentors.find(m => m.id === entry.mentorId);
                         const isEditing = editingId === entry.id;
                         const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
                         const linkedNote = notes.find(n => n.id === entry.linkedNoteId);
@@ -1767,7 +1536,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                         </div>
 
                                         {/* Main Content */}
-                                        <div className="flex-1 flex flex-col min-w-0 p-6 md:p-8 relative"> {/* added relative */}
+                                        <div className="flex-1 flex flex-col min-w-0 p-6 md:p-8 relative"> 
                                             {/* Header Actions (Insight/Edit) */}
                                             {entry.title ? (
                                                 <div className="flex justify-between items-start mb-4">
@@ -1810,7 +1579,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                                             >
                                                                 <Gem 
                                                                     size={16} 
-                                                                    strokeWidth={1.5} 
+                                                                    strokeWidth={1.5}
                                                                     className={entry.isInsight ? "fill-indigo-200/50" : "fill-transparent"} 
                                                                 />
                                                             </button>
@@ -1819,61 +1588,82 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                                 </div>
                                             )}
 
-                                            <div className={`font-serif text-[#2F3437] dark:text-slate-200 leading-[1.7] text-sm md:text-base flex-1 ${entry.title ? '' : 'mt-1'}`}>
-                                                <ReactMarkdown 
-                                                    components={markdownComponents} 
-                                                    urlTransform={allowDataUrls} 
-                                                    remarkPlugins={[remarkGfm]} 
-                                                    rehypePlugins={[rehypeRaw]}
-                                                >
-                                                    {entry.content.replace(/\n/g, '  \n')}
-                                                </ReactMarkdown>
+                                            {/* Content Body */}
+                                            <div className="relative text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed break-words whitespace-pre-wrap">
+                                                {isEditing ? (
+                                                    <div 
+                                                        ref={editContentRef}
+                                                        contentEditable
+                                                        suppressContentEditableWarning
+                                                        className="outline-none min-h-[100px] border-b border-indigo-200 dark:border-indigo-900/50 pb-2"
+                                                        onInput={handleEditorInput}
+                                                    />
+                                                ) : (
+                                                    <ReactMarkdown 
+                                                        components={markdownComponents} 
+                                                        urlTransform={allowDataUrls} 
+                                                        remarkPlugins={[remarkGfm]} 
+                                                        rehypePlugins={[rehypeRaw]}
+                                                    >
+                                                        {entry.content.replace(/\n/g, '  \n')}
+                                                    </ReactMarkdown>
+                                                )}
+                                                
+                                                {!isEditing && linkUrl && <LinkPreview url={linkUrl} />}
                                             </div>
-                                            {linkUrl && <LinkPreview url={linkUrl} />}
 
-                                            {/* Context Links */}
-                                            {!isEditing && (
-                                                <>
+                                            {/* Footer Info & Actions */}
+                                            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/50 flex flex-wrap items-center justify-between gap-4">
+                                                <div className="flex flex-wrap items-center gap-3">
                                                     {linkedTask && (
-                                                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                                                            <span>[ Задача: </span>
-                                                            <button 
-                                                                onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
-                                                                className="hover:text-indigo-500 transition-colors hover:underline decoration-indigo-500 underline-offset-2"
-                                                            >
-                                                                {getLinkedContentPreview(linkedTask.content)}
-                                                            </button>
-                                                            <span> ]</span>
-                                                        </div>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); if(onNavigateToTask) onNavigateToTask(linkedTask.id); }}
+                                                            className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 px-2 py-1 rounded-md hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-400 transition-colors uppercase tracking-wider"
+                                                        >
+                                                            <Kanban size={12} />
+                                                            <span className="truncate max-w-[150px]">{linkedTask.title || "Спринт"}</span>
+                                                        </button>
                                                     )}
+                                                    
                                                     {linkedNote && (
-                                                        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50 text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                                                            <span>[ Заметка: </span>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); onNavigateToNote?.(linkedNote.id); }}
-                                                                className="hover:text-indigo-500 transition-colors hover:underline decoration-indigo-500 underline-offset-2"
-                                                            >
-                                                                {getLinkedContentPreview(linkedNote.title || linkedNote.content)}
-                                                            </button>
-                                                            <span> ]</span>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); if(onNavigateToNote) onNavigateToNote(linkedNote.id); }}
+                                                            className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 px-2 py-1 rounded-md hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 transition-colors uppercase tracking-wider"
+                                                        >
+                                                            <StickyNote size={12} />
+                                                            <span>Заметка</span>
+                                                        </button>
+                                                    )}
+
+                                                    {entry.spheres && entry.spheres.length > 0 && (
+                                                        <SphereBadgeList spheres={entry.spheres} />
+                                                    )}
+
+                                                    {entry.mood && (
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                            {MOODS[entry.mood - 1]?.emoji} {MOODS[entry.mood - 1]?.label}
                                                         </div>
                                                     )}
-                                                </>
-                                            )}
-
-                                            {entry.aiFeedback && (
-                                                <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
-                                                        <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
-                                                    </div>
-                                                    <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
                                                 </div>
-                                            )}
-                                            
-                                            {/* Footer Spheres */}
-                                            <div className="mt-4 flex justify-start items-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                                                <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} align="left" direction="up" />
+
+                                                {/* Editing Actions */}
+                                                <div className="flex items-center gap-2">
+                                                    {isEditing ? (
+                                                        <>
+                                                            <button onClick={(e) => { e.stopPropagation(); saveEdit(entry); }} className="p-1.5 bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100 transition-colors"><Check size={14} /></button>
+                                                            <button onClick={(e) => { e.stopPropagation(); cancelEditing(); }} className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"><X size={14} /></button>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Tooltip content="Редактировать">
+                                                                <button onClick={(e) => { e.stopPropagation(); startEditing(entry); }} className="p-1.5 text-slate-300 hover:text-indigo-500 transition-colors rounded hover:bg-slate-50 dark:hover:bg-slate-800/50"><Edit3 size={14} /></button>
+                                                            </Tooltip>
+                                                            <Tooltip content="Удалить">
+                                                                <button onClick={(e) => { e.stopPropagation(); if(confirm('В архив?')) deleteEntry(entry.id); }} className="p-1.5 text-slate-300 hover:text-red-500 transition-colors rounded hover:bg-slate-50 dark:hover:bg-slate-800/50"><Trash2 size={14} /></button>
+                                                            </Tooltip>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1883,298 +1673,104 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                     })}
                 </div>
                 )}
-            </div>
-        </div>
+             </div>
 
-      {analysisResult && (
-          <div className="fixed inset-0 z-[120] bg-slate-200/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setAnalysisResult(null)}>
-              <div className="relative w-full max-w-2xl max-h-[85vh] rounded-[32px] overflow-hidden flex flex-col shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] animate-in zoom-in-95 duration-500 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-[40px] saturate-150 border border-white/40 dark:border-white/10" onClick={(e) => e.stopPropagation()}>
-                  
-                  {/* HOLOGRAM HEADER */}
-                  <div className="flex justify-between items-center p-8 pb-0 shrink-0">
-                      <div className="flex items-center gap-4">
-                          <Sparkles size={18} strokeWidth={1.5} className="text-indigo-500 animate-pulse duration-[3000ms] opacity-50" />
-                          <h3 className="font-sans text-xs font-bold tracking-[0.2em] uppercase text-slate-900/80 dark:text-slate-100/90">Анализ Пути</h3>
-                      </div>
-                      <button 
-                        onClick={() => setAnalysisResult(null)} 
-                        className="text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5"
-                      >
-                          <X size={20} strokeWidth={1} />
-                      </button>
-                  </div>
-
-                  {/* HOLOGRAM CONTENT */}
-                  <div className="flex-1 overflow-y-auto custom-scrollbar-ghost p-8 pt-6 pb-0">
-                      <ReactMarkdown components={HologramMarkdown}>
-                          {analysisResult}
-                      </ReactMarkdown>
-                  </div>
-
-                  {/* HOLOGRAM FOOTER */}
-                  <div className="mt-8 mb-8 flex justify-center shrink-0">
-                      <button 
-                        onClick={handleSaveAnalysis} 
-                        className="group flex items-center gap-3 px-8 py-3 rounded-full border border-slate-200/50 dark:border-slate-700/50 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-all duration-300"
-                      >
-                          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Сохранить в историю</span>
-                      </button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {showHistory && (
-          <div className="fixed inset-0 z-[120] bg-slate-200/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
-              <div className="relative w-full max-w-2xl max-h-[85vh] rounded-[32px] overflow-hidden flex flex-col shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] animate-in zoom-in-95 duration-500 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-[40px] saturate-150 border border-white/40 dark:border-white/10" onClick={(e) => e.stopPropagation()}>
-                  {/* Header */}
-                  <div className="flex justify-between items-center p-8 pb-0 shrink-0">
-                      <div className="flex items-center gap-4">
-                          <History size={18} strokeWidth={1.5} className="text-indigo-500 opacity-80" />
-                          <h3 className="font-sans text-xs font-bold tracking-[0.2em] uppercase text-slate-900/80 dark:text-slate-100/90">Архив Наставника</h3>
-                      </div>
-                      <button 
-                          onClick={() => setShowHistory(false)} 
-                          className="text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5"
-                      >
-                          <X size={20} strokeWidth={1} />
-                      </button>
-                  </div>
-
-                  {/* List */}
-                  <div className="flex-1 overflow-y-auto custom-scrollbar-ghost p-8 space-y-8">
-                      {mentorAnalyses.length === 0 ? (
-                          <div className="h-full flex flex-col items-center justify-center opacity-50">
-                              <Sparkles size={32} className="mb-4 text-slate-400" strokeWidth={1} />
-                              <p className="text-sm font-serif text-slate-500">История пуста</p>
-                          </div>
-                      ) : (
-                          mentorAnalyses.sort((a,b) => b.date - a.date).map(analysis => (
-                              <div key={analysis.id} className="group relative">
-                                  {/* Timeline Node */}
-                                  <div className="absolute -left-3 top-0 bottom-0 border-l border-indigo-500/10 dark:border-indigo-400/10"></div>
-                                  <div className="absolute -left-[17px] top-0 w-2 h-2 rounded-full bg-indigo-500/20 ring-1 ring-indigo-500/50"></div>
-
-                                  <div className="pl-6 pb-8">
-                                      <div className="flex justify-between items-baseline mb-4">
-                                          <div className="flex items-center gap-3">
-                                              <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                                                  {new Date(analysis.date).toLocaleDateString()}
-                                              </span>
-                                              <span className="h-px w-8 bg-indigo-500/20"></span>
-                                              <span className="font-sans text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                                  {analysis.mentorName}
-                                              </span>
-                                          </div>
-                                          <button 
-                                              onClick={() => { if (confirm("Удалить этот анализ?")) deleteMentorAnalysis(analysis.id); }} 
-                                              className="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                          >
-                                              <Trash2 size={14} />
-                                          </button>
-                                      </div>
-                                      
-                                      <div className="bg-white/40 dark:bg-white/5 border border-white/50 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-                                          <ReactMarkdown components={HologramMarkdown}>
-                                              {analysis.content}
-                                          </ReactMarkdown>
-                                      </div>
-                                  </div>
-                              </div>
-                          ))
-                      )}
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {selectedEntry && (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={handleCloseModal}>
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className={`w-full max-w-lg backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden ${getJournalColorClass(editingId === selectedEntry.id ? editColor : selectedEntry.color)}`}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {(editingId === selectedEntry.id ? editCover : selectedEntry.coverUrl) && (
-                        <div className="h-40 shrink-0 relative mb-6 -mx-8 -mt-8 md:-mx-10 md:-mt-10 w-[calc(100%_+_4rem)] md:w-[calc(100%_+_5rem)] group overflow-hidden">
-                            <img src={editingId === selectedEntry.id ? editCover! : selectedEntry.coverUrl!} alt="Cover" className="w-full h-full object-cover" />
-                            {editingId === selectedEntry.id && (
-                                <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100">
-                                    <X size={16} />
+             {/* ANALYSIS MODAL */}
+             <AnimatePresence>
+                {analysisResult && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 md:p-8"
+                        onClick={() => setAnalysisResult(null)}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            className="bg-white dark:bg-[#1e293b] w-full max-w-2xl max-h-full rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                                        <Sparkles size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-800 dark:text-white">Анализ Наставника</h3>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">Инсайты и паттерны</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setAnalysisResult(null)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                    <X size={20} />
                                 </button>
-                            )}
-                        </div>
-                    )}
-
-                    {/* GLASS MODAL HEADER */}
-                    <div className="flex justify-between items-start mb-4 shrink-0">
-                        <div className="flex flex-col gap-1 pr-4 w-full">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1 font-mono">
-                                {formatDate(selectedEntry.date)} <span className="opacity-50 mx-1">/</span> ID: {selectedEntry.id.slice(-4)}
                             </div>
-                            {editingId === selectedEntry.id ? (
-                                <input 
-                                    type="text" 
-                                    placeholder="Название" 
-                                    value={editTitle} 
-                                    onChange={(e) => setEditTitle(e.target.value)} 
-                                    className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full p-0 m-0 border-b border-transparent focus:border-slate-300 dark:focus:border-slate-600 transition-colors" 
-                                    autoFocus
-                                />
+                            
+                            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar-light">
+                                <div className="prose dark:prose-invert prose-sm max-w-none">
+                                    <ReactMarkdown components={HologramMarkdown}>{analysisResult}</ReactMarkdown>
+                                </div>
+                            </div>
+
+                            <div className="p-6 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-800/10 flex justify-end gap-3">
+                                <button onClick={() => setAnalysisResult(null)} className="px-6 py-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors">
+                                    Закрыть
+                                </button>
+                                <button onClick={handleSaveAnalysis} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium shadow-lg shadow-indigo-200 dark:shadow-none transition-all flex items-center gap-2">
+                                    <Save size={16} /> Сохранить
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+             </AnimatePresence>
+
+             {/* HISTORY MODAL */}
+             <AnimatePresence>
+                {showHistory && (
+                    <motion.div 
+                        initial={{ opacity: 0, x: '100%' }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: '100%' }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        className="fixed inset-y-0 right-0 z-[60] w-full max-w-md bg-white dark:bg-[#1e293b] shadow-2xl border-l border-slate-200 dark:border-slate-700 flex flex-col"
+                    >
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-center">
+                            <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                                <History size={20} className="text-slate-400" /> Архив Наставника
+                            </h3>
+                            <button onClick={() => setShowHistory(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar-light space-y-6">
+                            {mentorAnalyses.length === 0 ? (
+                                <div className="text-center text-slate-400 py-10">
+                                    <div className="mb-4 flex justify-center"><History size={48} className="opacity-20" /></div>
+                                    <p>История пуста</p>
+                                </div>
                             ) : (
-                                selectedEntry.title ? (
-                                    <h3 className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight break-words">
-                                        {selectedEntry.title}
-                                    </h3>
-                                ) : null
+                                mentorAnalyses.sort((a,b) => b.date - a.date).map(analysis => (
+                                    <div key={analysis.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-700/50 relative group">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{new Date(analysis.date).toLocaleDateString()}</div>
+                                            <button onClick={() => { if(confirm('Удалить?')) deleteMentorAnalysis(analysis.id); }} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                        <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-serif line-clamp-6 hover:line-clamp-none transition-all">
+                                            <ReactMarkdown components={markdownComponents}>{analysis.content}</ReactMarkdown>
+                                        </div>
+                                    </div>
+                                ))
                             )}
                         </div>
-                        <div className="flex items-center shrink-0 gap-1">
-                            {!editingId && (
-                                <>
-                                    <Tooltip content="Редактировать"><button onClick={() => startEditing(selectedEntry)} className="p-2 text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={16} /></button></Tooltip>
-                                    <Tooltip content="Отправить в архив"><button onClick={() => { if(confirm("Отправить в архив?")) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors"><Trash2 size={16} /></button></Tooltip>
-                                </>
-                            )}
-                            <button onClick={handleCloseModal} className="p-2 text-slate-300 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg ml-2"><X size={20}/></button>
-                        </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto custom-scrollbar-ghost min-h-0 pr-1 -mr-2 flex flex-col">
-                        {editingId === selectedEntry.id ? (
-                            <div className="flex-1 flex flex-col overflow-hidden">
-                                <div className="relative flex-1 overflow-hidden flex flex-col">
-                                    <div className="flex items-center justify-between mb-2 gap-2 shrink-0">
-                                        <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
-                                            <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
-                                            <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
-                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
-                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
-                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
-                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
-                                            <Tooltip content="Очистить"><button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
-                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
-                                            <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
-                                            {activeImage && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
-                                        </div>
-                                        {/* Right Container for Styling */}
-                                        <div className="flex items-center gap-1 shrink-0">
-                                            <div className="relative">
-                                                <Tooltip content="Обложка">
-                                                    <button 
-                                                        ref={editPickerTriggerRef}
-                                                        onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} 
-                                                        className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors ${editCover ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
-                                                    >
-                                                        <Layout size={16} />
-                                                    </button>
-                                                </Tooltip>
-                                                {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editPickerTriggerRef} />}
-                                            </div>
-                                            <div className="relative">
-                                                <Tooltip content="Фон записи">
-                                                    <button 
-                                                        ref={editColorTriggerRef}
-                                                        onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} 
-                                                        className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors ${editColor !== 'white' ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
-                                                    >
-                                                        <Palette size={16} />
-                                                    </button>
-                                                </Tooltip>
-                                                {showEditColorPicker && (
-                                                    <ColorPickerPopover
-                                                        onSelect={setEditColor}
-                                                        onClose={() => setShowEditColorPicker(false)}
-                                                        triggerRef={editColorTriggerRef}
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div 
-                                        ref={editContentRef} 
-                                        contentEditable 
-                                        onInput={handleEditorInput} 
-                                        onClick={handleEditorClick} 
-                                        onBlur={saveSelection} 
-                                        onMouseUp={saveSelection} 
-                                        onKeyUp={saveSelection} 
-                                        onScroll={() => setActiveImage(null)} 
-                                        className="w-full flex-1 bg-transparent p-1 text-base leading-relaxed text-slate-800 dark:text-slate-200 outline-none overflow-y-auto font-serif custom-scrollbar-ghost [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
-                                    />
-                                </div>
-                                
-                                <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5 shrink-0">
-                                    <button onClick={cancelEditing} className="font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">Отмена</button>
-                                    <button onClick={() => saveEdit(selectedEntry)} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold">Сохранить</button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex-1 flex flex-col">
-                                <div className="flex-1 font-serif text-[#2F3437] dark:text-slate-200 leading-[1.8] text-base">
-                                    <ReactMarkdown 
-                                        components={markdownComponents} 
-                                        urlTransform={allowDataUrls} 
-                                        remarkPlugins={[remarkGfm]} 
-                                        rehypePlugins={[rehypeRaw]}
-                                    >
-                                        {selectedEntry.content.replace(/\n/g, '  \n')}
-                                    </ReactMarkdown>
-                                </div>
-                                {selectedEntry.aiFeedback && (
-                                    <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-4 mt-6 border border-slate-100 dark:border-slate-700/50">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <div className="p-1 rounded bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
-                                                <RenderIcon name="User" className="w-3 h-3" />
-                                            </div>
-                                            <span className="text-xs font-bold uppercase text-indigo-600 dark:text-indigo-400">Наставник</span>
-                                        </div>
-                                        <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed font-serif">
-                                            <ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Modal Context Links */}
-                                {(selectedLinkedTask || selectedLinkedNote) && (
-                                    <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/50 flex flex-col gap-2">
-                                        {selectedLinkedTask && (
-                                            <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                                                <span>[ Задача: </span>
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(selectedLinkedTask.id); }}
-                                                    className="hover:text-indigo-500 transition-colors hover:underline decoration-indigo-500 underline-offset-2"
-                                                >
-                                                    {getLinkedContentPreview(selectedLinkedTask.content)}
-                                                </button>
-                                                <span> ]</span>
-                                            </div>
-                                        )}
-                                        {selectedLinkedNote && (
-                                            <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                                                <span>[ Заметка: </span>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); onNavigateToNote?.(selectedLinkedNote.id); }}
-                                                    className="hover:text-indigo-500 transition-colors hover:underline decoration-indigo-500 underline-offset-2"
-                                                >
-                                                    {getLinkedContentPreview(selectedLinkedNote.title || selectedLinkedNote.content)}
-                                                </button>
-                                                <span> ]</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </motion.div>
-            </div>
-        </AnimatePresence>
-      )}
+                    </motion.div>
+                )}
+             </AnimatePresence>
+        </div>
     </div>
   );
 };

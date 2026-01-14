@@ -454,6 +454,7 @@ const App: React.FC = () => {
       {module === Module.NAPKINS && (
           <Napkins 
             notes={data.notes.filter(n => n.status !== 'trash')} 
+            journalEntries={data.journal}
             config={visibleConfig} 
             addNote={addNote} 
             moveNoteToSandbox={moveNoteToSandbox} 
