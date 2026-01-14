@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -50,6 +49,16 @@ const UNSPLASH_PRESETS = [
 const getJournalColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 // --- HELPER FUNCTIONS ---
+
+const getLinkedContentPreview = (content: string) => {
+    let clean = content.replace(/!\[.*?\]\(.*?\)/g, '');
+    clean = clean.replace(/[#*`_]/g, ''); 
+    clean = clean.replace(/\s+/g, ' ').trim();
+    const match = clean.match(/^[^.!?]+[.!?]/);
+    let sentence = match ? match[0] : clean;
+    if (sentence.length > 50) sentence = sentence.substring(0, 50).trim() + '...';
+    return sentence;
+};
 
 const allowDataUrls = (url: string) => url;
 
@@ -1826,29 +1835,27 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                             {!isEditing && (
                                                 <>
                                                     {linkedTask && (
-                                                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                                                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                                                            <span>[ Задача: </span>
                                                             <button 
                                                                 onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
-                                                                className="font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                                                                className="hover:text-indigo-500 transition-colors hover:underline decoration-indigo-500 underline-offset-2"
                                                             >
-                                                                <Link size={10} className="shrink-0" />
-                                                                <span className="truncate max-w-full block">
-                                                                    CONTEXT: {linkedTask.content}
-                                                                </span>
+                                                                {getLinkedContentPreview(linkedTask.content)}
                                                             </button>
+                                                            <span> ]</span>
                                                         </div>
                                                     )}
                                                     {linkedNote && (
-                                                        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                                                        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50 text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                                                            <span>[ Заметка: </span>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); onNavigateToNote?.(linkedNote.id); }}
-                                                                className="font-mono text-[10px] text-[#6B6E70] dark:text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2 group/ctx w-full"
+                                                                className="hover:text-indigo-500 transition-colors hover:underline decoration-indigo-500 underline-offset-2"
                                                             >
-                                                                <StickyNote size={10} className="shrink-0" />
-                                                                <span className="truncate max-w-full block">
-                                                                    NOTE: {linkedNote.title || linkedNote.content}
-                                                                </span>
+                                                                {getLinkedContentPreview(linkedNote.title || linkedNote.content)}
                                                             </button>
+                                                            <span> ]</span>
                                                         </div>
                                                     )}
                                                 </>
@@ -2129,6 +2136,36 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                         <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed font-serif">
                                             <ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown>
                                         </div>
+                                    </div>
+                                )}
+
+                                {/* Modal Context Links */}
+                                {(selectedLinkedTask || selectedLinkedNote) && (
+                                    <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/50 flex flex-col gap-2">
+                                        {selectedLinkedTask && (
+                                            <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                                                <span>[ Задача: </span>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(selectedLinkedTask.id); }}
+                                                    className="hover:text-indigo-500 transition-colors hover:underline decoration-indigo-500 underline-offset-2"
+                                                >
+                                                    {getLinkedContentPreview(selectedLinkedTask.content)}
+                                                </button>
+                                                <span> ]</span>
+                                            </div>
+                                        )}
+                                        {selectedLinkedNote && (
+                                            <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                                                <span>[ Заметка: </span>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); onNavigateToNote?.(selectedLinkedNote.id); }}
+                                                    className="hover:text-indigo-500 transition-colors hover:underline decoration-indigo-500 underline-offset-2"
+                                                >
+                                                    {getLinkedContentPreview(selectedLinkedNote.title || selectedLinkedNote.content)}
+                                                </button>
+                                                <span> ]</span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
