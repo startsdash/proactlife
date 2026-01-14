@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -14,7 +16,6 @@ import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, Che
 
 interface Props {
   notes: Note[];
-  journalEntries: JournalEntry[];
   config: AppConfig;
   addNote: (note: Note) => void;
   moveNoteToSandbox: (id: string) => void;
@@ -654,7 +655,6 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
 interface NoteCardProps {
     note: Note;
     isArchived: boolean;
-    isLinkedToJournal?: boolean;
     handlers: {
         handleDragStart: (e: React.DragEvent, id: string) => void;
         handleDragOver: (e: React.DragEvent) => void;
@@ -671,7 +671,7 @@ interface NoteCardProps {
     }
 }
 
-const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal, handlers }) => {
+const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     const [isExiting, setIsExiting] = useState(false);
     const linkUrl = findFirstUrl(note.content);
     
@@ -835,18 +835,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                             
                             <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
                             
-                            <Tooltip content={isLinkedToJournal ? "В дневнике" : "В дневник"}>
-                                <button 
-                                    onClick={!isLinkedToJournal ? handleToJournal : undefined} 
-                                    className={`p-2 rounded-full transition-all ${
-                                        isLinkedToJournal 
-                                        ? 'text-cyan-600 dark:text-cyan-400 bg-cyan-100 dark:bg-cyan-900/30 opacity-100 cursor-default' 
-                                        : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
-                                    }`}
-                                >
-                                    <Book size={16} strokeWidth={isLinkedToJournal ? 2 : 1.5} />
-                                </button>
-                            </Tooltip>
+                            <Tooltip content="В дневник"><button onClick={handleToJournal} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Book size={16} strokeWidth={1.5} /></button></Tooltip>
                             
                             {handlers.addSketchItem && <Tooltip content="В скетчпад"><button onClick={handleToSketchpad} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Tablet size={16} strokeWidth={1.5} /></button></Tooltip>}
 
@@ -870,7 +859,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, journalEntries, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -920,9 +909,6 @@ const Napkins: React.FC<Props> = ({ notes, journalEntries, config, addNote, move
 
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
-
-  // Pre-calculate linked note IDs for performance
-  const linkedNoteIds = useMemo(() => new Set(journalEntries.map(e => e.linkedNoteId).filter(Boolean)), [journalEntries]);
 
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab as any);
@@ -1512,7 +1498,7 @@ const Napkins: React.FC<Props> = ({ notes, journalEntries, config, addNote, move
                             )}
                             {inboxNotes.length > 0 ? (
                                 <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                    {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} isLinkedToJournal={linkedNoteIds.has(note.id)} handlers={cardHandlers} />)}
+                                    {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} />)}
                                 </Masonry>
                             ) : (
                                 <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
@@ -1523,7 +1509,7 @@ const Napkins: React.FC<Props> = ({ notes, journalEntries, config, addNote, move
                         <>
                             {archivedNotes.length > 0 ? (
                                 <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                    {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} isLinkedToJournal={linkedNoteIds.has(note.id)} handlers={cardHandlers} />)}
+                                    {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} handlers={cardHandlers} />)}
                                 </Masonry>
                             ) : (
                                 <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
