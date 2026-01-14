@@ -1754,8 +1754,8 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                             {/* Date Content - On top of line */}
                                             <div className={`relative z-10 flex flex-col items-center gap-2 p-2 rounded-xl backdrop-blur-sm shadow-sm border border-slate-100/50 dark:border-slate-800/50 bg-white/50 dark:bg-slate-900/50`}>
                                                 <div className="text-center leading-none">
-                                                    <span className="font-mono text-xl font-bold text-slate-400 dark:text-slate-500 block">{tDate.day}</span>
-                                                    <span className="font-mono text-[9px] text-slate-400 uppercase font-bold tracking-wider">{tDate.month}</span>
+                                                    <span className="font-mono text-xl text-slate-400 dark:text-slate-500 block">{tDate.day}</span>
+                                                    <span className="font-mono text-[9px] text-slate-400 uppercase tracking-wider">{tDate.month}</span>
                                                 </div>
                                                 
                                                 <div className={`w-2 h-2 rounded-full border border-white dark:border-slate-800 transition-all duration-500 ${entry.isInsight ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse' : 'bg-slate-300 dark:bg-slate-600'}`} />
