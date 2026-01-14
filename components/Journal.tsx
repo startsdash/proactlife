@@ -1930,6 +1930,168 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
           </div>
       )}
 
+      {/* DETAIL VIEW & EDIT MODAL */}
+      <AnimatePresence>
+        {selectedEntry && (
+            <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => handleCloseModal(e)}>
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="w-full max-w-lg bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {(editingId === selectedEntry.id ? editCover : selectedEntry.coverUrl) && (
+                        <div className="h-40 shrink-0 relative mb-6 -mx-8 -mt-8 md:-mx-10 md:-mt-10 w-[calc(100%_+_4rem)] md:w-[calc(100%_+_5rem)] group overflow-hidden">
+                            <img src={editingId === selectedEntry.id ? editCover! : selectedEntry.coverUrl!} alt="Cover" className="w-full h-full object-cover" />
+                            {editingId === selectedEntry.id && (
+                                <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* GLASS MODAL HEADER */}
+                    <div className="flex justify-between items-start mb-6 shrink-0">
+                        <div className="flex flex-col gap-1 pr-4 w-full">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1 font-mono">
+                                {new Date(selectedEntry.date).toLocaleDateString()} <span className="opacity-50 mx-1">/</span> ID: {selectedEntry.id.slice(-4)}
+                            </div>
+                            {editingId === selectedEntry.id ? (
+                                <input 
+                                    type="text" 
+                                    placeholder="Заголовок" 
+                                    value={editTitle} 
+                                    onChange={(e) => setEditTitle(e.target.value)} 
+                                    className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full p-0 m-0 border-b border-transparent focus:border-slate-300 dark:focus:border-slate-600 transition-colors" 
+                                    autoFocus
+                                />
+                            ) : (
+                                selectedEntry.title && <h3 className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight break-words">{selectedEntry.title}</h3>
+                            )}
+                        </div>
+                        <div className="flex items-center shrink-0 gap-1">
+                            {!editingId && (
+                                <>
+                                    <Tooltip content="Редактировать"><button onClick={() => startEditing(selectedEntry)} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={18} /></button></Tooltip>
+                                    <Tooltip content="В архив"><button onClick={() => { if(window.confirm('Отправить запись в архив?')) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18} /></button></Tooltip>
+                                </>
+                            )}
+                            <button onClick={(e) => handleCloseModal(e)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors ml-1"><X size={20} /></button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto custom-scrollbar-ghost min-h-0 pr-1 -mr-2">
+                        {editingId === selectedEntry.id ? (
+                            <div className="flex flex-col animate-in fade-in duration-200 relative z-10 h-full">
+                                <div className="flex items-center justify-between mb-4 gap-2">
+                                    <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
+                                        <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
+                                        <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
+                                        <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                        <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
+                                        <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
+                                        <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                        <Tooltip content="Очистить"><button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
+                                        <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                        <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <div className="relative">
+                                            <Tooltip content="Обложка">
+                                                <button 
+                                                    ref={editPickerTriggerRef}
+                                                    onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} 
+                                                    className={`p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors ${editCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}
+                                                >
+                                                    <Layout size={16} />
+                                                </button>
+                                            </Tooltip>
+                                            {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editPickerTriggerRef} />}
+                                        </div>
+                                        <div className="relative">
+                                            <Tooltip content="Фон записи">
+                                                <button 
+                                                    ref={editColorTriggerRef}
+                                                    onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} 
+                                                    className={`p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors ${editColor !== 'white' ? 'text-indigo-500' : ''}`}
+                                                >
+                                                    <Palette size={16} />
+                                                </button>
+                                            </Tooltip>
+                                            {showEditColorPicker && <ColorPickerPopover onSelect={setEditColor} onClose={() => setShowEditColorPicker(false)} triggerRef={editColorTriggerRef} />}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div 
+                                    ref={editContentRef} 
+                                    contentEditable 
+                                    suppressContentEditableWarning={true}
+                                    style={{ whiteSpace: 'pre-wrap' }}
+                                    onInput={handleEditorInput} 
+                                    onClick={handleEditorClick}
+                                    className="w-full flex-1 bg-transparent rounded-none p-0 text-base text-slate-700 dark:text-slate-300 border-none outline-none font-serif leading-relaxed custom-scrollbar-ghost [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
+                                    data-placeholder="Твои мысли..." 
+                                />
+                                <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
+                                    <JournalEntrySphereSelector entry={selectedEntry} updateEntry={(e) => { updateEntry(e); setSelectedSpheres(e.spheres || []); }} align="left" direction="up" />
+                                </div>
+                                <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5 shrink-0">
+                                    <button onClick={cancelEditing} className="font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">Отмена</button>
+                                    <button onClick={() => saveEdit(selectedEntry)} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold">Сохранить</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed mb-6">
+                                    <ReactMarkdown components={markdownComponents}>{selectedEntry.content.replace(/\n/g, '  \n')}</ReactMarkdown>
+                                </div>
+                                
+                                {selectedLinkedTask && (
+                                    <CollapsibleSection title="Контекст: Задача" icon={<Kanban size={14}/>} defaultOpen>
+                                        <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-sans cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => onNavigateToTask?.(selectedLinkedTask.id)}>
+                                            <ReactMarkdown components={markdownComponents}>{selectedLinkedTask.content}</ReactMarkdown>
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+                                
+                                {selectedLinkedNote && (
+                                    <CollapsibleSection title="Контекст: Заметка" icon={<StickyNote size={14}/>} defaultOpen>
+                                        <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-serif cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => onNavigateToNote?.(selectedLinkedNote.id)}>
+                                            <ReactMarkdown components={markdownComponents}>{selectedLinkedNote.content.substring(0, 200) + '...'}</ReactMarkdown>
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+
+                                {selectedEntry.aiFeedback && (
+                                    <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-4 border border-slate-100 dark:border-slate-700/50 mt-6">
+                                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2">
+                                            <Sparkles size={12} /> Анализ Ментора
+                                        </div>
+                                        <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed font-serif">
+                                            <ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="mt-6 pt-4 border-t border-black/5 dark:border-white/5 flex justify-between items-center">
+                                    <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="left" direction="up" />
+                                    {/* Link Preview if URL exists */}
+                                    {(() => {
+                                        const url = findFirstUrl(selectedEntry.content);
+                                        return url ? <div className="max-w-[200px]"><LinkPreview url={url} /></div> : null;
+                                    })()}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </motion.div>
+            </div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
           {showHistory && (
               <div className="fixed inset-0 z-[120] bg-slate-200/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
