@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -756,25 +757,25 @@ const JournalEntrySphereSelector: React.FC<{
             <button 
                 ref={triggerRef}
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="flex items-center gap-1.5 font-mono text-[9px] font-bold text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent px-2 py-1 rounded transition-colors uppercase tracking-widest"
+                className="flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Сферы"
             >
                 {entry.spheres && entry.spheres.length > 0 ? (
-                    <div className="flex -space-x-1">
+                    <div className="flex -space-x-1.5">
                         {entry.spheres.map(s => {
                             const sp = SPHERES.find(x => x.id === s);
                             return sp ? (
                                 <div 
                                     key={s} 
-                                    className={`w-2 h-2 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
-                                    style={{ borderWidth: '1px' }}
+                                    className={`w-3 h-3 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
+                                    style={{ borderWidth: '1.5px' }}
                                 />
                             ) : null;
                         })}
                     </div>
                 ) : (
-                    <Target size={10} strokeWidth={1.5} />
+                    <Target size={16} strokeWidth={1.5} className="text-slate-300 hover:text-slate-500 dark:hover:text-slate-400" />
                 )}
-                <span>Сфера</span>
             </button>
             
             {isOpen && createPortal(
@@ -1768,7 +1769,8 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                                         <h3 className="font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 leading-tight break-words">{entry.title}</h3>
                                                     </div>
                                                     
-                                                    <div className="flex items-center gap-2 -mt-1 ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex items-center gap-1 -mt-1 ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                        <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} align="right" direction="down" />
                                                         {!isEditing && (
                                                             <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
                                                                 <button 
@@ -1790,7 +1792,8 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="absolute top-6 right-6 md:top-8 md:right-8 z-10 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                <div className="absolute top-6 right-6 md:top-8 md:right-8 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                     <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} align="right" direction="down" />
                                                      {!isEditing && (
                                                         <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
                                                             <button 
@@ -1871,11 +1874,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                                     <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
                                                 </div>
                                             )}
-                                            
-                                            {/* Footer Spheres */}
-                                            <div className="mt-4 flex justify-start items-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                                                <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} align="left" direction="up" />
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
