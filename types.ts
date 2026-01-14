@@ -126,7 +126,6 @@ export interface JournalEntry {
   title?: string;
   content: string;
   linkedTaskId?: string; 
-  linkedNoteId?: string;
   aiFeedback?: string;
   mentorId?: string;
   spheres?: string[];

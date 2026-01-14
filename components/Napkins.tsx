@@ -30,8 +30,6 @@ interface Props {
   deleteSketchItem?: (id: string) => void;
   updateSketchItem?: (item: SketchItem) => void;
   defaultTab?: 'inbox' | 'library';
-  initialNoteId?: string | null;
-  onClearInitialNote?: () => void;
 }
 
 const colors = [
@@ -717,8 +715,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
                 id: Date.now().toString(),
                 date: Date.now(),
                 content: note.content,
-                isInsight: false,
-                linkedNoteId: note.id
+                isInsight: false
             };
             handlers.onAddJournalEntry(entry);
         }
@@ -858,7 +855,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, handlers }) => {
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -920,27 +917,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       if (latest > 100 && isScrollingDown) setIsHeaderHidden(true);
       else setIsHeaderHidden(false);
   });
-
-  const handleOpenNote = (note: Note) => {
-      setSelectedNote(note);
-      setEditTitle(note.title || '');
-      setEditTagsList(note.tags ? note.tags.map(t => t.replace(/^#/, '')) : []);
-      setEditCover(note.coverUrl || null);
-      const contentHtml = markdownToHtml(note.content);
-      setEditHistory([contentHtml]);
-      setEditHistoryIndex(0);
-      setIsEditing(false);
-  };
-
-  useEffect(() => {
-    if (initialNoteId) {
-      const note = notes.find(n => n.id === initialNoteId);
-      if (note) {
-        handleOpenNote(note);
-      }
-      if (onClearInitialNote) onClearInitialNote();
-    }
-  }, [initialNoteId, notes, onClearInitialNote]);
 
   const allExistingTags = useMemo(() => {
       const uniqueTagsMap = new Map<string, string>();
@@ -1247,6 +1223,17 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       e.preventDefault();
       const draggedId = e.dataTransfer.getData('noteId');
       if (draggedId && draggedId !== targetId) reorderNote(draggedId, targetId);
+  };
+
+  const handleOpenNote = (note: Note) => {
+      setSelectedNote(note);
+      setEditTitle(note.title || '');
+      setEditTagsList(note.tags ? note.tags.map(t => t.replace(/^#/, '')) : []);
+      setEditCover(note.coverUrl || null);
+      const contentHtml = markdownToHtml(note.content);
+      setEditHistory([contentHtml]);
+      setEditHistoryIndex(0);
+      setIsEditing(false);
   };
 
   const handleSaveEdit = () => {
