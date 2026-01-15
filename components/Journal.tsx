@@ -1,10 +1,8 @@
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
-import Masonry from 'react-masonry-css';
 import { JournalEntry, Task, AppConfig, MentorAnalysis, Note } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
@@ -198,11 +196,12 @@ const htmlToMarkdown = (html: string) => {
     temp.innerHTML = html;
 
     const wrap = (text: string, marker: string) => {
-        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
-        if (match && match[2]) {
+        const match = text.match(/^([\s\u00A0]*)(.*?)([\s\u00A0]*)$/s);
+        if (match) {
+            if (!match[2]) return match[1] + match[3];
             return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
         }
-        return text.trim() ? `${marker}${text}${marker}` : '';
+        return text;
     };
 
     const walk = (node: Node): string => {
@@ -519,31 +518,6 @@ const markdownComponents = {
     img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
 };
 
-// --- HOLOGRAM MARKDOWN COMPONENTS (FOR ANALYSIS MODAL) ---
-const HologramMarkdown = {
-    p: ({node, ...props}: any) => <p className="mb-6 last:mb-0 text-[15px] md:text-[17px] text-slate-600 dark:text-slate-300 leading-7 md:leading-8 font-serif" {...props} />,
-    h1: ({node, ...props}: any) => <h1 className="font-mono text-[10px] uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mb-8 mt-10 text-center select-none" {...props} />,
-    h2: ({node, ...props}: any) => <h2 className="font-mono text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-4 mt-8 pl-4 border-l border-indigo-500/30" {...props} />,
-    h3: ({node, ...props}: any) => <h3 className="font-sans text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3 mt-6" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="space-y-4 my-6" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="space-y-4 my-6 list-none counter-reset-items" {...props} />,
-    li: ({node, ...props}: any) => (
-        <li className="relative pl-6 group">
-             <div className="absolute left-0 top-[0.6em] w-px h-[1em] bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-500 transition-colors" />
-             <div className="text-slate-700 dark:text-slate-300 font-serif leading-7">{props.children}</div>
-        </li>
-    ),
-    blockquote: ({node, ...props}: any) => (
-        <blockquote className="my-12 px-8 py-6 relative text-center">
-            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
-            <div className="font-serif text-lg md:text-xl italic text-slate-800 dark:text-slate-100 leading-relaxed tracking-wide" {...props} />
-            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
-        </blockquote>
-    ),
-    strong: ({node, ...props}: any) => <span className="font-sans font-bold text-slate-900 dark:text-slate-50 text-xs uppercase tracking-wide" {...props} />,
-    em: ({node, ...props}: any) => <em className="font-serif italic text-indigo-600 dark:text-indigo-400" {...props} />,
-};
-
 // --- REUSABLE SPHERE SELECTOR (AURA RINGS) ---
 const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -747,43 +721,6 @@ const JournalEntrySphereSelector: React.FC<{
     );
 };
 
-const CollapsibleSection: React.FC<{
-  title: string;
-  children: React.ReactNode;
-  icon?: React.ReactNode;
-  actions?: React.ReactNode;
-  defaultOpen?: boolean;
-}> = ({ title, children, icon, actions, defaultOpen = false }) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
-  return (
-    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden mb-3">
-      <div 
-        onClick={() => setIsOpen(!isOpen)} 
-        className="w-full flex items-center justify-between p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-      >
-        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-           {icon}
-           {title}
-        </div>
-        <div className="flex items-center gap-2">
-            {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
-            <div className="text-slate-400">
-                {isOpen ? <Minus size={14} strokeWidth={1} /> : <Plus size={14} strokeWidth={1} />}
-            </div>
-        </div>
-      </div>
-      {isOpen && (
-        <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-1 duration-200">
-           <div className="pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-sm">
-             {children}
-           </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, config, addEntry, deleteEntry, updateEntry, addMentorAnalysis, deleteMentorAnalysis, initialTaskId, onClearInitialTask, onNavigateToTask, onNavigateToNote }) => {
   const [hasCreationContent, setHasCreationContent] = useState(false);
   const [linkedTaskId, setLinkedTaskId] = useState<string>('');
@@ -959,8 +896,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
       if (file && creationContentEditableRef.current) {
           try {
               const compressedBase64 = await processImage(file);
-              insertImageAtCursor(compressedBase64, creationContentEditableRef.current);
-              saveCreationHistorySnapshot(creationContentEditableRef.current.innerHTML);
+              insertImageAtCursor(compressedBase64, creationContentEditableRef.current, saveCreationHistorySnapshot);
               setHasCreationContent(true);
           } catch (err) { console.error("Image upload failed", err); }
           e.target.value = '';
@@ -1014,7 +950,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
       execCmd('formatBlock', 'div'); 
   };
 
-  const insertImageAtCursor = (base64: string, targetEl: HTMLElement) => {
+  const insertImageAtCursor = (base64: string, targetEl: HTMLElement, onSave: (content: string) => void) => {
         targetEl.focus();
         let range = lastSelectionRange.current;
         if (!range || !targetEl.contains(range.commonAncestorContainer)) {
@@ -1036,7 +972,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
         const sel = window.getSelection();
         sel?.removeAllRanges();
         sel?.addRange(range);
-        // Only save history if specific editor called it, usually handled by caller
+        onSave(targetEl.innerHTML); 
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1044,8 +980,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
       if (file && editContentRef.current) {
           try {
               const compressedBase64 = await processImage(file);
-              insertImageAtCursor(compressedBase64, editContentRef.current);
-              saveEditHistorySnapshot(editContentRef.current.innerHTML);
+              insertImageAtCursor(compressedBase64, editContentRef.current, saveEditHistorySnapshot);
           } catch (err) { console.error("Image upload failed", err); }
           e.target.value = '';
       }
@@ -1102,14 +1037,17 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
     const handlePaste = async (e: ClipboardEvent) => {
         const target = e.target as HTMLElement;
         let activeEditor = null;
+        let onSave = null;
         
         if (editContentRef.current && (editContentRef.current === target || editContentRef.current.contains(target))) {
             activeEditor = editContentRef.current;
+            onSave = saveEditHistorySnapshot;
         } else if (creationContentEditableRef.current && (creationContentEditableRef.current === target || creationContentEditableRef.current.contains(target))) {
             activeEditor = creationContentEditableRef.current;
+            onSave = saveCreationHistorySnapshot;
         }
 
-        if (!activeEditor) return;
+        if (!activeEditor || !onSave) return;
 
         const items = e.clipboardData?.items;
         if (!items) return;
@@ -1120,10 +1058,8 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                 if (blob) {
                     try {
                         const compressedBase64 = await processImage(blob);
-                        insertImageAtCursor(compressedBase64, activeEditor);
-                        if (activeEditor === editContentRef.current) saveEditHistorySnapshot(activeEditor.innerHTML);
-                        else {
-                            saveCreationHistorySnapshot(activeEditor.innerHTML);
+                        insertImageAtCursor(compressedBase64, activeEditor, onSave);
+                        if (activeEditor !== editContentRef.current) {
                             setHasCreationContent(true);
                         }
                     } catch (err) { console.error("Image paste failed", err); }
@@ -1133,7 +1069,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
     };
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, [editingId, isCreationExpanded]);
+  }, [editingId, isCreationExpanded, saveEditHistorySnapshot, saveCreationHistorySnapshot]);
 
   // Init Editor Content
   useEffect(() => {
@@ -1252,9 +1188,10 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
       setSelectedNoteIdsForLinking([]);
   };
 
-  const RenderIcon = ({ name, className }: { name: string, className?: string }) => {
-    const Icon = ICON_MAP[name] || ICON_MAP['User'];
-    return <Icon className={className} size={14} strokeWidth={1} />;
+  const formatDate = (timestamp: number) => {
+      return new Date(timestamp)
+          .toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })
+          .toUpperCase();
   };
 
   const filteredEntries = entries.filter(entry => {
@@ -1325,21 +1262,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
   };
 
   const hasActiveDateFilter = !!dateRange.from || !!dateRange.to;
-
-  const formatDate = (timestamp: number) => {
-      return new Date(timestamp)
-          .toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })
-          .toUpperCase();
-  };
-
-  const formatTimelineDate = (timestamp: number) => {
-    const d = new Date(timestamp);
-    return {
-        day: d.getDate(),
-        month: d.toLocaleString('ru-RU', { month: 'short' }).toUpperCase().replace('.', '')
-    }
-  };
-
   const actionButtonStyle = "p-3 rounded-2xl border transition-all flex items-center justify-center aspect-square bg-white dark:bg-[#1e293b] border-transparent shadow-sm text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20";
 
   return (
@@ -1503,13 +1425,17 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                             <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
                                             <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCreationCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
                                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                            <Tooltip content="Очистить"><button onMouseDown={handleClearCreationStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
+                                            <Tooltip content="Очистить"><button onMouseDown={handleClearCreationStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-slate-400 dark:text-slate-500 transition-colors"><Eraser size={16} /></button></Tooltip>
                                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                            <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input ref={creationFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCreationImageUpload} /><ImageIcon size={16} /></label></Tooltip>
-                                            {activeImage && creationContentEditableRef.current && creationContentEditableRef.current.contains(activeImage) && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
+                                            <Tooltip content="Вставить картинку">
+                                                <label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center">
+                                                    <input ref={creationFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCreationImageUpload} />
+                                                    <ImageIcon size={16} />
+                                                </label>
+                                            </Tooltip>
                                         </div>
-                                        {/* Right Container for Styling */}
-                                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                                        
+                                        <div className="flex items-center gap-2 shrink-0">
                                             <div className="relative">
                                                 <Tooltip content="Обложка">
                                                     <button 
@@ -1532,620 +1458,158 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                                         <Palette size={16} />
                                                     </button>
                                                 </Tooltip>
-                                                {showCreationColorPicker && (
-                                                    <ColorPickerPopover
-                                                        onSelect={setCreationColor}
-                                                        onClose={() => setShowCreationColorPicker(false)}
-                                                        triggerRef={creationColorTriggerRef}
-                                                    />
-                                                )}
+                                                {showCreationColorPicker && <ColorPickerPopover onSelect={setCreationColor} onClose={() => setShowCreationColorPicker(false)} triggerRef={creationColorTriggerRef} />}
                                             </div>
+                                            <button onClick={handlePost} disabled={!hasCreationContent && !creationTitle.trim()} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 rounded-lg disabled:opacity-50 transition-colors">
+                                                <Send size={20} />
+                                            </button>
                                         </div>
                                     </div>
-                                    
-                                    <div className="flex gap-2">
-                                        <button 
-                                            onClick={handlePost} 
-                                            disabled={!hasCreationContent && !creationTitle} 
-                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium text-sm transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.98]"
-                                        >
-                                            <Send size={16} strokeWidth={1} /> 
-                                            <span className="font-serif">Записать мысль</span>
-                                        </button>
-                                        <button 
-                                            onClick={() => setIsCreationExpanded(false)} 
-                                            className="px-4 py-3 rounded-xl border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                                        >
-                                            <X size={20} strokeWidth={1} />
-                                        </button>
-                                    </div>
                                 </div>
-                            )}
-                        </div>
-
-                        <div className="flex gap-2 shrink-0">
-                            {hasMentorTool && (
-                                <>
-                                    <Tooltip content={isAnalyzing ? "Остановить генерацию" : "Наставник (ИИ)"} side="bottom" disabled={isAnalyzing}>
-                                        <button 
-                                            onClick={handleAnalyzePath} 
-                                            disabled={displayedEntries.length === 0} 
-                                            className={`${actionButtonStyle} ${isAnalyzing ? 'animate-pulse' : ''}`}
-                                        >
-                                            {isAnalyzing ? (
-                                                <div className="relative w-4 h-4 flex items-center justify-center">
-                                                    <Loader2 size={16} className="animate-spin absolute inset-0" />
-                                                    <div className="w-2 h-2 bg-current rounded-[1px] relative z-10" />
-                                                </div>
-                                            ) : (
-                                                <Sparkles size={18} strokeWidth={1.5} />
-                                            )}
-                                        </button>
-                                    </Tooltip>
-
-                                    <Tooltip content="Архив наставника" side="bottom">
-                                        <button 
-                                            onClick={() => setShowHistory(true)} 
-                                            className={actionButtonStyle}
-                                        >
-                                            <History size={18} strokeWidth={1.5} />
-                                        </button>
-                                    </Tooltip>
-                                </>
                             )}
                         </div>
                     </div>
                 </div>
 
+                {/* ENTRIES LIST */}
                 {displayedEntries.length === 0 ? (
-                <div className="py-10">
                     <EmptyState 
                         icon={Book} 
-                        title="Страницы пусты" 
-                        description={searchQuery || hasActiveDateFilter ? 'Ничего не найдено по вашему запросу' : 'Записывай свои мысли, связывай их с задачами, чтобы отслеживать свой путь'}
+                        title="В Дневнике пусто" 
+                        description="Запиши свои мысли или свяжи их с задачами" 
                         color="cyan"
                     />
-                </div>
                 ) : (
-                <div className="w-full max-w-3xl mx-auto relative space-y-6">
-                    {displayedEntries.map(entry => {
-                        const mentor = config.mentors.find(m => m.id === entry.mentorId);
-                        const isEditing = editingId === entry.id;
-                        const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
-                        const linkedNote = notes.find(n => n.id === entry.linkedNoteId);
-                        // Get all linked notes
-                        const linkedNotes = notes.filter(n => (entry.linkedNoteIds?.includes(n.id)) || (entry.linkedNoteId === n.id));
-                        
-                        const linkUrl = findFirstUrl(entry.content);
-                        const tDate = formatTimelineDate(entry.date);
-                        
-                        return (
-                            <div key={entry.id} className="relative group">
-                                {/* Entry Card */}
-                                <div 
-                                    onClick={() => setSelectedEntryId(entry.id)} 
-                                    className={`relative rounded-2xl border transition-all duration-300 group cursor-pointer overflow-hidden flex flex-col
-                                        ${getJournalColorClass(entry.color)} border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md
-                                    `}
-                                >
-                                    {/* Cover Image - Top Full Width */}
-                                    {entry.coverUrl && (
-                                        <div className="h-40 w-full relative overflow-hidden shrink-0 border-b border-slate-100 dark:border-slate-800/50">
-                                            <img src={entry.coverUrl} alt="Cover" className="w-full h-full object-cover" />
-                                        </div>
-                                    )}
+                    <div className="max-w-3xl mx-auto space-y-8">
+                        {displayedEntries.map(entry => {
+                            const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
+                            // Handling multiple linked notes (new) and single legacy linked note
+                            const linkedNotes: Note[] = [];
+                            if (entry.linkedNoteIds) {
+                                entry.linkedNoteIds.forEach(id => {
+                                    const n = notes.find(note => note.id === id);
+                                    if (n) linkedNotes.push(n);
+                                });
+                            } else if (entry.linkedNoteId) {
+                                const n = notes.find(note => note.id === entry.linkedNoteId);
+                                if (n) linkedNotes.push(n);
+                            }
 
-                                    {/* Body Container */}
-                                    <div className="flex flex-col md:flex-row flex-1">
-                                        
-                                        {/* Left Column: Timeline Info (Centered Vertically) */}
-                                        <div className="md:w-24 w-full shrink-0 flex md:flex-col flex-row items-center justify-center md:py-6 p-4 relative border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800/50">
-                                            {/* Vertical Line */}
-                                            <div className="hidden md:block absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px bg-slate-200/50 dark:bg-slate-700/50" />
-                                            
-                                            {/* Date Content - On top of line */}
-                                            <div className={`relative z-10 flex flex-col items-center gap-2 p-2 rounded-xl backdrop-blur-sm shadow-sm border border-slate-100/50 dark:border-slate-800/50 bg-white/50 dark:bg-slate-900/50`}>
-                                                <div className="text-center leading-none">
-                                                    <span className="font-mono text-xl text-slate-400 dark:text-slate-500 block">{tDate.day}</span>
-                                                    <span className="font-mono text-[9px] text-slate-400 uppercase tracking-wider">{tDate.month}</span>
-                                                </div>
-                                                
-                                                <div className={`w-2 h-2 rounded-full border border-white dark:border-slate-800 transition-all duration-500 ${entry.isInsight ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                            // Handling legacy singular
+                            if (linkedNotes.length === 0 && entry.linkedNoteId) {
+                                 const n = notes.find(note => note.id === entry.linkedNoteId);
+                                 if (n) linkedNotes.push(n);
+                            }
+
+                            return (
+                                <div key={entry.id} className="relative pl-8 md:pl-0 group">
+                                    {/* Timeline Decor */}
+                                    <div className="absolute left-0 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-800 md:hidden" />
+                                    <div className="absolute left-[-4px] top-6 w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700 md:hidden" />
+
+                                    <div className={`${getJournalColorClass(entry.color)} rounded-2xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-md relative overflow-hidden`}>
+                                        {entry.coverUrl && (
+                                            <div className="h-40 w-full mb-6 -mx-6 -mt-6 w-[calc(100%_+_3rem)] relative group/cover overflow-hidden">
+                                                <img src={entry.coverUrl} alt="Cover" className="w-full h-full object-cover" />
                                             </div>
+                                        )}
 
-                                            {/* Mobile Extra Info */}
-                                            <div className="md:hidden flex-1 text-right ml-auto">
-                                                <span className="font-mono text-[9px] text-slate-400">{formatDate(entry.date).split(',')[0]}</span>
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">
+                                                    <span>{formatDate(entry.date)}</span>
+                                                    {entry.isInsight && <span className="text-violet-500 flex items-center gap-1"><Zap size={12} fill="currentColor"/> INSIGHT</span>}
+                                                </div>
+                                                {entry.title && <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 font-sans">{applyTypography(entry.title)}</h3>}
+                                            </div>
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} />
+                                                <Tooltip content={entry.isInsight ? "Убрать отметку инсайта" : "Отметить как инсайт"}>
+                                                    <button onClick={() => toggleInsight(entry)} className={`p-2 rounded-lg transition-colors ${entry.isInsight ? 'text-violet-500 bg-violet-50 dark:bg-violet-900/20' : 'text-slate-400 hover:text-violet-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                                                        <Sparkles size={16} />
+                                                    </button>
+                                                </Tooltip>
+                                                <Tooltip content="Редактировать">
+                                                    <button onClick={() => startEditing(entry)} className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors"><Edit3 size={16} /></button>
+                                                </Tooltip>
+                                                <Tooltip content="В архив">
+                                                    <button onClick={() => deleteEntry(entry.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                                </Tooltip>
                                             </div>
                                         </div>
 
-                                        {/* Main Content */}
-                                        <div className="flex-1 flex flex-col min-w-0 p-6 md:p-8 relative"> {/* added relative */}
-                                            {/* Header Actions (Insight/Edit) */}
-                                            {entry.title ? (
-                                                <div className="flex justify-between items-start mb-4">
-                                                    <div className="flex-1 min-w-0">
-                                                        <h3 className="font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 leading-tight break-words">{entry.title}</h3>
-                                                    </div>
-                                                    
-                                                    <div className="flex items-center gap-1 -mt-1 ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                                        <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} align="right" direction="down" />
-                                                        {!isEditing && (
-                                                            <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
-                                                                <button 
-                                                                    onClick={() => toggleInsight(entry)} 
-                                                                    className={`p-1.5 rounded-lg transition-all ${
-                                                                        entry.isInsight 
-                                                                        ? "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20" 
-                                                                        : "text-slate-300 hover:text-slate-500 dark:hover:text-slate-400"
-                                                                    }`}
-                                                                >
-                                                                    <Gem 
-                                                                        size={16} 
-                                                                        strokeWidth={1.5} 
-                                                                        className={entry.isInsight ? "fill-indigo-200/50" : "fill-transparent"} 
-                                                                    />
-                                                                </button>
-                                                            </Tooltip>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="absolute top-6 right-6 md:top-8 md:right-8 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                                     <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} align="right" direction="down" />
-                                                     {!isEditing && (
-                                                        <Tooltip content={entry.isInsight ? "Убрать из инсайтов" : "Отметить как инсайт"}>
-                                                            <button 
-                                                                onClick={() => toggleInsight(entry)} 
-                                                                className={`p-1.5 rounded-lg transition-all ${
-                                                                    entry.isInsight 
-                                                                    ? "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20" 
-                                                                    : "text-slate-300 hover:text-slate-500 dark:hover:text-slate-400"
-                                                                }`}
-                                                            >
-                                                                <Gem 
-                                                                    size={16} 
-                                                                    strokeWidth={1.5} 
-                                                                    className={entry.isInsight ? "fill-indigo-200/50" : "fill-transparent"} 
-                                                                />
-                                                            </button>
-                                                        </Tooltip>
-                                                    )}
-                                                </div>
-                                            )}
+                                        <div className="text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed mb-4">
+                                            <ReactMarkdown 
+                                                components={markdownComponents} 
+                                                urlTransform={allowDataUrls} 
+                                                remarkPlugins={[remarkGfm]} 
+                                                rehypePlugins={[rehypeRaw]}
+                                            >
+                                                {entry.content.replace(/\n/g, '  \n')}
+                                            </ReactMarkdown>
+                                        </div>
 
-                                            <div className={`font-serif text-[#2F3437] dark:text-slate-200 leading-[1.7] text-sm md:text-base flex-1 ${entry.title ? '' : 'mt-1'}`}>
-                                                <ReactMarkdown 
-                                                    components={markdownComponents} 
-                                                    urlTransform={allowDataUrls} 
-                                                    remarkPlugins={[remarkGfm]} 
-                                                    rehypePlugins={[rehypeRaw]}
+                                        {/* Linked Contexts */}
+                                        <div className="space-y-2">
+                                            {linkedTask && (
+                                                <div 
+                                                    className="flex items-center gap-3 p-3 bg-slate-50/80 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50 cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-900 transition-colors group/link"
+                                                    onClick={() => onNavigateToTask?.(linkedTask.id)}
                                                 >
-                                                    {entry.content.replace(/\n/g, '  \n')}
-                                                </ReactMarkdown>
-                                            </div>
-                                            {linkUrl && <LinkPreview url={linkUrl} />}
-
-                                            {/* Context Links */}
-                                            {!isEditing && (
-                                                <>
-                                                    {linkedTask && (
-                                                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                                                            <span>[ Задача: </span>
-                                                            <button 
-                                                                onClick={(e) => { e.stopPropagation(); onNavigateToTask?.(linkedTask.id); }}
-                                                                className="hover:text-indigo-500 transition-colors hover:underline decoration-indigo-500 underline-offset-2"
-                                                            >
-                                                                {getLinkedContentPreview(linkedTask.content)}
-                                                            </button>
-                                                            <span> ]</span>
-                                                        </div>
-                                                    )}
-                                                    {/* Linked Notes Render */}
-                                                    {linkedNotes.length > 0 && (
-                                                        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50 flex flex-col gap-1">
-                                                            {linkedNotes.map(note => (
-                                                                <div key={note.id} className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                                    <Tooltip content="Открепить заметку">
-                                                                        <button
-                                                                            onClick={(e) => { 
-                                                                                e.stopPropagation(); 
-                                                                                // Remove from both fields
-                                                                                const newIds = (entry.linkedNoteIds || []).filter(id => id !== note.id);
-                                                                                const isLegacy = entry.linkedNoteId === note.id;
-                                                                                updateEntry({ 
-                                                                                    ...entry, 
-                                                                                    linkedNoteIds: newIds,
-                                                                                    linkedNoteId: isLegacy ? undefined : entry.linkedNoteId
-                                                                                }); 
-                                                                            }}
-                                                                            className="p-1 text-slate-300 hover:text-red-500 transition-colors"
-                                                                        >
-                                                                            <Unlink size={12} />
-                                                                        </button>
-                                                                    </Tooltip>
-                                                                    <span>[ Заметка: </span>
-                                                                    <button
-                                                                        onClick={(e) => { e.stopPropagation(); onNavigateToNote?.(note.id); }}
-                                                                        className="hover:text-indigo-500 transition-colors hover:underline decoration-indigo-500 underline-offset-2"
-                                                                    >
-                                                                        {getLinkedContentPreview(note.title || note.content)}
-                                                                    </button>
-                                                                    <span> ]</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </>
-                                            )}
-
-                                            {entry.aiFeedback && (
-                                                <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-3 relative mt-3 border border-slate-100 dark:border-slate-700/50">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <div className={`p-0.5 rounded ${mentor?.color || 'text-slate-500'}`}><RenderIcon name={mentor?.icon || 'User'} className="w-3 h-3" /></div>
-                                                        <span className={`text-[10px] font-bold uppercase ${mentor?.color || 'text-slate-500'}`}>{mentor?.name || 'Ментор'}</span>
+                                                    <div className="p-2 bg-white dark:bg-slate-700 rounded-lg text-indigo-500 shadow-sm"><Kanban size={16} /></div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Контекст: Задача</div>
+                                                        <div className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{getLinkedContentPreview(linkedTask.content)}</div>
                                                     </div>
-                                                    <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
+                                                    <ArrowRight size={14} className="text-slate-300 group-hover/link:text-indigo-400 transition-colors" />
                                                 </div>
                                             )}
-                                            
-                                            {/* FOOTER ACTIONS */}
-                                            <div className="mt-6 pt-4 border-t border-black/5 dark:border-white/5 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <div className="flex items-center gap-2">
-                                                    <Tooltip content="Привязать заметку">
-                                                        <button 
-                                                            onClick={(e) => handleOpenNoteLink(e, entry.id)}
-                                                            className="flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-300 hover:text-slate-500 dark:hover:text-slate-400"
-                                                        >
-                                                            <Link size={16} strokeWidth={1.5} />
-                                                        </button>
-                                                    </Tooltip>
+
+                                            {linkedNotes.length > 0 && linkedNotes.map(note => (
+                                                <div 
+                                                    key={note.id}
+                                                    className="flex items-center gap-3 p-3 bg-slate-50/80 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50 cursor-pointer hover:border-emerald-200 dark:hover:border-emerald-900 transition-colors group/link"
+                                                    onClick={() => onNavigateToNote?.(note.id)}
+                                                >
+                                                    <div className="p-2 bg-white dark:bg-slate-700 rounded-lg text-emerald-500 shadow-sm"><StickyNote size={16} /></div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Контекст: Заметка</div>
+                                                        <div className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{note.title || getNotePreviewContent(note.content)}</div>
+                                                    </div>
+                                                    <ArrowRight size={14} className="text-slate-300 group-hover/link:text-emerald-400 transition-colors" />
                                                 </div>
-                                                {/* Link Preview if URL exists */}
-                                                {(() => {
-                                                    const url = findFirstUrl(entry.content);
-                                                    return url ? <div className="max-w-[200px]"><LinkPreview url={url} /></div> : null;
-                                                })()}
+                                            ))}
+
+                                            {/* Link Adder */}
+                                            <div className="pt-2">
+                                                <button 
+                                                    onClick={(e) => handleOpenNoteLink(e, entry.id)}
+                                                    className="flex items-center gap-2 text-xs font-medium text-slate-400 hover:text-indigo-500 transition-colors px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
+                                                >
+                                                    <Link size={12} />
+                                                    <span>Связать с заметкой...</span>
+                                                </button>
                                             </div>
                                         </div>
+
+                                        {entry.aiFeedback && (
+                                            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-2">
+                                                    <Sparkles size={12} /> Ментор
+                                                </div>
+                                                <div className="text-sm text-slate-600 dark:text-slate-400 font-serif italic leading-relaxed bg-indigo-50/50 dark:bg-indigo-900/10 p-3 rounded-lg border border-indigo-100/50 dark:border-indigo-800/30">
+                                                    <ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
                 )}
             </div>
         </div>
-
-      {analysisResult && (
-          <div className="fixed inset-0 z-[120] bg-slate-200/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setAnalysisResult(null)}>
-              <div className="relative w-full max-w-2xl max-h-[85vh] rounded-[32px] overflow-hidden flex flex-col shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] animate-in zoom-in-95 duration-500 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-[40px] saturate-150 border border-white/40 dark:border-white/10" onClick={(e) => e.stopPropagation()}>
-                  
-                  {/* HOLOGRAM HEADER */}
-                  <div className="flex justify-between items-center p-8 pb-0 shrink-0">
-                      <div className="flex items-center gap-4">
-                          <Sparkles size={18} strokeWidth={1.5} className="text-indigo-500 animate-pulse duration-[3000ms] opacity-50" />
-                          <h3 className="font-sans text-xs font-bold tracking-[0.2em] uppercase text-slate-900/80 dark:text-slate-100/90">Анализ Пути</h3>
-                      </div>
-                      <button 
-                        onClick={() => setAnalysisResult(null)} 
-                        className="text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5"
-                      >
-                          <X size={20} strokeWidth={1.5} />
-                      </button>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto custom-scrollbar-ghost p-8 md:p-10">
-                      <ReactMarkdown components={HologramMarkdown}>{analysisResult}</ReactMarkdown>
-                  </div>
-
-                  <div className="p-8 pt-0 flex justify-center shrink-0">
-                      <button 
-                          onClick={handleSaveAnalysis}
-                          className="flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-lg hover:shadow-indigo-500/30 active:scale-95"
-                      >
-                          <Save size={16} strokeWidth={1.5} />
-                          <span className="text-xs font-bold uppercase tracking-widest">Сохранить в историю</span>
-                      </button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* DETAIL VIEW & EDIT MODAL */}
-      <AnimatePresence>
-        {selectedEntry && (
-            <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => handleCloseModal(e)}>
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="w-full max-w-lg bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {(editingId === selectedEntry.id ? editCover : selectedEntry.coverUrl) && (
-                        <div className="h-40 shrink-0 relative mb-6 -mx-8 -mt-8 md:-mx-10 md:-mt-10 w-[calc(100%_+_4rem)] md:w-[calc(100%_+_5rem)] group overflow-hidden">
-                            <img src={editingId === selectedEntry.id ? editCover! : selectedEntry.coverUrl!} alt="Cover" className="w-full h-full object-cover" />
-                            {editingId === selectedEntry.id && (
-                                <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100">
-                                    <X size={16} />
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {/* GLASS MODAL HEADER */}
-                    <div className="flex justify-between items-start mb-6 shrink-0">
-                        <div className="flex flex-col gap-1 pr-4 w-full">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1 font-mono">
-                                {new Date(selectedEntry.date).toLocaleDateString()} <span className="opacity-50 mx-1">/</span> ID: {selectedEntry.id.slice(-4)}
-                            </div>
-                            {editingId === selectedEntry.id ? (
-                                <input 
-                                    type="text" 
-                                    placeholder="Заголовок" 
-                                    value={editTitle} 
-                                    onChange={(e) => setEditTitle(e.target.value)} 
-                                    className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 w-full p-0 m-0 border-b border-transparent focus:border-slate-300 dark:focus:border-slate-600 transition-colors" 
-                                    autoFocus
-                                />
-                            ) : (
-                                selectedEntry.title && <h3 className="text-2xl font-sans font-semibold text-slate-900 dark:text-white leading-tight break-words">{selectedEntry.title}</h3>
-                            )}
-                        </div>
-                        <div className="flex items-center shrink-0 gap-1">
-                            {!editingId && (
-                                <>
-                                    <Tooltip content="Редактировать"><button onClick={() => startEditing(selectedEntry)} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={18} /></button></Tooltip>
-                                    <Tooltip content="Отправить в архив"><button onClick={() => { if(window.confirm('Отправить в архив?')) { deleteEntry(selectedEntry.id); handleCloseModal(); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18} /></button></Tooltip>
-                                </>
-                            )}
-                            <button onClick={(e) => handleCloseModal(e)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors ml-1"><X size={20} /></button>
-                        </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto custom-scrollbar-ghost min-h-0 pr-1 -mr-2">
-                        {editingId === selectedEntry.id ? (
-                            <div className="flex flex-col animate-in fade-in duration-200 relative z-10 h-full">
-                                <div className="flex items-center justify-between mb-4 gap-2">
-                                    <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
-                                        <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
-                                        <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
-                                        <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
-                                        <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
-                                        <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
-                                        <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
-                                        <Tooltip content="Очистить"><button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={16} /></button></Tooltip>
-                                        <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
-                                        <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
-                                    </div>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                        <div className="relative">
-                                            <Tooltip content="Обложка">
-                                                <button 
-                                                    ref={editPickerTriggerRef}
-                                                    onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} 
-                                                    className={`p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors ${editCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}
-                                                >
-                                                    <Layout size={16} />
-                                                </button>
-                                            </Tooltip>
-                                            {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editPickerTriggerRef} />}
-                                        </div>
-                                        <div className="relative">
-                                            <Tooltip content="Фон записи">
-                                                <button 
-                                                    ref={editColorTriggerRef}
-                                                    onMouseDown={(e) => { e.preventDefault(); setShowEditColorPicker(!showEditColorPicker); }} 
-                                                    className={`p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors ${editColor !== 'white' ? 'text-indigo-500' : ''}`}
-                                                >
-                                                    <Palette size={16} />
-                                                </button>
-                                            </Tooltip>
-                                            {showEditColorPicker && <ColorPickerPopover onSelect={setEditColor} onClose={() => setShowEditColorPicker(false)} triggerRef={editColorTriggerRef} />}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div 
-                                    ref={editContentRef} 
-                                    contentEditable 
-                                    suppressContentEditableWarning={true}
-                                    style={{ whiteSpace: 'pre-wrap' }}
-                                    onInput={handleEditorInput} 
-                                    onClick={handleEditorClick}
-                                    className="w-full flex-1 bg-transparent rounded-none p-0 text-base text-slate-700 dark:text-slate-300 border-none outline-none font-serif leading-relaxed custom-scrollbar-ghost [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
-                                    data-placeholder="Твои мысли..." 
-                                />
-                                <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
-                                    <JournalEntrySphereSelector entry={selectedEntry} updateEntry={(e) => { updateEntry(e); setSelectedSpheres(e.spheres || []); }} align="left" direction="up" />
-                                </div>
-                                <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5 shrink-0">
-                                    <button onClick={cancelEditing} className="font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">Отмена</button>
-                                    <button onClick={() => saveEdit(selectedEntry)} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold">Сохранить</button>
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed mb-6">
-                                    <ReactMarkdown components={markdownComponents}>{selectedEntry.content.replace(/\n/g, '  \n')}</ReactMarkdown>
-                                </div>
-                                
-                                {selectedLinkedTask && (
-                                    <CollapsibleSection title="Контекст: Задача" icon={<Kanban size={14}/>} defaultOpen>
-                                        <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-sans cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => onNavigateToTask?.(selectedLinkedTask.id)}>
-                                            <ReactMarkdown components={markdownComponents}>{selectedLinkedTask.content}</ReactMarkdown>
-                                        </div>
-                                    </CollapsibleSection>
-                                )}
-                                
-                                {/* Linked Notes Render - Grouped */}
-                                {(() => {
-                                    const linkedNotesList = notes.filter(n => (selectedEntry.linkedNoteIds?.includes(n.id)) || (selectedEntry.linkedNoteId === n.id));
-                                    if (linkedNotesList.length === 0) return null;
-                                    
-                                    return (
-                                        <CollapsibleSection title="Контекст: Заметки" icon={<StickyNote size={14}/>}>
-                                            <div className="space-y-4">
-                                                {linkedNotesList.map((note, index) => (
-                                                    <div key={note.id} className={index > 0 ? "pt-3 border-t border-slate-200/50 dark:border-slate-700/50" : ""}>
-                                                        <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-serif cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => onNavigateToNote?.(note.id)}>
-                                                            <ReactMarkdown components={markdownComponents}>{getNotePreviewContent(note.content)}</ReactMarkdown>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </CollapsibleSection>
-                                    );
-                                })()}
-
-                                {selectedEntry.aiFeedback && (
-                                    <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-4 border border-slate-100 dark:border-slate-700/50 mt-6">
-                                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2">
-                                            <Sparkles size={12} /> Анализ Ментора
-                                        </div>
-                                        <div className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed font-serif">
-                                            <ReactMarkdown components={markdownComponents}>{selectedEntry.aiFeedback}</ReactMarkdown>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="mt-6 pt-4 border-t border-black/5 dark:border-white/5 flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="left" direction="up" />
-                                        <Tooltip content="Привязать заметку">
-                                            <button 
-                                                onClick={(e) => handleOpenNoteLink(e, selectedEntry.id)}
-                                                className="flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-300 hover:text-slate-500 dark:hover:text-slate-400"
-                                            >
-                                                <Link size={16} strokeWidth={1.5} />
-                                            </button>
-                                        </Tooltip>
-                                    </div>
-                                    {/* Link Preview if URL exists */}
-                                    {(() => {
-                                        const url = findFirstUrl(selectedEntry.content);
-                                        return url ? <div className="max-w-[200px]"><LinkPreview url={url} /></div> : null;
-                                    })()}
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </motion.div>
-            </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-          {showHistory && (
-              <div className="fixed inset-0 z-[120] bg-slate-200/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
-                  <div className="bg-white dark:bg-[#1e293b] w-full max-w-2xl max-h-[85vh] rounded-3xl shadow-xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700" onClick={e => e.stopPropagation()}>
-                      <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                          <h3 className="font-sans text-lg font-bold text-slate-800 dark:text-slate-200">История Наставника</h3>
-                          <button onClick={() => setShowHistory(false)}><X size={20} className="text-slate-400" /></button>
-                      </div>
-                      <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar-light">
-                          {mentorAnalyses.length === 0 ? (
-                              <div className="text-center text-slate-400 py-10">История пуста</div>
-                          ) : (
-                              mentorAnalyses.map(analysis => (
-                                  <div key={analysis.id} className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700 relative group">
-                                      <div className="flex justify-between items-start mb-2">
-                                          <div className="text-xs font-bold text-indigo-500 uppercase tracking-wider">{new Date(analysis.date).toLocaleDateString()}</div>
-                                          <button onClick={() => deleteMentorAnalysis(analysis.id)} className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
-                                      </div>
-                                      <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-serif">
-                                          <ReactMarkdown components={markdownComponents}>{analysis.content}</ReactMarkdown>
-                                      </div>
-                                  </div>
-                              ))
-                          )}
-                      </div>
-                  </div>
-              </div>
-          )}
-      </AnimatePresence>
-
-      {/* NOTE SELECTION MODAL */}
-      <AnimatePresence>
-          {isNoteSelectorOpen && (
-              <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setIsNoteSelectorOpen(false)}>
-                  <motion.div 
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      className="relative w-full max-w-4xl h-[80vh] bg-[#f8fafc] dark:bg-[#0f172a] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800"
-                      onClick={(e) => e.stopPropagation()}
-                  >
-                      <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
-                          <div>
-                              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Выберите заметки</h3>
-                              <p className="text-xs text-slate-500 dark:text-slate-400">для привязки к записи</p>
-                          </div>
-                          <button onClick={() => setIsNoteSelectorOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                              <X size={20} />
-                          </button>
-                      </div>
-                      
-                      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar-light">
-                          <Masonry
-                              breakpointCols={{ default: 3, 1100: 2, 700: 1 }}
-                              className="my-masonry-grid"
-                              columnClassName="my-masonry-grid_column"
-                          >
-                              {notes.filter(n => n.status === 'archived').map(note => {
-                                  const isSelected = selectedNoteIdsForLinking.includes(note.id);
-                                  return (
-                                      <div 
-                                          key={note.id}
-                                          onClick={() => handleToggleNoteSelection(note.id)}
-                                          className={`
-                                              relative p-4 rounded-xl border transition-all cursor-pointer mb-4 group overflow-hidden
-                                              ${isSelected 
-                                                  ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 ring-2 ring-indigo-500/20' 
-                                                  : `${getNoteColorClass(note.color)} border-slate-200/50 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700`}
-                                          `}
-                                      >
-                                          {note.title && <h4 className="font-bold text-sm mb-2 text-slate-800 dark:text-slate-200">{applyTypography(note.title)}</h4>}
-                                          <div className="text-xs text-slate-600 dark:text-slate-400 line-clamp-4 font-serif">
-                                              <ReactMarkdown components={markdownComponents}>{note.content}</ReactMarkdown>
-                                          </div>
-                                          {isSelected && (
-                                              <div className="absolute top-2 right-2 bg-indigo-500 text-white rounded-full p-1 shadow-md">
-                                                  <Check size={12} strokeWidth={3} />
-                                              </div>
-                                          )}
-                                      </div>
-                                  );
-                              })}
-                          </Masonry>
-                          {notes.filter(n => n.status === 'archived').length === 0 && (
-                              <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                                  <StickyNote size={48} className="opacity-20 mb-4" />
-                                  <p>Библиотека пуста</p>
-                              </div>
-                          )}
-                      </div>
-
-                      {/* Floating Action Bar */}
-                      <AnimatePresence>
-                          {selectedNoteIdsForLinking.length > 0 && (
-                              <motion.button 
-                                  onClick={handleConfirmLinkNotes}
-                                  initial={{ y: 100, x: "-50%", opacity: 0 }}
-                                  animate={{ y: 0, x: "-50%", opacity: 1 }}
-                                  exit={{ y: 100, x: "-50%", opacity: 0 }}
-                                  className="absolute bottom-12 left-1/2 px-8 py-4 border border-slate-300 dark:border-slate-600 rounded-full text-xs font-mono uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-500 active:scale-95 flex items-center gap-3 z-50 shadow-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md"
-                              >
-                                  <span>СВЯЗАТЬ С ЗАПИСЬЮ ({selectedNoteIdsForLinking.length})</span>
-                              </motion.button>
-                          )}
-                      </AnimatePresence>
-                  </motion.div>
-              </div>
-          )}
-      </AnimatePresence>
     </div>
   );
 };

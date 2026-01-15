@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
-import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
 import { Note, AppConfig, Task, SketchItem, JournalEntry, Habit } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
@@ -63,13 +62,6 @@ const UNSPLASH_PRESETS = [
 
 const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E")`;
 
-const breakpointColumnsObj = {
-  default: 4,
-  1600: 3,
-  1100: 2,
-  700: 1
-};
-
 // --- HELPER FUNCTIONS ---
 
 const allowDataUrls = (url: string) => url;
@@ -80,50 +72,25 @@ const extractImages = (content: string): string[] => {
 };
 
 const getPreviewContent = (content: string) => {
-    // 1. Remove images
     let cleanText = content.replace(/!\[.*?\]\(.*?\)/g, '');
-    
-    // 2. Normalize horizontal spaces (keep newlines for card formatting)
     cleanText = cleanText.replace(/[ \t]+/g, ' ').trim();
-
-    // 3. Smart Truncation (2-3 sentences)
-    // Split by sentence terminators followed by space or newline
     const sentences = cleanText.match(/[^\.!\?]+[\.!\?]+(?=\s|$)/g) || [cleanText];
-    
-    // Determine how many sentences to show based on length
     let limit = 0;
     let sentenceCount = 0;
-    
-    // Try to get at least 2 sentences, up to 3, but watch char count
     for (let s of sentences) {
-        if (sentenceCount >= 3) break; // Max 3 sentences
-        if (limit + s.length > 300 && sentenceCount >= 1) break; // If adding next makes it huge, stop
+        if (sentenceCount >= 3) break;
+        if (limit + s.length > 300 && sentenceCount >= 1) break;
         limit += s.length;
         sentenceCount++;
     }
-
     let preview = sentences.slice(0, sentenceCount).join(' ');
-    
-    // Fallback if sentences detection failed or text is one giant block
-    if (preview.length === 0 && cleanText.length > 0) {
-        preview = cleanText;
-    }
-
-    // Hard cap at 300 chars to prevent overflow, but respect word boundaries
+    if (preview.length === 0 && cleanText.length > 0) preview = cleanText;
     if (preview.length > 300) {
         preview = preview.slice(0, 300);
         const lastSpace = preview.lastIndexOf(' ');
-        if (lastSpace > 0) {
-            preview = preview.slice(0, lastSpace);
-        }
+        if (lastSpace > 0) preview = preview.slice(0, lastSpace);
     }
-
-    // Add ellipsis if we cut content
-    if (preview.length < cleanText.length) {
-        // Remove trailing punctuation before adding ellipsis
-        preview = preview.replace(/[\.!\?,\s]+$/, '') + '...';
-    }
-    
+    if (preview.length < cleanText.length) preview = preview.replace(/[\.!\?,\s]+$/, '') + '...';
     return preview;
 };
 
@@ -144,19 +111,11 @@ const processImage = (file: File | Blob): Promise<string> => {
                 const MAX_HEIGHT = 800;
                 let width = img.width;
                 let height = img.height;
-
                 if (width > height) {
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
-                    }
+                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
                 } else {
-                    if (height > MAX_HEIGHT) {
-                        width *= MAX_HEIGHT / height;
-                        height = MAX_HEIGHT;
-                    }
+                    if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
                 }
-
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
@@ -185,7 +144,6 @@ const findFirstUrl = (text: string): string | null => {
 const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
-
     const wrap = (text: string, marker: string) => {
         const match = text.match(/^(\s*)(.*?)(\s*)$/s);
         if (match && match[2]) {
@@ -193,7 +151,6 @@ const htmlToMarkdown = (html: string) => {
         }
         return text.trim() ? `${marker}${text}${marker}` : '';
     };
-
     const walk = (node: Node): string => {
         if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
         if (node.nodeType === Node.ELEMENT_NODE) {
@@ -213,7 +170,6 @@ const htmlToMarkdown = (html: string) => {
                 case 'code': return `\`${content}\``;
                 case 'h1': return `\n# ${content}\n`;
                 case 'h2': return `\n## ${content}\n`;
-                // Improved block handling:
                 case 'div': return content ? `\n${content}` : '\n'; 
                 case 'p': return `\n${content}\n`;
                 case 'br': return '\n';
@@ -223,9 +179,7 @@ const htmlToMarkdown = (html: string) => {
         }
         return '';
     };
-    
     let md = walk(temp);
-    // Cleanup aggressive newlines but keep paragraphs
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
@@ -234,32 +188,21 @@ const htmlToMarkdown = (html: string) => {
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
-    
-    // Headers
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    
-    // Formatting
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
     html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
     html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
     html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    
-    // Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
-    
-    // Improved Line Breaks: Wrap loose lines in divs to simulate standard contentEditable behavior
     const lines = html.split('\n');
     const processedLines = lines.map(line => {
-        // Leave block elements alone
         if (line.match(/^<(h1|h2|div|p|ul|ol|li|blockquote)/i)) return line;
-        // Wrap text lines in div
         return line.trim() ? `<div>${line}</div>` : '<div><br></div>';
     });
-    
     return processedLines.join('');
 };
 
@@ -367,7 +310,6 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
 
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
-    // Graphite Ghost Style Links - No color change on hover, just underline
     a: ({node, ...props}: any) => <a className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer underline-offset-4 decoration-slate-300 dark:decoration-slate-600 transition-colors font-sans text-sm font-medium relative z-20 break-all" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
@@ -410,7 +352,6 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
         };
         
         const handleScroll = (event: Event) => {
-            // Fix: Check if scrolling happens inside the dropdown
             if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
                 return;
             }
@@ -539,13 +480,7 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
     }, [triggerRef]);
     
     const getUnsplashKey = () => {
-        const keys = [
-            'UNSPLASH_ACCESS_KEY', 
-            'VITE_UNSPLASH_ACCESS_KEY', 
-            'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY', 
-            'REACT_APP_UNSPLASH_ACCESS_KEY'
-        ];
-        
+        const keys = ['UNSPLASH_ACCESS_KEY', 'VITE_UNSPLASH_ACCESS_KEY', 'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY', 'REACT_APP_UNSPLASH_ACCESS_KEY'];
         for (const k of keys) {
             // @ts-ignore
             if (typeof process !== 'undefined' && process.env?.[k]) return process.env[k];
@@ -561,22 +496,16 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
             if (q) alert("Ключ Unsplash не найден.");
             return;
         }
-        
         setLoading(true);
         try {
             const page = Math.floor(Math.random() * 10) + 1;
             const endpoint = q 
                 ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&page=${page}&client_id=${key}`
                 : `https://api.unsplash.com/photos/random?count=20&client_id=${key}`;
-            
             const res = await fetch(endpoint);
             if (!res.ok) throw new Error("API Error");
             const data = await res.json();
-            
-            const urls = q 
-                ? data.results.map((img: any) => img.urls.regular) 
-                : data.map((img: any) => img.urls.regular);
-            
+            const urls = q ? data.results.map((img: any) => img.urls.regular) : data.map((img: any) => img.urls.regular);
             setResults(urls);
         } catch (e) {
             console.error("Unsplash Fetch Error", e);
@@ -605,7 +534,6 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                 onMouseDown={e => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase font-sans">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
-                
                 <div className="relative">
                     <input 
                         type="text" 
@@ -624,7 +552,6 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                         <ArrowRight size={12} />
                     </button>
                 </div>
-
                 <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
                     {loading ? (
                         <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
@@ -638,7 +565,6 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                         ))
                     )}
                 </div>
-
                 <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
                     <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded text-xs font-medium font-sans cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
                         <Upload size={12} /> Своя 
@@ -859,7 +785,7 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
-        onStartJourney?: (note: Note) => void; // New handler
+        onStartJourney?: (note: Note) => void;
     }
 }
 
@@ -1837,9 +1763,13 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], habits = [], config, addN
                                 </div>
                             )}
                             {inboxNotes.length > 0 ? (
-                                <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                    {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
-                                </Masonry>
+                                <div className="columns-1 md:columns-2 xl:columns-4 gap-6 space-y-6 pb-20 md:pb-0 block">
+                                    {inboxNotes.map((note) => (
+                                        <div key={note.id} className="break-inside-avoid mb-6">
+                                            <NoteCard note={note} isArchived={false} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />
+                                        </div>
+                                    ))}
+                                </div>
                             ) : (
                                 <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
                             )}
@@ -1848,9 +1778,13 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], habits = [], config, addN
                     {activeTab === 'library' && (
                         <>
                             {archivedNotes.length > 0 ? (
-                                <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                    {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
-                                </Masonry>
+                                <div className="columns-1 md:columns-2 xl:columns-4 gap-6 space-y-6 pb-20 md:pb-0 block">
+                                    {archivedNotes.map((note) => (
+                                        <div key={note.id} className="break-inside-avoid mb-6">
+                                            <NoteCard note={note} isArchived={true} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />
+                                        </div>
+                                    ))}
+                                </div>
                             ) : (
                                 <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
                             )}
