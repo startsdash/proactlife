@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -5,12 +6,13 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry, Habit } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
+import JourneyMap from './JourneyMap';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Map } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -32,6 +34,10 @@ interface Props {
   initialNoteId?: string | null;
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
+  // Added props for Journey Map stats context
+  tasks?: Task[];
+  habits?: Habit[];
+  onAddHabit?: (habit: Habit) => void;
 }
 
 const colors = [
@@ -668,6 +674,7 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
+        startJourney?: (note: Note) => void; // New Journey Handler
     }
 }
 
@@ -830,10 +837,21 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
             <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
-                        // Inbox: Only Archive button
-                        <Tooltip content="Переместить в библиотеку">
-                            <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
-                        </Tooltip>
+                        // Inbox: Start Journey + Archive
+                        <>
+                            <Tooltip content="Начать Путь">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handlers.startJourney && handlers.startJourney(note); }} 
+                                    className="p-2 text-indigo-500 hover:text-white hover:bg-indigo-500 rounded-full transition-all"
+                                >
+                                    <Map size={16} strokeWidth={1.5} />
+                                </button>
+                            </Tooltip>
+                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                            <Tooltip content="Переместить в библиотеку">
+                                <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
+                            </Tooltip>
+                        </>
                     ) : (
                         // Library: Action buttons moved here
                         <>
@@ -877,7 +895,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries, tasks, habits, onAddHabit }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -886,6 +904,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'inbox' | 'library'>((defaultTab as any) || 'inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  // Journey State
+  const [journeyNote, setJourneyNote] = useState<Note | null>(null);
+
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
   const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
@@ -940,6 +961,17 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       }
       return ids;
   }, [journalEntries]);
+
+  // Journey Stats Calc
+  const journeyStats = useMemo(() => {
+      const totalNotes = notes.filter(n => n.status !== 'trash').length;
+      const assimilatedNotes = notes.filter(n => n.status === 'archived').length;
+      const percent = totalNotes > 0 ? Math.round((assimilatedNotes / totalNotes) * 100) : 0;
+      return {
+          syncRatio: `${assimilatedNotes} / ${totalNotes}`,
+          percent
+      };
+  }, [notes]);
 
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab as any);
@@ -1343,7 +1375,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
-      onImageClick: (src: string) => setLightboxSrc(src)
+      onImageClick: (src: string) => setLightboxSrc(src),
+      startJourney: (note: Note) => setJourneyNote(note)
   }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
 
   const markdownRenderComponents = {
@@ -1787,6 +1820,60 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </div>
         </AnimatePresence>
       )}
+
+      {/* JOURNEY MAP MODAL */}
+      <AnimatePresence>
+          {journeyNote && (
+              <JourneyMap 
+                  note={journeyNote}
+                  config={config}
+                  onClose={() => setJourneyNote(null)}
+                  stats={journeyStats}
+                  actions={{
+                      createTask: (content, title) => {
+                          const task: Task = {
+                              id: Date.now().toString(),
+                              title: title || journeyNote.title,
+                              content: content,
+                              column: 'todo',
+                              createdAt: Date.now()
+                          };
+                          onAddTask(task);
+                          archiveNote(journeyNote.id);
+                      },
+                      createHabit: (title) => {
+                          if (onAddHabit) {
+                              const habit: Habit = {
+                                  id: Date.now().toString(),
+                                  title: title,
+                                  color: 'indigo',
+                                  icon: 'Zap',
+                                  frequency: 'daily',
+                                  history: {},
+                                  streak: 0,
+                                  bestStreak: 0,
+                                  reminders: [],
+                                  createdAt: Date.now()
+                              };
+                              onAddHabit(habit);
+                              archiveNote(journeyNote.id);
+                          }
+                      },
+                      createJournal: (content) => {
+                          const entry: JournalEntry = {
+                              id: Date.now().toString(),
+                              date: Date.now(),
+                              content: content,
+                              linkedNoteId: journeyNote.id,
+                              isInsight: false
+                          };
+                          onAddJournalEntry(entry);
+                          archiveNote(journeyNote.id);
+                      }
+                  }}
+              />
+          )}
+      </AnimatePresence>
     </div>
   );
 };
