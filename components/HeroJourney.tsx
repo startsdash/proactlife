@@ -1,8 +1,8 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Note, Task, Habit, JournalEntry, Module } from '../types';
-import { X, Zap, Target, Book, Flame, BrainCircuit, CheckCircle2, Circle, ArrowRight, Activity, Diamond, LayoutGrid, Radio, Plus, Check } from 'lucide-react';
+import { Note, Task, Habit, JournalEntry } from '../types';
+import { X, Zap, Target, Book, Flame, Activity, CheckCircle2, Lock, Terminal, Cpu, Radio, ShieldCheck } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface Props {
@@ -17,12 +17,88 @@ interface Props {
   onNavigateToSandbox: (noteId: string) => void;
 }
 
+// --- SYSTEM LOG COMPONENT ---
+const SystemLogs = ({ logs }: { logs: string[] }) => {
+    return (
+        <div className="font-mono text-[9px] text-emerald-500/80 p-4 border-r border-emerald-500/20 bg-black/20 h-full overflow-hidden flex flex-col justify-end">
+            <div className="mb-2 text-xs font-bold text-emerald-400 opacity-50 uppercase tracking-widest">System_Log_v2.4</div>
+            <div className="space-y-1">
+                {logs.map((log, i) => (
+                    <motion.div 
+                        key={i} 
+                        initial={{ opacity: 0, x: -10 }} 
+                        animate={{ opacity: 1 - (logs.length - 1 - i) * 0.15, x: 0 }} 
+                        className="truncate"
+                    >
+                        <span className="opacity-50 mr-2">[{new Date().toLocaleTimeString([], {hour12: false, hour:'2-digit', minute:'2-digit', second:'2-digit'})}]</span>
+                        {log}
+                    </motion.div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// --- ACTION TERMINAL BUTTON ---
+const ActionTerminal = ({ 
+    label, 
+    subLabel, 
+    icon: Icon, 
+    onClick, 
+    active, 
+    disabled, 
+    colorClass 
+}: { 
+    label: string, 
+    subLabel: string, 
+    icon: any, 
+    onClick: () => void, 
+    active: boolean, 
+    disabled?: boolean, 
+    colorClass: string 
+}) => {
+    return (
+        <button 
+            onClick={onClick}
+            disabled={disabled}
+            className={`
+                w-full p-4 border-l-2 transition-all duration-300 group relative overflow-hidden text-left
+                ${active 
+                    ? `bg-${colorClass}-500/10 border-${colorClass}-500` 
+                    : 'bg-transparent border-slate-700 hover:bg-slate-800 hover:border-slate-500'}
+                ${disabled ? 'opacity-30 cursor-not-allowed' : ''}
+            `}
+        >
+            <div className="flex justify-between items-center relative z-10">
+                <div>
+                    <div className={`text-[10px] font-mono uppercase tracking-widest mb-1 ${active ? `text-${colorClass}-400` : 'text-slate-500 group-hover:text-slate-300'}`}>
+                        {subLabel}
+                    </div>
+                    <div className={`text-sm font-bold ${active ? 'text-white' : 'text-slate-400 group-hover:text-white'}`}>
+                        {label}
+                    </div>
+                </div>
+                <Icon size={18} className={`${active ? `text-${colorClass}-400` : 'text-slate-600'} transition-colors`} />
+            </div>
+            
+            {/* Scanline Effect */}
+            {active && (
+                <motion.div 
+                    className={`absolute inset-0 bg-gradient-to-r from-transparent via-${colorClass}-500/20 to-transparent`}
+                    animate={{ x: ['-100%', '100%'] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                />
+            )}
+        </button>
+    );
+};
+
 const HeroJourney: React.FC<Props> = ({ 
   note, tasks, habits, journal, 
   onClose, onCreateTask, onCreateHabit, onCreateEntry, onNavigateToSandbox 
 }) => {
   
-  // --- DATA AGGREGATION ---
+  // --- DATA PROCESSING ---
   const linkedTask = useMemo(() => tasks.find(t => t.originNoteId === note.id), [tasks, note.id]);
   const linkedHabit = useMemo(() => habits.find(h => h.originNoteId === note.id), [habits, note.id]);
   const linkedEntries = useMemo(() => journal.filter(j => j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id)), [journal, note.id]);
@@ -30,8 +106,40 @@ const HeroJourney: React.FC<Props> = ({
   const hasInsight = linkedEntries.some(j => j.isInsight);
   const isTaskDone = linkedTask?.column === 'done';
   const habitStreak = linkedHabit?.streak || 0;
+  const isHabitEstablished = habitStreak > 3;
 
-  // --- ACTIONS ---
+  // --- TRANSFORMATION SCORE ---
+  // Task Done: 30% | Habit > 3 days: 30% | Insight: 40%
+  const transformationScore = useMemo(() => {
+      let score = 0;
+      if (isTaskDone) score += 30;
+      if (isHabitEstablished) score += 30;
+      if (hasInsight) score += 40;
+      return score;
+  }, [isTaskDone, isHabitEstablished, hasInsight]);
+
+  // --- LOGS ---
+  const [logs, setLogs] = useState<string[]>([]);
+  
+  useEffect(() => {
+      const initLogs = [
+          "INITIALIZING NEURAL LINK...",
+          `TARGET ID: ${note.id.slice(-4)}`,
+          "SCANNING SECTORS...",
+      ];
+      let delay = 0;
+      initLogs.forEach((log, i) => {
+          delay += 500;
+          setTimeout(() => setLogs(prev => [...prev.slice(-5), log]), delay);
+      });
+
+      if (linkedTask) setTimeout(() => setLogs(prev => [...prev.slice(-5), `KANBAN LINK DETECTED: [${linkedTask.column.toUpperCase()}]`]), delay + 600);
+      if (linkedHabit) setTimeout(() => setLogs(prev => [...prev.slice(-5), `RITUAL LINK DETECTED: [STREAK ${linkedHabit.streak}]`]), delay + 800);
+      if (hasInsight) setTimeout(() => setLogs(prev => [...prev.slice(-5), `INSIGHT ACQUIRED. CORE STABLE.`]), delay + 1000);
+
+  }, []);
+
+  // --- HANDLERS ---
   const handleCreateTask = () => {
       onCreateTask({
           id: Date.now().toString(),
@@ -41,6 +149,7 @@ const HeroJourney: React.FC<Props> = ({
           createdAt: Date.now(),
           originNoteId: note.id
       });
+      setLogs(prev => [...prev.slice(-5), "PROTOCOL INITIATED: SPRINT CREATED"]);
   };
 
   const handleCreateHabit = () => {
@@ -57,6 +166,7 @@ const HeroJourney: React.FC<Props> = ({
           createdAt: Date.now(),
           originNoteId: note.id
       });
+      setLogs(prev => [...prev.slice(-5), "PROTOCOL INITIATED: RITUAL STARTED"]);
   };
 
   const handleCreateEntry = () => {
@@ -67,218 +177,252 @@ const HeroJourney: React.FC<Props> = ({
           linkedNoteId: note.id,
           linkedNoteIds: [note.id]
       });
+      setLogs(prev => [...prev.slice(-5), "DATA LOG OPENED: JOURNAL ENTRY"]);
   };
 
-  // --- ANIMATION VARIANTS ---
-  const orbitVariants = {
-      animate: { rotate: 360, transition: { duration: 60, repeat: Infinity, ease: "linear" } }
-  };
-
-  // Calculate elapsed time formatted
-  const elapsedDays = Math.floor((Date.now() - (note.journeyStartedAt || note.createdAt)) / (1000 * 60 * 60 * 24));
+  // --- RADAR CONFIG ---
+  const cx = 300;
+  const cy = 300;
+  
+  // Orbits
+  const r1 = 60; // Core
+  const r2 = 120; // Inner
+  const r3 = 180; // Middle
+  const r4 = 240; // Outer
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-        {/* BACKDROP */}
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl">
+        
+        {/* MAIN HUD CONTAINER */}
         <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-slate-950/90 backdrop-blur-[40px]"
-            onClick={onClose}
-        >
-            <div 
-                className="absolute inset-0 opacity-10 pointer-events-none" 
-                style={{ 
-                    backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
-                    backgroundSize: '40px 40px'
-                }} 
-            />
-        </motion.div>
-
-        {/* MAIN HUD */}
-        <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="relative w-full max-w-7xl h-[90vh] grid grid-cols-1 md:grid-cols-4 grid-rows-4 md:grid-rows-2 gap-4 md:gap-0 overflow-hidden rounded-[40px] border border-white/10 bg-slate-900/50 shadow-2xl p-4 md:p-0"
-            onClick={e => e.stopPropagation()}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="w-full max-w-6xl h-[85vh] bg-[#020617] border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl relative flex flex-col md:flex-row"
         >
-            {/* Header / Control Deck Label */}
-            <div className="absolute top-8 left-8 z-30 pointer-events-none hidden md:block">
-                <div className="flex items-center gap-3 text-emerald-400 mb-1">
-                    <Activity size={16} className="animate-pulse" />
-                    <span className="font-mono text-[10px] uppercase tracking-[0.3em]">Protocol: HERO_JOURNEY</span>
+            {/* --- LEFT PANEL: SYSTEM --- */}
+            <div className="hidden md:flex w-64 flex-col border-r border-slate-800/50 bg-[#020617]/50 backdrop-blur-md z-10 relative">
+                <div className="p-6 border-b border-slate-800/50">
+                    <div className="flex items-center gap-2 text-emerald-500 mb-2">
+                        <Terminal size={16} />
+                        <span className="font-mono text-[10px] uppercase tracking-[0.2em]">System Status</span>
+                    </div>
+                    <div className="text-2xl text-white font-light tracking-tight">Online</div>
                 </div>
-            </div>
-            
-            <button onClick={onClose} className="absolute top-8 right-8 z-30 p-3 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors border border-white/10">
-                <X size={24} strokeWidth={1} />
-            </button>
-
-            {/* SECTOR 1: INITIATION (Top Left) */}
-            <div className="md:col-span-1 md:row-span-1 border-b md:border-r border-white/10 p-6 flex flex-col justify-end relative bg-slate-900/40">
-                <div className="absolute top-4 left-4 font-mono text-[9px] text-slate-500 uppercase tracking-widest">SECTOR 1: INITIATION</div>
                 
-                <div className="font-mono text-xs text-slate-400 space-y-4">
-                    <div>
-                        <div className="text-slate-600 mb-1">SUBJECT</div>
-                        <div className="text-white font-bold truncate">{note.title || 'Untitled Idea'}</div>
+                {/* Note Info */}
+                <div className="p-6 border-b border-slate-800/50 flex-1 overflow-y-auto custom-scrollbar-ghost">
+                    <div className="mb-4">
+                        <div className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">Source ID</div>
+                        <div className="font-mono text-emerald-500 text-xs">{note.id.slice(-8)}</div>
+                    </div>
+                    <div className="mb-4">
+                        <div className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">Content Preview</div>
+                        <div className="text-slate-400 text-xs font-serif italic line-clamp-6 opacity-70">
+                            {note.content}
+                        </div>
                     </div>
                     <div>
-                        <div className="text-slate-600 mb-1">START_DATE</div>
-                        <div className="text-emerald-400">{new Date(note.journeyStartedAt || note.createdAt).toLocaleDateString()}</div>
-                    </div>
-                    <div>
-                        <div className="text-slate-600 mb-1">TIME_ELAPSED</div>
-                        <div className="text-emerald-400">{elapsedDays} DAYS</div>
-                    </div>
-                    <div>
-                        <div className="text-slate-600 mb-1">STATUS</div>
-                        <div className="text-amber-400 animate-pulse">ACTIVE</div>
+                        <div className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">Creation Date</div>
+                        <div className="font-mono text-slate-400 text-xs">{new Date(note.createdAt).toLocaleDateString()}</div>
                     </div>
                 </div>
+
+                {/* Logs Area */}
+                <div className="h-40 shrink-0">
+                    <SystemLogs logs={logs} />
+                </div>
             </div>
 
-            {/* CENTER ORBIT (Spans center area visually, absolutely positioned) */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[500px] md:h-[500px] pointer-events-none z-0 flex items-center justify-center">
-                 {/* Connection Lines to Sectors */}
-                 <svg className="absolute inset-0 w-full h-full opacity-30">
-                    <line x1="0" y1="0" x2="50%" y2="50%" stroke="white" strokeDasharray="4 4" />
-                    <line x1="100%" y1="0" x2="50%" y2="50%" stroke="white" strokeDasharray="4 4" />
-                    <line x1="0" y1="100%" x2="50%" y2="50%" stroke="white" strokeDasharray="4 4" />
-                    <line x1="100%" y1="100%" x2="50%" y2="50%" stroke="white" strokeDasharray="4 4" />
-                 </svg>
-
-                 {/* Orbital System */}
-                 <motion.div variants={orbitVariants} animate="animate" className="absolute inset-0 rounded-full border border-dashed border-slate-600 opacity-50" />
-                 <div className="absolute inset-[15%] rounded-full border border-white/10" />
-                 
-                 {/* Quantum Core */}
-                 <div className="relative w-40 h-40 md:w-64 md:h-64 rounded-full bg-slate-950 border border-emerald-500/30 flex items-center justify-center p-6 text-center shadow-[0_0_50px_rgba(16,185,129,0.1)] z-10 pointer-events-auto">
-                    <div className="text-[8px] font-mono text-emerald-500 mb-2 uppercase tracking-widest absolute top-6">Quantum Core</div>
-                    <div className="text-slate-300 font-serif text-xs md:text-sm leading-relaxed line-clamp-4 mix-blend-lighten overflow-hidden">
-                        <ReactMarkdown>{note.content}</ReactMarkdown>
+            {/* --- CENTER: THE RADAR --- */}
+            <div className="flex-1 relative flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-20 pointer-events-none">
+                    <div>
+                        <h2 className="text-white text-lg font-bold uppercase tracking-wider flex items-center gap-3">
+                            <Radio className="text-indigo-500 animate-pulse" size={18} />
+                            Transformation Radar
+                        </h2>
+                        <p className="text-[10px] text-slate-500 font-mono mt-1">OBJECT: {note.title?.toUpperCase() || 'UNTITLED'}</p>
                     </div>
-                 </div>
+                    <button onClick={onClose} className="pointer-events-auto p-2 rounded-full border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* SVG RADAR */}
+                <div className="flex-1 flex items-center justify-center relative">
+                    {/* Background Grid */}
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.05)_0%,transparent_70%)] pointer-events-none" />
+                    
+                    <svg viewBox="0 0 600 600" className="w-full h-full max-w-[600px] max-h-[600px] p-8 overflow-visible">
+                        <defs>
+                            <radialGradient id="coreGradient">
+                                <stop offset="0%" stopColor="#6366f1" stopOpacity="0.8" />
+                                <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+                            </radialGradient>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+
+                        {/* --- ORBITS --- */}
+                        {/* Outer Ring (Call) */}
+                        <circle cx={cx} cy={cy} r={r4} fill="none" stroke="#1e293b" strokeWidth="1" />
+                        <motion.circle cx={cx} cy={cy} r={r4} fill="none" stroke="#334155" strokeWidth="1" strokeDasharray="4 8" animate={{ rotate: 360 }} transition={{ duration: 120, repeat: Infinity, ease: "linear" }} />
+                        
+                        {/* Middle Ring (Trials) */}
+                        <circle cx={cx} cy={cy} r={r3} fill="none" stroke="#1e293b" strokeWidth="1" />
+                        <motion.circle cx={cx} cy={cy} r={r3} fill="none" stroke="#475569" strokeWidth="1" strokeDasharray="10 20" animate={{ rotate: -360 }} transition={{ duration: 90, repeat: Infinity, ease: "linear" }} />
+
+                        {/* Inner Ring (Threshold) */}
+                        <circle cx={cx} cy={cy} r={r2} fill="none" stroke="#1e293b" strokeWidth="1" />
+                        
+                        {/* --- CONNECTIONS (RAYS) --- */}
+                        
+                        {/* NORTH RAY (Tasks) */}
+                        {linkedTask && (
+                            <motion.line 
+                                x1={cx} y1={cy - r1} x2={cx} y2={cy - r4} 
+                                stroke="#10b981" strokeWidth="2"
+                                strokeDasharray="4 4"
+                                animate={{ strokeDashoffset: [0, -8] }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                filter="url(#glow)"
+                            />
+                        )}
+                        {/* Status Marker North */}
+                        <circle cx={cx} cy={cy - r4} r="4" fill={isTaskDone ? "#10b981" : "#1e293b"} stroke="#10b981" strokeWidth="2" />
+                        <text x={cx} y={cy - r4 - 15} textAnchor="middle" fill="#10b981" className="text-[10px] font-mono font-bold uppercase tracking-widest">SPRINT</text>
+
+                        {/* EAST RAY (Habits) */}
+                        {linkedHabit && (
+                            <motion.line 
+                                x1={cx + r1} y1={cy} x2={cx + r4} y2={cy} 
+                                stroke="#f59e0b" strokeWidth="2"
+                                strokeDasharray="4 4"
+                                animate={{ strokeDashoffset: [0, -8] }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                filter="url(#glow)"
+                            />
+                        )}
+                        {/* Status Marker East */}
+                        <circle cx={cx + r4} cy={cy} r="4" fill={isHabitEstablished ? "#f59e0b" : "#1e293b"} stroke="#f59e0b" strokeWidth="2" />
+                        <text x={cx + r4 + 25} y={cy + 4} textAnchor="start" fill="#f59e0b" className="text-[10px] font-mono font-bold uppercase tracking-widest">RITUAL</text>
+
+                        {/* SOUTH RAY (Journal) */}
+                        {linkedEntries.length > 0 && (
+                            <motion.line 
+                                x1={cx} y1={cy + r1} x2={cx} y2={cy + r4} 
+                                stroke="#06b6d4" strokeWidth="2"
+                                strokeDasharray="4 4"
+                                animate={{ strokeDashoffset: [0, -8] }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                filter="url(#glow)"
+                            />
+                        )}
+                        {/* Status Marker South */}
+                        <circle cx={cx} cy={cy + r4} r="4" fill={hasInsight ? "#06b6d4" : "#1e293b"} stroke="#06b6d4" strokeWidth="2" />
+                        <text x={cx} y={cy + r4 + 20} textAnchor="middle" fill="#06b6d4" className="text-[10px] font-mono font-bold uppercase tracking-widest">INSIGHT</text>
+
+                        {/* --- THE CORE --- */}
+                        <g filter="url(#glow)">
+                            <motion.circle 
+                                cx={cx} cy={cy} r={r1} 
+                                fill="#1e1b4b" 
+                                stroke="#6366f1" strokeWidth="2" 
+                                animate={{ 
+                                    r: [r1, r1 + 5, r1],
+                                    strokeOpacity: [0.5, 1, 0.5]
+                                }}
+                                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                            />
+                            <motion.circle 
+                                cx={cx} cy={cy} r={r1 / 2} 
+                                fill="url(#coreGradient)"
+                                animate={{ opacity: [0.5, 0.8, 0.5] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            />
+                            {/* Core Text */}
+                            <text x={cx} y={cy} dy="0.3em" textAnchor="middle" fill="white" className="text-xs font-bold font-mono tracking-widest pointer-events-none">
+                                {transformationScore}%
+                            </text>
+                        </g>
+                    </svg>
+                </div>
+
+                {/* BOTTOM: PROGRESS BAR */}
+                <div className="p-6 bg-slate-900/50 border-t border-slate-800">
+                    <div className="flex justify-between items-end mb-2">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            Personality Transformation Status
+                        </div>
+                        <div className="font-mono text-xl text-indigo-400 font-bold">{transformationScore}/100</div>
+                    </div>
+                    <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <motion.div 
+                            className="h-full bg-gradient-to-r from-indigo-600 via-purple-500 to-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.5)]"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${transformationScore}%` }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                        />
+                    </div>
+                </div>
             </div>
 
-            {/* SECTOR 2: CHOICE (Top Right) */}
-            <div className="md:col-start-4 md:row-start-1 border-b border-l border-white/10 p-6 flex flex-col relative bg-slate-900/40 z-10">
-                <div className="absolute top-4 right-4 font-mono text-[9px] text-slate-500 uppercase tracking-widest text-right">SECTOR 2: CHOICE</div>
+            {/* --- RIGHT PANEL: ACTIONS --- */}
+            <div className="w-full md:w-72 border-t md:border-t-0 md:border-l border-slate-800/50 bg-[#020617]/50 backdrop-blur-md flex flex-col">
+                <div className="p-6 border-b border-slate-800/50">
+                    <h3 className="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                        <Cpu size={16} className="text-indigo-500" /> Control Deck
+                    </h3>
+                </div>
                 
-                <div className="mt-auto space-y-3">
-                    <button 
+                <div className="flex-1 flex flex-col">
+                    <ActionTerminal 
+                        label="INITIATE SPRINT"
+                        subLabel="ACTION PROTOCOL"
+                        icon={Target}
                         onClick={handleCreateTask}
+                        active={!!linkedTask}
                         disabled={!!linkedTask}
-                        className="w-full p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/50 transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-bold text-slate-300 group-hover:text-emerald-400">MISSION</span>
-                            {linkedTask ? <Check size={12} className="text-emerald-500" /> : <Plus size={12} className="text-slate-500" />}
-                        </div>
-                        <div className="text-[10px] text-slate-500">Create Task</div>
-                    </button>
-
-                    <button 
+                        colorClass="emerald"
+                    />
+                    
+                    <ActionTerminal 
+                        label="ESTABLISH RITUAL"
+                        subLabel="SYSTEM PROTOCOL"
+                        icon={Flame}
                         onClick={handleCreateHabit}
+                        active={!!linkedHabit}
                         disabled={!!linkedHabit}
-                        className="w-full p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-orange-500/10 hover:border-orange-500/50 transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-bold text-slate-300 group-hover:text-orange-400">RITUAL</span>
-                            {linkedHabit ? <Check size={12} className="text-orange-500" /> : <Plus size={12} className="text-slate-500" />}
-                        </div>
-                        <div className="text-[10px] text-slate-500">Form Habit</div>
-                    </button>
-
-                    <button 
+                        colorClass="amber"
+                    />
+                    
+                    <ActionTerminal 
+                        label="LOG REFLECTION"
+                        subLabel="DATA ENTRY"
+                        icon={Book}
                         onClick={handleCreateEntry}
-                        className="w-full p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-cyan-500/10 hover:border-cyan-500/50 transition-all text-left group"
-                    >
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-bold text-slate-300 group-hover:text-cyan-400">LOG</span>
-                            <Plus size={12} className="text-slate-500" />
-                        </div>
-                        <div className="text-[10px] text-slate-500">Add Reflection</div>
-                    </button>
-                </div>
-            </div>
+                        active={linkedEntries.length > 0}
+                        colorClass="cyan"
+                    />
 
-            {/* SECTOR 3: TRANSFORMATION (Bottom Left) */}
-            <div className="md:col-start-1 md:row-start-2 border-r border-t border-white/10 p-6 flex flex-col relative bg-slate-900/40 z-10">
-                <div className="absolute bottom-4 left-4 font-mono text-[9px] text-slate-500 uppercase tracking-widest">SECTOR 3: TRANSFORMATION</div>
-                
-                <div className="mb-auto flex items-center justify-center h-full">
-                    {hasInsight ? (
-                        <div className="text-center">
-                            <div className="w-20 h-20 mx-auto bg-indigo-500/20 rounded-full flex items-center justify-center border border-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.4)] animate-pulse">
-                                <Diamond size={32} className="text-indigo-400 fill-current" />
-                            </div>
-                            <div className="mt-4 font-bold text-indigo-300 tracking-widest text-sm">INSIGHT ACQUIRED</div>
-                            <div className="text-[10px] text-indigo-400/60 mt-1">Synthesis Complete</div>
-                        </div>
-                    ) : (
-                        <div className="text-center opacity-30">
-                            <div className="w-20 h-20 mx-auto bg-slate-800 rounded-full flex items-center justify-center border border-slate-700">
-                                <Diamond size={32} className="text-slate-600" />
-                            </div>
-                            <div className="mt-4 font-bold text-slate-500 tracking-widest text-sm">AWAITING INSIGHT</div>
+                    {/* Completion Badge */}
+                    {transformationScore === 100 && (
+                        <div className="mt-auto m-4 p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                            <ShieldCheck size={32} className="mx-auto text-indigo-400 mb-2" />
+                            <div className="text-xs font-bold text-indigo-300 uppercase tracking-widest mb-1">Evolution Complete</div>
+                            <div className="text-[10px] text-indigo-400/60">New Neural Pathway Established</div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* SECTOR 4: MONITORING (Bottom Right) */}
-            <div className="md:col-start-4 md:row-start-2 border-l border-t border-white/10 p-6 flex flex-col relative bg-slate-900/40 z-10">
-                <div className="absolute bottom-4 right-4 font-mono text-[9px] text-slate-500 uppercase tracking-widest text-right">SECTOR 4: MONITORING</div>
-                
-                <div className="mb-auto space-y-4 pt-4">
-                    {/* Task Monitor */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Target size={14} className="text-slate-400" />
-                            <span className="text-xs text-slate-300 font-bold">TASK LINK</span>
-                        </div>
-                        <div className="w-24 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                            <div className={`h-full ${linkedTask ? (isTaskDone ? 'bg-emerald-500 w-full' : 'bg-emerald-500 w-1/2 animate-pulse') : 'w-0'}`} />
-                        </div>
-                    </div>
-
-                    {/* Habit Monitor */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Flame size={14} className="text-slate-400" />
-                            <span className="text-xs text-slate-300 font-bold">HABIT LINK</span>
-                        </div>
-                        <div className="w-24 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                            <div 
-                                className={`h-full ${linkedHabit ? 'bg-orange-500' : 'w-0'}`} 
-                                style={{ width: linkedHabit ? `${Math.min(habitStreak * 10, 100)}%` : '0%' }} 
-                            />
-                        </div>
-                    </div>
-
-                    {/* Journal Monitor */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Book size={14} className="text-slate-400" />
-                            <span className="text-xs text-slate-300 font-bold">ENTRIES</span>
-                        </div>
-                        <span className="font-mono text-xs text-cyan-400">{linkedEntries.length} LOGS</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Footer Exit Button */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
-                <button 
-                    onClick={onClose}
-                    className="px-6 py-2 rounded-full border border-white/20 hover:bg-white/10 text-[10px] font-bold text-white uppercase tracking-[0.2em] transition-all backdrop-blur-md"
-                >
-                    ВЕРНУТЬСЯ К СПИСКУ ПУТЕЙ
-                </button>
-            </div>
         </motion.div>
     </div>
   );
