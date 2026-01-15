@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -636,7 +637,7 @@ const TaskDetailSphereSelector: React.FC<{
 
     return (
         <>
-            <Tooltip content="Сферы">
+            <Tooltip content="Сферы" className="w-fit">
                 <button 
                     ref={triggerRef}
                     onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
