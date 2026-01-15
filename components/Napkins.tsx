@@ -3,18 +3,17 @@ import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
+import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry, Habit } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Compass, Map, Workflow, TrendingUp, BookOpen, Crown } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
 
 interface Props {
   notes: Note[];
-  tasks?: Task[];
-  habits?: Habit[];
   config: AppConfig;
   addNote: (note: Note) => void;
   moveNoteToSandbox: (id: string) => void;
@@ -24,7 +23,6 @@ interface Props {
   reorderNote: (draggedId: string, targetId: string) => void;
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
-  onAddHabit?: (habit: Habit) => void;
   onAddJournalEntry: (entry: JournalEntry) => void;
   sketchItems?: SketchItem[];
   addSketchItem?: (item: SketchItem) => void;
@@ -62,6 +60,13 @@ const UNSPLASH_PRESETS = [
 
 const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E")`;
 
+const breakpointColumnsObj = {
+  default: 4,
+  1600: 3,
+  1100: 2,
+  700: 1
+};
+
 // --- HELPER FUNCTIONS ---
 
 const allowDataUrls = (url: string) => url;
@@ -72,25 +77,50 @@ const extractImages = (content: string): string[] => {
 };
 
 const getPreviewContent = (content: string) => {
+    // 1. Remove images
     let cleanText = content.replace(/!\[.*?\]\(.*?\)/g, '');
+    
+    // 2. Normalize horizontal spaces (keep newlines for card formatting)
     cleanText = cleanText.replace(/[ \t]+/g, ' ').trim();
+
+    // 3. Smart Truncation (2-3 sentences)
+    // Split by sentence terminators followed by space or newline
     const sentences = cleanText.match(/[^\.!\?]+[\.!\?]+(?=\s|$)/g) || [cleanText];
+    
+    // Determine how many sentences to show based on length
     let limit = 0;
     let sentenceCount = 0;
+    
+    // Try to get at least 2 sentences, up to 3, but watch char count
     for (let s of sentences) {
-        if (sentenceCount >= 3) break;
-        if (limit + s.length > 300 && sentenceCount >= 1) break;
+        if (sentenceCount >= 3) break; // Max 3 sentences
+        if (limit + s.length > 300 && sentenceCount >= 1) break; // If adding next makes it huge, stop
         limit += s.length;
         sentenceCount++;
     }
+
     let preview = sentences.slice(0, sentenceCount).join(' ');
-    if (preview.length === 0 && cleanText.length > 0) preview = cleanText;
+    
+    // Fallback if sentences detection failed or text is one giant block
+    if (preview.length === 0 && cleanText.length > 0) {
+        preview = cleanText;
+    }
+
+    // Hard cap at 300 chars to prevent overflow, but respect word boundaries
     if (preview.length > 300) {
         preview = preview.slice(0, 300);
         const lastSpace = preview.lastIndexOf(' ');
-        if (lastSpace > 0) preview = preview.slice(0, lastSpace);
+        if (lastSpace > 0) {
+            preview = preview.slice(0, lastSpace);
+        }
     }
-    if (preview.length < cleanText.length) preview = preview.replace(/[\.!\?,\s]+$/, '') + '...';
+
+    // Add ellipsis if we cut content
+    if (preview.length < cleanText.length) {
+        // Remove trailing punctuation before adding ellipsis
+        preview = preview.replace(/[\.!\?,\s]+$/, '') + '...';
+    }
+    
     return preview;
 };
 
@@ -111,11 +141,19 @@ const processImage = (file: File | Blob): Promise<string> => {
                 const MAX_HEIGHT = 800;
                 let width = img.width;
                 let height = img.height;
+
                 if (width > height) {
-                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
                 } else {
-                    if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
                 }
+
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
@@ -144,6 +182,7 @@ const findFirstUrl = (text: string): string | null => {
 const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
+
     const wrap = (text: string, marker: string) => {
         const match = text.match(/^(\s*)(.*?)(\s*)$/s);
         if (match && match[2]) {
@@ -151,6 +190,7 @@ const htmlToMarkdown = (html: string) => {
         }
         return text.trim() ? `${marker}${text}${marker}` : '';
     };
+
     const walk = (node: Node): string => {
         if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
         if (node.nodeType === Node.ELEMENT_NODE) {
@@ -170,6 +210,7 @@ const htmlToMarkdown = (html: string) => {
                 case 'code': return `\`${content}\``;
                 case 'h1': return `\n# ${content}\n`;
                 case 'h2': return `\n## ${content}\n`;
+                // Improved block handling:
                 case 'div': return content ? `\n${content}` : '\n'; 
                 case 'p': return `\n${content}\n`;
                 case 'br': return '\n';
@@ -179,7 +220,9 @@ const htmlToMarkdown = (html: string) => {
         }
         return '';
     };
+    
     let md = walk(temp);
+    // Cleanup aggressive newlines but keep paragraphs
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
@@ -188,21 +231,32 @@ const htmlToMarkdown = (html: string) => {
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
+    
+    // Headers
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    
+    // Formatting
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
     html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
     html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
     html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
+    
+    // Improved Line Breaks: Wrap loose lines in divs to simulate standard contentEditable behavior
     const lines = html.split('\n');
     const processedLines = lines.map(line => {
+        // Leave block elements alone
         if (line.match(/^<(h1|h2|div|p|ul|ol|li|blockquote)/i)) return line;
+        // Wrap text lines in div
         return line.trim() ? `<div>${line}</div>` : '<div><br></div>';
     });
+    
     return processedLines.join('');
 };
 
@@ -310,6 +364,7 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
 
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
+    // Graphite Ghost Style Links - No color change on hover, just underline
     a: ({node, ...props}: any) => <a className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer underline-offset-4 decoration-slate-300 dark:decoration-slate-600 transition-colors font-sans text-sm font-medium relative z-20 break-all" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
@@ -352,6 +407,7 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
         };
         
         const handleScroll = (event: Event) => {
+            // Fix: Check if scrolling happens inside the dropdown
             if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
                 return;
             }
@@ -480,7 +536,13 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
     }, [triggerRef]);
     
     const getUnsplashKey = () => {
-        const keys = ['UNSPLASH_ACCESS_KEY', 'VITE_UNSPLASH_ACCESS_KEY', 'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY', 'REACT_APP_UNSPLASH_ACCESS_KEY'];
+        const keys = [
+            'UNSPLASH_ACCESS_KEY', 
+            'VITE_UNSPLASH_ACCESS_KEY', 
+            'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY', 
+            'REACT_APP_UNSPLASH_ACCESS_KEY'
+        ];
+        
         for (const k of keys) {
             // @ts-ignore
             if (typeof process !== 'undefined' && process.env?.[k]) return process.env[k];
@@ -496,16 +558,22 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
             if (q) alert("Ключ Unsplash не найден.");
             return;
         }
+        
         setLoading(true);
         try {
             const page = Math.floor(Math.random() * 10) + 1;
             const endpoint = q 
                 ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&page=${page}&client_id=${key}`
                 : `https://api.unsplash.com/photos/random?count=20&client_id=${key}`;
+            
             const res = await fetch(endpoint);
             if (!res.ok) throw new Error("API Error");
             const data = await res.json();
-            const urls = q ? data.results.map((img: any) => img.urls.regular) : data.map((img: any) => img.urls.regular);
+            
+            const urls = q 
+                ? data.results.map((img: any) => img.urls.regular) 
+                : data.map((img: any) => img.urls.regular);
+            
             setResults(urls);
         } catch (e) {
             console.error("Unsplash Fetch Error", e);
@@ -534,6 +602,7 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                 onMouseDown={e => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase font-sans">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
+                
                 <div className="relative">
                     <input 
                         type="text" 
@@ -552,6 +621,7 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                         <ArrowRight size={12} />
                     </button>
                 </div>
+
                 <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
                     {loading ? (
                         <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
@@ -565,6 +635,7 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                         ))
                     )}
                 </div>
+
                 <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
                     <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded text-xs font-medium font-sans cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
                         <Upload size={12} /> Своя 
@@ -577,194 +648,6 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
             </div>
         </>,
         document.body
-    );
-};
-
-// --- HERO JOURNEY COMPONENT ---
-const HeroJourneyView: React.FC<{ 
-    note: Note, 
-    tasks: Task[], 
-    habits: Habit[], 
-    onClose: () => void,
-    onNavigate: (tab: 'inbox' | 'library' | 'journey') => void,
-    onMoveToHub: () => void,
-    onAddSprint: () => void,
-    onAddRitual: () => void,
-    onAddJournal: () => void
-}> = ({ note, tasks, habits, onClose, onNavigate, onMoveToHub, onAddSprint, onAddRitual, onAddJournal }) => {
-    
-    // Check Status of Linked Items
-    const linkedTask = tasks.find(t => t.id === note.journeyPath?.taskId);
-    const linkedHabit = habits.find(h => h.id === note.journeyPath?.habitId);
-    
-    const isTaskDone = linkedTask?.column === 'done';
-    const hasJourneyStarted = !!linkedTask || !!linkedHabit || !!note.journeyPath?.journalId;
-
-    return (
-        <div className="flex flex-col h-full bg-[#020617] relative overflow-hidden text-white">
-            {/* Background Atmosphere */}
-            <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#020617] to-[#020617]" />
-                <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]" />
-            </div>
-
-            {/* Header */}
-            <div className="relative z-10 flex items-center justify-between p-6">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => onNavigate('inbox')} className="text-slate-400 hover:text-white transition-colors">
-                        <ArrowLeft size={24} strokeWidth={1} />
-                    </button>
-                    <div>
-                        <h2 className="text-xl font-serif tracking-tight text-white/90">Hero Journey</h2>
-                        <p className="text-[10px] font-mono text-indigo-400 uppercase tracking-widest">Protocol: Transformation</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Stage */}
-            <div className="flex-1 relative flex items-center justify-center">
-                
-                {/* Connecting Lines Layer (SVG) */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                    <defs>
-                        <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stopColor="#6366f1" stopOpacity="0" />
-                            <stop offset="50%" stopColor="#6366f1" stopOpacity="0.5" />
-                            <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
-                        </linearGradient>
-                    </defs>
-                    {/* Center to Top (Hub) */}
-                    <line x1="50%" y1="50%" x2="50%" y2="20%" stroke="white" strokeWidth="1" strokeOpacity="0.1" strokeDasharray="4 4" />
-                    
-                    {/* Center to Right (Sprint) */}
-                    {linkedTask && (
-                        <motion.line 
-                            x1="50%" y1="50%" x2="80%" y2="50%" 
-                            stroke={isTaskDone ? "#fbbf24" : "#6366f1"}
-                            strokeWidth="2"
-                            initial={{ pathLength: 0 }}
-                            animate={{ pathLength: 1 }}
-                            transition={{ duration: 1 }}
-                        />
-                    )}
-                    
-                    {/* Center to Bottom (Ritual) */}
-                    {linkedHabit && (
-                        <motion.line 
-                            x1="50%" y1="50%" x2="50%" y2="80%" 
-                            stroke="#10b981"
-                            strokeWidth="2"
-                            initial={{ pathLength: 0 }}
-                            animate={{ pathLength: 1 }}
-                            transition={{ duration: 1 }}
-                        />
-                    )}
-
-                    {/* Center to Left (Journal) */}
-                    {note.journeyPath?.journalId && (
-                        <motion.line 
-                            x1="50%" y1="50%" x2="20%" y2="50%" 
-                            stroke="#f43f5e"
-                            strokeWidth="2"
-                            initial={{ pathLength: 0 }}
-                            animate={{ pathLength: 1 }}
-                            transition={{ duration: 1 }}
-                        />
-                    )}
-                </svg>
-
-                {/* CENTRAL NODE (THE IDEA) */}
-                <motion.div 
-                    layoutId={`note-${note.id}`}
-                    className={`
-                        relative z-10 w-64 h-64 rounded-full flex items-center justify-center p-8 text-center
-                        backdrop-blur-xl bg-white/5 border border-white/10 shadow-[0_0_50px_rgba(99,102,241,0.1)]
-                        ${isTaskDone ? 'shadow-[0_0_80px_rgba(251,191,36,0.3)] border-amber-500/30' : ''}
-                    `}
-                >
-                    <div className="absolute inset-0 rounded-full border border-white/5 animate-spin-slow" />
-                    <div className="font-serif text-lg md:text-xl text-white/90 line-clamp-4 leading-relaxed">
-                        {note.content}
-                    </div>
-                    {isTaskDone && (
-                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-black px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-lg">
-                            SYNTHESIS COMPLETE
-                        </div>
-                    )}
-                </motion.div>
-
-                {/* SATELLITES */}
-                
-                {/* 1. TOP: HUB (MENTOR) */}
-                <div className="absolute top-[15%] left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 group">
-                    <button 
-                        onClick={onMoveToHub}
-                        className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 hover:border-indigo-400 hover:bg-indigo-500/20 backdrop-blur-md flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-lg"
-                    >
-                        <Box size={24} className="text-white/70 group-hover:text-white" />
-                    </button>
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500 group-hover:text-indigo-400 transition-colors">AI Analysis</span>
-                </div>
-
-                {/* 2. RIGHT: SPRINT (ACTION) */}
-                <div className="absolute right-[10%] top-1/2 -translate-y-1/2 flex flex-col items-center gap-4 group">
-                    <button 
-                        onClick={onAddSprint}
-                        disabled={!!linkedTask}
-                        className={`w-16 h-16 rounded-2xl border backdrop-blur-md flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-lg
-                            ${linkedTask 
-                                ? isTaskDone ? 'bg-amber-500/20 border-amber-500 text-amber-400' : 'bg-indigo-500/20 border-indigo-500 text-indigo-400' 
-                                : 'bg-white/5 border-white/10 text-white/70 hover:border-indigo-400 hover:bg-indigo-500/20 hover:text-white'
-                            }
-                        `}
-                    >
-                        {linkedTask ? <Workflow size={24} /> : <Zap size={24} />}
-                    </button>
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500 group-hover:text-indigo-400 transition-colors">
-                        {linkedTask ? (isTaskDone ? 'COMPLETED' : 'IN PROGRESS') : 'Create Sprint'}
-                    </span>
-                </div>
-
-                {/* 3. BOTTOM: RITUAL (SYSTEM) */}
-                <div className="absolute bottom-[15%] left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 group">
-                    <button 
-                        onClick={onAddRitual}
-                        disabled={!!linkedHabit}
-                        className={`w-16 h-16 rounded-2xl border backdrop-blur-md flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-lg
-                            ${linkedHabit 
-                                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
-                                : 'bg-white/5 border-white/10 text-white/70 hover:border-emerald-400 hover:bg-emerald-500/20 hover:text-white'
-                            }
-                        `}
-                    >
-                        <TrendingUp size={24} />
-                    </button>
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500 group-hover:text-emerald-400 transition-colors">
-                        {linkedHabit ? 'ACTIVE RITUAL' : 'Create Ritual'}
-                    </span>
-                </div>
-
-                {/* 4. LEFT: JOURNAL (REFLECT) */}
-                <div className="absolute left-[10%] top-1/2 -translate-y-1/2 flex flex-col items-center gap-4 group">
-                    <button 
-                        onClick={onAddJournal}
-                        disabled={!!note.journeyPath?.journalId}
-                        className={`w-16 h-16 rounded-2xl border backdrop-blur-md flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-lg
-                            ${note.journeyPath?.journalId 
-                                ? 'bg-rose-500/20 border-rose-500 text-rose-400' 
-                                : 'bg-white/5 border-white/10 text-white/70 hover:border-rose-400 hover:bg-rose-500/20 hover:text-white'
-                            }
-                        `}
-                    >
-                        <BookOpen size={24} />
-                    </button>
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500 group-hover:text-rose-400 transition-colors">
-                        {note.journeyPath?.journalId ? 'LOGGED' : 'Journal Entry'}
-                    </span>
-                </div>
-
-            </div>
-        </div>
     );
 };
 
@@ -785,7 +668,6 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
-        onStartJourney?: (note: Note) => void;
     }
 }
 
@@ -856,11 +738,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
             };
             handlers.addSketchItem(item);
         }
-    };
-
-    const handleStartJourney = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        handlers.onStartJourney?.(note);
     };
 
     return (
@@ -953,20 +830,10 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
             <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
-                        <>
-                            {/* Start Journey Button */}
-                            <Tooltip content="В ПУТЬ">
-                                <button 
-                                    onClick={handleStartJourney}
-                                    className="p-2 text-indigo-500 hover:text-white bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-500 dark:hover:bg-indigo-500 rounded-full transition-all"
-                                >
-                                    <Compass size={16} strokeWidth={1.5} />
-                                </button>
-                            </Tooltip>
-                            <Tooltip content="Переместить в библиотеку">
-                                <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
-                            </Tooltip>
-                        </>
+                        // Inbox: Only Archive button
+                        <Tooltip content="Переместить в библиотеку">
+                            <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
+                        </Tooltip>
                     ) : (
                         // Library: Action buttons moved here
                         <>
@@ -1010,18 +877,15 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, tasks = [], habits = [], config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddHabit, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
   const [creationCover, setCreationCover] = useState<string | null>(null);
   
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'inbox' | 'library' | 'journey'>((defaultTab as any) || 'inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'library'>((defaultTab as any) || 'inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  // Journey State
-  const [journeyNoteId, setJourneyNoteId] = useState<string | null>(null);
-
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
   const [showCreationCoverPicker, setShowCreationCoverPicker] = useState(false);
@@ -1447,86 +1311,6 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], habits = [], config, addN
       }
   };
 
-  // --- JOURNEY HANDLERS ---
-  const handleStartJourney = (note: Note) => {
-      updateNote({ ...note, status: 'library' });
-      setJourneyNoteId(note.id);
-      setActiveTab('journey');
-  };
-
-  const handleJourneyNavigate = (tab: 'inbox' | 'library' | 'journey') => {
-      setActiveTab(tab);
-      if (tab !== 'journey') setJourneyNoteId(null);
-  };
-
-  // Link creators for Journey
-  const createSprintFromJourney = () => {
-      if (!journeyNoteId) return;
-      const note = notes.find(n => n.id === journeyNoteId);
-      if (!note) return;
-
-      const taskId = Date.now().toString();
-      onAddTask({
-          id: taskId,
-          title: note.title,
-          content: note.content,
-          column: 'todo',
-          createdAt: Date.now(),
-      });
-
-      updateNote({
-          ...note,
-          journeyPath: { ...note.journeyPath, taskId }
-      });
-  };
-
-  const createRitualFromJourney = () => {
-      if (!journeyNoteId || !onAddHabit) return;
-      const note = notes.find(n => n.id === journeyNoteId);
-      if (!note) return;
-
-      const habitId = Date.now().toString();
-      onAddHabit({
-          id: habitId,
-          title: note.title || 'Новый ритуал',
-          description: note.content.substring(0, 50),
-          frequency: 'daily',
-          createdAt: Date.now(),
-          history: {},
-          streak: 0,
-          bestStreak: 0,
-          reminders: [],
-          color: 'indigo',
-          icon: 'Zap'
-      });
-
-      updateNote({
-          ...note,
-          journeyPath: { ...note.journeyPath, habitId }
-      });
-  };
-
-  const createJournalEntryFromJourney = () => {
-      if (!journeyNoteId) return;
-      const note = notes.find(n => n.id === journeyNoteId);
-      if (!note) return;
-
-      const journalId = Date.now().toString();
-      onAddJournalEntry({
-          id: journalId,
-          date: Date.now(),
-          content: `Reflecting on: ${note.title || 'Idea'}\n\n${note.content}`,
-          isInsight: false
-      });
-
-      updateNote({
-          ...note,
-          journeyPath: { ...note.journeyPath, journalId }
-      });
-  };
-
-  // -------------------------
-
   const filterNotes = (list: Note[]) => {
     return list.filter(note => {
       if (showTagInput && tagQuery) {
@@ -1559,9 +1343,8 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], habits = [], config, addN
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
-      onImageClick: (src: string) => setLightboxSrc(src),
-      onStartJourney: handleStartJourney
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc, handleStartJourney]);
+      onImageClick: (src: string) => setLightboxSrc(src)
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
 
   const markdownRenderComponents = {
       ...markdownComponents,
@@ -1577,9 +1360,6 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], habits = [], config, addN
       )
   };
 
-  // Resolve Journey Note
-  const journeyNote = useMemo(() => notes.find(n => n.id === journeyNoteId), [notes, journeyNoteId]);
-
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
       
@@ -1588,21 +1368,6 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], habits = [], config, addN
           {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       </AnimatePresence>
 
-      {/* Conditional Rendering for Journey View to take over full screen */}
-      {activeTab === 'journey' && journeyNote ? (
-          <HeroJourneyView 
-              note={journeyNote} 
-              tasks={tasks || []} 
-              habits={habits || []} 
-              onClose={() => setActiveTab('inbox')} 
-              onNavigate={handleJourneyNavigate}
-              onMoveToHub={() => moveNoteToSandbox(journeyNote.id)}
-              onAddSprint={createSprintFromJourney}
-              onAddRitual={createRitualFromJourney}
-              onAddJournal={createJournalEntryFromJourney}
-          />
-      ) : (
-      <>
       <div className="shrink-0 w-full px-4 md:px-8 pt-4 md:pt-8 mb-4 z-50">
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
@@ -1763,13 +1528,9 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], habits = [], config, addN
                                 </div>
                             )}
                             {inboxNotes.length > 0 ? (
-                                <div className="columns-1 md:columns-2 xl:columns-4 gap-6 space-y-6 pb-20 md:pb-0 block">
-                                    {inboxNotes.map((note) => (
-                                        <div key={note.id} className="break-inside-avoid mb-6">
-                                            <NoteCard note={note} isArchived={false} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />
-                                        </div>
-                                    ))}
-                                </div>
+                                <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
+                                    {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
+                                </Masonry>
                             ) : (
                                 <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
                             )}
@@ -1778,13 +1539,9 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], habits = [], config, addN
                     {activeTab === 'library' && (
                         <>
                             {archivedNotes.length > 0 ? (
-                                <div className="columns-1 md:columns-2 xl:columns-4 gap-6 space-y-6 pb-20 md:pb-0 block">
-                                    {archivedNotes.map((note) => (
-                                        <div key={note.id} className="break-inside-avoid mb-6">
-                                            <NoteCard note={note} isArchived={true} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />
-                                        </div>
-                                    ))}
-                                </div>
+                                <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
+                                    {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
+                                </Masonry>
                             ) : (
                                 <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
                             )}
@@ -1793,8 +1550,6 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], habits = [], config, addN
                 </div>
             </div>
       </div>
-      </>
-      )}
       
       {showOracle && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

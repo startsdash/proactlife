@@ -454,18 +454,15 @@ const App: React.FC = () => {
       {module === Module.NAPKINS && (
           <Napkins 
             notes={data.notes.filter(n => n.status !== 'trash')} 
-            tasks={data.tasks}
-            habits={data.habits}
             config={visibleConfig} 
             addNote={addNote} 
             moveNoteToSandbox={moveNoteToSandbox} 
             moveNoteToInbox={moveNoteToInbox} 
-            deleteNote={deleteNote} 
+            deleteNote={deleteNote} // Use soft delete
             reorderNote={reorderNote} 
             updateNote={updateNote} 
             archiveNote={archiveNote} 
             onAddTask={addTask} 
-            onAddHabit={addHabit}
             onAddJournalEntry={addJournalEntry}
             addSketchItem={addSketchItem} 
             initialNoteId={napkinsContextNoteId}

@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
+import Masonry from 'react-masonry-css';
 import { Task, Note, JournalEntry } from '../types';
 import { RotateCcw, Trash2, Calendar, CheckCircle2, FileText, X, Zap, Circle, Archive as ArchiveIcon, Trophy, StickyNote, Book, Link } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,6 +38,12 @@ const getJournalColorClass = (colorId?: string) => colors.find(c => c.id === col
 const getTaskColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E")`;
+
+const breakpointColumnsObj = {
+  default: 3,
+  1100: 2,
+  700: 1
+};
 
 const allowDataUrls = (url: string) => url;
 
@@ -107,7 +115,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
               />
           </div>
       ) : (
-          <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6 block">
+          <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid" columnClassName="my-masonry-grid_column">
             {archivedTasks.map(task => {
                 const sphere = task.spheres?.[0];
                 const sphereColor = sphere && sphere === 'productivity' ? '#6366f1' : sphere === 'growth' ? '#10b981' : sphere === 'relationships' ? '#f43f5e' : '#6366f1';
@@ -115,7 +123,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={task.id} 
-                    className={`${getTaskColorClass(task.color)} backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group overflow-hidden mb-6 break-inside-avoid`}
+                    className={`${getTaskColorClass(task.color)} backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group overflow-hidden mb-6`}
                   >
                     {task.coverUrl && (
                         <div className="h-32 w-full shrink-0 relative overflow-hidden"><img src={task.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
@@ -180,7 +188,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                   </div>
                 )
             })}
-          </div>
+          </Masonry>
       )}
     </>
   );
@@ -197,7 +205,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
               />
           </div>
       ) : (
-          <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6 block">
+          <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid" columnClassName="my-masonry-grid_column">
             {archivedNotes.map(note => {
                 const previewText = getPreviewContent(note.content);
                 const contentImages = extractImages(note.content);
@@ -206,7 +214,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={note.id} 
-                    className={`${getNoteColorClass(note.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800 break-inside-avoid`}
+                    className={`${getNoteColorClass(note.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800`}
                   >
                     <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
@@ -265,7 +273,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                   </div>
                 );
             })}
-          </div>
+          </Masonry>
       )}
     </>
   );
@@ -282,7 +290,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
               />
           </div>
       ) : (
-          <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6 block">
+          <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid" columnClassName="my-masonry-grid_column">
             {archivedJournal.map(entry => {
                 const previewText = getPreviewContent(entry.content);
                 const hasTask = !!entry.linkedTaskId;
@@ -293,7 +301,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={entry.id} 
-                    className={`${getJournalColorClass(entry.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800 break-inside-avoid`}
+                    className={`${getJournalColorClass(entry.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800`}
                   >
                     <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
@@ -349,7 +357,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                   </div>
                 );
             })}
-          </div>
+          </Masonry>
       )}
     </>
   );
