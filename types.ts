@@ -78,6 +78,7 @@ export interface Task {
   
   spheres?: string[];
   isArchived?: boolean;
+  originNoteId?: string; // Link to source note
 }
 
 export interface Flashcard {
@@ -111,6 +112,7 @@ export interface Habit {
   spheres?: string[];
   isArchived?: boolean;
   createdAt: number;
+  originNoteId?: string; // Link to source note
 }
 
 export interface Challenge {
