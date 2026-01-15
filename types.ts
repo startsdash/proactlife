@@ -30,12 +30,17 @@ export interface Note {
   content: string;
   tags: string[];
   createdAt: number;
-  status: 'inbox' | 'sandbox' | 'archived' | 'trash';
-  previousStatus?: 'inbox' | 'sandbox' | 'archived';
+  status: 'inbox' | 'sandbox' | 'archived' | 'trash' | 'library';
+  previousStatus?: 'inbox' | 'sandbox' | 'archived' | 'library';
   isPinned?: boolean;
   color?: string;
   coverUrl?: string;
   connectedNoteIds?: string[];
+  journeyPath?: {
+    taskId?: string;
+    habitId?: string;
+    journalId?: string;
+  };
 }
 
 export interface SketchItem {
