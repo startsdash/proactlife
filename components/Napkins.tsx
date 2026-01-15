@@ -10,11 +10,10 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Map } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
 
 interface Props {
   notes: Note[];
-  tasks?: Task[];
   config: AppConfig;
   addNote: (note: Note) => void;
   moveNoteToSandbox: (id: string) => void;
@@ -78,25 +77,50 @@ const extractImages = (content: string): string[] => {
 };
 
 const getPreviewContent = (content: string) => {
+    // 1. Remove images
     let cleanText = content.replace(/!\[.*?\]\(.*?\)/g, '');
+    
+    // 2. Normalize horizontal spaces (keep newlines for card formatting)
     cleanText = cleanText.replace(/[ \t]+/g, ' ').trim();
+
+    // 3. Smart Truncation (2-3 sentences)
+    // Split by sentence terminators followed by space or newline
     const sentences = cleanText.match(/[^\.!\?]+[\.!\?]+(?=\s|$)/g) || [cleanText];
+    
+    // Determine how many sentences to show based on length
     let limit = 0;
     let sentenceCount = 0;
+    
+    // Try to get at least 2 sentences, up to 3, but watch char count
     for (let s of sentences) {
-        if (sentenceCount >= 3) break;
-        if (limit + s.length > 300 && sentenceCount >= 1) break;
+        if (sentenceCount >= 3) break; // Max 3 sentences
+        if (limit + s.length > 300 && sentenceCount >= 1) break; // If adding next makes it huge, stop
         limit += s.length;
         sentenceCount++;
     }
+
     let preview = sentences.slice(0, sentenceCount).join(' ');
-    if (preview.length === 0 && cleanText.length > 0) preview = cleanText;
+    
+    // Fallback if sentences detection failed or text is one giant block
+    if (preview.length === 0 && cleanText.length > 0) {
+        preview = cleanText;
+    }
+
+    // Hard cap at 300 chars to prevent overflow, but respect word boundaries
     if (preview.length > 300) {
         preview = preview.slice(0, 300);
         const lastSpace = preview.lastIndexOf(' ');
-        if (lastSpace > 0) preview = preview.slice(0, lastSpace);
+        if (lastSpace > 0) {
+            preview = preview.slice(0, lastSpace);
+        }
     }
-    if (preview.length < cleanText.length) preview = preview.replace(/[\.!\?,\s]+$/, '') + '...';
+
+    // Add ellipsis if we cut content
+    if (preview.length < cleanText.length) {
+        // Remove trailing punctuation before adding ellipsis
+        preview = preview.replace(/[\.!\?,\s]+$/, '') + '...';
+    }
+    
     return preview;
 };
 
@@ -117,11 +141,19 @@ const processImage = (file: File | Blob): Promise<string> => {
                 const MAX_HEIGHT = 800;
                 let width = img.width;
                 let height = img.height;
+
                 if (width > height) {
-                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
                 } else {
-                    if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
                 }
+
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
@@ -145,16 +177,20 @@ const findFirstUrl = (text: string): string | null => {
     return match ? match[0] : null;
 };
 
-// --- HTML <-> Markdown Converters ---
+// --- HTML <-> Markdown Converters (IMPROVED) ---
 
 const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
+
     const wrap = (text: string, marker: string) => {
         const match = text.match(/^(\s*)(.*?)(\s*)$/s);
-        if (match && match[2]) return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
+        if (match && match[2]) {
+            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
+        }
         return text.trim() ? `${marker}${text}${marker}` : '';
     };
+
     const walk = (node: Node): string => {
         if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
         if (node.nodeType === Node.ELEMENT_NODE) {
@@ -162,9 +198,11 @@ const htmlToMarkdown = (html: string) => {
             const tag = el.tagName.toLowerCase();
             let content = '';
             el.childNodes.forEach(child => content += walk(child));
+            
             if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
             if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
             if (el.style.fontStyle === 'italic') return wrap(content, '*');
+            
             switch (tag) {
                 case 'b': case 'strong': return wrap(content, '**');
                 case 'i': case 'em': return wrap(content, '*');
@@ -172,6 +210,7 @@ const htmlToMarkdown = (html: string) => {
                 case 'code': return `\`${content}\``;
                 case 'h1': return `\n# ${content}\n`;
                 case 'h2': return `\n## ${content}\n`;
+                // Improved block handling:
                 case 'div': return content ? `\n${content}` : '\n'; 
                 case 'p': return `\n${content}\n`;
                 case 'br': return '\n';
@@ -181,7 +220,9 @@ const htmlToMarkdown = (html: string) => {
         }
         return '';
     };
+    
     let md = walk(temp);
+    // Cleanup aggressive newlines but keep paragraphs
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
@@ -190,97 +231,38 @@ const htmlToMarkdown = (html: string) => {
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
+    
+    // Headers
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    
+    // Formatting
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
     html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
     html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
     html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
+    
+    // Improved Line Breaks: Wrap loose lines in divs to simulate standard contentEditable behavior
     const lines = html.split('\n');
     const processedLines = lines.map(line => {
+        // Leave block elements alone
         if (line.match(/^<(h1|h2|div|p|ul|ol|li|blockquote)/i)) return line;
+        // Wrap text lines in div
         return line.trim() ? `<div>${line}</div>` : '<div><br></div>';
     });
+    
     return processedLines.join('');
 };
 
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 // --- COMPONENTS ---
-
-// Note Journey Modal
-const NoteJourneyModal: React.FC<{ note: Note, journalEntries: JournalEntry[], tasks: Task[], onClose: () => void }> = ({ note, journalEntries, tasks, onClose }) => {
-    const inHub = note.status === 'sandbox' || note.status === 'archived';
-    const hasJournal = journalEntries.some(j => j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id));
-    const hasTask = tasks.some(t => (t.description && t.description.includes(note.content.substring(0, 50))) || t.title === note.title);
-
-    const stages = [
-        { id: 1, label: 'ИМПУЛЬС', desc: 'Мысль поймана во Входящих', active: true },
-        { id: 2, label: 'ФОКУС', desc: 'Обработка в Хабе', active: inHub },
-        { id: 3, label: 'СВЯЗЬ', desc: 'Контекст в Дневнике', active: hasJournal },
-        { id: 4, label: 'ДЕЙСТВИЕ', desc: 'Превращение в Задачу', active: hasTask }
-    ];
-
-    return (
-        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-[50px] flex items-center justify-center p-8" onClick={onClose}>
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="w-full max-w-4xl relative"
-                onClick={e => e.stopPropagation()}
-            >
-                <button onClick={onClose} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors">
-                    <X size={24} />
-                </button>
-                <div className="flex flex-col md:flex-row items-center justify-between relative py-20 px-10">
-                    <div className="absolute left-10 right-10 top-1/2 h-[1px] bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 hidden md:block" />
-                    <div className="absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-slate-700 via-slate-500 to-slate-700 md:hidden" />
-                    <motion.div 
-                        className="absolute h-[3px] w-[20px] bg-white blur-[2px] rounded-full hidden md:block top-1/2 -mt-[1.5px]"
-                        animate={{ 
-                            left: ['0%', hasTask ? '100%' : hasJournal ? '75%' : inHub ? '50%' : '25%'], 
-                            opacity: [0, 1, 0] 
-                        }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                    />
-                    {stages.map((stage, i) => (
-                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-6 group mb-8 md:mb-0">
-                            <div className={`
-                                w-4 h-4 transition-all duration-500
-                                ${stage.id === 1 ? 'rounded-full border border-slate-400 bg-white' : ''}
-                                ${stage.id === 2 ? 'w-3 h-3 bg-slate-300 transform rotate-45' : ''}
-                                ${stage.id === 3 ? 'rounded-full' : ''}
-                                ${stage.id === 4 ? 'transform rotate-45' : ''}
-                            `}
-                            style={{ 
-                                backgroundColor: stage.active ? (stage.id === 4 ? '#6366f1' : (stage.id === 3 ? '#06b6d4' : (stage.id === 2 ? '#f59e0b' : undefined))) : '#334155',
-                                boxShadow: stage.active ? `0 0 15px ${stage.id === 4 ? '#6366f1' : (stage.id === 3 ? '#06b6d4' : '#f59e0b')}` : undefined
-                            }}
-                            >
-                            </div>
-                            <div className="text-center">
-                                <div className="font-mono text-[10px] text-slate-300 uppercase tracking-[0.3em] mb-2">{stage.label}</div>
-                                <div className={`font-serif text-sm italic text-slate-400 max-w-[150px] leading-tight transition-opacity duration-500 ${stage.active ? 'opacity-100' : 'opacity-30'}`}>
-                                    {stage.desc}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <div className="text-center mt-8">
-                    <p className="font-mono text-[9px] text-slate-600 uppercase tracking-widest">
-                        Note ID: {note.id.slice(-4)}
-                    </p>
-                </div>
-            </motion.div>
-        </div>
-    )
-}
 
 // Lightbox
 const Lightbox = ({ src, onClose }: { src: string, onClose: () => void }) => {
@@ -382,6 +364,7 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
 
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
+    // Graphite Ghost Style Links - No color change on hover, just underline
     a: ({node, ...props}: any) => <a className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer underline-offset-4 decoration-slate-300 dark:decoration-slate-600 transition-colors font-sans text-sm font-medium relative z-20 break-all" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
@@ -417,19 +400,26 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
             const target = event.target as Node;
             const isWrapper = wrapperRef.current && wrapperRef.current.contains(target);
             const isDropdown = dropdownRef.current && dropdownRef.current.contains(target);
+            
             if (!isWrapper && !isDropdown) {
                 setIsOpen(false);
             }
         };
+        
         const handleScroll = (event: Event) => {
-            if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) return;
+            // Fix: Check if scrolling happens inside the dropdown
+            if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
+                return;
+            }
             if (isOpen) setIsOpen(false);
         };
+
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside);
             document.addEventListener('scroll', handleScroll, true); 
             window.addEventListener('resize', handleScroll);
         }
+        
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('scroll', handleScroll, true);
@@ -446,6 +436,7 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
                 width: Math.max(rect.width, 200),
                 zIndex: 99999,
             };
+            
             if (direction === 'down') {
                 style.top = rect.bottom + 4;
             } else {
@@ -461,6 +452,7 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
         const cleanTag = tag.trim().replace(/^#/, '');
         if (!cleanTag) return;
         if (selectedTags.some(t => t.toLowerCase() === cleanTag.toLowerCase())) { setInput(''); setIsOpen(false); return; }
+        
         handleTagChange([...selectedTags, existingTags.find(t => t.toLowerCase() === cleanTag.toLowerCase()) || cleanTag]);
         setInput(''); setIsOpen(false);
     };
@@ -521,7 +513,9 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
             const viewportH = window.innerHeight;
             const viewportW = window.innerWidth;
             const pickerHeight = 320; 
+            
             const style: React.CSSProperties = {};
+            
             const spaceBelow = viewportH - rect.bottom;
             if (spaceBelow < pickerHeight && rect.top > spaceBelow) {
                 style.bottom = viewportH - rect.top + 8;
@@ -530,11 +524,13 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                 style.top = rect.bottom + 8;
                 style.maxHeight = spaceBelow - 20;
             }
+
             if (rect.left + 320 > viewportW) {
                 style.right = 16;
             } else {
                 style.left = rect.left;
             }
+            
             setPickerStyle(style);
         }
     }, [triggerRef]);
@@ -546,6 +542,7 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
             'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY', 
             'REACT_APP_UNSPLASH_ACCESS_KEY'
         ];
+        
         for (const k of keys) {
             // @ts-ignore
             if (typeof process !== 'undefined' && process.env?.[k]) return process.env[k];
@@ -561,18 +558,22 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
             if (q) alert("Ключ Unsplash не найден.");
             return;
         }
+        
         setLoading(true);
         try {
             const page = Math.floor(Math.random() * 10) + 1;
             const endpoint = q 
                 ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&page=${page}&client_id=${key}`
                 : `https://api.unsplash.com/photos/random?count=20&client_id=${key}`;
+            
             const res = await fetch(endpoint);
             if (!res.ok) throw new Error("API Error");
             const data = await res.json();
+            
             const urls = q 
                 ? data.results.map((img: any) => img.urls.regular) 
                 : data.map((img: any) => img.urls.regular);
+            
             setResults(urls);
         } catch (e) {
             console.error("Unsplash Fetch Error", e);
@@ -601,6 +602,7 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                 onMouseDown={e => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase font-sans">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
+                
                 <div className="relative">
                     <input 
                         type="text" 
@@ -619,6 +621,7 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                         <ArrowRight size={12} />
                     </button>
                 </div>
+
                 <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
                     {loading ? (
                         <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
@@ -632,6 +635,7 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                         ))
                     )}
                 </div>
+
                 <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
                     <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded text-xs font-medium font-sans cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
                         <Upload size={12} /> Своя 
@@ -664,7 +668,6 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
-        onShowJourney?: (note: Note) => void;
     }
 }
 
@@ -767,7 +770,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                 </Tooltip>
             </div>
 
-            <div className="p-8 pb-20 w-full flex-1 relative z-10">
+            <div className="p-8 pb-16 w-full flex-1 relative z-10">
                 <div className="block w-full mb-2">
                     {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words pr-6 ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
                     <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words relative max-h-[400px] mask-linear-fade ${!note.title ? 'pr-6' : ''}`}>
@@ -827,33 +830,13 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
             <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
-                        // Inbox: Path button and Archive
-                        <>
-                            <Tooltip content="Путь">
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); handlers.onShowJourney?.(note); }}
-                                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
-                                >
-                                    <Map size={16} strokeWidth={1.5} />
-                                </button>
-                            </Tooltip>
-                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-                            <Tooltip content="Переместить в библиотеку">
-                                <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
-                            </Tooltip>
-                        </>
+                        // Inbox: Only Archive button
+                        <Tooltip content="Переместить в библиотеку">
+                            <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
+                        </Tooltip>
                     ) : (
                         // Library: Action buttons moved here
                         <>
-                            <Tooltip content="Путь">
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); handlers.onShowJourney?.(note); }}
-                                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
-                                >
-                                    <Map size={16} strokeWidth={1.5} />
-                                </button>
-                            </Tooltip>
-                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                             <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
                             
                             <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
@@ -879,16 +862,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                 
                 {/* Right Side: ID or Restore Button */}
                 {!isArchived ? (
-                    <div className="flex items-center gap-2 p-2">
-                        {/* Pulse Line Visual */}
-                        <div className="flex items-center gap-1 opacity-50">
-                            <div className="w-1 h-1 rounded-full bg-slate-400 animate-pulse" />
-                            <div className="w-1 h-1 rounded-full bg-slate-300" />
-                            <div className="w-1 h-1 rounded-full bg-slate-200" />
-                        </div>
-                        <div className="font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
-                            ID // {note.id.slice(-5).toLowerCase()}
-                        </div>
+                    <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
+                        ID // {note.id.slice(-5).toLowerCase()}
                     </div>
                 ) : (
                     <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
@@ -902,7 +877,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, tasks = [], config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries = [] }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -949,7 +924,6 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], config, addNote, moveNote
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [journeyNote, setJourneyNote] = useState<Note | null>(null);
 
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
@@ -961,11 +935,6 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], config, addNote, moveNote
           journalEntries.forEach(entry => {
               if (entry.linkedNoteId && !entry.isArchived) {
                   ids.add(entry.linkedNoteId);
-              }
-              if (entry.linkedNoteIds && Array.isArray(entry.linkedNoteIds)) {
-                  entry.linkedNoteIds.forEach(id => {
-                      if (!entry.isArchived) ids.add(id);
-                  });
               }
           });
       }
@@ -1316,7 +1285,7 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], config, addNote, moveNote
       if (selectedNote) {
           const rawHtml = editContentRef.current?.innerHTML || '';
           const markdownContent = htmlToMarkdown(rawHtml);
-          if (markdownContent.trim() || editTitle.trim() !== '') {
+          if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
               const updated = { 
                   ...selectedNote, 
                   title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
@@ -1374,9 +1343,8 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], config, addNote, moveNote
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
-      onImageClick: (src: string) => setLightboxSrc(src),
-      onShowJourney: (note: Note) => setJourneyNote(note)
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc, setJourneyNote]);
+      onImageClick: (src: string) => setLightboxSrc(src)
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
 
   const markdownRenderComponents = {
       ...markdownComponents,
@@ -1727,7 +1695,6 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], config, addNote, moveNote
                             <div className="flex items-center gap-1 shrink-0 -mt-1 relative z-20" style={{top: '5px', right: '5px'}}>
                                 {!isEditing && (
                                     <>
-                                        <Tooltip content="Путь"><button onClick={() => { setJourneyNote(selectedNote); }} className="p-2 text-slate-300 hover:text-amber-500 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Map size={16} /></button></Tooltip>
                                         <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить"}><button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-lg transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-transparent' : 'text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5'}`}><Pin size={16} className={selectedNote.isPinned ? "fill-current" : ""} /></button></Tooltip>
                                         <Tooltip content="Редактировать"><button onClick={() => setIsEditing(true)} className="p-2 text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={16} /></button></Tooltip>
                                         <Tooltip content="Отправить в архив"><button onClick={() => { if(window.confirm('Отправить в архив?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors"><Trash2 size={16} /></button></Tooltip>
@@ -1820,13 +1787,6 @@ const Napkins: React.FC<Props> = ({ notes, tasks = [], config, addNote, moveNote
             </div>
         </AnimatePresence>
       )}
-
-      {/* JOURNEY MODAL */}
-      <AnimatePresence>
-          {journeyNote && tasks && journalEntries && (
-              <NoteJourneyModal key={journeyNote.id} note={journeyNote} journalEntries={journalEntries} tasks={tasks} onClose={() => setJourneyNote(null)} />
-          )}
-      </AnimatePresence>
     </div>
   );
 };
