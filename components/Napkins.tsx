@@ -10,10 +10,11 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Map } from 'lucide-react';
 
 interface Props {
   notes: Note[];
+  tasks?: Task[]; // Added optional tasks prop
   config: AppConfig;
   addNote: (note: Note) => void;
   moveNoteToSandbox: (id: string) => void;
@@ -263,6 +264,91 @@ const markdownToHtml = (md: string) => {
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 // --- COMPONENTS ---
+
+const NoteJourneyModal = ({ note, journalEntries, tasks, onClose }: { note: Note, journalEntries: JournalEntry[], tasks: Task[], onClose: () => void }) => {
+    // Logic to determine active stages
+    const inHub = note.status === 'sandbox' || note.status === 'archived'; // Archived often means processed
+    const hasJournal = journalEntries.some(j => j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id));
+    // Fuzzy check for task conversion since we don't have direct link
+    const hasTask = tasks.some(t => (t.description && t.description.includes(note.content.substring(0, 50))) || t.title === note.title);
+
+    const stages = [
+        { id: 1, label: 'ИМПУЛЬС', desc: 'Мысль поймана во Входящих', active: true },
+        { id: 2, label: 'ФОКУС', desc: 'Обработка в Хабе', active: inHub },
+        { id: 3, label: 'СВЯЗЬ', desc: 'Контекст в Дневнике', active: hasJournal },
+        { id: 4, label: 'ДЕЙСТВИЕ', desc: 'Превращение в Задачу', active: hasTask }
+    ];
+
+    return (
+        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-[50px] flex items-center justify-center p-8" onClick={onClose}>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full max-w-4xl relative"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Close Button */}
+                <button onClick={onClose} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors">
+                    <X size={24} />
+                </button>
+
+                {/* Central Map */}
+                <div className="flex flex-col md:flex-row items-center justify-between relative py-20 px-10">
+                    
+                    {/* The Thread */}
+                    <div className="absolute left-10 right-10 top-1/2 h-[1px] bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 hidden md:block" />
+                    <div className="absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-slate-700 via-slate-500 to-slate-700 md:hidden" />
+                    
+                    {/* Pulse Animation */}
+                    <motion.div 
+                        className="absolute h-[3px] w-[20px] bg-white blur-[2px] rounded-full hidden md:block top-1/2 -mt-[1.5px]"
+                        animate={{ 
+                            left: ['0%', hasTask ? '100%' : hasJournal ? '75%' : inHub ? '50%' : '25%'], 
+                            opacity: [0, 1, 0] 
+                        }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                    />
+
+                    {stages.map((stage, i) => (
+                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-6 group mb-8 md:mb-0">
+                            {/* Node */}
+                            <div className={`
+                                w-4 h-4 transition-all duration-500
+                                ${stage.id === 1 ? 'rounded-full border border-slate-400 bg-white' : ''}
+                                ${stage.id === 2 ? 'w-3 h-3 bg-slate-300 transform rotate-45' : ''}
+                                ${stage.id === 3 ? 'rounded-full' : ''}
+                                ${stage.id === 4 ? 'transform rotate-45' : ''}
+                            `}
+                            style={{ 
+                                backgroundColor: stage.active ? (stage.id === 4 ? '#6366f1' : (stage.id === 3 ? '#06b6d4' : (stage.id === 2 ? '#f59e0b' : undefined))) : '#334155',
+                                boxShadow: stage.active ? `0 0 15px ${stage.id === 4 ? '#6366f1' : (stage.id === 3 ? '#06b6d4' : '#f59e0b')}` : undefined
+                            }}
+                            >
+                            </div>
+
+                            {/* Label */}
+                            <div className="text-center">
+                                <div className="font-mono text-[10px] text-slate-300 uppercase tracking-[0.3em] mb-2">{stage.label}</div>
+                                <div className={`font-serif text-sm italic text-slate-400 max-w-[150px] leading-tight transition-opacity duration-500 ${stage.active ? 'opacity-100' : 'opacity-30'}`}>
+                                    {stage.desc}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                
+                {/* Footer Quote */}
+                <div className="text-center mt-8">
+                    <p className="font-mono text-[9px] text-slate-600 uppercase tracking-widest">
+                        Note ID: {note.id.slice(-4)}
+                    </p>
+                </div>
+
+            </motion.div>
+        </div>
+    )
+}
 
 // Lightbox
 const Lightbox = ({ src, onClose }: { src: string, onClose: () => void }) => {
@@ -668,6 +754,7 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
+        onShowJourney?: (note: Note) => void; // Added journey handler
     }
 }
 
@@ -770,7 +857,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                 </Tooltip>
             </div>
 
-            <div className="p-8 pb-16 w-full flex-1 relative z-10">
+            <div className="p-8 pb-20 w-full flex-1 relative z-10">
                 <div className="block w-full mb-2">
                     {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words pr-6 ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
                     <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words relative max-h-[400px] mask-linear-fade ${!note.title ? 'pr-6' : ''}`}>
@@ -830,13 +917,33 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
             <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
-                        // Inbox: Only Archive button
-                        <Tooltip content="Переместить в библиотеку">
-                            <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
-                        </Tooltip>
+                        // Inbox: Path button and Archive
+                        <>
+                            <Tooltip content="Путь">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handlers.onShowJourney?.(note); }}
+                                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
+                                >
+                                    <Map size={16} strokeWidth={1.5} />
+                                </button>
+                            </Tooltip>
+                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                            <Tooltip content="Переместить в библиотеку">
+                                <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
+                            </Tooltip>
+                        </>
                     ) : (
                         // Library: Action buttons moved here
                         <>
+                            <Tooltip content="Путь">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handlers.onShowJourney?.(note); }}
+                                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full transition-all opacity-60 hover:opacity-100"
+                                >
+                                    <Map size={16} strokeWidth={1.5} />
+                                </button>
+                            </Tooltip>
+                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                             <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
                             
                             <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
@@ -862,8 +969,16 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                 
                 {/* Right Side: ID or Restore Button */}
                 {!isArchived ? (
-                    <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
-                        ID // {note.id.slice(-5).toLowerCase()}
+                    <div className="flex items-center gap-2 p-2">
+                        {/* Pulse Line Visual */}
+                        <div className="flex items-center gap-1 opacity-50">
+                            <div className="w-1 h-1 rounded-full bg-slate-400 animate-pulse" />
+                            <div className="w-1 h-1 rounded-full bg-slate-300" />
+                            <div className="w-1 h-1 rounded-full bg-slate-200" />
+                        </div>
+                        <div className="font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
+                            ID // {note.id.slice(-5).toLowerCase()}
+                        </div>
                     </div>
                 ) : (
                     <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
@@ -877,7 +992,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
+const Napkins: React.FC<Props> = ({ notes, tasks = [], config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries = [] }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -924,6 +1039,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [journeyNote, setJourneyNote] = useState<Note | null>(null);
 
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
@@ -1285,7 +1401,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       if (selectedNote) {
           const rawHtml = editContentRef.current?.innerHTML || '';
           const markdownContent = htmlToMarkdown(rawHtml);
-          if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
+          if (markdownContent.trim() || editTitle.trim() !== '') {
               const updated = { 
                   ...selectedNote, 
                   title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
@@ -1343,8 +1459,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
-      onImageClick: (src: string) => setLightboxSrc(src)
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
+      onImageClick: (src: string) => setLightboxSrc(src),
+      onShowJourney: (note: Note) => setJourneyNote(note) // Added handler
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc, setJourneyNote]);
 
   const markdownRenderComponents = {
       ...markdownComponents,
@@ -1695,6 +1812,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             <div className="flex items-center gap-1 shrink-0 -mt-1 relative z-20" style={{top: '5px', right: '5px'}}>
                                 {!isEditing && (
                                     <>
+                                        <Tooltip content="Путь"><button onClick={() => { setJourneyNote(selectedNote); }} className="p-2 text-slate-300 hover:text-amber-500 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Map size={16} /></button></Tooltip>
                                         <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить"}><button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-lg transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-transparent' : 'text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5'}`}><Pin size={16} className={selectedNote.isPinned ? "fill-current" : ""} /></button></Tooltip>
                                         <Tooltip content="Редактировать"><button onClick={() => setIsEditing(true)} className="p-2 text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={16} /></button></Tooltip>
                                         <Tooltip content="Отправить в архив"><button onClick={() => { if(window.confirm('Отправить в архив?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors"><Trash2 size={16} /></button></Tooltip>
@@ -1787,6 +1905,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </div>
         </AnimatePresence>
       )}
+
+      {/* JOURNEY MODAL */}
+      <AnimatePresence>
+          {journeyNote && tasks && journalEntries && (
+              <NoteJourneyModal note={journeyNote} journalEntries={journalEntries} tasks={tasks} onClose={() => setJourneyNote(null)} />
+          )}
+      </AnimatePresence>
     </div>
   );
 };
