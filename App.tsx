@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
@@ -21,9 +20,7 @@ import LearningMode from './components/LearningMode';
 import UserSettings from './components/UserSettings';
 import Onboarding from './components/Onboarding';
 import Profile from './components/Profile'; 
-import JourneyModal from './components/JourneyModal';
 import { LogIn, Shield, CloudOff, ArrowRight } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
 
 const App: React.FC = () => {
   // --- THEME LOGIC ---
@@ -103,9 +100,6 @@ const App: React.FC = () => {
   const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
   const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null); // Context for navigation (Napkins)
   
-  // HERO'S JOURNEY STATE
-  const [journeyNote, setJourneyNote] = useState<Note | null>(null);
-
   // INVITE CODE LOGIC
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [guestSessionCode, setGuestSessionCode] = useState<string | null>(() => {
@@ -474,7 +468,6 @@ const App: React.FC = () => {
             initialNoteId={napkinsContextNoteId}
             onClearInitialNote={() => setNapkinsContextNoteId(null)}
             journalEntries={data.journal}
-            onStartJourney={(note) => setJourneyNote(note)}
           />
       )}
       
@@ -518,19 +511,6 @@ const App: React.FC = () => {
       {module === Module.PROFILE && <Profile notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} flashcards={data.flashcards} config={data.profileConfig || { role: 'architect', manifesto: '...' }} onUpdateConfig={updateProfileConfig} />}
       {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
       {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}
-
-      <AnimatePresence>
-        {journeyNote && (
-          <JourneyModal 
-            note={journeyNote} 
-            onClose={() => setJourneyNote(null)}
-            addTask={addTask}
-            addHabit={addHabit}
-            addJournalEntry={addJournalEntry}
-            config={data.config}
-          />
-        )}
-      </AnimatePresence>
     </Layout>
   );
 };
