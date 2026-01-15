@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -11,7 +10,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, CheckSquare } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -33,13 +32,6 @@ interface Props {
   initialNoteId?: string | null;
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
-  
-  // Selection Props
-  isSelectionMode?: boolean;
-  selectedNoteIds?: string[];
-  onToggleSelection?: (id: string) => void;
-  onConfirmSelection?: () => void;
-  onCancelSelection?: () => void;
 }
 
 const colors = [
@@ -663,8 +655,6 @@ interface NoteCardProps {
     note: Note;
     isArchived: boolean;
     isLinkedToJournal?: boolean;
-    isSelectionMode?: boolean;
-    isSelected?: boolean;
     handlers: {
         handleDragStart: (e: React.DragEvent, id: string) => void;
         handleDragOver: (e: React.DragEvent) => void;
@@ -678,12 +668,10 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
-        // Selection handlers
-        onToggleSelection?: (id: string) => void;
     }
 }
 
-const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal, isSelectionMode, isSelected, handlers }) => {
+const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal, handlers }) => {
     const [isExiting, setIsExiting] = useState(false);
     const linkUrl = findFirstUrl(note.content);
     
@@ -752,53 +740,35 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
         }
     };
 
-    const handleClick = (e: React.MouseEvent) => {
-        if (isSelectionMode && handlers.onToggleSelection) {
-            e.preventDefault();
-            e.stopPropagation();
-            handlers.onToggleSelection(note.id);
-        } else {
-            handlers.handleOpenNote(note);
-        }
-    };
-
     return (
         <div 
-            draggable={!isSelectionMode}
-            onDragStart={(e) => !isSelectionMode && handlers.handleDragStart(e, note.id)}
-            onDragOver={!isSelectionMode ? handlers.handleDragOver : undefined}
-            onDrop={(e) => !isSelectionMode && handlers.handleDrop(e, note.id)}
-            onClick={handleClick}
-            className={`${getNoteColorClass(note.color)} rounded-3xl transition-all duration-500 hover:-translate-y-[4px] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] group/card flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden mb-6 ${isExiting ? 'opacity-0 translate-x-full scale-90' : ''} ${isSelectionMode && isSelected ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-900 shadow-xl' : ''} ${isSelectionMode ? 'cursor-pointer hover:ring-2 hover:ring-indigo-300/50 hover:ring-offset-2 dark:hover:ring-offset-slate-900' : ''}`}
+            draggable
+            onDragStart={(e) => handlers.handleDragStart(e, note.id)}
+            onDragOver={handlers.handleDragOver}
+            onDrop={(e) => handlers.handleDrop(e, note.id)}
+            onClick={() => handlers.handleOpenNote(note)}
+            className={`${getNoteColorClass(note.color)} rounded-3xl transition-all duration-500 hover:-translate-y-[4px] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] group/card flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden mb-6 ${isExiting ? 'opacity-0 translate-x-full scale-90' : ''}`}
         >
-            {isSelectionMode && (
-                <div className={`absolute top-4 left-4 z-40 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-500 border-indigo-500 scale-110' : 'bg-white/80 border-slate-300 dark:border-slate-500 dark:bg-slate-800/80 group-hover/card:scale-110'}`}>
-                    {isSelected && <Check size={14} className="text-white" strokeWidth={3} />}
-                </div>
-            )}
-
             <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
             {note.coverUrl && (
                 <div className="h-40 w-full shrink-0 relative z-10"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
             )}
 
-            {!isSelectionMode && (
-                <div className="absolute top-5 right-5 z-30">
-                    <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
-                        <button 
-                            onClick={(e) => handlers.togglePin(e, note)} 
-                            className={`p-2 rounded-full transition-all duration-300 ${
-                                note.isPinned 
-                                ? 'text-[#B0A0FF] opacity-50 hover:opacity-100 bg-transparent' 
-                                : 'text-slate-400 dark:text-slate-500 opacity-0 group-hover/card:opacity-100 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent'
-                            }`}
-                        >
-                            <Pin size={16} strokeWidth={1.5} className={note.isPinned ? "fill-current" : ""} />
-                        </button>
-                    </Tooltip>
-                </div>
-            )}
+            <div className="absolute top-5 right-5 z-30">
+                <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
+                    <button 
+                        onClick={(e) => handlers.togglePin(e, note)} 
+                        className={`p-2 rounded-full transition-all duration-300 ${
+                            note.isPinned 
+                            ? 'text-[#B0A0FF] opacity-50 hover:opacity-100 bg-transparent' 
+                            : 'text-slate-400 dark:text-slate-500 opacity-0 group-hover/card:opacity-100 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent'
+                        }`}
+                    >
+                        <Pin size={16} strokeWidth={1.5} className={note.isPinned ? "fill-current" : ""} />
+                    </button>
+                </Tooltip>
+            </div>
 
             <div className="p-8 pb-16 w-full flex-1 relative z-10">
                 <div className="block w-full mb-2">
@@ -857,59 +827,57 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                 </div>
             </div>
             
-            {!isSelectionMode && (
-                <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
-                    <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
-                        {!isArchived ? (
-                            // Inbox: Only Archive button
-                            <Tooltip content="Переместить в библиотеку">
-                                <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
-                            </Tooltip>
-                        ) : (
-                            // Library: Action buttons moved here
-                            <>
-                                <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
-                                
-                                <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
-                                
-                                <Tooltip content={isLinkedToJournal ? "В дневнике" : "В дневник"}>
-                                    <button 
-                                        onClick={isLinkedToJournal ? undefined : handleToJournal} 
-                                        disabled={isLinkedToJournal}
-                                        className={`p-2 rounded-full transition-all ${
-                                            isLinkedToJournal 
-                                            ? 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 opacity-100 cursor-default' 
-                                            : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
-                                        }`}
-                                    >
-                                        <Book size={16} strokeWidth={1.5} />
-                                    </button>
-                                </Tooltip>
-                                
-                                {handlers.addSketchItem && <Tooltip content="В скетчпад"><button onClick={handleToSketchpad} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Tablet size={16} strokeWidth={1.5} /></button></Tooltip>}
-                            </>
-                        )}
-                    </div>
-                    
-                    {/* Right Side: ID or Restore Button */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
+                <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
-                        <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
-                            ID // {note.id.slice(-5).toLowerCase()}
-                        </div>
+                        // Inbox: Only Archive button
+                        <Tooltip content="Переместить в библиотеку">
+                            <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
+                        </Tooltip>
                     ) : (
-                        <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
-                            <Tooltip content="Вернуть во входящие">
-                                <button onClick={(e) => { e.stopPropagation(); if(window.confirm('Вернуть во входящие?')) { handlers.moveNoteToInbox(note.id); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><RotateCcw size={16} strokeWidth={1.5} /></button>
+                        // Library: Action buttons moved here
+                        <>
+                            <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
+                            
+                            <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
+                            
+                            <Tooltip content={isLinkedToJournal ? "В дневнике" : "В дневник"}>
+                                <button 
+                                    onClick={isLinkedToJournal ? undefined : handleToJournal} 
+                                    disabled={isLinkedToJournal}
+                                    className={`p-2 rounded-full transition-all ${
+                                        isLinkedToJournal 
+                                        ? 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 opacity-100 cursor-default' 
+                                        : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
+                                    }`}
+                                >
+                                    <Book size={16} strokeWidth={1.5} />
+                                </button>
                             </Tooltip>
-                        </div>
+                            
+                            {handlers.addSketchItem && <Tooltip content="В скетчпад"><button onClick={handleToSketchpad} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Tablet size={16} strokeWidth={1.5} /></button></Tooltip>}
+                        </>
                     )}
                 </div>
-            )}
+                
+                {/* Right Side: ID or Restore Button */}
+                {!isArchived ? (
+                    <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
+                        ID // {note.id.slice(-5).toLowerCase()}
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
+                        <Tooltip content="Вернуть во входящие">
+                            <button onClick={(e) => { e.stopPropagation(); if(window.confirm('Вернуть во входящие?')) { handlers.moveNoteToInbox(note.id); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><RotateCcw size={16} strokeWidth={1.5} /></button>
+                        </Tooltip>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries, isSelectionMode, selectedNoteIds, onToggleSelection, onConfirmSelection, onCancelSelection }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -967,9 +935,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           journalEntries.forEach(entry => {
               if (entry.linkedNoteId && !entry.isArchived) {
                   ids.add(entry.linkedNoteId);
-              }
-              if (entry.linkedNoteIds && Array.isArray(entry.linkedNoteIds)) {
-                  entry.linkedNoteIds.forEach(id => ids.add(id));
               }
           });
       }
@@ -1378,9 +1343,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
-      onImageClick: (src: string) => setLightboxSrc(src),
-      onToggleSelection
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc, onToggleSelection]);
+      onImageClick: (src: string) => setLightboxSrc(src)
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
 
   const markdownRenderComponents = {
       ...markdownComponents,
@@ -1397,60 +1361,23 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden relative">
+    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
       
       {/* Global Lightbox for viewing images */}
       <AnimatePresence>
           {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       </AnimatePresence>
 
-      {/* Floating Selection Panel */}
-      <AnimatePresence>
-        {isSelectionMode && selectedNoteIds && (
-          <motion.div 
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 50, opacity: 0 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-indigo-500/30 p-2 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[300px] justify-between"
-          >
-             <div className="pl-3 flex items-center gap-2">
-                <CheckSquare size={18} className="text-indigo-500" />
-                <span className="text-sm font-bold text-slate-700 dark:text-white">
-                    Выбрано: {selectedNoteIds.length}
-                </span>
-             </div>
-             <div className="flex items-center gap-2">
-                 <button 
-                    onClick={onConfirmSelection} 
-                    disabled={selectedNoteIds.length === 0}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                 >
-                    Связать с записью
-                 </button>
-                 <button onClick={onCancelSelection} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
-                    <X size={18} strokeWidth={2}/>
-                 </button>
-             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <div className="shrink-0 w-full px-4 md:px-8 pt-4 md:pt-8 mb-4 z-50">
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">
-                    {isSelectionMode ? "Выбор заметок" : "Заметки"}
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">
-                    {isSelectionMode ? "Отметьте заметки для привязки к дневнику" : "На скорости мысли"}
-                </p>
+                <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Заметки</h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">На скорости мысли</p>
                 </div>
-                {!isSelectionMode && (
-                    <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
-                        <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
-                        <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
-                    </div>
-                )}
+                <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
+                    <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
+                    <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
+                </div>
             </header>
       </div>
 
@@ -1539,7 +1466,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <div className="w-full px-4 md:px-8 pt-6 pb-8">
                     {activeTab === 'inbox' && (
                         <>
-                            {!isSelectionMode && !searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
+                            {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
                                 <div className="max-w-3xl mx-auto w-full">
                                     <div ref={editorRef} className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative mb-8 ${isExpanded ? 'shadow-xl z-30' : 'shadow-sm hover:shadow-md'}`}>
                                         <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0 rounded-3xl"></div>
@@ -1602,17 +1529,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             )}
                             {inboxNotes.length > 0 ? (
                                 <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                    {inboxNotes.map((note) => (
-                                        <NoteCard 
-                                            key={note.id} 
-                                            note={note} 
-                                            isArchived={false} 
-                                            handlers={cardHandlers} 
-                                            isLinkedToJournal={linkedNoteIds.has(note.id)} 
-                                            isSelectionMode={isSelectionMode}
-                                            isSelected={selectedNoteIds?.includes(note.id)}
-                                        />
-                                    ))}
+                                    {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
                                 </Masonry>
                             ) : (
                                 <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
@@ -1623,17 +1540,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         <>
                             {archivedNotes.length > 0 ? (
                                 <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                    {archivedNotes.map((note) => (
-                                        <NoteCard 
-                                            key={note.id} 
-                                            note={note} 
-                                            isArchived={true} 
-                                            handlers={cardHandlers} 
-                                            isLinkedToJournal={linkedNoteIds.has(note.id)} 
-                                            isSelectionMode={isSelectionMode}
-                                            isSelected={selectedNoteIds?.includes(note.id)}
-                                        />
-                                    ))}
+                                    {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
                                 </Masonry>
                             ) : (
                                 <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
@@ -1644,7 +1551,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </div>
       </div>
       
-      {/* ... Oracle Modal and Note Edit Modal (unchanged) ... */}
       {showOracle && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <motion.div 
@@ -1749,7 +1655,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       </div>
       )}
 
-      {selectedNote && !isSelectionMode && (
+      {selectedNote && (
         <AnimatePresence>
             <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
                 <motion.div 
