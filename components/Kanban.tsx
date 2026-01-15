@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -2045,281 +2044,6 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
     );
   };
 
-  // --- CARD SPHERE SELECTOR COMPONENT (UPDATED) ---
-  const CardSphereSelector: React.FC<{ task: Task, updateTask: (t: Task) => void }> = ({ task, updateTask }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    
-    const toggleSphere = (sphereId: string) => {
-        const current = task.spheres || [];
-        const newSpheres = current.includes(sphereId) 
-            ? current.filter(s => s !== sphereId)
-            : [...current, sphereId];
-        updateTask({ ...task, spheres: newSpheres });
-    };
-
-    return (
-        <div className="relative">
-            <Tooltip content="Сферы">
-                <button 
-                    onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors opacity-0 group-hover:opacity-100"
-                >
-                    {task.spheres && task.spheres.length > 0 ? (
-                        <div className="flex -space-x-1.5">
-                            {task.spheres.map(s => {
-                                const sp = SPHERES.find(x => x.id === s);
-                                return sp ? (
-                                    <div 
-                                        key={s} 
-                                        className={`w-3 h-3 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
-                                        style={{ borderWidth: '1.5px' }}
-                                    />
-                                ) : null;
-                            })}
-                        </div>
-                    ) : (
-                        <Target size={14} strokeWidth={1.5} className="text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400" />
-                    )}
-                </button>
-            </Tooltip>
-            
-            {isOpen && (
-                <>
-                    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
-                    <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
-                        {SPHERES.map(s => {
-                            const isSelected = task.spheres?.includes(s.id);
-                            const Icon = ICON_MAP[s.icon];
-                            return (
-                                <button
-                                    key={s.id}
-                                    onClick={(e) => { e.stopPropagation(); toggleSphere(s.id); }}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-[#2F3437] dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                                >
-                                    {Icon && <Icon size={12} className={isSelected ? s.text : 'text-[#6B6E70]'} />}
-                                    <span className="flex-1">{s.label}</span>
-                                    {isSelected && <Check size={12} className="text-indigo-500" />}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </>
-            )}
-        </div>
-    );
-  };
-
-  // --- TASK DETAIL SPHERE SELECTOR (JOURNAL STYLE) ---
-  const TaskDetailSphereSelector: React.FC<{ 
-      task: Task, 
-      updateTask: (t: Task) => void,
-      align?: 'left' | 'right',
-      direction?: 'up' | 'down'
-  }> = ({ task, updateTask, align = 'right', direction = 'down' }) => {
-      const [isOpen, setIsOpen] = useState(false);
-      const triggerRef = useRef<HTMLButtonElement>(null);
-      const [style, setStyle] = useState<React.CSSProperties>({});
-
-      useEffect(() => {
-          const handleClickOutside = (event: MouseEvent) => {
-              if (triggerRef.current && triggerRef.current.contains(event.target as Node)) {
-                  return;
-              }
-              if ((event.target as Element).closest('.sphere-selector-dropdown')) {
-                  return;
-              }
-              setIsOpen(false);
-          };
-          
-          if (isOpen) {
-              document.addEventListener('mousedown', handleClickOutside);
-              window.addEventListener('scroll', () => setIsOpen(false), true);
-              window.addEventListener('resize', () => setIsOpen(false));
-          }
-          return () => {
-              document.removeEventListener('mousedown', handleClickOutside);
-              window.removeEventListener('scroll', () => setIsOpen(false), true);
-              window.removeEventListener('resize', () => setIsOpen(false));
-          };
-      }, [isOpen]);
-
-      useEffect(() => {
-          if (isOpen && triggerRef.current) {
-              const rect = triggerRef.current.getBoundingClientRect();
-              const width = 192; // w-48 = 12rem = 192px
-
-              let top = direction === 'down' ? rect.bottom + 8 : rect.top - 8;
-              let left = align === 'left' ? rect.left : rect.right - width;
-
-              const newStyle: React.CSSProperties = {
-                  position: 'fixed',
-                  left: left,
-                  zIndex: 9999,
-                  minWidth: width,
-              };
-
-              if (direction === 'up') {
-                  newStyle.top = rect.top - 8;
-                  newStyle.transform = 'translateY(-100%)';
-              } else {
-                  newStyle.top = rect.bottom + 8;
-              }
-
-              setStyle(newStyle);
-          }
-      }, [isOpen, direction, align]);
-      
-      const toggleSphere = (sphereId: string) => {
-          const current = task.spheres || [];
-          const newSpheres = current.includes(sphereId) 
-              ? current.filter(s => s !== sphereId)
-              : [...current, sphereId];
-          updateTask({ ...task, spheres: newSpheres });
-      };
-
-      return (
-          <>
-              <Tooltip content="Сферы">
-                  <button 
-                      ref={triggerRef}
-                      onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                      className="flex items-center justify-center p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                  >
-                      {task.spheres && task.spheres.length > 0 ? (
-                          <div className="flex -space-x-1.5">
-                              {task.spheres.map(s => {
-                                  const sp = SPHERES.find(x => x.id === s);
-                                  return sp ? (
-                                      <div 
-                                          key={s} 
-                                          className={`w-3 h-3 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
-                                          style={{ borderWidth: '1.5px' }}
-                                      />
-                                  ) : null;
-                              })}
-                          </div>
-                      ) : (
-                          <Target size={18} strokeWidth={1.5} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" />
-                      )}
-                  </button>
-              </Tooltip>
-              
-              {isOpen && createPortal(
-                  <div 
-                      className="sphere-selector-dropdown absolute bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5"
-                      style={style}
-                      onClick={e => e.stopPropagation()}
-                  >
-                      {SPHERES.map(s => {
-                          const isSelected = task.spheres?.includes(s.id);
-                          const Icon = ICON_MAP[s.icon];
-                          return (
-                              <button
-                                  key={s.id}
-                                  onClick={() => toggleSphere(s.id)}
-                                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                              >
-                                  {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} strokeWidth={1} />}
-                                  <span className="flex-1">{s.label}</span>
-                                  {isSelected && <Check size={12} className="text-indigo-500" strokeWidth={1} />}
-                              </button>
-                          );
-                      })}
-                  </div>,
-                  document.body
-              )}
-          </>
-      );
-  };
-
-  // --- JOURNEY MODAL COMPONENT ---
-  const JourneyModal = ({ task, journalEntries, onClose }: { task: Task, journalEntries: JournalEntry[], onClose: () => void }) => {
-    // Check for insight
-    const hasInsight = journalEntries.some(j => j.linkedTaskId === task.id && j.isInsight);
-    const sphere = task.spheres?.[0];
-    const sphereColor = sphere && NEON_COLORS[sphere] ? NEON_COLORS[sphere] : '#6366f1'; 
-
-    const stages = [
-        { id: 1, label: 'ХАОС', desc: 'Мысль зафиксирована в Дневнике/Заметках', active: true },
-        { id: 2, label: 'ЛОГОС', desc: 'Сформирован контекст и план действий', active: true },
-        { id: 3, label: 'ЭНЕРГИЯ', desc: 'Задача реализована в материальном мире', active: true },
-        { id: 4, label: 'СИНТЕЗ', desc: 'Опыт интегрирован в структуру личности', active: hasInsight }
-    ];
-
-    return (
-        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-[50px] flex items-center justify-center p-8" onClick={onClose}>
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="w-full max-w-4xl relative"
-                onClick={e => e.stopPropagation()}
-            >
-                {/* Close Button */}
-                <button onClick={onClose} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors">
-                    <X size={24} />
-                </button>
-
-                {/* Central Map */}
-                <div className="flex flex-col md:flex-row items-center justify-between relative py-20 px-10">
-                    
-                    {/* The Thread */}
-                    <div className="absolute left-10 right-10 top-1/2 h-[1px] bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 hidden md:block" />
-                    <div className="absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-slate-700 via-slate-500 to-slate-700 md:hidden" />
-                    
-                    {/* Pulse Animation */}
-                    <motion.div 
-                        className="absolute h-[3px] w-[20px] bg-white blur-[2px] rounded-full hidden md:block top-1/2 -mt-[1.5px]"
-                        animate={{ 
-                            left: ['0%', hasInsight ? '100%' : '75%'], 
-                            opacity: [0, 1, 0] 
-                        }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                    />
-
-                    {stages.map((stage, i) => (
-                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-6 group mb-8 md:mb-0">
-                            {/* Node */}
-                            <div className={`
-                                w-4 h-4 transition-all duration-500
-                                ${stage.id === 1 ? 'rounded-full border border-slate-400 bg-black' : ''}
-                                ${stage.id === 2 ? 'w-3 h-3 bg-slate-300 transform rotate-45' : ''}
-                                ${stage.id === 3 ? 'rounded-full' : ''}
-                                ${stage.id === 4 ? 'transform rotate-45' : ''}
-                            `}
-                            style={{ 
-                                backgroundColor: stage.id === 3 ? sphereColor : undefined,
-                                boxShadow: stage.id === 3 ? `0 0 15px ${sphereColor}` : undefined
-                            }}
-                            >
-                                {stage.id === 4 && (
-                                    <div className={`w-4 h-4 border border-indigo-500 transition-all duration-1000 ${stage.active ? 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.8)]' : 'bg-black'}`} />
-                                )}
-                            </div>
-
-                            {/* Label */}
-                            <div className="text-center">
-                                <div className="font-mono text-[10px] text-slate-300 uppercase tracking-[0.3em] mb-2">{stage.label}</div>
-                                <div className={`font-serif text-sm italic text-slate-400 max-w-[150px] leading-tight transition-opacity duration-500 ${stage.active ? 'opacity-100' : 'opacity-30'}`}>
-                                    {stage.desc}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                
-                {/* Footer Quote */}
-                <div className="text-center mt-8">
-                    <p className="font-mono text-[9px] text-slate-600 uppercase tracking-widest">
-                        Task ID: {task.id.slice(-4)}
-                    </p>
-                </div>
-
-            </motion.div>
-        </div>
-    )
-  }
-
   return (
     <div ref={scrollContainerRef} className="flex flex-col h-full relative overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-[#0f172a]" style={DOT_GRID_STYLE}>
       <div className="w-full px-4 md:px-8 pt-4 md:pt-8 mb-6">
@@ -2428,18 +2152,11 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                             {activeModal.type === 'details' && !isEditingTask && (
                                 (() => {
                                     const task = getTaskForModal();
-                                    if (task) {
+                                    if (task && task.column !== 'done') {
                                         return (
                                             <>
-                                                <div className="mr-1">
-                                                    <TaskDetailSphereSelector task={task} updateTask={updateTask} align="right" direction="down" />
-                                                </div>
-                                                {task.column !== 'done' && (
-                                                    <>
-                                                        <Tooltip content="Редактировать"><button onClick={() => setIsEditingTask(true)} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={18} /></button></Tooltip>
-                                                        <Tooltip content="Отправить в архив"><button onClick={() => { if(window.confirm('Отправить в архив?')) { deleteTask(task.id); handleCloseModal(); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18} /></button></Tooltip>
-                                                    </>
-                                                )}
+                                                <Tooltip content="Редактировать"><button onClick={() => setIsEditingTask(true)} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={18} /></button></Tooltip>
+                                                <Tooltip content="Отправить в архив"><button onClick={() => { if(window.confirm('Отправить в архив?')) { deleteTask(task.id); handleCloseModal(); } }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18} /></button></Tooltip>
                                             </>
                                         );
                                     }
@@ -2531,8 +2248,8 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                                 data-placeholder="Описание задачи..." 
                                             />
                                             <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
-                                                <div className="flex justify-end">
-                                                    <TaskDetailSphereSelector task={task} updateTask={updateTask} align="right" direction="up" />
+                                                <div className="flex justify-start">
+                                                    <TaskDetailSphereSelector task={task} updateTask={updateTask} align="left" direction="up" />
                                                 </div>
                                             </div>
                                             <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5 shrink-0">
@@ -2542,11 +2259,16 @@ const Kanban: React.FC<Props> = ({ tasks, journalEntries, config, addTask, updat
                                         </div>
                                     ) : (
                                         <div className="group relative pr-1">
-                                            {task.description && (<CollapsibleSection title="Контекст" icon={<FileText size={12}/>}><div className="text-xs text-[#6B6E70] dark:text-slate-400 leading-relaxed font-sans"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.description))}</ReactMarkdown></div></CollapsibleSection>)}
                                             
-                                            <div className="text-slate-700 dark:text-slate-300 text-sm font-normal leading-relaxed font-sans mb-6">
+                                            <div className="text-slate-700 dark:text-slate-300 text-sm font-normal leading-relaxed font-sans">
                                                 <ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.content))}</ReactMarkdown>
                                             </div>
+
+                                            <div className="mt-4 mb-6">
+                                                <TaskDetailSphereSelector task={task} updateTask={updateTask} align="left" direction="down" />
+                                            </div>
+
+                                            {task.description && (<CollapsibleSection title="Контекст" icon={<FileText size={12}/>}><div className="text-xs text-[#6B6E70] dark:text-slate-400 leading-relaxed font-sans"><ReactMarkdown components={markdownComponents}>{formatForDisplay(applyTypography(task.description))}</ReactMarkdown></div></CollapsibleSection>)}
                                             
                                             {(task.subtasks && task.subtasks.length > 0 || !isDone) && (
                                                 <CollapsibleSection title={`Чек-лист ${subtasksTotal > 0 ? `(${subtasksDone}/${subtasksTotal})` : ''}`} icon={<ListTodo size={14}/>}>
