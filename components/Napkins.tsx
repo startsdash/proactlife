@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -6,12 +5,12 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry, Habit } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, User, Target, Compass, Cpu, Activity } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -25,8 +24,8 @@ interface Props {
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
   onAddJournalEntry: (entry: JournalEntry) => void;
+  sketchItems?: SketchItem[];
   addSketchItem?: (item: SketchItem) => void;
-  addHabit?: (habit: Habit) => void; // Added for Hero's Journey
   deleteSketchItem?: (id: string) => void;
   updateSketchItem?: (item: SketchItem) => void;
   defaultTab?: 'inbox' | 'library';
@@ -264,300 +263,6 @@ const markdownToHtml = (md: string) => {
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 // --- COMPONENTS ---
-
-// SYNTHESIS CHAMBER (Replaces HeroJourneyModal)
-const SynthesisChamber = ({ 
-    note, 
-    onClose, 
-    onAddTask,
-    onAddHabit,
-    onAddJournalEntry,
-    onMoveToSandbox
-}: { 
-    note: Note; 
-    onClose: () => void;
-    onAddTask: (task: Task) => void;
-    onAddHabit?: (habit: Habit) => void;
-    onAddJournalEntry: (entry: JournalEntry) => void;
-    onMoveToSandbox: (id: string) => void;
-}) => {
-    // --- STATE ---
-    const [density, setDensity] = useState(0); // 0 = Chaos, 100 = Crystal
-    const [activeBridge, setActiveBridge] = useState<'sprint' | 'ritual' | 'journal' | null>(null);
-    const [completedBridges, setCompletedBridges] = useState<Set<string>>(new Set());
-    
-    // Input States
-    const [taskTitle, setTaskTitle] = useState(note.title || note.content.substring(0, 30));
-    
-    // Calculate Density based on completion
-    useEffect(() => {
-        const count = completedBridges.size;
-        setDensity(count * 33.3);
-    }, [completedBridges]);
-
-    // --- ACTIONS ---
-    const handleIntegrateSprint = () => {
-        onAddTask({
-            id: Date.now().toString(),
-            title: taskTitle,
-            content: note.content,
-            column: 'todo',
-            createdAt: Date.now()
-        });
-        setCompletedBridges(prev => new Set(prev).add('sprint'));
-        setActiveBridge(null);
-    };
-
-    const handleIntegrateRitual = () => {
-        if (onAddHabit) {
-            onAddHabit({
-                id: Date.now().toString(),
-                title: note.title || 'Новый Ритуал',
-                description: note.content.substring(0, 100),
-                frequency: 'daily',
-                createdAt: Date.now(),
-                history: {},
-                streak: 0,
-                bestStreak: 0,
-                color: 'indigo',
-                icon: 'Zap',
-                reminders: []
-            });
-            setCompletedBridges(prev => new Set(prev).add('ritual'));
-            setActiveBridge(null);
-        }
-    };
-
-    const handleIntegrateJournal = () => {
-        onAddJournalEntry({
-            id: Date.now().toString(),
-            date: Date.now(),
-            content: note.content,
-            linkedNoteId: note.id,
-            isInsight: true,
-            title: note.title
-        });
-        setCompletedBridges(prev => new Set(prev).add('journal'));
-        setActiveBridge(null);
-    };
-
-    // --- VISUALIZATIONS ---
-    const isCrystal = density >= 90;
-
-    return createPortal(
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-xl animate-in fade-in duration-500">
-            <div className="w-[900px] h-[700px] relative bg-[#020617]/80 border border-white/5 rounded-[40px] overflow-hidden shadow-2xl flex flex-col">
-                
-                {/* BACKGROUND GRID & SCALES */}
-                <div className="absolute inset-0 pointer-events-none opacity-20" 
-                     style={{ backgroundImage: 'radial-gradient(#475569 1px, transparent 1px)', backgroundSize: '40px 40px' }} 
-                />
-                
-                {/* VERNIER SCALES (Top) */}
-                <div className="absolute top-8 left-0 right-0 flex justify-center gap-2 pointer-events-none opacity-50">
-                    {Array.from({length: 40}).map((_, i) => (
-                        <div key={i} className={`w-px bg-slate-500 ${i % 5 === 0 ? 'h-3' : 'h-1.5'}`} />
-                    ))}
-                </div>
-                <div className="absolute top-12 left-1/2 -translate-x-1/2 font-mono text-[9px] text-slate-500 tracking-[0.3em]">
-                    DENSITY_SCAN: {Math.round(density)}%
-                </div>
-
-                {/* CENTRAL VORTEX (THE ALCHEMY) */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] flex items-center justify-center pointer-events-none">
-                    
-                    {/* Neural Fog (Chaos Layers) */}
-                    <motion.div 
-                        className="absolute inset-0 rounded-full bg-indigo-500/10 blur-[80px]"
-                        animate={{ scale: isCrystal ? 0.2 : 1, opacity: isCrystal ? 0.5 : 0.2 }}
-                        transition={{ duration: 1 }}
-                    />
-                    
-                    {/* Spinning Rings */}
-                    <motion.div 
-                        className="absolute w-[400px] h-[400px] border border-dashed border-slate-700/50 rounded-full"
-                        animate={{ rotate: 360, scale: isCrystal ? 0.5 : 1 }}
-                        transition={{ duration: isCrystal ? 10 : 60, repeat: Infinity, ease: "linear" }}
-                    />
-                    <motion.div 
-                        className="absolute w-[280px] h-[280px] border border-dotted border-slate-600/50 rounded-full"
-                        animate={{ rotate: -360, scale: isCrystal ? 0.4 : 1 }}
-                        transition={{ duration: isCrystal ? 8 : 40, repeat: Infinity, ease: "linear" }}
-                    />
-
-                    {/* The Core (Note Content) */}
-                    <motion.div 
-                        className={`
-                            relative z-10 w-64 h-64 flex flex-col items-center justify-center text-center p-6
-                            transition-all duration-1000
-                            ${isCrystal ? 'bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_0_50px_rgba(255,255,255,0.2)]' : 'bg-transparent'}
-                        `}
-                        style={{ borderRadius: isCrystal ? '10%' : '50%' }}
-                    >
-                        <div className="overflow-hidden max-h-full">
-                            <p className="font-serif text-slate-300 text-sm leading-relaxed line-clamp-6 opacity-80 mix-blend-plus-lighter">
-                                {note.content}
-                            </p>
-                        </div>
-                    </motion.div>
-                </div>
-
-                {/* STRUCTURAL BRIDGES (MODULES) */}
-                
-                {/* 1. SPRINT BRIDGE (Right) */}
-                <div className="absolute top-1/2 right-12 -translate-y-1/2 flex items-center gap-4">
-                    {/* Laser Beam */}
-                    <div className={`h-[1px] w-24 transition-all duration-500 ${activeBridge === 'sprint' || completedBridges.has('sprint') ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-slate-800'}`} />
-                    
-                    <div className="relative group">
-                        {activeBridge === 'sprint' && (
-                            <motion.div 
-                                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                                className="absolute right-full mr-6 top-1/2 -translate-y-1/2 w-64 bg-slate-900/90 backdrop-blur-md border border-emerald-500/30 p-4 rounded-xl shadow-2xl"
-                            >
-                                <div className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-3">Интеграция в Спринт</div>
-                                <input 
-                                    className="w-full bg-black/30 border border-slate-700 rounded p-2 text-xs text-white mb-3 outline-none focus:border-emerald-500 font-mono"
-                                    placeholder="ОПРЕДЕЛИТЬ ЦЕЛЬ..."
-                                    value={taskTitle}
-                                    onChange={e => setTaskTitle(e.target.value)}
-                                    autoFocus
-                                />
-                                <div className="flex gap-2">
-                                    <button onClick={handleIntegrateSprint} className="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[10px] py-2 rounded uppercase tracking-wider transition-colors border border-emerald-500/20">
-                                        Подтвердить
-                                    </button>
-                                    <button onClick={() => setActiveBridge(null)} className="px-3 text-slate-500 hover:text-slate-300">
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                            </motion.div>
-                        )}
-                        
-                        <button 
-                            onClick={() => setActiveBridge('sprint')}
-                            disabled={completedBridges.has('sprint')}
-                            className={`
-                                w-16 h-16 rounded-2xl border flex items-center justify-center transition-all duration-500
-                                ${completedBridges.has('sprint') 
-                                    ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]' 
-                                    : activeBridge === 'sprint' ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-slate-900/50 border-slate-700 text-slate-500 hover:border-emerald-500/50 hover:text-emerald-400'}
-                            `}
-                        >
-                            <Kanban size={24} strokeWidth={1.5} />
-                        </button>
-                        <div className="absolute top-full mt-2 w-full text-center text-[9px] font-mono uppercase tracking-widest text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                            Спринт
-                        </div>
-                    </div>
-                </div>
-
-                {/* 2. RITUAL BRIDGE (Left) */}
-                <div className="absolute top-1/2 left-12 -translate-y-1/2 flex items-center gap-4 flex-row-reverse">
-                    {/* Pulse Line */}
-                    <div className={`h-[1px] w-24 transition-all duration-500 ${activeBridge === 'ritual' || completedBridges.has('ritual') ? 'bg-rose-500 shadow-[0_0_10px_#f43f5e]' : 'bg-slate-800'}`} />
-                    
-                    <div className="relative group">
-                        {activeBridge === 'ritual' && (
-                            <motion.div 
-                                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-                                className="absolute left-full ml-6 top-1/2 -translate-y-1/2 w-56 bg-slate-900/90 backdrop-blur-md border border-rose-500/30 p-4 rounded-xl shadow-2xl"
-                            >
-                                <div className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mb-3">Закрепить поведением</div>
-                                <button onClick={handleIntegrateRitual} className="w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] py-2 rounded uppercase tracking-wider transition-colors border border-rose-500/20 mb-2">
-                                    Создать ритуал (Daily)
-                                </button>
-                                <button onClick={() => setActiveBridge(null)} className="w-full text-center text-[9px] text-slate-500 hover:text-slate-300">
-                                    Отмена
-                                </button>
-                            </motion.div>
-                        )}
-
-                        <button 
-                            onClick={() => setActiveBridge('ritual')}
-                            disabled={completedBridges.has('ritual')}
-                            className={`
-                                w-16 h-16 rounded-full border flex items-center justify-center transition-all duration-500
-                                ${completedBridges.has('ritual') 
-                                    ? 'bg-rose-500/10 border-rose-500 text-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.3)]' 
-                                    : activeBridge === 'ritual' ? 'bg-rose-500 text-white border-rose-500' : 'bg-slate-900/50 border-slate-700 text-slate-500 hover:border-rose-500/50 hover:text-rose-400'}
-                            `}
-                        >
-                            <Flame size={24} strokeWidth={1.5} />
-                        </button>
-                        <div className="absolute top-full mt-2 w-full text-center text-[9px] font-mono uppercase tracking-widest text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                            Трекер
-                        </div>
-                    </div>
-                </div>
-
-                {/* 3. JOURNAL BRIDGE (Bottom) */}
-                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">
-                    <div className="relative group">
-                        {activeBridge === 'journal' && (
-                            <motion.div 
-                                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                                className="absolute bottom-full mb-6 left-1/2 -translate-x-1/2 w-48 bg-slate-900/90 backdrop-blur-md border border-cyan-500/30 p-4 rounded-xl shadow-2xl text-center"
-                            >
-                                <div className="text-[9px] font-bold text-cyan-500 uppercase tracking-widest mb-3">Осознать инсайт</div>
-                                <button onClick={handleIntegrateJournal} className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-[10px] py-2 rounded uppercase tracking-wider transition-colors border border-cyan-500/20 mb-2">
-                                    В Дневник
-                                </button>
-                                <button onClick={() => setActiveBridge(null)} className="text-[9px] text-slate-500 hover:text-slate-300">
-                                    Отмена
-                                </button>
-                            </motion.div>
-                        )}
-
-                        <button 
-                            onClick={() => setActiveBridge('journal')}
-                            disabled={completedBridges.has('journal')}
-                            className={`
-                                w-14 h-14 rounded-xl rotate-45 border flex items-center justify-center transition-all duration-500
-                                ${completedBridges.has('journal') 
-                                    ? 'bg-cyan-500/10 border-cyan-500 text-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.3)]' 
-                                    : activeBridge === 'journal' ? 'bg-cyan-500 text-white border-cyan-500' : 'bg-slate-900/50 border-slate-700 text-slate-500 hover:border-cyan-500/50 hover:text-cyan-400'}
-                            `}
-                        >
-                            <Book size={20} strokeWidth={1.5} className="-rotate-45" />
-                        </button>
-                    </div>
-                    {/* Portal Beam */}
-                    <div className={`w-[1px] h-16 transition-all duration-500 ${activeBridge === 'journal' || completedBridges.has('journal') ? 'bg-cyan-500 shadow-[0_0_10px_#06b6d4]' : 'bg-slate-800'}`} />
-                </div>
-
-                {/* FOOTER: BIO-BALANCE & ACTION */}
-                <div className="mt-auto h-20 bg-slate-900/50 border-t border-white/5 flex items-center justify-between px-8 relative z-20 backdrop-blur-md">
-                    <div className="flex items-center gap-4">
-                        <div className="flex flex-col gap-1">
-                            <div className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Bio-Balance Impact</div>
-                            <div className="flex gap-2">
-                                {completedBridges.has('sprint') && <span className="text-[10px] text-emerald-400 font-bold uppercase">+5% Growth</span>}
-                                {completedBridges.has('ritual') && <span className="text-[10px] text-rose-400 font-bold uppercase">+3% Willpower</span>}
-                                {completedBridges.has('journal') && <span className="text-[10px] text-cyan-400 font-bold uppercase">+4% Wisdom</span>}
-                                {completedBridges.size === 0 && <span className="text-[10px] text-slate-600 font-mono">-- WAITING FOR INPUT --</span>}
-                            </div>
-                        </div>
-                    </div>
-
-                    <button 
-                        onClick={onClose}
-                        className={`
-                            px-8 py-3 rounded-full font-mono text-[10px] uppercase tracking-[0.2em] font-bold transition-all duration-500
-                            ${completedBridges.size > 0 
-                                ? 'bg-white text-black hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)]' 
-                                : 'bg-slate-800 text-slate-500 hover:text-slate-300'}
-                        `}
-                    >
-                        ЗАФИКСИРОВАТЬ ТРАНСФОРМАЦИЮ
-                    </button>
-                </div>
-
-            </div>
-        </div>,
-        document.body
-    );
-};
 
 // Lightbox
 const Lightbox = ({ src, onClose }: { src: string, onClose: () => void }) => {
@@ -963,9 +668,6 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
-        openHeroJourney: (note: Note) => void; 
-        // NEW HANDLERS FOR MODAL
-        onAddHabit?: (habit: Habit) => void;
     }
 }
 
@@ -1133,12 +835,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                             <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
                         </Tooltip>
                     ) : (
-                        // Library: Action buttons
+                        // Library: Action buttons moved here
                         <>
-                            <Tooltip content="Начать путь">
-                                <button onClick={(e) => { e.stopPropagation(); handlers.openHeroJourney(note); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-100"><Orbit size={16} strokeWidth={1.5} /></button>
-                            </Tooltip>
-                            
                             <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
                             
                             <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
@@ -1179,7 +877,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, addHabit, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -1226,7 +924,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [heroJourneyNote, setHeroJourneyNote] = useState<Note | null>(null); // New State for Hero Journey
 
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
@@ -1646,10 +1343,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
-      addHabit,
-      onImageClick: (src: string) => setLightboxSrc(src),
-      openHeroJourney: (note: Note) => setHeroJourneyNote(note)
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, addHabit, setLightboxSrc, setHeroJourneyNote]);
+      onImageClick: (src: string) => setLightboxSrc(src)
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
 
   const markdownRenderComponents = {
       ...markdownComponents,
@@ -1856,20 +1551,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </div>
       </div>
       
-      {/* SYNTHESIS CHAMBER (Replaced Hero's Journey Modal) */}
-      <AnimatePresence>
-          {heroJourneyNote && (
-              <SynthesisChamber 
-                  note={heroJourneyNote} 
-                  onClose={() => setHeroJourneyNote(null)}
-                  onAddTask={onAddTask}
-                  onAddHabit={addHabit}
-                  onAddJournalEntry={onAddJournalEntry}
-                  onMoveToSandbox={moveNoteToSandbox}
-              />
-          )}
-      </AnimatePresence>
-
       {showOracle && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <motion.div 
