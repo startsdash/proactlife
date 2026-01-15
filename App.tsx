@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
@@ -100,6 +101,10 @@ const App: React.FC = () => {
   const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
   const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null); // Context for navigation (Napkins)
   
+  // NOTE LINKING LOGIC
+  const [linkingJournalEntryId, setLinkingJournalEntryId] = useState<string | null>(null);
+  const [selectedNoteIdsForLinking, setSelectedNoteIdsForLinking] = useState<string[]>([]);
+
   // INVITE CODE LOGIC
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [guestSessionCode, setGuestSessionCode] = useState<string | null>(() => {
@@ -382,6 +387,39 @@ const App: React.FC = () => {
       }
   };
 
+  // --- NOTE LINKING HANDLERS ---
+  const handleStartLinking = (entryId: string) => {
+      setLinkingJournalEntryId(entryId);
+      setSelectedNoteIdsForLinking([]);
+      handleNavigate(Module.NAPKINS);
+  };
+
+  const handleToggleNoteSelection = (noteId: string) => {
+      setSelectedNoteIdsForLinking(prev => 
+          prev.includes(noteId) ? prev.filter(id => id !== noteId) : [...prev, noteId]
+      );
+  };
+
+  const handleConfirmLinking = () => {
+      if (linkingJournalEntryId) {
+          const entry = data.journal.find(j => j.id === linkingJournalEntryId);
+          if (entry) {
+              const existingIds = entry.linkedNoteIds || (entry.linkedNoteId ? [entry.linkedNoteId] : []);
+              const newIds = Array.from(new Set([...existingIds, ...selectedNoteIdsForLinking]));
+              updateJournalEntry({ ...entry, linkedNoteIds: newIds });
+          }
+      }
+      setLinkingJournalEntryId(null);
+      setSelectedNoteIdsForLinking([]);
+      handleNavigate(Module.JOURNAL);
+  };
+
+  const handleCancelLinking = () => {
+      setLinkingJournalEntryId(null);
+      setSelectedNoteIdsForLinking([]);
+      handleNavigate(Module.JOURNAL);
+  };
+
   if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a] text-slate-800 dark:text-slate-200">Loading...</div>;
 
   // --- GUEST MODE GUARD ---
@@ -458,7 +496,7 @@ const App: React.FC = () => {
             addNote={addNote} 
             moveNoteToSandbox={moveNoteToSandbox} 
             moveNoteToInbox={moveNoteToInbox} 
-            deleteNote={deleteNote} // Use soft delete
+            deleteNote={deleteNote} 
             reorderNote={reorderNote} 
             updateNote={updateNote} 
             archiveNote={archiveNote} 
@@ -468,6 +506,13 @@ const App: React.FC = () => {
             initialNoteId={napkinsContextNoteId}
             onClearInitialNote={() => setNapkinsContextNoteId(null)}
             journalEntries={data.journal}
+            
+            // Note Linking Props
+            isSelectionMode={!!linkingJournalEntryId}
+            selectedNoteIds={selectedNoteIdsForLinking}
+            onToggleSelection={handleToggleNoteSelection}
+            onConfirmSelection={handleConfirmLinking}
+            onCancelSelection={handleCancelLinking}
           />
       )}
       
@@ -491,7 +536,25 @@ const App: React.FC = () => {
       {module === Module.KANBAN && <Kanban tasks={data.tasks.filter(t => !t.isArchived)} journalEntries={data.journal.filter(j => !j.isArchived)} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={archiveTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
       {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
-      {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} notes={data.notes} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} onNavigateToNote={handleNavigateToNote} />}
+      {module === Module.JOURNAL && (
+        <Journal 
+            entries={data.journal.filter(j => !j.isArchived)} 
+            mentorAnalyses={data.mentorAnalyses} 
+            tasks={data.tasks} 
+            notes={data.notes} 
+            config={visibleConfig} 
+            addEntry={addJournalEntry} 
+            deleteEntry={archiveJournalEntry} 
+            updateEntry={updateJournalEntry} 
+            addMentorAnalysis={addMentorAnalysis} 
+            deleteMentorAnalysis={deleteMentorAnalysis} 
+            initialTaskId={journalContextTaskId} 
+            onClearInitialTask={() => setJournalContextTaskId(null)} 
+            onNavigateToTask={handleNavigateToTask} 
+            onNavigateToNote={handleNavigateToNote}
+            onLinkNote={handleStartLinking} // New Prop
+        />
+      )}
       {module === Module.MOODBAR && <Moodbar entries={data.journal.filter(j => !j.isArchived)} onAddEntry={addJournalEntry} />}
       
       {module === Module.ARCHIVE && (
@@ -501,8 +564,8 @@ const App: React.FC = () => {
             journal={data.journal} 
             restoreTask={restoreTask} 
             deleteTask={deleteTask} 
-            moveNoteToInbox={restoreNote} // Restore soft-deleted notes
-            deleteNote={hardDeleteNote} // Permanently delete notes
+            moveNoteToInbox={restoreNote} 
+            deleteNote={hardDeleteNote} 
             deleteJournalEntry={deleteJournalEntry} 
             restoreJournalEntry={restoreJournalEntry} 
           />

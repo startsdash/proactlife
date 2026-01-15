@@ -126,7 +126,8 @@ export interface JournalEntry {
   title?: string;
   content: string;
   linkedTaskId?: string; 
-  linkedNoteId?: string; // Added to link back to notes
+  linkedNoteId?: string; // Legacy single link
+  linkedNoteIds?: string[]; // Support multiple linked notes
   aiFeedback?: string;
   mentorId?: string;
   spheres?: string[];
