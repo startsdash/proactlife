@@ -5,12 +5,12 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry, Habit } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Swords, GraduationCap, Hexagon, CheckCircle2 } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -28,12 +28,10 @@ interface Props {
   addSketchItem?: (item: SketchItem) => void;
   deleteSketchItem?: (id: string) => void;
   updateSketchItem?: (item: SketchItem) => void;
-  defaultTab?: 'inbox' | 'library' | 'path';
+  defaultTab?: 'inbox' | 'library';
   initialNoteId?: string | null;
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
-  tasks?: Task[];
-  habits?: Habit[];
 }
 
 const colors = [
@@ -264,251 +262,9 @@ const markdownToHtml = (md: string) => {
 
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
-// --- HERO JOURNEY COMPONENT ---
-const HeroJourney = ({ note, onAction, tasks, habits }: { note: Note, onAction: (action: string, payload?: any) => void, tasks?: Task[], habits?: Habit[] }) => {
-    const isArchived = note.status === 'sandbox' || note.status === 'archived';
-    
-    // Detect linked items for Stage 4
-    const linkedTask = tasks?.find(t => t.content.includes(note.content.substring(0, 20)) || t.description?.includes(note.content.substring(0, 20))); // Heuristic check if real link missing
-    // In a real app we'd check strict IDs, here we assume tasks might be created from note content text
-    
-    // Determine Stage
-    let stage = 1;
-    if (isArchived) stage = 2;
-    // If we have linked items, we might be stage 4 (Transformation)
-    // For visual demo, let's assume if it's archived and we click "Choice", we go to stage 3.
-    // Stage 4 triggers if linked task is done.
-    
-    const [currentStage, setCurrentStage] = useState(stage);
-    
-    // Check for stage 4 transition
-    useEffect(() => {
-        if (currentStage >= 3) {
-            // Check if related task is done or habit active
-            // Mock logic for demo visual
-        }
-    }, [currentStage, tasks]);
+// --- COMPONENTS ---
 
-    const handleChoice = (path: 'warrior' | 'apprentice') => {
-        if (path === 'warrior') {
-            onAction('create_task', note);
-        } else {
-            onAction('create_journal', note);
-        }
-        // Advance for visual effect (In reality, app navigation would happen)
-        setCurrentStage(4);
-    };
-
-    const handleIntegrate = () => {
-        onAction('move_sandbox', note.id);
-        setCurrentStage(2);
-    };
-
-    // Calculate progress for accumulator
-    const progress = (currentStage / 4) * 100;
-
-    return (
-        <div className="flex flex-col h-full bg-[#050505] relative overflow-hidden font-sans text-white">
-            {/* Dotted Grid Background */}
-            <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" 
-                 style={{ backgroundImage: 'radial-gradient(#333 1px, transparent 1px)', backgroundSize: '24px 24px' }} 
-            />
-
-            {/* Header: Accumulator */}
-            <div className="relative z-10 px-8 pt-8 pb-4 flex justify-between items-center border-b border-white/10">
-                <div>
-                    <h2 className="text-xl font-bold tracking-widest uppercase text-white/80">Hero Protocol</h2>
-                    <p className="text-[10px] font-mono text-white/40">ID: {note.id.slice(-4)} // STAGE {currentStage}/4</p>
-                </div>
-                <div className="w-64 h-12 bg-white/5 border border-white/10 rounded-full relative overflow-hidden flex items-center px-1">
-                    {/* Liquid Fill */}
-                    <motion.div 
-                        className="h-full bg-gradient-to-r from-[#00A3FF] to-[#00FF9D] opacity-50 blur-lg absolute top-0 left-0"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 1 }}
-                    />
-                    <motion.div 
-                        className="h-1 bg-white rounded-full shadow-[0_0_10px_white] relative z-10"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 1 }}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center z-20 text-[9px] font-bold tracking-[0.2em] mix-blend-overlay">
-                        ACCUMULATOR
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Stage */}
-            <div className="flex-1 flex flex-col items-center justify-center relative z-10 p-8">
-                <AnimatePresence mode="wait">
-                    
-                    {/* STAGE 1: ORDINARY WORLD */}
-                    {currentStage === 1 && (
-                        <motion.div 
-                            key="stage1"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
-                            className="flex flex-col items-center gap-8 max-w-lg w-full"
-                        >
-                            <div className="text-center space-y-2">
-                                <h1 className="text-3xl font-light tracking-tight text-white">Обыкновенный Мир</h1>
-                                <p className="text-white/50 text-sm font-mono uppercase tracking-widest">Статус: Входящие</p>
-                            </div>
-                            
-                            {/* Holographic Card */}
-                            <div className="w-full bg-white/5 backdrop-blur-xl border border-white/20 p-8 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden group">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-50" />
-                                <div className="font-serif text-lg leading-relaxed text-white/90">
-                                    {note.content.substring(0, 200)}{note.content.length > 200 ? '...' : ''}
-                                </div>
-                                <div className="mt-6 flex gap-2">
-                                    {note.tags.map(t => (
-                                        <span key={t} className="text-[10px] border border-white/20 px-2 py-1 rounded text-white/60 font-mono">{t}</span>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <button 
-                                onClick={handleIntegrate}
-                                className="px-8 py-4 bg-[#00FF9D] text-black font-bold uppercase tracking-widest rounded-full hover:shadow-[0_0_30px_#00FF9D] transition-shadow duration-300 flex items-center gap-3"
-                            >
-                                <Zap size={18} fill="currentColor" /> Начать Трансформацию
-                            </button>
-                        </motion.div>
-                    )}
-
-                    {/* STAGE 2: THE CALL (CRYSTALLIZATION) */}
-                    {currentStage === 2 && (
-                        <motion.div 
-                            key="stage2"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="flex flex-col items-center gap-12 w-full"
-                        >
-                            <motion.div 
-                                className="w-32 h-32 bg-[#00A3FF] rounded-full blur-[60px] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20"
-                                animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }}
-                                transition={{ duration: 4, repeat: Infinity }}
-                            />
-                            
-                            <div className="relative z-10 text-center">
-                                <Hexagon size={64} className="text-[#00A3FF] mx-auto mb-6" strokeWidth={1} />
-                                <h1 className="text-3xl font-light text-white mb-2">Призыв</h1>
-                                <p className="text-white/50 text-xs uppercase tracking-widest">Структура сформирована</p>
-                            </div>
-
-                            <div className="flex gap-8">
-                                <button 
-                                    onClick={() => setCurrentStage(3)}
-                                    className="px-8 py-3 border border-white/20 hover:border-white/50 hover:bg-white/5 rounded-xl text-sm font-mono tracking-widest transition-all flex items-center gap-3"
-                                >
-                                    ВЫБОР ПУТИ <ArrowRight size={16} />
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* STAGE 3: CROSSING THE THRESHOLD */}
-                    {currentStage === 3 && (
-                        <motion.div 
-                            key="stage3"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="flex flex-col md:flex-row gap-8 w-full max-w-4xl h-[400px]"
-                        >
-                            {/* Warrior Path */}
-                            <div className="flex-1 border border-[#FF005C]/30 bg-[#FF005C]/5 hover:bg-[#FF005C]/10 rounded-3xl p-8 flex flex-col items-center justify-center gap-6 cursor-pointer transition-all hover:scale-[1.02] group relative overflow-hidden" onClick={() => handleChoice('warrior')}>
-                                <div className="absolute inset-0 bg-gradient-to-br from-[#FF005C]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                <div className="p-4 rounded-full border border-[#FF005C] bg-[#FF005C]/10 text-[#FF005C] group-hover:shadow-[0_0_30px_#FF005C] transition-shadow">
-                                    <Swords size={32} />
-                                </div>
-                                <div className="text-center relative z-10">
-                                    <h3 className="text-xl font-bold text-white uppercase tracking-widest mb-2">Путь Воина</h3>
-                                    <p className="text-white/60 text-sm font-serif italic">Действие. Преодоление. Спринт.</p>
-                                </div>
-                                <div className="mt-auto flex flex-col gap-2 w-full relative z-10">
-                                    <button className="py-2 px-4 rounded bg-[#FF005C]/20 text-[#FF005C] hover:bg-[#FF005C] hover:text-white transition-colors text-xs font-bold uppercase tracking-wider">
-                                        Создать Задачу
-                                    </button>
-                                    <button className="py-2 px-4 rounded border border-[#FF005C]/30 text-[#FF005C] hover:bg-[#FF005C]/10 transition-colors text-xs font-bold uppercase tracking-wider">
-                                        Закрепить Ритуал
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Apprentice Path */}
-                            <div className="flex-1 border border-[#00A3FF]/30 bg-[#00A3FF]/5 hover:bg-[#00A3FF]/10 rounded-3xl p-8 flex flex-col items-center justify-center gap-6 cursor-pointer transition-all hover:scale-[1.02] group relative overflow-hidden" onClick={() => handleChoice('apprentice')}>
-                                <div className="absolute inset-0 bg-gradient-to-bl from-[#00A3FF]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                <div className="p-4 rounded-full border border-[#00A3FF] bg-[#00A3FF]/10 text-[#00A3FF] group-hover:shadow-[0_0_30px_#00A3FF] transition-shadow">
-                                    <GraduationCap size={32} />
-                                </div>
-                                <div className="text-center relative z-10">
-                                    <h3 className="text-xl font-bold text-white uppercase tracking-widest mb-2">Путь Ученика</h3>
-                                    <p className="text-white/60 text-sm font-serif italic">Мудрость. Анализ. Рефлексия.</p>
-                                </div>
-                                <div className="mt-auto flex flex-col gap-2 w-full relative z-10">
-                                    <button className="py-2 px-4 rounded bg-[#00A3FF]/20 text-[#00A3FF] hover:bg-[#00A3FF] hover:text-white transition-colors text-xs font-bold uppercase tracking-wider">
-                                        Записать Инсайт
-                                    </button>
-                                    <button className="py-2 px-4 rounded border border-[#00A3FF]/30 text-[#00A3FF] hover:bg-[#00A3FF]/10 transition-colors text-xs font-bold uppercase tracking-wider">
-                                        Вызвать Ментора
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* STAGE 4: TRANSFORMATION */}
-                    {currentStage === 4 && (
-                        <motion.div 
-                            key="stage4"
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="flex flex-col items-center justify-center text-center"
-                        >
-                            <div className="relative mb-12">
-                                <motion.div 
-                                    className="w-48 h-48 rounded-full bg-white blur-xl opacity-20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                                    animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0.5, 0.2] }}
-                                    transition={{ duration: 3, repeat: Infinity }}
-                                />
-                                <motion.div 
-                                    className="w-32 h-32 rounded-full border-2 border-white/50 flex items-center justify-center relative z-10 shadow-[0_0_50px_white]"
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 20, ease: "linear", repeat: Infinity }}
-                                >
-                                    <Orbit size={48} className="text-white" />
-                                </motion.div>
-                            </div>
-                            
-                            <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00FF9D] to-[#00A3FF] mb-4 uppercase tracking-widest">
-                                Мысль Оживает
-                            </h1>
-                            <p className="text-white/60 font-mono text-sm max-w-md">
-                                Интеграция в структуру личности запущена. Следи за прогрессом в Control Deck.
-                            </p>
-                            
-                            <button 
-                                onClick={() => onAction('view_dashboard')}
-                                className="mt-8 text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 hover:text-white transition-colors"
-                            >
-                                [ ЗАВЕРШИТЬ СЕССИЮ ]
-                            </button>
-                        </motion.div>
-                    )}
-
-                </AnimatePresence>
-            </div>
-        </div>
-    );
-};
-
-// --- RE-INCLUDING ALL HELPER COMPONENTS TO ENSURE FILE INTEGRITY ---
-
+// Lightbox
 const Lightbox = ({ src, onClose }: { src: string, onClose: () => void }) => {
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -606,6 +362,27 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
     );
 });
 
+const markdownComponents = {
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
+    // Graphite Ghost Style Links - No color change on hover, just underline
+    a: ({node, ...props}: any) => <a className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer underline-offset-4 decoration-slate-300 dark:decoration-slate-600 transition-colors font-sans text-sm font-medium relative z-20 break-all" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
+    li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
+    h1: ({node, ...props}: any) => <h1 className="font-sans font-bold text-2xl mt-4 mb-2 text-slate-900 dark:text-slate-100 leading-tight" {...props} />,
+    h2: ({node, ...props}: any) => <h2 className="font-sans font-bold text-xl mt-3 mb-2 text-slate-900 dark:text-slate-100 leading-tight" {...props} />,
+    h3: ({node, ...props}: any) => <h3 className="font-sans font-bold text-lg mt-2 mb-1 text-slate-900 dark:text-slate-100 leading-tight" {...props} />,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 dark:border-slate-600 pl-4 italic text-slate-500 dark:text-slate-400 my-3 font-serif" {...props} />,
+    code: ({node, inline, className, children, ...props}: any) => {
+         return inline 
+            ? <code className="bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code>
+            : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-3 rounded-xl text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
+    },
+    img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
+    u: ({node, ...props}: any) => <u {...props} /> 
+};
+
+// Tag Selector
 const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[]) => void, existingTags: string[], placeholder?: string, variant?: 'default' | 'ghost', direction?: 'up' | 'down' }> = ({ selectedTags, onChange, existingTags, placeholder = "Добавить теги...", variant = 'default', direction = 'down' }) => {
     const [input, setInput] = useState('');
     const [isOpen, setIsOpen] = useState(false);
@@ -623,12 +400,31 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
             const target = event.target as Node;
             const isWrapper = wrapperRef.current && wrapperRef.current.contains(target);
             const isDropdown = dropdownRef.current && dropdownRef.current.contains(target);
+            
             if (!isWrapper && !isDropdown) {
                 setIsOpen(false);
             }
         };
-        if (isOpen) document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        
+        const handleScroll = (event: Event) => {
+            // Fix: Check if scrolling happens inside the dropdown
+            if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
+                return;
+            }
+            if (isOpen) setIsOpen(false);
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('scroll', handleScroll, true); 
+            window.addEventListener('resize', handleScroll);
+        }
+        
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('scroll', handleScroll, true);
+            window.removeEventListener('resize', handleScroll);
+        };
     }, [isOpen]);
 
     useEffect(() => {
@@ -640,6 +436,7 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
                 width: Math.max(rect.width, 200),
                 zIndex: 99999,
             };
+            
             if (direction === 'down') {
                 style.top = rect.bottom + 4;
             } else {
@@ -655,6 +452,7 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
         const cleanTag = tag.trim().replace(/^#/, '');
         if (!cleanTag) return;
         if (selectedTags.some(t => t.toLowerCase() === cleanTag.toLowerCase())) { setInput(''); setIsOpen(false); return; }
+        
         handleTagChange([...selectedTags, existingTags.find(t => t.toLowerCase() === cleanTag.toLowerCase()) || cleanTag]);
         setInput(''); setIsOpen(false);
     };
@@ -702,6 +500,7 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
     );
 };
 
+// Cover Picker
 const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => void, triggerRef: React.RefObject<HTMLElement> }> = ({ onSelect, onClose, triggerRef }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<string[]>(UNSPLASH_PRESETS);
@@ -714,7 +513,9 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
             const viewportH = window.innerHeight;
             const viewportW = window.innerWidth;
             const pickerHeight = 320; 
+            
             const style: React.CSSProperties = {};
+            
             const spaceBelow = viewportH - rect.bottom;
             if (spaceBelow < pickerHeight && rect.top > spaceBelow) {
                 style.bottom = viewportH - rect.top + 8;
@@ -723,17 +524,62 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                 style.top = rect.bottom + 8;
                 style.maxHeight = spaceBelow - 20;
             }
+
             if (rect.left + 320 > viewportW) {
                 style.right = 16;
             } else {
                 style.left = rect.left;
             }
+            
             setPickerStyle(style);
         }
     }, [triggerRef]);
     
+    const getUnsplashKey = () => {
+        const keys = [
+            'UNSPLASH_ACCESS_KEY', 
+            'VITE_UNSPLASH_ACCESS_KEY', 
+            'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY', 
+            'REACT_APP_UNSPLASH_ACCESS_KEY'
+        ];
+        
+        for (const k of keys) {
+            // @ts-ignore
+            if (typeof process !== 'undefined' && process.env?.[k]) return process.env[k];
+            // @ts-ignore
+            if (typeof import.meta !== 'undefined' && import.meta.env?.[k]) return import.meta.env[k];
+        }
+        return '';
+    };
+
     const searchUnsplash = async (q?: string) => {
-        // Implementation kept simple as per original
+        const key = getUnsplashKey();
+        if (!key) {
+            if (q) alert("Ключ Unsplash не найден.");
+            return;
+        }
+        
+        setLoading(true);
+        try {
+            const page = Math.floor(Math.random() * 10) + 1;
+            const endpoint = q 
+                ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&page=${page}&client_id=${key}`
+                : `https://api.unsplash.com/photos/random?count=20&client_id=${key}`;
+            
+            const res = await fetch(endpoint);
+            if (!res.ok) throw new Error("API Error");
+            const data = await res.json();
+            
+            const urls = q 
+                ? data.results.map((img: any) => img.urls.regular) 
+                : data.map((img: any) => img.urls.regular);
+            
+            setResults(urls);
+        } catch (e) {
+            console.error("Unsplash Fetch Error", e);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -756,38 +602,53 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
                 onMouseDown={e => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase font-sans">Обложка</span><button onClick={onClose}><X size={14} /></button></div>
+                
                 <div className="relative">
-                    <input type="text" placeholder="Поиск Unsplash..." value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={handleKeyDown} className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-xs font-sans outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400" />
+                    <input 
+                        type="text" 
+                        placeholder="Поиск Unsplash..." 
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="w-full pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-xs font-sans outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
+                    />
                     <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                    <button onClick={() => searchUnsplash(query)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors" title="Найти"><ArrowRight size={12} /></button>
+                    <button 
+                        onClick={() => searchUnsplash(query)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
+                        title="Найти"
+                    >
+                        <ArrowRight size={12} />
+                    </button>
                 </div>
+
                 <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar-light min-h-[60px]">
-                    {loading ? <div className="col-span-3 flex items-center justify-center py-4 text-slate-400"><RefreshCw size={16} className="animate-spin" /></div> : results.map((url, i) => (<button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded overflow-hidden border border-slate-100 dark:border-slate-700 hover:ring-2 hover:ring-indigo-500 relative group bg-slate-100"><img src={url} className="w-full h-full object-cover" loading="lazy" /></button>))}
+                    {loading ? (
+                        <div className="col-span-3 flex items-center justify-center py-4 text-slate-400">
+                            <RefreshCw size={16} className="animate-spin" />
+                        </div>
+                    ) : (
+                        results.map((url, i) => (
+                            <button key={i} onClick={() => { onSelect(url); onClose(); }} className="aspect-video rounded overflow-hidden border border-slate-100 dark:border-slate-700 hover:ring-2 hover:ring-indigo-500 relative group bg-slate-100">
+                                <img src={url} className="w-full h-full object-cover" loading="lazy" />
+                            </button>
+                        ))
+                    )}
                 </div>
+
                 <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-                    <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded text-xs font-medium font-sans cursor-pointer transition-colors text-slate-600 dark:text-slate-300"><Upload size={12} /> Своя <input type="file" accept="image/*" className="hidden" onChange={handleUpload} /></label>
-                    <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded text-xs font-medium font-sans transition-colors text-slate-600 dark:text-slate-300"><Shuffle size={12} /> Случайные</button>
+                    <label className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded text-xs font-medium font-sans cursor-pointer transition-colors text-slate-600 dark:text-slate-300">
+                        <Upload size={12} /> Своя 
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                    </label>
+                    <button onClick={() => searchUnsplash()} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded text-xs font-medium font-sans transition-colors text-slate-600 dark:text-slate-300">
+                        <Shuffle size={12} /> Случайные
+                    </button>
                 </div>
             </div>
         </>,
         document.body
     );
-};
-
-// Markdown Components
-const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
-    a: ({node, ...props}: any) => <a className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer underline-offset-4 decoration-slate-300 dark:decoration-slate-600 transition-colors font-sans text-sm font-medium relative z-20 break-all" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
-    li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
-    h1: ({node, ...props}: any) => <h1 className="font-sans font-bold text-2xl mt-4 mb-2 text-slate-900 dark:text-slate-100 leading-tight" {...props} />,
-    h2: ({node, ...props}: any) => <h2 className="font-sans font-bold text-xl mt-3 mb-2 text-slate-900 dark:text-slate-100 leading-tight" {...props} />,
-    h3: ({node, ...props}: any) => <h3 className="font-sans font-bold text-lg mt-2 mb-1 text-slate-900 dark:text-slate-100 leading-tight" {...props} />,
-    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 dark:border-slate-600 pl-4 italic text-slate-500 dark:text-slate-400 my-3 font-serif" {...props} />,
-    code: ({node, inline, className, children, ...props}: any) => { return inline ? <code className="bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono text-pink-600 dark:text-pink-400" {...props}>{children}</code> : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-3 rounded-xl text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code> },
-    img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
-    u: ({node, ...props}: any) => <u {...props} /> 
 };
 
 interface NoteCardProps {
@@ -807,7 +668,6 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
-        onToPath: (note: Note) => void; // NEW
     }
 }
 
@@ -848,6 +708,35 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
             setTimeout(() => {
                 handlers.archiveNote(note.id);
             }, 400); 
+        }
+    };
+
+    const handleToJournal = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if(window.confirm('В дневник?')) {
+            const entry: JournalEntry = {
+                id: Date.now().toString(),
+                date: Date.now(),
+                content: note.content,
+                isInsight: false,
+                linkedNoteId: note.id
+            };
+            handlers.onAddJournalEntry(entry);
+        }
+    };
+
+    const handleToSketchpad = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if(handlers.addSketchItem && window.confirm('В скетчпад?')) {
+             const item: SketchItem = {
+                id: Date.now().toString(),
+                type: 'text',
+                content: note.content,
+                createdAt: Date.now(),
+                rotation: 0,
+                widthClass: 'col-span-1 row-span-1'
+            };
+            handlers.addSketchItem(item);
         }
     };
 
@@ -941,17 +830,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
             <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
-                        <>
-                            <Tooltip content="Переместить в библиотеку">
-                                <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
-                            </Tooltip>
-                            {/* TO PATH BUTTON */}
-                            <Tooltip content="В путь">
-                                <button onClick={(e) => { e.stopPropagation(); handlers.onToPath(note); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Zap size={16} strokeWidth={1.5} /></button>
-                            </Tooltip>
-                        </>
+                        // Inbox: Only Archive button
+                        <Tooltip content="Переместить в библиотеку">
+                            <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
+                        </Tooltip>
                     ) : (
-                        // Library: Action buttons
+                        // Library: Action buttons moved here
                         <>
                             <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
                             
@@ -959,7 +843,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                             
                             <Tooltip content={isLinkedToJournal ? "В дневнике" : "В дневник"}>
                                 <button 
-                                    onClick={(e) => { e.stopPropagation(); if(!isLinkedToJournal && window.confirm('В дневник?')) { const entry: JournalEntry = { id: Date.now().toString(), date: Date.now(), content: note.content, isInsight: false, linkedNoteId: note.id }; handlers.onAddJournalEntry(entry); } }} 
+                                    onClick={isLinkedToJournal ? undefined : handleToJournal} 
                                     disabled={isLinkedToJournal}
                                     className={`p-2 rounded-full transition-all ${
                                         isLinkedToJournal 
@@ -971,7 +855,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                                 </button>
                             </Tooltip>
                             
-                            {handlers.addSketchItem && <Tooltip content="В скетчпад"><button onClick={(e) => { e.stopPropagation(); if(handlers.addSketchItem && window.confirm('В скетчпад?')) { const item: SketchItem = { id: Date.now().toString(), type: 'text', content: note.content, createdAt: Date.now(), rotation: 0, widthClass: 'col-span-1 row-span-1' }; handlers.addSketchItem(item); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Tablet size={16} strokeWidth={1.5} /></button></Tooltip>}
+                            {handlers.addSketchItem && <Tooltip content="В скетчпад"><button onClick={handleToSketchpad} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Tablet size={16} strokeWidth={1.5} /></button></Tooltip>}
                         </>
                     )}
                 </div>
@@ -993,14 +877,14 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries, tasks, habits }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
   const [creationCover, setCreationCover] = useState<string | null>(null);
   
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'inbox' | 'library' | 'path'>((defaultTab as any) || 'inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'library'>((defaultTab as any) || 'inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
@@ -1040,7 +924,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [heroNoteId, setHeroNoteId] = useState<string | null>(null);
 
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
@@ -1428,42 +1311,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       }
   };
 
-  const handleToPath = (note: Note) => {
-      setHeroNoteId(note.id);
-      setActiveTab('path');
-  };
-
-  // HeroJourney Actions
-  const handleHeroAction = (action: string, payload?: any) => {
-      if (action === 'move_sandbox') {
-          moveNoteToSandbox(payload);
-      } else if (action === 'create_task') {
-          const note = payload as Note;
-          const newTask: Task = {
-              id: Date.now().toString(),
-              title: note.title,
-              content: note.content,
-              column: 'todo',
-              createdAt: Date.now()
-          };
-          onAddTask(newTask);
-      } else if (action === 'create_journal') {
-          const note = payload as Note;
-          const entry: JournalEntry = {
-              id: Date.now().toString(),
-              date: Date.now(),
-              content: note.content,
-              isInsight: true,
-              linkedNoteId: note.id
-          };
-          onAddJournalEntry(entry);
-      } else if (action === 'view_dashboard') {
-          // Reset hero view or navigate (mock)
-          setHeroNoteId(null);
-          setActiveTab('inbox');
-      }
-  };
-
   const filterNotes = (list: Note[]) => {
     return list.filter(note => {
       if (showTagInput && tagQuery) {
@@ -1496,9 +1343,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
-      onImageClick: (src: string) => setLightboxSrc(src),
-      onToPath: handleToPath // NEW
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc, handleToPath]);
+      onImageClick: (src: string) => setLightboxSrc(src)
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
 
   const markdownRenderComponents = {
       ...markdownComponents,
@@ -1514,8 +1360,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       )
   };
 
-  const heroNote = useMemo(() => notes.find(n => n.id === heroNoteId), [notes, heroNoteId]);
-
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
       
@@ -1524,7 +1368,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
           {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       </AnimatePresence>
 
-      {/* HEADER TABS ONLY */}
       <div className="shrink-0 w-full px-4 md:px-8 pt-4 md:pt-8 mb-4 z-50">
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
@@ -1534,198 +1377,178 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
                     <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
                     <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
-                    <button onClick={() => { setActiveTab('path'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'path' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Zap size={16} /> Путь</button>
                 </div>
             </header>
       </div>
 
       <div className="flex-1 min-h-0 relative">
-            
-            {activeTab === 'path' ? (
-                // HERO JOURNEY MODULE
-                heroNote ? (
-                    <HeroJourney note={heroNote} onAction={handleHeroAction} tasks={tasks} habits={habits} />
-                ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-[#050505]">
-                        <div className="w-24 h-24 rounded-full border border-white/10 bg-white/5 flex items-center justify-center mb-6">
-                            <Orbit size={48} className="text-white/20" />
-                        </div>
-                        <h2 className="text-white font-light text-2xl mb-2">Путь Героя не выбран</h2>
-                        <p className="text-white/40 text-sm max-w-xs mb-8">Выберите мысль из Входящих, чтобы начать трансформацию.</p>
-                        <button onClick={() => setActiveTab('inbox')} className="px-6 py-3 border border-white/20 hover:bg-white/10 rounded-full text-white text-xs font-bold uppercase tracking-widest transition-colors">
-                            Вернуться во Входящие
-                        </button>
-                    </div>
-                )
-            ) : (
-                <div 
-                    ref={scrollContainerRef}
-                    className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar-light"
-                    onScroll={() => setActiveImage(null)}
+            <div 
+                ref={scrollContainerRef}
+                className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar-light"
+                onScroll={() => setActiveImage(null)}
+            >
+                <motion.div 
+                    className="sticky top-0 z-40 w-full mb-[-20px]"
+                    animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
                 >
-                    <motion.div 
-                        className="sticky top-0 z-40 w-full mb-[-20px]"
-                        animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    >
-                        <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
-                            <div 
-                                className="absolute inset-0 backdrop-blur-xl"
-                                style={{
-                                    maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)',
-                                    WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)'
-                                }}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
-                        </div>
+                    <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
+                        <div 
+                            className="absolute inset-0 backdrop-blur-xl"
+                            style={{
+                                maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)',
+                                WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)'
+                            }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
+                    </div>
 
-                        <div className="relative z-10 w-full px-4 md:px-8 pb-2">
-                            <div className="max-w-3xl mx-auto w-full">
-                                <div className="flex gap-2">
-                                    <div className="relative flex-1 group">
-                                        {showMoodInput ? (
-                                            <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                                                <div className="relative flex-1">
-                                                    <Sparkles size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500" />
-                                                    <input type="text" placeholder="На какую тему подобрать заметки?" value={moodQuery} onChange={(e) => setMoodQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleMoodSearch()} className="w-full pl-10 pr-4 py-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 focus:border-purple-300 transition-all text-purple-900 dark:text-purple-300 placeholder:text-purple-300" autoFocus />
-                                                </div>
-                                                <button onClick={handleMoodSearch} disabled={isMoodAnalyzing || !moodQuery.trim()} className="px-5 py-2 bg-purple-600 text-white rounded-2xl text-xs font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 shadow-sm">{isMoodAnalyzing ? 'Думаю...' : 'Найти'}</button>
-                                                <button onClick={() => setShowMoodInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                    <div className="relative z-10 w-full px-4 md:px-8 pb-2">
+                        <div className="max-w-3xl mx-auto w-full">
+                            <div className="flex gap-2">
+                                <div className="relative flex-1 group">
+                                    {showMoodInput ? (
+                                        <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                                            <div className="relative flex-1">
+                                                <Sparkles size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500" />
+                                                <input type="text" placeholder="На какую тему подобрать заметки?" value={moodQuery} onChange={(e) => setMoodQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleMoodSearch()} className="w-full pl-10 pr-4 py-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 focus:border-purple-300 transition-all text-purple-900 dark:text-purple-300 placeholder:text-purple-300" autoFocus />
                                             </div>
-                                        ) : showTagInput ? (
-                                            <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                                                <div className="relative flex-1">
-                                                    <TagIcon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" />
-                                                    <input type="text" placeholder="Поиск по #тегам..." value={tagQuery} onChange={(e) => setTagQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 focus:border-indigo-300 transition-all text-indigo-900 dark:text-indigo-300 placeholder:text-indigo-300" autoFocus />
-                                                </div>
-                                                <button onClick={() => setShowTagInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                                            <button onClick={handleMoodSearch} disabled={isMoodAnalyzing || !moodQuery.trim()} className="px-5 py-2 bg-purple-600 text-white rounded-2xl text-xs font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 shadow-sm">{isMoodAnalyzing ? 'Думаю...' : 'Найти'}</button>
+                                            <button onClick={() => setShowMoodInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                                        </div>
+                                    ) : showTagInput ? (
+                                        <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                                            <div className="relative flex-1">
+                                                <TagIcon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" />
+                                                <input type="text" placeholder="Поиск по #тегам..." value={tagQuery} onChange={(e) => setTagQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 focus:border-indigo-300 transition-all text-indigo-900 dark:text-indigo-300 placeholder:text-indigo-300" autoFocus />
                                             </div>
-                                        ) : (
-                                            <>
-                                                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                                                <input type="text" placeholder="Поиск" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-shadow shadow-sm placeholder:text-slate-400" />
-                                                {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
-                                            </>
-                                        )}
-                                    </div>
-                                    {!showMoodInput && !showTagInput && (
+                                            <button onClick={() => setShowTagInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                                        </div>
+                                    ) : (
                                         <>
-                                            <Tooltip content="Поиск по тегам" side="bottom"><button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button></Tooltip>
-                                            <Tooltip content="Фильтр по цвету" side="bottom"><button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button></Tooltip>
-                                            {hasMoodMatcher && <Tooltip content="Подбор по теме (ИИ)" side="bottom"><button onClick={() => setShowMoodInput(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-purple-500 hover:bg-purple-50'}`}><Sparkles size={20} /></button></Tooltip>}
-                                            <Tooltip content="Рандом" side="bottom">
-                                                <button onClick={startOracle} className="group relative p-3 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none">
-                                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
-                                                    <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                                                    <Dices size={20} className="relative z-10 text-white transition-transform duration-500 group-hover:rotate-180" />
-                                                </button>
-                                            </Tooltip>
+                                            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                                            <input type="text" placeholder="Поиск" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-shadow shadow-sm placeholder:text-slate-400" />
+                                            {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
                                         </>
                                     )}
                                 </div>
-                                {aiFilteredIds !== null && !showMoodInput && (
-                                    <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl px-4 py-3 animate-in fade-in slide-in-from-top-1">
-                                        <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300"><Sparkles size={14} /><span>Найдено {aiFilteredIds.length} заметок на тему: <b>«{moodQuery}»</b></span></div>
-                                        <button onClick={clearMoodFilter} className="text-[10px] font-bold uppercase tracking-wider text-purple-400 hover:text-purple-700 dark:hover:text-purple-200 flex items-center gap-1"><X size={12} /> Сброс</button>
-                                    </div>
-                                )}
-                                {(showFilters || activeColorFilter) && (
-                                    <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200">
-                                        <button onClick={() => setActiveColorFilter(null)} className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${activeColorFilter === null ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}>Все</button>
-                                        {colors.map(c => <button key={c.id} onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)} className={`w-6 h-6 rounded-full border shadow-sm transition-transform ${activeColorFilter === c.id ? 'ring-2 ring-indigo-400 ring-offset-2 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: c.hex, borderColor: '#cbd5e1' }} title={c.id} />)}
-                                    </div>
+                                {!showMoodInput && !showTagInput && (
+                                    <>
+                                        <Tooltip content="Поиск по тегам" side="bottom"><button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button></Tooltip>
+                                        <Tooltip content="Фильтр по цвету" side="bottom"><button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button></Tooltip>
+                                        {hasMoodMatcher && <Tooltip content="Подбор по теме (ИИ)" side="bottom"><button onClick={() => setShowMoodInput(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-purple-500 hover:bg-purple-50'}`}><Sparkles size={20} /></button></Tooltip>}
+                                        <Tooltip content="Рандом" side="bottom">
+                                            <button onClick={startOracle} className="group relative p-3 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none">
+                                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
+                                                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+                                                <Dices size={20} className="relative z-10 text-white transition-transform duration-500 group-hover:rotate-180" />
+                                            </button>
+                                        </Tooltip>
+                                    </>
                                 )}
                             </div>
+                            {aiFilteredIds !== null && !showMoodInput && (
+                                <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl px-4 py-3 animate-in fade-in slide-in-from-top-1">
+                                    <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300"><Sparkles size={14} /><span>Найдено {aiFilteredIds.length} заметок на тему: <b>«{moodQuery}»</b></span></div>
+                                    <button onClick={clearMoodFilter} className="text-[10px] font-bold uppercase tracking-wider text-purple-400 hover:text-purple-700 dark:hover:text-purple-200 flex items-center gap-1"><X size={12} /> Сброс</button>
+                                </div>
+                            )}
+                            {(showFilters || activeColorFilter) && (
+                                <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200">
+                                    <button onClick={() => setActiveColorFilter(null)} className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${activeColorFilter === null ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}>Все</button>
+                                    {colors.map(c => <button key={c.id} onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)} className={`w-6 h-6 rounded-full border shadow-sm transition-transform ${activeColorFilter === c.id ? 'ring-2 ring-indigo-400 ring-offset-2 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: c.hex, borderColor: '#cbd5e1' }} title={c.id} />)}
+                                </div>
+                            )}
                         </div>
-                    </motion.div>
+                    </div>
+                </motion.div>
 
-                    <div className="w-full px-4 md:px-8 pt-6 pb-8">
-                        {activeTab === 'inbox' && (
-                            <>
-                                {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
-                                    <div className="max-w-3xl mx-auto w-full">
-                                        <div ref={editorRef} className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative mb-8 ${isExpanded ? 'shadow-xl z-30' : 'shadow-sm hover:shadow-md'}`}>
-                                            <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0 rounded-3xl"></div>
-                                            
-                                            {!isExpanded ? (
-                                                <div onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }} className="p-5 text-slate-400 dark:text-slate-500 cursor-text text-base font-medium flex items-center justify-between relative z-10"><span>Заметка...</span><div className="flex gap-4 text-slate-300 hover:text-slate-400 transition-colors"><PenTool size={20} /><ImageIcon size={20} /></div></div>
-                                            ) : (
-                                                <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
-                                                    {creationCover && <div className="relative w-full h-32 md:h-48 group rounded-t-3xl overflow-hidden"><img src={creationCover} alt="Cover" className="w-full h-full object-cover" /><button onClick={() => setCreationCover(null)} className="absolute top-5 right-5 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button></div>}
-                                                    <input type="text" placeholder="Название" value={title} onChange={(e) => setTitle(e.target.value)} className="px-6 pt-6 pb-2 bg-transparent text-xl font-sans font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none" />
-                                                    <div 
-                                                        ref={contentEditableRef} 
-                                                        contentEditable 
-                                                        onInput={handleEditorInput} 
-                                                        onClick={handleEditorClick} 
-                                                        onBlur={saveSelection} 
-                                                        onMouseUp={saveSelection} 
-                                                        onKeyUp={saveSelection} 
-                                                        className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-serif [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
-                                                        style={{ whiteSpace: 'pre-wrap' }} 
-                                                        data-placeholder="О чём ты думаешь?" 
-                                                    />
-                                                    <div className="px-6 py-2"><TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} /></div>
-                                                    <div className="flex items-center justify-between px-4 py-3 gap-2 bg-transparent">
-                                                        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
-                                                            <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button></Tooltip>
-                                                            <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={18} /></button></Tooltip>
-                                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button></Tooltip>
-                                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button></Tooltip>
-                                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                                            <Tooltip content="Очистить форматирование"><button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button></Tooltip>
-                                                            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                                            <Tooltip content="Вставить картинку"><label className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={18} /></label></Tooltip>
-                                                            {activeImage && !isEditing && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors"><Trash2 size={18} /></button></Tooltip>}
+                <div className="w-full px-4 md:px-8 pt-6 pb-8">
+                    {activeTab === 'inbox' && (
+                        <>
+                            {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
+                                <div className="max-w-3xl mx-auto w-full">
+                                    <div ref={editorRef} className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative mb-8 ${isExpanded ? 'shadow-xl z-30' : 'shadow-sm hover:shadow-md'}`}>
+                                        <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0 rounded-3xl"></div>
+                                        
+                                        {!isExpanded ? (
+                                            <div onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }} className="p-5 text-slate-400 dark:text-slate-500 cursor-text text-base font-medium flex items-center justify-between relative z-10"><span>Заметка...</span><div className="flex gap-4 text-slate-300 hover:text-slate-400 transition-colors"><PenTool size={20} /><ImageIcon size={20} /></div></div>
+                                        ) : (
+                                            <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
+                                                {creationCover && <div className="relative w-full h-32 md:h-48 group rounded-t-3xl overflow-hidden"><img src={creationCover} alt="Cover" className="w-full h-full object-cover" /><button onClick={() => setCreationCover(null)} className="absolute top-5 right-5 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button></div>}
+                                                <input type="text" placeholder="Название" value={title} onChange={(e) => setTitle(e.target.value)} className="px-6 pt-6 pb-2 bg-transparent text-xl font-sans font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none" />
+                                                <div 
+                                                    ref={contentEditableRef} 
+                                                    contentEditable 
+                                                    onInput={handleEditorInput} 
+                                                    onClick={handleEditorClick} 
+                                                    onBlur={saveSelection} 
+                                                    onMouseUp={saveSelection} 
+                                                    onKeyUp={saveSelection} 
+                                                    className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-serif [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                                    style={{ whiteSpace: 'pre-wrap' }} 
+                                                    data-placeholder="О чём ты думаешь?" 
+                                                />
+                                                <div className="px-6 py-2"><TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} /></div>
+                                                <div className="flex items-center justify-between px-4 py-3 gap-2 bg-transparent">
+                                                    <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
+                                                        <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button></Tooltip>
+                                                        <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={18} /></button></Tooltip>
+                                                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                        <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button></Tooltip>
+                                                        <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button></Tooltip>
+                                                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                        <Tooltip content="Очистить форматирование"><button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button></Tooltip>
+                                                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                        <Tooltip content="Вставить картинку"><label className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={18} /></label></Tooltip>
+                                                        {activeImage && !isEditing && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors"><Trash2 size={18} /></button></Tooltip>}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <div className="relative">
+                                                            <Tooltip content="Обложка"><button ref={creationCoverBtnRef} onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button></Tooltip>
+                                                            {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationCoverBtnRef} />}
                                                         </div>
-                                                        <div className="flex items-center gap-2 shrink-0">
-                                                            <div className="relative">
-                                                                <Tooltip content="Обложка"><button ref={creationCoverBtnRef} onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button></Tooltip>
-                                                                {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationCoverBtnRef} />}
-                                                            </div>
-                                                            <div className="relative">
-                                                                <Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>
-                                                                {showColorPicker && (
-                                                                    <>
-                                                                        <div className="fixed inset-0 z-40" onClick={() => setShowColorPicker(false)} />
-                                                                        <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
-                                                                            {colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}
-                                                                        </div>
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                            <button onClick={handleDump} disabled={isProcessing} className="font-mono text-[10px] uppercase tracking-widest px-5 py-2.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold disabled:opacity-50">Сохранить</button>
+                                                        <div className="relative">
+                                                            <Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>
+                                                            {showColorPicker && (
+                                                                <>
+                                                                    <div className="fixed inset-0 z-40" onClick={() => setShowColorPicker(false)} />
+                                                                    <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                                        {colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}
+                                                                    </div>
+                                                                </>
+                                                            )}
                                                         </div>
+                                                        <button onClick={handleDump} disabled={isProcessing} className="font-mono text-[10px] uppercase tracking-widest px-5 py-2.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold disabled:opacity-50">Сохранить</button>
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                                {inboxNotes.length > 0 ? (
-                                    <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                        {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
-                                    </Masonry>
-                                ) : (
-                                    <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
-                                )}
-                            </>
-                        )}
-                        {activeTab === 'library' && (
-                            <>
-                                {archivedNotes.length > 0 ? (
-                                    <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                        {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
-                                    </Masonry>
-                                ) : (
-                                    <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
-                                )}
-                            </>
-                        )}
-                    </div>
+                                </div>
+                            )}
+                            {inboxNotes.length > 0 ? (
+                                <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
+                                    {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
+                                </Masonry>
+                            ) : (
+                                <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
+                            )}
+                        </>
+                    )}
+                    {activeTab === 'library' && (
+                        <>
+                            {archivedNotes.length > 0 ? (
+                                <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
+                                    {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
+                                </Masonry>
+                            ) : (
+                                <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
+                            )}
+                        </>
+                    )}
                 </div>
-            )}
+            </div>
       </div>
       
       {showOracle && (

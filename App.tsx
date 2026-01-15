@@ -468,8 +468,6 @@ const App: React.FC = () => {
             initialNoteId={napkinsContextNoteId}
             onClearInitialNote={() => setNapkinsContextNoteId(null)}
             journalEntries={data.journal}
-            tasks={data.tasks} // Pass tasks for HeroJourney
-            habits={data.habits} // Pass habits for HeroJourney
           />
       )}
       
