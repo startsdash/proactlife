@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -1981,14 +1980,25 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                     </CollapsibleSection>
                                 )}
                                 
-                                {/* Linked Notes Render */}
-                                {notes.filter(n => (selectedEntry.linkedNoteIds?.includes(n.id)) || (selectedEntry.linkedNoteId === n.id)).map(note => (
-                                    <CollapsibleSection key={note.id} title="Контекст: Заметка" icon={<StickyNote size={14}/>} defaultOpen>
-                                        <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-serif cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => onNavigateToNote?.(note.id)}>
-                                            <ReactMarkdown components={markdownComponents}>{getNotePreviewContent(note.content)}</ReactMarkdown>
-                                        </div>
-                                    </CollapsibleSection>
-                                ))}
+                                {/* Linked Notes Render - Grouped */}
+                                {(() => {
+                                    const linkedNotesList = notes.filter(n => (selectedEntry.linkedNoteIds?.includes(n.id)) || (selectedEntry.linkedNoteId === n.id));
+                                    if (linkedNotesList.length === 0) return null;
+                                    
+                                    return (
+                                        <CollapsibleSection title="Контекст: Заметки" icon={<StickyNote size={14}/>}>
+                                            <div className="space-y-4">
+                                                {linkedNotesList.map((note, index) => (
+                                                    <div key={note.id} className={index > 0 ? "pt-3 border-t border-slate-200/50 dark:border-slate-700/50" : ""}>
+                                                        <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-serif cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => onNavigateToNote?.(note.id)}>
+                                                            <ReactMarkdown components={markdownComponents}>{getNotePreviewContent(note.content)}</ReactMarkdown>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </CollapsibleSection>
+                                    );
+                                })()}
 
                                 {selectedEntry.aiFeedback && (
                                     <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-4 border border-slate-100 dark:border-slate-700/50 mt-6">
