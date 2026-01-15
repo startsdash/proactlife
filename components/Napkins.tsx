@@ -5,7 +5,7 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry, Habit } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
@@ -24,8 +24,8 @@ interface Props {
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
   onAddJournalEntry: (entry: JournalEntry) => void;
+  sketchItems?: SketchItem[];
   addSketchItem?: (item: SketchItem) => void;
-  addHabit?: (habit: Habit) => void; // Added for Hero's Journey
   deleteSketchItem?: (id: string) => void;
   updateSketchItem?: (item: SketchItem) => void;
   defaultTab?: 'inbox' | 'library';
@@ -263,136 +263,6 @@ const markdownToHtml = (md: string) => {
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 // --- COMPONENTS ---
-
-// Hero's Journey Modal
-const HeroJourneyModal = ({ note, onClose, onConvertToTask, onConvertToHabit, onConvertToJournal, onMoveToSandbox }: { 
-    note: Note; 
-    onClose: () => void;
-    onConvertToTask: () => void;
-    onConvertToHabit: () => void;
-    onConvertToJournal: () => void;
-    onMoveToSandbox: () => void;
-}) => {
-    return createPortal(
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-            {/* Backdrop with Blur */}
-            <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-slate-900/80 backdrop-blur-2xl"
-                onClick={onClose}
-            />
-
-            <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                className="relative w-full max-w-4xl aspect-square md:aspect-[16/9] max-h-[85vh] flex items-center justify-center overflow-hidden"
-                onClick={e => e.stopPropagation()}
-            >
-                {/* ORBITAL RINGS */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <motion.div 
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-                        className="w-[60%] h-[60%] md:w-[500px] md:h-[500px] border border-dashed border-slate-500/30 rounded-full"
-                    />
-                    <motion.div 
-                        animate={{ rotate: -360 }}
-                        transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-                        className="absolute w-[40%] h-[40%] md:w-[350px] md:h-[350px] border border-dotted border-indigo-500/30 rounded-full"
-                    />
-                </div>
-
-                {/* SATELLITES (Interactive Modules) */}
-                
-                {/* TOP: SANDBOX (Mentor) */}
-                <div className="absolute top-[10%] md:top-[15%] left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 group z-20">
-                    <button 
-                        onClick={onMoveToSandbox}
-                        className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-slate-900 border border-amber-500/50 hover:border-amber-400 text-amber-500 hover:text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:shadow-[0_0_30px_rgba(245,158,11,0.4)] transition-all flex items-center justify-center backdrop-blur-md"
-                    >
-                        <Box size={24} strokeWidth={1.5} />
-                    </button>
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400 group-hover:text-amber-400 transition-colors">Путь с Наставником</span>
-                </div>
-
-                {/* RIGHT: KANBAN (Sprint) */}
-                <div className="absolute right-[5%] md:right-[15%] top-1/2 -translate-y-1/2 flex flex-col items-center gap-2 group z-20">
-                    <button 
-                        onClick={onConvertToTask}
-                        className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-slate-900 border border-emerald-500/50 hover:border-emerald-400 text-emerald-500 hover:text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all flex items-center justify-center backdrop-blur-md"
-                    >
-                        <Kanban size={24} strokeWidth={1.5} />
-                    </button>
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400 group-hover:text-emerald-400 transition-colors">Спринты</span>
-                </div>
-
-                {/* BOTTOM: JOURNAL (Insight) */}
-                <div className="absolute bottom-[10%] md:bottom-[15%] left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 group z-20">
-                    <button 
-                        onClick={onConvertToJournal}
-                        className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-slate-900 border border-cyan-500/50 hover:border-cyan-400 text-cyan-500 hover:text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] transition-all flex items-center justify-center backdrop-blur-md"
-                    >
-                        <Book size={24} strokeWidth={1.5} />
-                    </button>
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400 group-hover:text-cyan-400 transition-colors">Дневник</span>
-                </div>
-
-                {/* LEFT: RITUALS (Habit) */}
-                <div className="absolute left-[5%] md:left-[15%] top-1/2 -translate-y-1/2 flex flex-col items-center gap-2 group z-20">
-                    <button 
-                        onClick={onConvertToHabit}
-                        className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-slate-900 border border-rose-500/50 hover:border-rose-400 text-rose-500 hover:text-rose-300 shadow-[0_0_20px_rgba(244,63,94,0.2)] hover:shadow-[0_0_30px_rgba(244,63,94,0.4)] transition-all flex items-center justify-center backdrop-blur-md"
-                    >
-                        <Flame size={24} strokeWidth={1.5} />
-                    </button>
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400 group-hover:text-rose-400 transition-colors">Ритуалы</span>
-                </div>
-
-                {/* CENTER: THE NOTE (Bio-Capsule) */}
-                <div className="relative z-30 w-64 md:w-80 aspect-square rounded-full border border-indigo-500/30 bg-black/40 backdrop-blur-xl shadow-[0_0_50px_rgba(99,102,241,0.15)] flex flex-col items-center justify-center p-8 text-center group hover:border-indigo-500/60 transition-all">
-                    <div className="absolute top-6 left-1/2 -translate-x-1/2 text-[9px] font-mono text-indigo-400 uppercase tracking-[0.2em] opacity-70">
-                        ИСХОДНАЯ МЫСЛЬ
-                    </div>
-                    
-                    <div className="overflow-y-auto custom-scrollbar-ghost max-h-[60%] w-full">
-                        <div className="text-slate-200 font-serif text-sm md:text-base leading-relaxed line-clamp-6">
-                            <ReactMarkdown components={{...markdownComponents, p: ({children}) => <span className="text-slate-200">{children}</span>}}>
-                                {note.content}
-                            </ReactMarkdown>
-                        </div>
-                    </div>
-
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
-                        <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-transparent opacity-50" />
-                    </div>
-                </div>
-
-                {/* TELEMETRY CORNERS */}
-                <div className="absolute top-4 left-4 font-mono text-[10px] text-slate-500 leading-tight">
-                    <div>[ЭТАП]: ПРИЗЫВ</div>
-                    <div>[СТАТУС]: ОЖИДАНИЕ</div>
-                </div>
-                
-                <div className="absolute top-4 right-4 font-mono text-[10px] text-slate-500 leading-tight text-right">
-                    <div>[ЭНЕРГИЯ]: 100%</div>
-                    <div>ID: {note.id.slice(-4)}</div>
-                </div>
-
-                <div className="absolute bottom-4 left-4 text-slate-600 hover:text-white transition-colors cursor-pointer" onClick={onClose}>
-                    <div className="flex items-center gap-2">
-                        <ArrowLeft size={16} /> <span className="font-mono text-[10px] uppercase tracking-widest">Назад</span>
-                    </div>
-                </div>
-
-            </motion.div>
-        </div>,
-        document.body
-    );
-};
 
 // Lightbox
 const Lightbox = ({ src, onClose }: { src: string, onClose: () => void }) => {
@@ -798,7 +668,6 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
-        openHeroJourney: (note: Note) => void; // New Handler
     }
 }
 
@@ -966,12 +835,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                             <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
                         </Tooltip>
                     ) : (
-                        // Library: Action buttons
+                        // Library: Action buttons moved here
                         <>
-                            <Tooltip content="Начать путь">
-                                <button onClick={(e) => { e.stopPropagation(); handlers.openHeroJourney(note); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-100"><Orbit size={16} strokeWidth={1.5} /></button>
-                            </Tooltip>
-                            
                             <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
                             
                             <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
@@ -1012,7 +877,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, addHabit, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -1059,7 +924,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [heroJourneyNote, setHeroJourneyNote] = useState<Note | null>(null); // New State for Hero Journey
 
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
@@ -1479,9 +1343,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
-      onImageClick: (src: string) => setLightboxSrc(src),
-      openHeroJourney: (note: Note) => setHeroJourneyNote(note)
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc, setHeroJourneyNote]);
+      onImageClick: (src: string) => setLightboxSrc(src)
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
 
   const markdownRenderComponents = {
       ...markdownComponents,
@@ -1495,58 +1358,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
               {...props} 
           />
       )
-  };
-
-  // HERO JOURNEY HANDLERS
-  const handleConvertToTask = () => {
-      if(!heroJourneyNote) return;
-      const task: Task = {
-          id: Date.now().toString(),
-          title: heroJourneyNote.title,
-          content: heroJourneyNote.content,
-          column: 'todo',
-          createdAt: Date.now()
-      };
-      onAddTask(task);
-      setHeroJourneyNote(null);
-  };
-
-  const handleConvertToHabit = () => {
-      if(!heroJourneyNote || !addHabit) return;
-      const habit: Habit = {
-          id: Date.now().toString(),
-          title: heroJourneyNote.title || 'Новая привычка',
-          description: heroJourneyNote.content.substring(0, 100),
-          frequency: 'daily',
-          createdAt: Date.now(),
-          history: {},
-          streak: 0,
-          bestStreak: 0,
-          color: 'indigo',
-          icon: 'Zap',
-          reminders: []
-      };
-      addHabit(habit);
-      setHeroJourneyNote(null);
-  };
-
-  const handleConvertToJournal = () => {
-      if(!heroJourneyNote) return;
-      const entry: JournalEntry = {
-          id: Date.now().toString(),
-          date: Date.now(),
-          content: heroJourneyNote.content,
-          linkedNoteId: heroJourneyNote.id,
-          isInsight: true
-      };
-      onAddJournalEntry(entry);
-      setHeroJourneyNote(null);
-  };
-
-  const handleMoveToSandbox = () => {
-      if(!heroJourneyNote) return;
-      moveNoteToSandbox(heroJourneyNote.id);
-      setHeroJourneyNote(null);
   };
 
   return (
@@ -1740,20 +1551,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </div>
       </div>
       
-      {/* HERO JOURNEY MODAL */}
-      <AnimatePresence>
-          {heroJourneyNote && (
-              <HeroJourneyModal 
-                  note={heroJourneyNote} 
-                  onClose={() => setHeroJourneyNote(null)}
-                  onConvertToTask={cardHandlers.handleConvertToTask}
-                  onConvertToHabit={cardHandlers.handleConvertToHabit}
-                  onConvertToJournal={cardHandlers.handleConvertToJournal}
-                  onMoveToSandbox={cardHandlers.handleMoveToSandbox}
-              />
-          )}
-      </AnimatePresence>
-
       {showOracle && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <motion.div 
