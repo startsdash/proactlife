@@ -754,29 +754,30 @@ const JournalEntrySphereSelector: React.FC<{
 
     return (
         <>
-            <button 
-                ref={triggerRef}
-                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                title="Сферы"
-            >
-                {entry.spheres && entry.spheres.length > 0 ? (
-                    <div className="flex -space-x-1.5">
-                        {entry.spheres.map(s => {
-                            const sp = SPHERES.find(x => x.id === s);
-                            return sp ? (
-                                <div 
-                                    key={s} 
-                                    className={`w-3 h-3 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
-                                    style={{ borderWidth: '1.5px' }}
-                                />
-                            ) : null;
-                        })}
-                    </div>
-                ) : (
-                    <Target size={16} strokeWidth={1.5} className="text-slate-300 hover:text-slate-500 dark:hover:text-slate-400" />
-                )}
-            </button>
+            <Tooltip content="Сферы">
+                <button 
+                    ref={triggerRef}
+                    onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                    className="flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                    {entry.spheres && entry.spheres.length > 0 ? (
+                        <div className="flex -space-x-1.5">
+                            {entry.spheres.map(s => {
+                                const sp = SPHERES.find(x => x.id === s);
+                                return sp ? (
+                                    <div 
+                                        key={s} 
+                                        className={`w-3 h-3 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
+                                        style={{ borderWidth: '1.5px' }}
+                                    />
+                                ) : null;
+                            })}
+                        </div>
+                    ) : (
+                        <Target size={16} strokeWidth={1.5} className="text-slate-300 hover:text-slate-500 dark:hover:text-slate-400" />
+                    )}
+                </button>
+            </Tooltip>
             
             {isOpen && createPortal(
                 <div 
