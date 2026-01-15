@@ -34,8 +34,19 @@ interface Props {
 
 const ORBIT_DURATION = 60; // Seconds for full rotation
 
+interface OrbitItemProps {
+    angle: number;
+    radius: number;
+    icon: any;
+    label: string;
+    color: string;
+    onClick: () => void;
+    delay?: number;
+    isProcessing: boolean;
+}
+
 // Helper component moved outside
-const RenderOrbitItem = ({ 
+const RenderOrbitItem: React.FC<OrbitItemProps> = ({ 
     angle, 
     radius, 
     icon: Icon, 
@@ -44,15 +55,6 @@ const RenderOrbitItem = ({
     onClick, 
     delay = 0,
     isProcessing
-}: { 
-    angle: number, 
-    radius: number, 
-    icon: any, 
-    label: string, 
-    color: string, 
-    onClick: () => void, 
-    delay?: number,
-    isProcessing: boolean
 }) => {
     // Convert angle to position
     const rad = (angle * Math.PI) / 180;

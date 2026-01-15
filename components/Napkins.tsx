@@ -1809,6 +1809,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       <AnimatePresence>
           {journeyNote && onAddHabit && (
               <JourneyMap 
+                  key="journey-map-modal"
                   note={journeyNote}
                   config={config}
                   stats={stats || { notesCount: 0, actionsCount: 0 }}
