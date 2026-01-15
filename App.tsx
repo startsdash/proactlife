@@ -1,388 +1,517 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  AppState, Module, Note, Task, Habit, JournalEntry, Flashcard, 
-  SketchItem, MentorAnalysis, AppConfig, UserProfile, UserProfileConfig, SyncStatus 
-} from './types';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
-import * as DriveService from './services/driveService';
+import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
-
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Napkins from './components/Napkins';
-import Sandbox from './components/Sandbox';
-import Kanban from './components/Kanban';
-import Rituals from './components/Rituals';
-import Journal from './components/Journal';
-import Archive from './components/Archive';
-import Settings from './components/Settings';
-import LearningMode from './components/LearningMode';
-import UserSettings from './components/UserSettings';
 import Sketchpad from './components/Sketchpad';
 import Ether from './components/Ether';
+import Sandbox from './components/Sandbox';
 import MentalGym from './components/MentalGym';
-import Profile from './components/Profile';
+import Kanban from './components/Kanban';
+import Rituals from './components/Rituals';
+import Archive from './components/Archive';
+import Settings from './components/Settings';
+import Journal from './components/Journal';
+import Moodbar from './components/Moodbar';
+import LearningMode from './components/LearningMode';
+import UserSettings from './components/UserSettings';
 import Onboarding from './components/Onboarding';
+import Profile from './components/Profile'; 
+import { LogIn, Shield, CloudOff, ArrowRight } from 'lucide-react';
 
 const App: React.FC = () => {
-  const [data, setData] = useState<AppState>(loadState());
-  const [module, setModule] = useState<Module>(Module.DASHBOARD);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('disconnected');
-  const [isDriveConnected, setIsDriveConnected] = useState(false);
-  const [user, setUser] = useState<UserProfile | undefined>(undefined);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-
-  // Navigation Contexts
-  const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null);
-  const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null);
-
-  // --- INITIALIZATION ---
-  useEffect(() => {
-    // Theme Init
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-      setTheme('light');
+  // --- THEME LOGIC ---
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('theme');
+        return (saved === 'dark' || saved === 'light') ? saved : 'light';
     }
-    
-    // Drive Init
-    const initDrive = async () => {
-        try {
-            await DriveService.initGapi();
-            const profile = await DriveService.getUserProfile();
-            if (profile) {
-                setUser(profile);
-                setIsDriveConnected(true);
-                setSyncStatus('synced');
-            } else if (DriveService.restoreSession()) {
-               // Try to restore if we have tokens but no profile yet (lazy load)
-               // Usually getUserProfile would work if tokens are valid
-            }
-        } catch (e) {
-            console.error("Drive Init Error", e);
-            setSyncStatus('error');
-        }
-    };
-    initDrive();
-  }, []);
+    return 'light';
+  });
 
-  // Theme Effect
   useEffect(() => {
+    const root = window.document.documentElement;
     if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
+        root.classList.add('dark');
     } else {
-      document.documentElement.classList.remove('dark');
+        root.classList.remove('dark');
     }
+    localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // --- PERSISTENCE ---
-  useEffect(() => {
-    saveState(data);
-    if (isDriveConnected && syncStatus !== 'syncing') {
-        const timeout = setTimeout(() => {
-            setSyncStatus('syncing');
-            DriveService.saveToDrive(data)
-                .then(() => setSyncStatus('synced'))
-                .catch(() => setSyncStatus('error'));
-        }, 5000); // Debounce cloud save
-        return () => clearTimeout(timeout);
-    }
-  }, [data, isDriveConnected]);
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
-  const handleConnectDrive = () => {
-      DriveService.initGis(async () => {
-          const profile = await DriveService.getUserProfile();
-          if (profile) {
-              setUser(profile);
-              setIsDriveConnected(true);
-              setSyncStatus('syncing');
-              // Merge strategy: Load remote, if exists, merge/replace local?
-              // For simplicity in this version: Remote wins if newer or we just load it.
-              // Here we just load remote state to be safe.
-              const cloudState = await DriveService.loadFromDrive();
-              if (cloudState) {
-                  setData(cloudState);
+  // --- NAVIGATION LOGIC ---
+  const getInitialModule = (): Module => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      // Validate tab against Module enum
+      if (tab && Object.values(Module).includes(tab as Module)) {
+        return tab as Module;
+      }
+    }
+    // Default to NAPKINS
+    return Module.NAPKINS;
+  };
+
+  const [module, setModule] = useState<Module>(getInitialModule);
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  
+  // Custom Navigation Handler that syncs with Browser History
+  const handleNavigate = (newModule: Module) => {
+    setModule(newModule);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', newModule);
+    window.history.pushState({ module: newModule }, '', url.toString());
+  };
+
+  // Listen for Browser Back/Forward buttons
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const stateModule = event.state?.module;
+      if (stateModule && Object.values(Module).includes(stateModule)) {
+        setModule(stateModule);
+      } else {
+        // Fallback to URL parsing or Default if state is missing
+        setModule(getInitialModule());
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // ------------------------
+
+  const [data, setData] = useState<AppState>({
+    notes: [], sketchpad: [], tasks: [], flashcards: [], habits: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG, 
+    profileConfig: { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' }
+  });
+  
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'disconnected' | 'syncing' | 'synced' | 'error'>('disconnected');
+  const [isDriveConnected, setIsDriveConnected] = useState(false);
+  const [hasLoadedFromCloud, setHasLoadedFromCloud] = useState(false); // Guard state
+  const [journalContextTaskId, setJournalContextTaskId] = useState<string | null>(null); // Context for navigation (Journal)
+  const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
+  const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null); // Context for navigation (Napkins)
+  
+  // INVITE CODE LOGIC
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
+  const [guestSessionCode, setGuestSessionCode] = useState<string | null>(() => {
+      return localStorage.getItem('live_act_guest_code');
+  });
+
+  const isHydratingRef = useRef(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchProfile = async () => {
+    const profile = await getUserProfile();
+    if (profile) {
+      console.log(`Logged in as: ${profile.email}`);
+      setData(prev => ({ ...prev, user: profile }));
+    }
+  };
+
+  useEffect(() => {
+    console.log('LIVE.ACT Pro v2.0.0');
+    const failSafeTimer = setTimeout(() => { if (!isLoaded) setIsLoaded(true); }, 4000);
+
+    const initializeApp = async () => {
+      const localData = loadState();
+      setData(localData);
+      
+      try {
+        await initGapi();
+        await initGis(() => {});
+        const restored = restoreSession();
+        if (restored) {
+            setIsDriveConnected(true);
+            setSyncStatus('synced');
+            await fetchProfile();
+            handleDriveLoad(true);
+        } else {
+            const wasConnected = localStorage.getItem('isGoogleAuthEnabled') === 'true';
+            if (wasConnected && !isDriveConnected) handleDriveConnect(true);
+            else setIsLoaded(true);
+        }
+      } catch (e) {
+        console.error("Init Error", e);
+        setIsLoaded(true);
+      }
+    };
+    initializeApp();
+    return () => clearTimeout(failSafeTimer);
+  }, []);
+
+  const handleDriveLoad = async (isStartup: boolean) => {
+      try {
+          if (isStartup) setSyncStatus('syncing');
+          const driveData = await loadFromDrive();
+          if (driveData) {
+              isHydratingRef.current = true;
+              
+              if (!driveData.config || driveData.config._version !== DEFAULT_CONFIG._version) {
+                  console.log("Drive Config outdated. Using Code Config.");
+                  driveData.config = DEFAULT_CONFIG;
               }
-              setSyncStatus('synced');
+
+              if (!driveData.journal) driveData.journal = [];
+              if (!driveData.mentorAnalyses) driveData.mentorAnalyses = [];
+              if (!driveData.habits) driveData.habits = [];
+              if (!driveData.sketchpad) driveData.sketchpad = [];
+              if (!driveData.profileConfig) driveData.profileConfig = { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' };
+              
+              setData(prev => ({...driveData, user: prev.user})); 
+              saveState(driveData);
+              setTimeout(() => { isHydratingRef.current = false; }, 100);
           }
-      });
+          setHasLoadedFromCloud(true);
+          setSyncStatus('synced');
+      } catch (e) {
+          setSyncStatus('error');
+      } finally {
+          setIsLoaded(true);
+      }
+  };
+
+  const handleDriveConnect = async (silent: boolean = false) => {
+    if (!silent && isDriveConnected) return;
+    if (silent && (!localStorage.getItem('isGoogleAuthEnabled') || isDriveConnected)) return;
+    try {
+        if (!silent) setSyncStatus('syncing');
+        await requestAuth(silent);
+        setIsDriveConnected(true);
+        localStorage.setItem('isGoogleAuthEnabled', 'true');
+        await fetchProfile();
+        await handleDriveLoad(false);
+        if (!silent) triggerAutoSave(data);
+    } catch (e: any) {
+        if (silent) { setIsDriveConnected(false); setSyncStatus('disconnected'); }
+        else { setSyncStatus('error'); setIsDriveConnected(false); }
+    } finally {
+        setIsLoaded(true);
+    }
   };
 
   const handleSignOut = () => {
-      DriveService.signOut();
-      setUser(undefined);
-      setIsDriveConnected(false);
-      setSyncStatus('disconnected');
+    signOut();
+    setIsDriveConnected(false);
+    setSyncStatus('disconnected');
+    setHasLoadedFromCloud(false);
+    localStorage.removeItem('isGoogleAuthEnabled');
+    
+    // Also clear guest session on explicit sign out if we treat it as logout
+    localStorage.removeItem('live_act_guest_code');
+    setGuestSessionCode(null);
+    
+    const localData = loadState();
+    setData(prev => ({ ...localData, user: undefined, config: prev.config }));
+    alert("Вы вышли из профиля.");
   };
 
-  // --- DATA HANDLERS ---
+  const triggerAutoSave = useCallback((stateToSave: AppState) => {
+    if (!isDriveConnected) return;
+    if (!hasLoadedFromCloud) return;
 
-  // Notes
-  const addNote = (note: Note) => setData(prev => ({ ...prev, notes: [note, ...prev.notes] }));
-  const updateNote = (note: Note) => setData(prev => ({ ...prev, notes: prev.notes.map(n => n.id === note.id ? note : n) }));
-  // Soft Delete
-  const softDeleteNote = (id: string) => setData(prev => ({ ...prev, notes: prev.notes.map(n => n.id === id ? { ...n, status: 'trash' } : n) }));
-  // Hard Delete
-  const hardDeleteNote = (id: string) => setData(prev => ({ ...prev, notes: prev.notes.filter(n => n.id !== id) }));
+    setSyncStatus('syncing');
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+        try { await saveToDrive(stateToSave); setSyncStatus('synced'); }
+        catch (e) { setSyncStatus('error'); }
+    }, 2000); 
+  }, [isDriveConnected, hasLoadedFromCloud]);
+
+  useEffect(() => {
+    if (!isLoaded || isHydratingRef.current) return;
+    saveState(data);
+    if (isDriveConnected) triggerAutoSave(data);
+  }, [data, isLoaded, isDriveConnected, triggerAutoSave]);
+
+  const addNote = (note: Note) => setData(p => ({ ...p, notes: [note, ...p.notes] }));
   
-  const moveNoteToSandbox = (id: string) => setData(prev => ({ ...prev, notes: prev.notes.map(n => n.id === id ? { ...n, status: 'sandbox' } : n) }));
-  const moveNoteToInbox = (id: string) => setData(prev => ({ ...prev, notes: prev.notes.map(n => n.id === id ? { ...n, status: 'inbox' } : n) }));
-  const archiveNote = (id: string) => setData(prev => ({ ...prev, notes: prev.notes.map(n => n.id === id ? { ...n, status: 'archived' } : n) }));
-  const reorderNote = (draggedId: string, targetId: string) => {
-      const notesCopy = [...data.notes];
-      const draggedIdx = notesCopy.findIndex(n => n.id === draggedId);
-      const targetIdx = notesCopy.findIndex(n => n.id === targetId);
-      if (draggedIdx > -1 && targetIdx > -1) {
-          const [dragged] = notesCopy.splice(draggedIdx, 1);
-          notesCopy.splice(targetIdx, 0, dragged);
-          setData(prev => ({ ...prev, notes: notesCopy }));
-      }
-  };
+  const moveNoteToSandbox = (id: string) => setData(p => {
+    const originalNote = p.notes.find(n => n.id === id);
+    if (!originalNote) return p;
+    const sandboxClone: Note = {
+      ...originalNote,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      status: 'sandbox',
+      createdAt: Date.now()
+    };
+    return { ...p, notes: [sandboxClone, ...p.notes] };
+  });
 
-  // Tasks
-  const addTask = (task: Task) => setData(prev => ({ ...prev, tasks: [task, ...prev.tasks] }));
-  const updateTask = (task: Task) => setData(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === task.id ? task : t) }));
-  // Soft Delete / Archive
-  const archiveTask = (id: string) => setData(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === id ? { ...t, isArchived: true } : t) }));
-  // Restore
-  const restoreTask = (id: string) => setData(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === id ? { ...t, isArchived: false } : t) }));
+  const moveNoteToInbox = (id: string) => setData(p => ({ ...p, notes: p.notes.map(n => n.id === id ? { ...n, status: 'inbox' } : n) }));
+  const archiveNote = (id: string) => setData(p => ({ ...p, notes: p.notes.map(n => n.id === id ? { ...n, status: 'archived' } : n) }));
+  
+  // Soft Delete
+  const deleteNote = (id: string) => setData(p => ({ 
+      ...p, 
+      notes: p.notes.map(n => n.id === id ? { ...n, status: 'trash', previousStatus: n.status === 'trash' ? n.previousStatus : n.status } : n) 
+  }));
+  
   // Hard Delete
-  const deleteTask = (id: string) => setData(prev => ({ ...prev, tasks: prev.tasks.filter(t => t.id !== id) }));
-  const reorderTask = (draggedId: string, targetId: string) => {
-      const tasksCopy = [...data.tasks];
-      const draggedIdx = tasksCopy.findIndex(t => t.id === draggedId);
-      const targetIdx = tasksCopy.findIndex(t => t.id === targetId);
-      if (draggedIdx > -1 && targetIdx > -1) {
-          const [dragged] = tasksCopy.splice(draggedIdx, 1);
-          tasksCopy.splice(targetIdx, 0, dragged);
-          setData(prev => ({ ...prev, tasks: tasksCopy }));
+  const hardDeleteNote = (id: string) => setData(p => ({ ...p, notes: p.notes.filter(n => n.id !== id) }));
+  
+  // Restore Note
+  const restoreNote = (id: string) => setData(p => ({ 
+      ...p, 
+      notes: p.notes.map(n => n.id === id ? { ...n, status: n.previousStatus || 'inbox', previousStatus: undefined } : n) 
+  }));
+
+  const updateNote = (n: Note) => setData(p => ({ ...p, notes: p.notes.map(x => x.id === n.id ? n : x) }));
+  const reorderNote = (draggedId: string, targetId: string) => setData(p => {
+      const notes = [...p.notes];
+      const dIdx = notes.findIndex(n => n.id === draggedId);
+      const tIdx = notes.findIndex(n => n.id === targetId);
+      if (dIdx < 0 || tIdx < 0) return p;
+      const [item] = notes.splice(dIdx, 1);
+      notes.splice(tIdx, 0, item);
+      return { ...p, notes };
+  });
+
+  // SKETCHPAD METHODS
+  const addSketchItem = (item: SketchItem) => setData(p => ({ ...p, sketchpad: [item, ...p.sketchpad] }));
+  const deleteSketchItem = (id: string) => setData(p => ({ ...p, sketchpad: p.sketchpad.filter(i => i.id !== id) }));
+  const updateSketchItem = (item: SketchItem) => setData(p => ({ ...p, sketchpad: p.sketchpad.map(i => i.id === item.id ? item : i) }));
+
+  const addTask = (t: Task) => setData(p => ({ ...p, tasks: [...p.tasks, t] }));
+  const updateTask = (t: Task) => setData(p => ({ ...p, tasks: p.tasks.map(x => x.id === t.id ? t : x) }));
+  const deleteTask = (id: string) => setData(p => ({ ...p, tasks: p.tasks.filter(t => t.id !== id) }));
+  const archiveTask = (id: string) => setData(p => ({ ...p, tasks: p.tasks.map(t => t.id === id ? { ...t, isArchived: true } : t) }));
+  // Restore task to 'todo' column so it goes back to sprints
+  const restoreTask = (id: string) => setData(p => ({ ...p, tasks: p.tasks.map(t => t.id === id ? { ...t, isArchived: false, column: 'todo' } : t) }));
+
+  const reorderTask = (draggedId: string, targetId: string) => setData(p => {
+      const tasks = [...p.tasks];
+      const dIdx = tasks.findIndex(t => t.id === draggedId);
+      const tIdx = tasks.findIndex(t => t.id === targetId);
+      if (dIdx < 0 || tIdx < 0) return p;
+      const [item] = tasks.splice(dIdx, 1);
+      tasks.splice(tIdx, 0, item);
+      return { ...p, tasks };
+  });
+
+  const addFlashcard = (c: Flashcard) => setData(p => ({ ...p, flashcards: [...p.flashcards, c] }));
+  const deleteFlashcard = (id: string) => setData(p => ({ ...p, flashcards: p.flashcards.filter(f => f.id !== id) }));
+  const toggleFlashcardStar = (id: string) => setData(p => ({ ...p, flashcards: p.flashcards.map(f => f.id === id ? { ...f, isStarred: !f.isStarred } : f) }));
+
+  const addHabit = (h: Habit) => setData(p => ({ ...p, habits: [...p.habits, h] }));
+  const updateHabit = (h: Habit) => setData(p => ({ ...p, habits: p.habits.map(x => x.id === h.id ? h : x) }));
+  const deleteHabit = (id: string) => setData(p => ({ ...p, habits: p.habits.filter(h => h.id !== id) }));
+
+  const addJournalEntry = (entry: JournalEntry) => setData(p => ({ ...p, journal: [...p.journal, entry] }));
+  const updateJournalEntry = (entry: JournalEntry) => setData(p => ({ ...p, journal: p.journal.map(j => j.id === entry.id ? entry : j) }));
+  // Hard delete (for Archive)
+  const deleteJournalEntry = (id: string) => setData(p => ({ ...p, journal: p.journal.filter(j => j.id !== id) }));
+  // Soft delete (Archive)
+  const archiveJournalEntry = (id: string) => setData(p => ({ ...p, journal: p.journal.map(j => j.id === id ? { ...j, isArchived: true } : j) }));
+  // Restore (Unarchive)
+  const restoreJournalEntry = (id: string) => setData(p => ({ ...p, journal: p.journal.map(j => j.id === id ? { ...j, isArchived: false } : j) }));
+  
+  const addMentorAnalysis = (analysis: MentorAnalysis) => setData(p => ({ ...p, mentorAnalyses: [analysis, ...p.mentorAnalyses] }));
+  const deleteMentorAnalysis = (id: string) => setData(p => ({ ...p, mentorAnalyses: p.mentorAnalyses.filter(a => a.id !== id) }));
+
+  const handleReflectInJournal = (taskId: string) => {
+    setJournalContextTaskId(taskId);
+    handleNavigate(Module.JOURNAL);
+  };
+  
+  const handleNavigateToTask = (taskId: string) => {
+    setKanbanContextTaskId(taskId);
+    handleNavigate(Module.KANBAN);
+  };
+
+  const handleNavigateToNote = (noteId: string) => {
+    setNapkinsContextNoteId(noteId);
+    handleNavigate(Module.NAPKINS);
+  };
+
+  const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
+  const updateProfileConfig = (newProfileConfig: UserProfileConfig) => setData(p => ({ ...p, profileConfig: newProfileConfig }));
+  
+  // Use config owner email
+  const isOwner = data.user?.email === data.config.ownerEmail;
+
+  const visibleConfig = useMemo(() => {
+    const configToFilter = data.config;
+    const currentUserEmail = data.user?.email || '';
+
+    const isVisible = (item: AccessControl) => {
+       if (item.isDisabled) return false;
+       if (isOwner) return true;
+       const level = item.accessLevel || 'public';
+       if (level === 'public') return true;
+       if (level === 'owner_only') return false; 
+       if (level === 'restricted') return item.allowedEmails?.includes(currentUserEmail) || false;
+       return true;
+    };
+
+    return {
+      ...configToFilter,
+      mentors: (configToFilter.mentors || []).filter(isVisible),
+      challengeAuthors: (configToFilter.challengeAuthors || []).filter(isVisible),
+      aiTools: (configToFilter.aiTools || []).filter(isVisible),
+    };
+  }, [data.config, isOwner, data.user]);
+
+  // INVITE CODE VALIDATION
+  const validateGuestSession = (code: string | null): boolean => {
+      if (!code) return false;
+      const validCodes = data.config.inviteCodes || [];
+      const match = validCodes.find(c => c.code === code);
+      if (!match) return false;
+      if (match.expiresAt && match.expiresAt < Date.now()) return false;
+      return true;
+  };
+
+  const handleInviteCodeSubmit = () => {
+      if (!inviteCodeInput) return;
+      const code = inviteCodeInput.toUpperCase().trim();
+      if (validateGuestSession(code)) {
+          localStorage.setItem('live_act_guest_code', code);
+          setGuestSessionCode(code);
+          if (window.confetti) window.confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+      } else {
+          alert('Неверный или истекший код приглашения');
       }
   };
 
-  // Habits
-  const addHabit = (habit: Habit) => setData(prev => ({ ...prev, habits: [habit, ...prev.habits] }));
-  const updateHabit = (habit: Habit) => setData(prev => ({ ...prev, habits: prev.habits.map(h => h.id === habit.id ? habit : h) }));
-  const deleteHabit = (id: string) => setData(prev => ({ ...prev, habits: prev.habits.filter(h => h.id !== id) }));
+  if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a] text-slate-800 dark:text-slate-200">Loading...</div>;
 
-  // Journal
-  const addJournalEntry = (entry: JournalEntry) => setData(prev => ({ ...prev, journal: [entry, ...prev.journal] }));
-  const updateJournalEntry = (entry: JournalEntry) => setData(prev => ({ ...prev, journal: prev.journal.map(e => e.id === entry.id ? entry : e) }));
-  const deleteJournalEntry = (id: string) => setData(prev => ({ ...prev, journal: prev.journal.filter(e => e.id !== id) })); // Hard delete from Archive? 
-  // Let's implement soft delete for journal too
-  const softDeleteJournalEntry = (id: string) => setData(prev => ({ ...prev, journal: prev.journal.map(e => e.id === id ? { ...e, isArchived: true } : e) }));
-  const restoreJournalEntry = (id: string) => setData(prev => ({ ...prev, journal: prev.journal.map(e => e.id === id ? { ...e, isArchived: false } : e) }));
+  // --- GUEST MODE GUARD ---
+  const isGuestModeAllowed = data.config.isGuestModeEnabled ?? true;
+  const isAuthenticated = !!data.user;
+  const isGuestAuthenticated = validateGuestSession(guestSessionCode);
 
-  // Flashcards
-  const addFlashcard = (card: Flashcard) => setData(prev => ({ ...prev, flashcards: [card, ...prev.flashcards] }));
-  const deleteFlashcard = (id: string) => setData(prev => ({ ...prev, flashcards: prev.flashcards.filter(c => c.id !== id) }));
-  const toggleFlashcardStar = (id: string) => setData(prev => ({ ...prev, flashcards: prev.flashcards.map(c => c.id === id ? { ...c, isStarred: !c.isStarred } : c) }));
+  if (!isGuestModeAllowed && !isAuthenticated && !isGuestAuthenticated) {
+      return (
+          <div className="flex flex-col h-screen items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a] p-4 animate-in fade-in duration-500">
+              <div className="w-full max-w-sm bg-white dark:bg-[#1e293b] rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 text-center">
+                  <div className="w-16 h-16 bg-slate-900 dark:bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-6 shadow-lg">L</div>
+                  <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Доступ ограничен</h1>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
+                      Владелец отключил гостевой режим
+                  </p>
+                  
+                  <button 
+                         onClick={() => handleDriveConnect(false)}
+                         className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium text-sm transition-colors shadow-lg shadow-indigo-200 dark:shadow-none mb-6"
+                       >
+                           <LogIn size={18} /> Войти через Google
+                   </button>
 
-  // Sketchpad
-  const addSketchItem = (item: SketchItem) => setData(prev => ({ ...prev, sketchpad: [item, ...prev.sketchpad] }));
-  const updateSketchItem = (item: SketchItem) => setData(prev => ({ ...prev, sketchpad: prev.sketchpad.map(i => i.id === item.id ? item : i) }));
-  const deleteSketchItem = (id: string) => setData(prev => ({ ...prev, sketchpad: prev.sketchpad.filter(i => i.id !== id) }));
+                   <div className="flex items-center gap-4 mb-6">
+                       <div className="h-[1px] bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                       <span className="text-xs text-slate-400 uppercase font-bold">ИЛИ</span>
+                       <div className="h-[1px] bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                   </div>
 
-  // Mentor Analysis
-  const addMentorAnalysis = (analysis: MentorAnalysis) => setData(prev => ({ ...prev, mentorAnalyses: [analysis, ...prev.mentorAnalyses] }));
-  const deleteMentorAnalysis = (id: string) => setData(prev => ({ ...prev, mentorAnalyses: prev.mentorAnalyses.filter(a => a.id !== id) }));
-
-  // Config
-  const updateConfig = (config: AppConfig) => setData(prev => ({ ...prev, config }));
-  const updateProfileConfig = (profileConfig: UserProfileConfig) => setData(prev => ({ ...prev, profileConfig }));
-
-  // Navigation Helpers
-  const navigateToTask = (taskId: string) => {
-      setKanbanContextTaskId(taskId);
-      setModule(Module.KANBAN);
-  };
-
-  const navigateToNote = (noteId: string) => {
-      setNapkinsContextNoteId(noteId);
-      setModule(Module.NAPKINS);
-  };
-
-  // Safe config fallback
-  const visibleConfig = data.config || DEFAULT_CONFIG;
+                   <div className="flex gap-2">
+                       <input 
+                          type="text" 
+                          placeholder="Инвайт-код (6 символов)" 
+                          className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-center uppercase font-mono tracking-widest text-slate-800 dark:text-white outline-none focus:border-indigo-500 transition-all placeholder:normal-case placeholder:tracking-normal placeholder:font-sans placeholder:text-slate-400"
+                          value={inviteCodeInput}
+                          onChange={(e) => setInviteCodeInput(e.target.value)}
+                          maxLength={6}
+                       />
+                       <button 
+                          onClick={handleInviteCodeSubmit}
+                          disabled={inviteCodeInput.length < 6}
+                          className="px-4 py-2.5 bg-slate-900 dark:bg-slate-700 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                       >
+                           <ArrowRight size={20} />
+                       </button>
+                   </div>
+              </div>
+              <div className="mt-8 text-xs text-slate-400 flex items-center gap-2">
+                  <Shield size={12} /> Protected by LIVE.ACT Pro
+              </div>
+          </div>
+      );
+  }
 
   return (
-    <>
-      <Layout 
-        currentModule={module} 
-        setModule={setModule} 
-        syncStatus={syncStatus}
-        onConnectDrive={handleConnectDrive}
-        isDriveConnected={isDriveConnected}
-        isOwner={user?.email === visibleConfig.ownerEmail}
+    <Layout 
+        currentModule={module} setModule={handleNavigate} syncStatus={syncStatus}
+        onConnectDrive={() => handleDriveConnect(false)} isDriveConnected={isDriveConnected}
+        isOwner={isOwner}
         role={data.profileConfig?.role || 'architect'}
         habits={data.habits}
-        config={visibleConfig}
-        userEmail={user?.email}
-      >
-        {module === Module.DASHBOARD && (
-            <Dashboard 
-                notes={data.notes.filter(n => n.status !== 'trash')}
-                tasks={data.tasks.filter(t => !t.isArchived)}
-                habits={data.habits.filter(h => !h.isArchived)}
-                journal={data.journal.filter(j => !j.isArchived)}
-                flashcards={data.flashcards}
-                onNavigate={setModule}
-            />
-        )}
-        {module === Module.NAPKINS && (
-            <Napkins 
-              notes={data.notes.filter(n => n.status !== 'trash')} 
-              config={visibleConfig} 
-              addNote={addNote} 
-              moveNoteToSandbox={moveNoteToSandbox} 
-              moveNoteToInbox={moveNoteToInbox} 
-              deleteNote={softDeleteNote} // Soft delete
-              reorderNote={reorderNote} 
-              updateNote={updateNote} 
-              archiveNote={archiveNote} 
-              onAddTask={addTask} 
-              onAddJournalEntry={addJournalEntry}
-              addSketchItem={addSketchItem} 
-              initialNoteId={napkinsContextNoteId}
-              onClearInitialNote={() => setNapkinsContextNoteId(null)}
-              journalEntries={data.journal}
-              tasks={data.tasks}
-              habits={data.habits}
-              addHabit={addHabit}
-            />
-        )}
-        {module === Module.SANDBOX && (
-            <Sandbox 
-                notes={data.notes.filter(n => n.status !== 'trash')}
-                tasks={data.tasks}
-                flashcards={data.flashcards}
-                config={visibleConfig}
-                onProcessNote={archiveNote}
-                onAddTask={addTask}
-                onAddFlashcard={addFlashcard}
-                deleteNote={softDeleteNote}
-            />
-        )}
-        {module === Module.KANBAN && (
-            <Kanban 
-                tasks={data.tasks.filter(t => !t.isArchived)}
-                journalEntries={data.journal.filter(j => !j.isArchived)}
-                config={visibleConfig}
-                addTask={addTask}
-                updateTask={updateTask}
-                deleteTask={archiveTask} // Soft delete
-                reorderTask={reorderTask}
-                archiveTask={archiveTask}
-                onReflectInJournal={(taskId) => {
-                    addJournalEntry({
-                        id: Date.now().toString(),
-                        date: Date.now(),
-                        content: '',
-                        linkedTaskId: taskId,
-                        isInsight: false
-                    });
-                    setModule(Module.JOURNAL);
-                }}
-                initialTaskId={kanbanContextTaskId}
-                onClearInitialTask={() => setKanbanContextTaskId(null)}
-            />
-        )}
-        {module === Module.RITUALS && (
-            <Rituals 
-                habits={data.habits.filter(h => !h.isArchived)}
-                addHabit={addHabit}
-                updateHabit={updateHabit}
-                deleteHabit={(id) => updateHabit({ ...data.habits.find(h => h.id === id)!, isArchived: true })} // Soft
-            />
-        )}
-        {module === Module.JOURNAL && (
-            <Journal 
-                entries={data.journal.filter(j => !j.isArchived)}
-                mentorAnalyses={data.mentorAnalyses}
-                tasks={data.tasks}
-                notes={data.notes}
-                config={visibleConfig}
-                addEntry={addJournalEntry}
-                updateEntry={updateJournalEntry}
-                deleteEntry={softDeleteJournalEntry} // Soft
-                addMentorAnalysis={addMentorAnalysis}
-                deleteMentorAnalysis={deleteMentorAnalysis}
-                onNavigateToTask={navigateToTask}
-                onNavigateToNote={navigateToNote}
-            />
-        )}
-        {module === Module.ARCHIVE && (
-            <Archive 
-                tasks={data.tasks}
-                notes={data.notes}
-                journal={data.journal}
-                restoreTask={restoreTask}
-                deleteTask={deleteTask} // Hard
-                moveNoteToInbox={moveNoteToInbox}
-                deleteNote={hardDeleteNote} // Hard
-                deleteJournalEntry={deleteJournalEntry} // Hard
-                restoreJournalEntry={restoreJournalEntry}
-            />
-        )}
-        {module === Module.SETTINGS && (
-            <Settings 
-                config={visibleConfig}
-                onUpdateConfig={updateConfig}
-                onClose={() => setModule(Module.DASHBOARD)}
-            />
-        )}
-        {module === Module.LEARNING && (
-            <LearningMode 
-                onStart={() => setModule(Module.DASHBOARD)} 
-                onNavigate={setModule}
-            />
-        )}
-        {module === Module.USER_SETTINGS && (
-            <UserSettings 
-                user={user}
-                syncStatus={syncStatus}
-                isDriveConnected={isDriveConnected}
-                onConnect={handleConnectDrive}
-                onSignOut={handleSignOut}
-                onClose={() => setModule(Module.DASHBOARD)}
-                theme={theme}
-                toggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
-            />
-        )}
-        {module === Module.SKETCHPAD && (
-            <Sketchpad 
-                items={data.sketchpad}
-                addItem={addSketchItem}
-                updateItem={updateSketchItem}
-                deleteItem={deleteSketchItem}
-            />
-        )}
-        {module === Module.ETHER && (
-            <Ether 
-                notes={data.notes.filter(n => n.status !== 'trash')}
-                onUpdateNote={updateNote}
-            />
-        )}
-        {module === Module.MENTAL_GYM && (
-            <MentalGym 
-                flashcards={data.flashcards}
-                tasks={data.tasks}
-                deleteFlashcard={deleteFlashcard}
-                toggleFlashcardStar={toggleFlashcardStar}
-            />
-        )}
-        {module === Module.PROFILE && (
-            <Profile 
-                notes={data.notes}
-                tasks={data.tasks}
-                habits={data.habits}
-                journal={data.journal}
-                flashcards={data.flashcards}
-                config={data.profileConfig || { role: 'architect', manifesto: '...' }}
-                onUpdateConfig={updateProfileConfig}
-            />
-        )}
-      </Layout>
-      <Onboarding onClose={() => {}} />
-    </>
+        config={data.config}
+        userEmail={data.user?.email}
+    >
+      <Onboarding onClose={() => setShowOnboarding(false)} />
+      {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
+      {module === Module.DASHBOARD && <Dashboard notes={data.notes.filter(n => n.status !== 'archived' && n.status !== 'trash')} tasks={data.tasks.filter(t => !t.isArchived)} habits={data.habits} journal={data.journal.filter(j => !j.isArchived)} onNavigate={handleNavigate} flashcards={data.flashcards} />}
+      
+      {module === Module.NAPKINS && (
+          <Napkins 
+            notes={data.notes.filter(n => n.status !== 'trash')} 
+            config={visibleConfig} 
+            addNote={addNote} 
+            moveNoteToSandbox={moveNoteToSandbox} 
+            moveNoteToInbox={moveNoteToInbox} 
+            deleteNote={deleteNote} // Use soft delete
+            reorderNote={reorderNote} 
+            updateNote={updateNote} 
+            archiveNote={archiveNote} 
+            onAddTask={addTask} 
+            onAddJournalEntry={addJournalEntry}
+            addSketchItem={addSketchItem} 
+            initialNoteId={napkinsContextNoteId}
+            onClearInitialNote={() => setNapkinsContextNoteId(null)}
+            journalEntries={data.journal}
+          />
+      )}
+      
+      {module === Module.SKETCHPAD && (
+          <Sketchpad 
+            items={data.sketchpad || []} 
+            addItem={addSketchItem} 
+            deleteItem={deleteSketchItem} 
+            updateItem={updateSketchItem} 
+          />
+      )}
+
+      {module === Module.ETHER && (
+          <Ether 
+            notes={data.notes.filter(n => n.status !== 'archived' && n.status !== 'trash')} 
+            onUpdateNote={updateNote} 
+          />
+      )}
+
+      {module === Module.SANDBOX && <Sandbox notes={data.notes} tasks={data.tasks} flashcards={data.flashcards} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
+      {module === Module.KANBAN && <Kanban tasks={data.tasks.filter(t => !t.isArchived)} journalEntries={data.journal.filter(j => !j.isArchived)} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={archiveTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
+      {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
+      {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
+      {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} notes={data.notes} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} onNavigateToNote={handleNavigateToNote} />}
+      {module === Module.MOODBAR && <Moodbar entries={data.journal.filter(j => !j.isArchived)} onAddEntry={addJournalEntry} />}
+      
+      {module === Module.ARCHIVE && (
+          <Archive 
+            tasks={data.tasks} 
+            notes={data.notes} 
+            journal={data.journal} 
+            restoreTask={restoreTask} 
+            deleteTask={deleteTask} 
+            moveNoteToInbox={restoreNote} // Restore soft-deleted notes
+            deleteNote={hardDeleteNote} // Permanently delete notes
+            deleteJournalEntry={deleteJournalEntry} 
+            restoreJournalEntry={restoreJournalEntry} 
+          />
+      )}
+      
+      {module === Module.PROFILE && <Profile notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} flashcards={data.flashcards} config={data.profileConfig || { role: 'architect', manifesto: '...' }} onUpdateConfig={updateProfileConfig} />}
+      {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
+      {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}
+    </Layout>
   );
 };
-
 export default App;
