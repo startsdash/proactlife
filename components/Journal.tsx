@@ -1,9 +1,11 @@
 
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
+import Masonry from 'react-masonry-css';
 import { JournalEntry, Task, AppConfig, MentorAnalysis, Note } from '../types';
 import { ICON_MAP, applyTypography, SPHERES } from '../constants';
 import { analyzeJournalPath } from '../services/geminiService';
@@ -47,6 +49,7 @@ const UNSPLASH_PRESETS = [
 ];
 
 const getJournalColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
+const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 // --- HELPER FUNCTIONS ---
 
@@ -58,6 +61,15 @@ const getLinkedContentPreview = (content: string) => {
     let sentence = match ? match[0] : clean;
     if (sentence.length > 50) sentence = sentence.substring(0, 50).trim() + '...';
     return sentence;
+};
+
+const getNotePreviewContent = (content: string) => {
+    let cleanText = content.replace(/!\[.*?\]\(.*?\)/g, '');
+    cleanText = cleanText.replace(/[ \t]+/g, ' ').trim();
+    if (cleanText.length > 150) {
+        return cleanText.substring(0, 150).trim() + '...';
+    }
+    return cleanText;
 };
 
 const allowDataUrls = (url: string) => url;
@@ -533,77 +545,6 @@ const HologramMarkdown = {
     em: ({node, ...props}: any) => <em className="font-serif italic text-indigo-600 dark:text-indigo-400" {...props} />,
 };
 
-const TaskSelect: React.FC<{
-  tasks: Task[];
-  selectedId: string;
-  onSelect: (id: string) => void;
-}> = ({ tasks, selectedId, onSelect }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const selectedTask = tasks.find(t => t.id === selectedId);
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all outline-none text-left ${
-          isOpen ? 'border-indigo-300 bg-white dark:bg-slate-800 ring-2 ring-indigo-50/50' : 'border-slate-200/60 dark:border-slate-700/60 bg-transparent hover:bg-slate-50/50 dark:hover:bg-slate-800/50'
-        }`}
-      >
-        <span className={`text-xs truncate ${selectedId ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-400'}`}>
-          {selectedTask ? (
-             <span className="flex items-center gap-2">
-                {selectedTask.column === 'done' ? <CheckCircle2 size={14} className="text-emerald-500" strokeWidth={1} /> : <Circle size={14} className="text-indigo-500" strokeWidth={1} />}
-                {selectedTask.content}
-             </span>
-          ) : (
-            "Без привязки (Свободная мысль)"
-          )}
-        </span>
-        <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-60 overflow-y-auto z-50 animate-in fade-in zoom-in-95 duration-100">
-          <button
-            onClick={() => { onSelect(''); setIsOpen(false); }}
-            className="w-full text-left px-4 py-3 text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 transition-colors"
-          >
-            Без привязки (Свободная мысль)
-          </button>
-          {tasks.length > 0 ? (
-            tasks.map(t => (
-              <button
-                key={t.id}
-                onClick={() => { onSelect(t.id); setIsOpen(false); }}
-                className="w-full text-left px-4 py-3 text-xs hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-start gap-2 group"
-              >
-                 <div className="mt-0.5 shrink-0">
-                    {t.column === 'done' ? <CheckCircle2 size={12} className="text-emerald-500" strokeWidth={1} /> : <Circle size={12} className="text-indigo-500" strokeWidth={1} />}
-                 </div>
-                 <span className="text-slate-700 dark:text-slate-300 group-hover:text-indigo-900 dark:group-hover:text-indigo-200 line-clamp-2">{t.content}</span>
-              </button>
-            ))
-          ) : (
-             <div className="px-4 py-3 text-[10px] text-slate-400 italic text-center">Нет активных задач</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
 // --- REUSABLE SPHERE SELECTOR (AURA RINGS) ---
 const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -807,31 +748,14 @@ const JournalEntrySphereSelector: React.FC<{
     );
 };
 
-const SphereBadgeList: React.FC<{ spheres: string[] }> = ({ spheres }) => {
-    return (
-        <div className="flex flex-wrap gap-2">
-            {spheres.map(s => {
-                const sp = SPHERES.find(sphere => sphere.id === s);
-                if (!sp) return null;
-                const Icon = ICON_MAP[sp.icon];
-                return (
-                    <div key={s} className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${sp.bg} ${sp.text} ${sp.border}`}>
-                        {Icon && <Icon size={10} strokeWidth={1} />}
-                        {sp.label}
-                    </div>
-                );
-            })}
-        </div>
-    );
-};
-
 const CollapsibleSection: React.FC<{
   title: string;
   children: React.ReactNode;
   icon?: React.ReactNode;
   actions?: React.ReactNode;
-}> = ({ title, children, icon, actions }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  defaultOpen?: boolean;
+}> = ({ title, children, icon, actions, defaultOpen = false }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
     <div className="bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden mb-3">
@@ -861,71 +785,6 @@ const CollapsibleSection: React.FC<{
   );
 };
 
-const StaticChallengeRenderer: React.FC<{ 
-    content: string,
-    mode: 'draft' | 'history'
-}> = ({ content, mode }) => {
-    const cleanContent = content.trim().replace(/^#+\s*[^\n]*(\n+|$)/, '').trim();
-    const lines = cleanContent.split('\n');
-    const renderedParts: React.ReactNode[] = [];
-    let textBuffer = '';
-
-    const flushBuffer = (keyPrefix: string) => {
-        if (textBuffer) {
-            const trimmedBuffer = textBuffer.trim();
-            if (trimmedBuffer) {
-                renderedParts.push(
-                    <div key={`${keyPrefix}-md`} className="text-sm leading-relaxed text-slate-900 dark:text-slate-200 mb-1 last:mb-0">
-                        <ReactMarkdown components={markdownComponents}>{textBuffer}</ReactMarkdown>
-                    </div>
-                );
-            }
-            textBuffer = '';
-        }
-    };
-
-    lines.forEach((line, i) => {
-        const match = line.match(/^\s*(?:[-*+]|\d+\.)?\s*\[([ xX])\]\s+(.*)/);
-        if (match) {
-            flushBuffer(`line-${i}`);
-            const isChecked = match[1].toLowerCase() === 'x';
-            const label = match[2];
-            const leadingSpaces = line.search(/\S|$/);
-            const indent = leadingSpaces * 4; 
-            let Icon = Circle;
-            let iconClass = "text-slate-300 dark:text-slate-600";
-            if (isChecked) {
-                Icon = CheckCircle2;
-                iconClass = "text-emerald-500";
-            } else if (mode === 'history') {
-                Icon = XCircle;
-                iconClass = "text-red-400";
-            } else {
-                Icon = Circle;
-                iconClass = "text-slate-300 dark:text-slate-600";
-            }
-            renderedParts.push(
-                <div 
-                    key={`cb-${i}`}
-                    className="flex items-start gap-2 w-full text-left py-1 px-1 mb-0.5 cursor-default"
-                    style={{ marginLeft: `${indent}px` }}
-                >
-                    <div className={`mt-0.5 shrink-0 ${iconClass}`}>
-                        <Icon size={16} strokeWidth={1} />
-                    </div>
-                    <span className={`text-sm text-slate-700 dark:text-slate-300`}>
-                        <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span className="m-0 p-0">{children}</span>}}>{label}</ReactMarkdown>
-                    </span>
-                </div>
-            );
-        } else {
-            textBuffer += line + '\n';
-        }
-    });
-    flushBuffer('end');
-    return <>{renderedParts}</>;
-};
-
 const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, config, addEntry, deleteEntry, updateEntry, addMentorAnalysis, deleteMentorAnalysis, initialTaskId, onClearInitialTask, onNavigateToTask, onNavigateToNote }) => {
   const [hasCreationContent, setHasCreationContent] = useState(false);
   const [linkedTaskId, setLinkedTaskId] = useState<string>('');
@@ -936,6 +795,11 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
   const [dateRange, setDateRange] = useState<{from: string, to: string}>({from: '', to: ''});
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Note Linker State
+  const [isNoteSelectorOpen, setIsNoteSelectorOpen] = useState(false);
+  const [noteSelectorEntryId, setNoteSelectorEntryId] = useState<string | null>(null);
+  const [selectedNoteIdsForLinking, setSelectedNoteIdsForLinking] = useState<string[]>([]);
   
   // Creation Editor State
   const creationContentEditableRef = useRef<HTMLDivElement>(null);
@@ -955,7 +819,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
 
   // Edit Modal Editor State
   const editContentRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null); 
   const [editHistory, setEditHistory] = useState<string[]>(['']);
   const [editHistoryIndex, setEditHistoryIndex] = useState(0);
   const [activeImage, setActiveImage] = useState<HTMLImageElement | null>(null);
@@ -971,7 +834,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
   const [showEditColorPicker, setShowEditColorPicker] = useState(false);
   const editColorTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -1289,8 +1151,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
 
   // ----------------------
 
-  const availableTasks = tasks.filter(t => !t.isArchived && (t.column === 'doing' || t.column === 'done') || t.id === linkedTaskId);
-
   const handlePost = () => {
     const rawHtml = creationContentEditableRef.current?.innerHTML || '';
     const markdownContent = htmlToMarkdown(rawHtml);
@@ -1355,6 +1215,42 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
       if (e) e.stopPropagation();
       setSelectedEntryId(null);
       setEditingId(null);
+  };
+
+  const handleOpenNoteLink = (e: React.MouseEvent, entryId: string) => {
+      e.stopPropagation();
+      setNoteSelectorEntryId(entryId);
+      setSelectedNoteIdsForLinking([]);
+      setIsNoteSelectorOpen(true);
+  };
+
+  const handleToggleNoteSelection = (noteId: string) => {
+      setSelectedNoteIdsForLinking(prev => {
+          if (prev.includes(noteId)) {
+              return prev.filter(id => id !== noteId);
+          } else {
+              return [...prev, noteId];
+          }
+      });
+  };
+
+  const handleConfirmLinkNotes = () => {
+      if (noteSelectorEntryId && selectedNoteIdsForLinking.length > 0) {
+          const entry = entries.find(e => e.id === noteSelectorEntryId);
+          if (entry) {
+              const currentIds = entry.linkedNoteIds || [];
+              const newIds = Array.from(new Set([...currentIds, ...selectedNoteIdsForLinking]));
+              // Ensure legacy linkedNoteId is also included if present and not in array
+              if (entry.linkedNoteId && !newIds.includes(entry.linkedNoteId)) {
+                  newIds.unshift(entry.linkedNoteId);
+              }
+              
+              updateEntry({ ...entry, linkedNoteIds: newIds });
+          }
+      }
+      setIsNoteSelectorOpen(false);
+      setNoteSelectorEntryId(null);
+      setSelectedNoteIdsForLinking([]);
   };
 
   const RenderIcon = ({ name, className }: { name: string, className?: string }) => {
@@ -1718,6 +1614,9 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                         const isEditing = editingId === entry.id;
                         const linkedTask = tasks.find(t => t.id === entry.linkedTaskId);
                         const linkedNote = notes.find(n => n.id === entry.linkedNoteId);
+                        // Get all linked notes
+                        const linkedNotes = notes.filter(n => (entry.linkedNoteIds?.includes(n.id)) || (entry.linkedNoteId === n.id));
+                        
                         const linkUrl = findFirstUrl(entry.content);
                         const tDate = formatTimelineDate(entry.date);
                         
@@ -1843,24 +1742,39 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                                             <span> ]</span>
                                                         </div>
                                                     )}
-                                                    {linkedNote && (
-                                                        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50 text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                            <Tooltip content="Открепить заметку">
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); updateEntry({ ...entry, linkedNoteId: undefined }); }}
-                                                                    className="p-1 text-slate-300 hover:text-red-500 transition-colors"
-                                                                >
-                                                                    <Unlink size={12} />
-                                                                </button>
-                                                            </Tooltip>
-                                                            <span>[ Заметка: </span>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); onNavigateToNote?.(linkedNote.id); }}
-                                                                className="hover:text-indigo-500 transition-colors hover:underline decoration-indigo-500 underline-offset-2"
-                                                            >
-                                                                {getLinkedContentPreview(linkedNote.title || linkedNote.content)}
-                                                            </button>
-                                                            <span> ]</span>
+                                                    {/* Linked Notes Render */}
+                                                    {linkedNotes.length > 0 && (
+                                                        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50 flex flex-col gap-1">
+                                                            {linkedNotes.map(note => (
+                                                                <div key={note.id} className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                                                    <Tooltip content="Открепить заметку">
+                                                                        <button
+                                                                            onClick={(e) => { 
+                                                                                e.stopPropagation(); 
+                                                                                // Remove from both fields
+                                                                                const newIds = (entry.linkedNoteIds || []).filter(id => id !== note.id);
+                                                                                const isLegacy = entry.linkedNoteId === note.id;
+                                                                                updateEntry({ 
+                                                                                    ...entry, 
+                                                                                    linkedNoteIds: newIds,
+                                                                                    linkedNoteId: isLegacy ? undefined : entry.linkedNoteId
+                                                                                }); 
+                                                                            }}
+                                                                            className="p-1 text-slate-300 hover:text-red-500 transition-colors"
+                                                                        >
+                                                                            <Unlink size={12} />
+                                                                        </button>
+                                                                    </Tooltip>
+                                                                    <span>[ Заметка: </span>
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); onNavigateToNote?.(note.id); }}
+                                                                        className="hover:text-indigo-500 transition-colors hover:underline decoration-indigo-500 underline-offset-2"
+                                                                    >
+                                                                        {getLinkedContentPreview(note.title || note.content)}
+                                                                    </button>
+                                                                    <span> ]</span>
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     )}
                                                 </>
@@ -1875,6 +1789,26 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                                     <div className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pl-1 font-serif"><ReactMarkdown components={markdownComponents}>{entry.aiFeedback}</ReactMarkdown></div>
                                                 </div>
                                             )}
+                                            
+                                            {/* FOOTER ACTIONS */}
+                                            <div className="mt-6 pt-4 border-t border-black/5 dark:border-white/5 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex items-center gap-2">
+                                                    <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} align="left" direction="up" />
+                                                    <Tooltip content="Привязать заметку">
+                                                        <button 
+                                                            onClick={(e) => handleOpenNoteLink(e, entry.id)}
+                                                            className="flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-300 hover:text-slate-500 dark:hover:text-slate-400"
+                                                        >
+                                                            <Link size={16} strokeWidth={1.5} />
+                                                        </button>
+                                                    </Tooltip>
+                                                </div>
+                                                {/* Link Preview if URL exists */}
+                                                {(() => {
+                                                    const url = findFirstUrl(entry.content);
+                                                    return url ? <div className="max-w-[200px]"><LinkPreview url={url} /></div> : null;
+                                                })()}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -2048,13 +1982,14 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                     </CollapsibleSection>
                                 )}
                                 
-                                {selectedLinkedNote && (
-                                    <CollapsibleSection title="Контекст: Заметка" icon={<StickyNote size={14}/>} defaultOpen>
-                                        <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-serif cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => onNavigateToNote?.(selectedLinkedNote.id)}>
-                                            <ReactMarkdown components={markdownComponents}>{selectedLinkedNote.content.substring(0, 200) + '...'}</ReactMarkdown>
+                                {/* Linked Notes Render */}
+                                {notes.filter(n => (selectedEntry.linkedNoteIds?.includes(n.id)) || (selectedEntry.linkedNoteId === n.id)).map(note => (
+                                    <CollapsibleSection key={note.id} title="Контекст: Заметка" icon={<StickyNote size={14}/>} defaultOpen>
+                                        <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-serif cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => onNavigateToNote?.(note.id)}>
+                                            <ReactMarkdown components={markdownComponents}>{getNotePreviewContent(note.content)}</ReactMarkdown>
                                         </div>
                                     </CollapsibleSection>
-                                )}
+                                ))}
 
                                 {selectedEntry.aiFeedback && (
                                     <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-4 border border-slate-100 dark:border-slate-700/50 mt-6">
@@ -2068,7 +2003,17 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                 )}
 
                                 <div className="mt-6 pt-4 border-t border-black/5 dark:border-white/5 flex justify-between items-center">
-                                    <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="left" direction="up" />
+                                    <div className="flex items-center gap-2">
+                                        <JournalEntrySphereSelector entry={selectedEntry} updateEntry={updateEntry} align="left" direction="up" />
+                                        <Tooltip content="Привязать заметку">
+                                            <button 
+                                                onClick={(e) => handleOpenNoteLink(e, selectedEntry.id)}
+                                                className="flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-300 hover:text-slate-500 dark:hover:text-slate-400"
+                                            >
+                                                <Link size={16} strokeWidth={1.5} />
+                                            </button>
+                                        </Tooltip>
+                                    </div>
                                     {/* Link Preview if URL exists */}
                                     {(() => {
                                         const url = findFirstUrl(selectedEntry.content);
@@ -2109,6 +2054,92 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                           )}
                       </div>
                   </div>
+              </div>
+          )}
+      </AnimatePresence>
+
+      {/* NOTE SELECTION MODAL */}
+      <AnimatePresence>
+          {isNoteSelectorOpen && (
+              <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setIsNoteSelectorOpen(false)}>
+                  <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="w-full max-w-4xl h-[80vh] bg-[#f8fafc] dark:bg-[#0f172a] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800"
+                      onClick={(e) => e.stopPropagation()}
+                  >
+                      <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
+                          <div>
+                              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Выберите заметки</h3>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">для привязки к записи</p>
+                          </div>
+                          <button onClick={() => setIsNoteSelectorOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                              <X size={20} />
+                          </button>
+                      </div>
+                      
+                      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar-light">
+                          <Masonry
+                              breakpointCols={{ default: 3, 1100: 2, 700: 1 }}
+                              className="my-masonry-grid"
+                              columnClassName="my-masonry-grid_column"
+                          >
+                              {notes.filter(n => n.status === 'inbox').map(note => {
+                                  const isSelected = selectedNoteIdsForLinking.includes(note.id);
+                                  return (
+                                      <div 
+                                          key={note.id}
+                                          onClick={() => handleToggleNoteSelection(note.id)}
+                                          className={`
+                                              relative p-4 rounded-xl border transition-all cursor-pointer mb-4 group overflow-hidden
+                                              ${isSelected 
+                                                  ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 ring-2 ring-indigo-500/20' 
+                                                  : `${getNoteColorClass(note.color)} border-slate-200/50 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700`}
+                                          `}
+                                      >
+                                          {note.title && <h4 className="font-bold text-sm mb-2 text-slate-800 dark:text-slate-200">{applyTypography(note.title)}</h4>}
+                                          <div className="text-xs text-slate-600 dark:text-slate-400 line-clamp-4 font-serif">
+                                              <ReactMarkdown components={markdownComponents}>{note.content}</ReactMarkdown>
+                                          </div>
+                                          {isSelected && (
+                                              <div className="absolute top-2 right-2 bg-indigo-500 text-white rounded-full p-1 shadow-md">
+                                                  <Check size={12} strokeWidth={3} />
+                                              </div>
+                                          )}
+                                      </div>
+                                  );
+                              })}
+                          </Masonry>
+                          {notes.filter(n => n.status === 'inbox').length === 0 && (
+                              <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                                  <StickyNote size={48} className="opacity-20 mb-4" />
+                                  <p>Нет заметок во входящих</p>
+                              </div>
+                          )}
+                      </div>
+
+                      {/* Floating Action Bar */}
+                      <AnimatePresence>
+                          {selectedNoteIdsForLinking.length > 0 && (
+                              <motion.div 
+                                  initial={{ y: 100, opacity: 0 }}
+                                  animate={{ y: 0, opacity: 1 }}
+                                  exit={{ y: 100, opacity: 0 }}
+                                  className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 z-50"
+                              >
+                                  <span className="text-xs font-bold whitespace-nowrap">Выбрано: {selectedNoteIdsForLinking.length}</span>
+                                  <div className="w-px h-4 bg-white/20 dark:bg-black/10" />
+                                  <button 
+                                      onClick={handleConfirmLinkNotes}
+                                      className="text-xs font-bold uppercase tracking-wider hover:text-indigo-400 dark:hover:text-indigo-600 transition-colors"
+                                  >
+                                      Связать с записью
+                                  </button>
+                              </motion.div>
+                          )}
+                      </AnimatePresence>
+                  </motion.div>
               </div>
           )}
       </AnimatePresence>
