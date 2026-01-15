@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -10,7 +11,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Map } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -32,6 +33,7 @@ interface Props {
   initialNoteId?: string | null;
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
+  onStartJourney?: (note: Note) => void;
 }
 
 const colors = [
@@ -668,6 +670,7 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
+        onStartJourney?: (note: Note) => void;
     }
 }
 
@@ -830,10 +833,21 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
             <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
-                        // Inbox: Only Archive button
-                        <Tooltip content="Переместить в библиотеку">
-                            <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
-                        </Tooltip>
+                        <>
+                            <Tooltip content="Переместить в библиотеку">
+                                <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
+                            </Tooltip>
+                            {handlers.onStartJourney && (
+                                <Tooltip content="Путешествие Героя">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handlers.onStartJourney?.(note); }} 
+                                        className="p-2 text-indigo-500 hover:text-white bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-500 dark:hover:bg-indigo-500 rounded-full transition-all shadow-sm"
+                                    >
+                                        <Map size={16} strokeWidth={1.5} />
+                                    </button>
+                                </Tooltip>
+                            )}
+                        </>
                     ) : (
                         // Library: Action buttons moved here
                         <>
@@ -877,7 +891,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries, onStartJourney }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -1343,8 +1357,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
-      onImageClick: (src: string) => setLightboxSrc(src)
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
+      onImageClick: (src: string) => setLightboxSrc(src),
+      onStartJourney
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc, onStartJourney]);
 
   const markdownRenderComponents = {
       ...markdownComponents,
@@ -1695,6 +1710,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             <div className="flex items-center gap-1 shrink-0 -mt-1 relative z-20" style={{top: '5px', right: '5px'}}>
                                 {!isEditing && (
                                     <>
+                                        {onStartJourney && (
+                                            <Tooltip content="Путешествие Героя">
+                                                <button onClick={(e) => { e.stopPropagation(); onStartJourney(selectedNote); }} className="p-2 text-indigo-500 hover:text-white hover:bg-indigo-500 rounded-lg transition-colors"><Map size={16} /></button>
+                                            </Tooltip>
+                                        )}
                                         <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить"}><button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-lg transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-transparent' : 'text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5'}`}><Pin size={16} className={selectedNote.isPinned ? "fill-current" : ""} /></button></Tooltip>
                                         <Tooltip content="Редактировать"><button onClick={() => setIsEditing(true)} className="p-2 text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={16} /></button></Tooltip>
                                         <Tooltip content="Отправить в архив"><button onClick={() => { if(window.confirm('Отправить в архив?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors"><Trash2 size={16} /></button></Tooltip>
