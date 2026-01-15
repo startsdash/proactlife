@@ -99,6 +99,7 @@ const App: React.FC = () => {
   const [journalContextTaskId, setJournalContextTaskId] = useState<string | null>(null); // Context for navigation (Journal)
   const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
   const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null); // Context for navigation (Napkins)
+  const [journalSelectionEntryId, setJournalSelectionEntryId] = useState<string | null>(null); // New: Context for linking notes to journal
   
   // INVITE CODE LOGIC
   const [inviteCodeInput, setInviteCodeInput] = useState('');
@@ -332,6 +333,31 @@ const App: React.FC = () => {
     handleNavigate(Module.NAPKINS);
   };
 
+  // --- JOURNAL LINKING FLOW ---
+  const handleRequestNoteSelection = (entryId: string) => {
+    setJournalSelectionEntryId(entryId);
+    handleNavigate(Module.NAPKINS);
+  };
+
+  const handleLinkNotesToJournal = (noteIds: string[]) => {
+    if (journalSelectionEntryId) {
+        const entry = data.journal.find(j => j.id === journalSelectionEntryId);
+        if (entry) {
+            const currentIds = entry.linkedNoteIds || (entry.linkedNoteId ? [entry.linkedNoteId] : []);
+            // Use Set to prevent duplicates
+            const newIds = Array.from(new Set([...currentIds, ...noteIds]));
+            updateJournalEntry({ ...entry, linkedNoteIds: newIds });
+        }
+        setJournalSelectionEntryId(null);
+        handleNavigate(Module.JOURNAL);
+    }
+  };
+
+  const handleCancelLink = () => {
+      setJournalSelectionEntryId(null);
+      handleNavigate(Module.JOURNAL);
+  };
+
   const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
   const updateProfileConfig = (newProfileConfig: UserProfileConfig) => setData(p => ({ ...p, profileConfig: newProfileConfig }));
   
@@ -458,7 +484,7 @@ const App: React.FC = () => {
             addNote={addNote} 
             moveNoteToSandbox={moveNoteToSandbox} 
             moveNoteToInbox={moveNoteToInbox} 
-            deleteNote={deleteNote} // Use soft delete
+            deleteNote={deleteNote} 
             reorderNote={reorderNote} 
             updateNote={updateNote} 
             archiveNote={archiveNote} 
@@ -468,6 +494,10 @@ const App: React.FC = () => {
             initialNoteId={napkinsContextNoteId}
             onClearInitialNote={() => setNapkinsContextNoteId(null)}
             journalEntries={data.journal}
+            // Selection Mode Props
+            selectionMode={!!journalSelectionEntryId}
+            onLinkSelected={handleLinkNotesToJournal}
+            onCancelSelection={handleCancelLink}
           />
       )}
       
@@ -491,7 +521,7 @@ const App: React.FC = () => {
       {module === Module.KANBAN && <Kanban tasks={data.tasks.filter(t => !t.isArchived)} journalEntries={data.journal.filter(j => !j.isArchived)} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={archiveTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
       {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
-      {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} notes={data.notes} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} onNavigateToNote={handleNavigateToNote} />}
+      {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} notes={data.notes} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} onNavigateToNote={handleNavigateToNote} onRequestNoteSelection={handleRequestNoteSelection} />}
       {module === Module.MOODBAR && <Moodbar entries={data.journal.filter(j => !j.isArchived)} onAddEntry={addJournalEntry} />}
       
       {module === Module.ARCHIVE && (
@@ -501,8 +531,8 @@ const App: React.FC = () => {
             journal={data.journal} 
             restoreTask={restoreTask} 
             deleteTask={deleteTask} 
-            moveNoteToInbox={restoreNote} // Restore soft-deleted notes
-            deleteNote={hardDeleteNote} // Permanently delete notes
+            moveNoteToInbox={restoreNote} 
+            deleteNote={hardDeleteNote} 
             deleteJournalEntry={deleteJournalEntry} 
             restoreJournalEntry={restoreJournalEntry} 
           />
