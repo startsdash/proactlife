@@ -2065,7 +2065,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="w-full max-w-4xl h-[80vh] bg-[#f8fafc] dark:bg-[#0f172a] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800"
+                      className="relative w-full max-w-4xl h-[80vh] bg-[#f8fafc] dark:bg-[#0f172a] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800"
                       onClick={(e) => e.stopPropagation()}
                   >
                       <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
@@ -2123,10 +2123,10 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                           {selectedNoteIdsForLinking.length > 0 && (
                               <motion.button 
                                   onClick={handleConfirmLinkNotes}
-                                  initial={{ y: 100, opacity: 0 }}
-                                  animate={{ y: 0, opacity: 1 }}
-                                  exit={{ y: 100, opacity: 0 }}
-                                  className="absolute bottom-12 left-1/2 -translate-x-1/2 px-8 py-4 border border-slate-300 dark:border-slate-600 rounded-full text-xs font-mono uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-500 active:scale-95 flex items-center gap-3 z-50 shadow-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md"
+                                  initial={{ y: 100, x: "-50%", opacity: 0 }}
+                                  animate={{ y: 0, x: "-50%", opacity: 1 }}
+                                  exit={{ y: 100, x: "-50%", opacity: 0 }}
+                                  className="absolute bottom-12 left-1/2 px-8 py-4 border border-slate-300 dark:border-slate-600 rounded-full text-xs font-mono uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-500 active:scale-95 flex items-center gap-3 z-50 shadow-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md"
                               >
                                   <span>СВЯЗАТЬ С ЗАПИСЬЮ ({selectedNoteIdsForLinking.length})</span>
                               </motion.button>
