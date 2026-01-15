@@ -268,33 +268,6 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
     }
 };
 
-export const generateJourneyChallenge = async (noteContent: string, mentorId: string, config: AppConfig): Promise<string> => {
-    const mentor = config.mentors.find(m => m.id === mentorId) || config.mentors[0];
-    const model = mentor.model || DEFAULT_MODEL;
-    const ai = getAiClient();
-
-    const systemPrompt = `Ты — ${mentor.name}. Твоя задача — трансформировать мысль пользователя в конкретный, выполнимый вызов (Challenge) для реализации в реальной жизни.
-    Используй свой уникальный стиль и философию.
-    Вызов должен быть:
-    1. Конкретным (что сделать).
-    2. Ограниченным по времени (или иметь четкий критерий завершения).
-    3. Трансформирующим (меняющим поведение или восприятие).
-    
-    Верни только текст вызова в формате Markdown. Не используй списки, только описание.`;
-
-    try {
-        const response = await ai.models.generateContent({
-            model,
-            contents: `Мысль: "${noteContent}"`,
-            config: isGemmaModel(model) ? getGemmaConfig() : { systemInstruction: systemPrompt }
-        });
-        return applyTypography(response.text || "Не удалось создать вызов.");
-    } catch (e) {
-        console.error("Journey Challenge Error", e);
-        return "Ошибка связи с Ментором.";
-    }
-};
-
 export const analyzeJournalPath = async (entries: JournalEntry[], config: AppConfig): Promise<string> => {
     const tool = getToolConfig('journal_mentor', config);
     const model = tool.model || DEFAULT_MODEL;
