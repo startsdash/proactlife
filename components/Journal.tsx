@@ -1793,7 +1793,6 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                             {/* FOOTER ACTIONS */}
                                             <div className="mt-6 pt-4 border-t border-black/5 dark:border-white/5 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <div className="flex items-center gap-2">
-                                                    <JournalEntrySphereSelector entry={entry} updateEntry={updateEntry} align="left" direction="up" />
                                                     <Tooltip content="Привязать заметку">
                                                         <button 
                                                             onClick={(e) => handleOpenNoteLink(e, entry.id)}
@@ -2085,7 +2084,7 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                               className="my-masonry-grid"
                               columnClassName="my-masonry-grid_column"
                           >
-                              {notes.filter(n => n.status === 'inbox').map(note => {
+                              {notes.filter(n => n.status === 'archived').map(note => {
                                   const isSelected = selectedNoteIdsForLinking.includes(note.id);
                                   return (
                                       <div 
@@ -2111,10 +2110,10 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                   );
                               })}
                           </Masonry>
-                          {notes.filter(n => n.status === 'inbox').length === 0 && (
+                          {notes.filter(n => n.status === 'archived').length === 0 && (
                               <div className="flex flex-col items-center justify-center h-64 text-slate-400">
                                   <StickyNote size={48} className="opacity-20 mb-4" />
-                                  <p>Нет заметок во входящих</p>
+                                  <p>Библиотека пуста</p>
                               </div>
                           )}
                       </div>
@@ -2122,21 +2121,15 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                       {/* Floating Action Bar */}
                       <AnimatePresence>
                           {selectedNoteIdsForLinking.length > 0 && (
-                              <motion.div 
+                              <motion.button 
+                                  onClick={handleConfirmLinkNotes}
                                   initial={{ y: 100, opacity: 0 }}
                                   animate={{ y: 0, opacity: 1 }}
                                   exit={{ y: 100, opacity: 0 }}
-                                  className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 z-50"
+                                  className="absolute bottom-12 left-1/2 -translate-x-1/2 px-8 py-4 border border-slate-300 dark:border-slate-600 rounded-full text-xs font-mono uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-500 active:scale-95 flex items-center gap-3 z-50 shadow-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md"
                               >
-                                  <span className="text-xs font-bold whitespace-nowrap">Выбрано: {selectedNoteIdsForLinking.length}</span>
-                                  <div className="w-px h-4 bg-white/20 dark:bg-black/10" />
-                                  <button 
-                                      onClick={handleConfirmLinkNotes}
-                                      className="text-xs font-bold uppercase tracking-wider hover:text-indigo-400 dark:hover:text-indigo-600 transition-colors"
-                                  >
-                                      Связать с записью
-                                  </button>
-                              </motion.div>
+                                  <span>СВЯЗАТЬ С ЗАПИСЬЮ ({selectedNoteIdsForLinking.length})</span>
+                              </motion.button>
                           )}
                       </AnimatePresence>
                   </motion.div>
