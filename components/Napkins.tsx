@@ -11,7 +11,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, User } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, User, Target, Compass, Cpu, Activity } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -265,8 +265,8 @@ const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorI
 
 // --- COMPONENTS ---
 
-// Hero's Journey Modal - Redesigned as "Transformation Control Panel"
-const HeroJourneyModal = ({ 
+// SYNTHESIS CHAMBER (Replaces HeroJourneyModal)
+const SynthesisChamber = ({ 
     note, 
     onClose, 
     onAddTask,
@@ -281,56 +281,22 @@ const HeroJourneyModal = ({
     onAddJournalEntry: (entry: JournalEntry) => void;
     onMoveToSandbox: (id: string) => void;
 }) => {
-    // State for local micro-forms
-    const [activePortal, setActivePortal] = useState<'kanban' | 'habits' | 'journal' | 'hub' | null>(null);
-    const [completedPaths, setCompletedPaths] = useState<Set<string>>(new Set());
+    // --- STATE ---
+    const [density, setDensity] = useState(0); // 0 = Chaos, 100 = Crystal
+    const [activeBridge, setActiveBridge] = useState<'sprint' | 'ritual' | 'journal' | null>(null);
+    const [completedBridges, setCompletedBridges] = useState<Set<string>>(new Set());
     
-    // Form States
+    // Input States
     const [taskTitle, setTaskTitle] = useState(note.title || note.content.substring(0, 30));
-    const [habitFreq, setHabitFreq] = useState<'daily' | 'specific_days'>('daily');
     
-    // Helper to generate SVG paths connecting center to satellites
-    // Center is approx (50%, 50%). Satellites are positioned via absolute percentages.
-    const renderConnectionLine = (target: 'top' | 'right' | 'bottom' | 'left', isActive: boolean, isCompleted: boolean) => {
-        const center = { x: 50, y: 50 };
-        const targets = {
-            top: { x: 50, y: 15 },
-            right: { x: 85, y: 50 },
-            bottom: { x: 50, y: 85 },
-            left: { x: 15, y: 50 }
-        };
-        const t = targets[target];
-        const color = isCompleted ? (
-            target === 'top' ? '#f59e0b' : // Amber (Hub)
-            target === 'right' ? '#10b981' : // Emerald (Kanban)
-            target === 'bottom' ? '#06b6d4' : // Cyan (Journal)
-            '#f43f5e' // Rose (Habits)
-        ) : '#475569'; // Slate-600
+    // Calculate Density based on completion
+    useEffect(() => {
+        const count = completedBridges.size;
+        setDensity(count * 33.3);
+    }, [completedBridges]);
 
-        return (
-            <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <line 
-                    x1={center.x} y1={center.y} 
-                    x2={t.x} y2={t.y} 
-                    stroke={color} 
-                    strokeWidth={isCompleted ? 0.8 : 0.3} 
-                    strokeDasharray={isCompleted ? "none" : "2 2"}
-                    className="transition-all duration-500"
-                />
-                {isCompleted && (
-                    <circle r="1" fill={color}>
-                        <animateMotion 
-                            dur="2s" 
-                            repeatCount="indefinite"
-                            path={`M${center.x},${center.y} L${t.x},${t.y}`}
-                        />
-                    </circle>
-                )}
-            </svg>
-        );
-    };
-
-    const handleCreateTask = () => {
+    // --- ACTIONS ---
+    const handleIntegrateSprint = () => {
         onAddTask({
             id: Date.now().toString(),
             title: taskTitle,
@@ -338,17 +304,17 @@ const HeroJourneyModal = ({
             column: 'todo',
             createdAt: Date.now()
         });
-        setCompletedPaths(prev => new Set(prev).add('kanban'));
-        setActivePortal(null);
+        setCompletedBridges(prev => new Set(prev).add('sprint'));
+        setActiveBridge(null);
     };
 
-    const handleCreateHabit = () => {
+    const handleIntegrateRitual = () => {
         if (onAddHabit) {
             onAddHabit({
                 id: Date.now().toString(),
-                title: note.title || 'Новая привычка',
+                title: note.title || 'Новый Ритуал',
                 description: note.content.substring(0, 100),
-                frequency: habitFreq as any,
+                frequency: 'daily',
                 createdAt: Date.now(),
                 history: {},
                 streak: 0,
@@ -357,12 +323,12 @@ const HeroJourneyModal = ({
                 icon: 'Zap',
                 reminders: []
             });
-            setCompletedPaths(prev => new Set(prev).add('habits'));
-            setActivePortal(null);
+            setCompletedBridges(prev => new Set(prev).add('ritual'));
+            setActiveBridge(null);
         }
     };
 
-    const handleCreateInsight = () => {
+    const handleIntegrateJournal = () => {
         onAddJournalEntry({
             id: Date.now().toString(),
             date: Date.now(),
@@ -371,200 +337,223 @@ const HeroJourneyModal = ({
             isInsight: true,
             title: note.title
         });
-        setCompletedPaths(prev => new Set(prev).add('journal'));
-        setActivePortal(null);
+        setCompletedBridges(prev => new Set(prev).add('journal'));
+        setActiveBridge(null);
     };
 
-    const handleHubAction = () => {
-        onMoveToSandbox(note.id);
-        setCompletedPaths(prev => new Set(prev).add('hub'));
-        setActivePortal(null);
-    };
+    // --- VISUALIZATIONS ---
+    const isCrystal = density >= 90;
 
     return createPortal(
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-[#0f172a]/90 backdrop-blur-xl"
-                onClick={onClose}
-            />
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-xl animate-in fade-in duration-500">
+            <div className="w-[900px] h-[700px] relative bg-[#020617]/80 border border-white/5 rounded-[40px] overflow-hidden shadow-2xl flex flex-col">
+                
+                {/* BACKGROUND GRID & SCALES */}
+                <div className="absolute inset-0 pointer-events-none opacity-20" 
+                     style={{ backgroundImage: 'radial-gradient(#475569 1px, transparent 1px)', backgroundSize: '40px 40px' }} 
+                />
+                
+                {/* VERNIER SCALES (Top) */}
+                <div className="absolute top-8 left-0 right-0 flex justify-center gap-2 pointer-events-none opacity-50">
+                    {Array.from({length: 40}).map((_, i) => (
+                        <div key={i} className={`w-px bg-slate-500 ${i % 5 === 0 ? 'h-3' : 'h-1.5'}`} />
+                    ))}
+                </div>
+                <div className="absolute top-12 left-1/2 -translate-x-1/2 font-mono text-[9px] text-slate-500 tracking-[0.3em]">
+                    DENSITY_SCAN: {Math.round(density)}%
+                </div>
 
-            <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                className="relative w-full max-w-4xl h-[600px] flex items-center justify-center"
-                onClick={e => e.stopPropagation()}
-            >
-                {/* CONNECTIONS LAYER */}
-                {renderConnectionLine('top', activePortal === 'hub', completedPaths.has('hub'))}
-                {renderConnectionLine('right', activePortal === 'kanban', completedPaths.has('kanban'))}
-                {renderConnectionLine('bottom', activePortal === 'journal', completedPaths.has('journal'))}
-                {renderConnectionLine('left', activePortal === 'habits', completedPaths.has('habits'))}
-
-                {/* --- CENTRAL NODE --- */}
-                <div className="relative z-30 w-72 h-72 rounded-full border border-white/10 bg-black/40 backdrop-blur-md shadow-[0_0_50px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center p-8 text-center group transition-all">
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-[9px] font-mono text-slate-500 uppercase tracking-[0.2em]">
-                        ИСХОДНАЯ МЫСЛЬ
-                    </div>
+                {/* CENTRAL VORTEX (THE ALCHEMY) */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] flex items-center justify-center pointer-events-none">
                     
-                    <div className="overflow-y-auto custom-scrollbar-ghost max-h-[80%] w-full">
-                        <div className="text-slate-200 font-serif text-sm leading-relaxed">
-                            <ReactMarkdown components={{...markdownComponents, p: ({children}) => <span className="text-slate-200 block mb-2">{children}</span>}}>
+                    {/* Neural Fog (Chaos Layers) */}
+                    <motion.div 
+                        className="absolute inset-0 rounded-full bg-indigo-500/10 blur-[80px]"
+                        animate={{ scale: isCrystal ? 0.2 : 1, opacity: isCrystal ? 0.5 : 0.2 }}
+                        transition={{ duration: 1 }}
+                    />
+                    
+                    {/* Spinning Rings */}
+                    <motion.div 
+                        className="absolute w-[400px] h-[400px] border border-dashed border-slate-700/50 rounded-full"
+                        animate={{ rotate: 360, scale: isCrystal ? 0.5 : 1 }}
+                        transition={{ duration: isCrystal ? 10 : 60, repeat: Infinity, ease: "linear" }}
+                    />
+                    <motion.div 
+                        className="absolute w-[280px] h-[280px] border border-dotted border-slate-600/50 rounded-full"
+                        animate={{ rotate: -360, scale: isCrystal ? 0.4 : 1 }}
+                        transition={{ duration: isCrystal ? 8 : 40, repeat: Infinity, ease: "linear" }}
+                    />
+
+                    {/* The Core (Note Content) */}
+                    <motion.div 
+                        className={`
+                            relative z-10 w-64 h-64 flex flex-col items-center justify-center text-center p-6
+                            transition-all duration-1000
+                            ${isCrystal ? 'bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_0_50px_rgba(255,255,255,0.2)]' : 'bg-transparent'}
+                        `}
+                        style={{ borderRadius: isCrystal ? '10%' : '50%' }}
+                    >
+                        <div className="overflow-hidden max-h-full">
+                            <p className="font-serif text-slate-300 text-sm leading-relaxed line-clamp-6 opacity-80 mix-blend-plus-lighter">
                                 {note.content}
-                            </ReactMarkdown>
+                            </p>
+                        </div>
+                    </motion.div>
+                </div>
+
+                {/* STRUCTURAL BRIDGES (MODULES) */}
+                
+                {/* 1. SPRINT BRIDGE (Right) */}
+                <div className="absolute top-1/2 right-12 -translate-y-1/2 flex items-center gap-4">
+                    {/* Laser Beam */}
+                    <div className={`h-[1px] w-24 transition-all duration-500 ${activeBridge === 'sprint' || completedBridges.has('sprint') ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-slate-800'}`} />
+                    
+                    <div className="relative group">
+                        {activeBridge === 'sprint' && (
+                            <motion.div 
+                                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+                                className="absolute right-full mr-6 top-1/2 -translate-y-1/2 w-64 bg-slate-900/90 backdrop-blur-md border border-emerald-500/30 p-4 rounded-xl shadow-2xl"
+                            >
+                                <div className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-3">Интеграция в Спринт</div>
+                                <input 
+                                    className="w-full bg-black/30 border border-slate-700 rounded p-2 text-xs text-white mb-3 outline-none focus:border-emerald-500 font-mono"
+                                    placeholder="ОПРЕДЕЛИТЬ ЦЕЛЬ..."
+                                    value={taskTitle}
+                                    onChange={e => setTaskTitle(e.target.value)}
+                                    autoFocus
+                                />
+                                <div className="flex gap-2">
+                                    <button onClick={handleIntegrateSprint} className="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[10px] py-2 rounded uppercase tracking-wider transition-colors border border-emerald-500/20">
+                                        Подтвердить
+                                    </button>
+                                    <button onClick={() => setActiveBridge(null)} className="px-3 text-slate-500 hover:text-slate-300">
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+                        
+                        <button 
+                            onClick={() => setActiveBridge('sprint')}
+                            disabled={completedBridges.has('sprint')}
+                            className={`
+                                w-16 h-16 rounded-2xl border flex items-center justify-center transition-all duration-500
+                                ${completedBridges.has('sprint') 
+                                    ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]' 
+                                    : activeBridge === 'sprint' ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-slate-900/50 border-slate-700 text-slate-500 hover:border-emerald-500/50 hover:text-emerald-400'}
+                            `}
+                        >
+                            <Kanban size={24} strokeWidth={1.5} />
+                        </button>
+                        <div className="absolute top-full mt-2 w-full text-center text-[9px] font-mono uppercase tracking-widest text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                            Спринт
                         </div>
                     </div>
                 </div>
 
-                {/* --- SATELLITES (PORTALS) --- */}
-
-                {/* TOP: HUB (MENTOR) */}
-                <div className="absolute top-[15%] left-1/2 -translate-x-1/2 z-40">
-                    <AnimatePresence>
-                        {activePortal === 'hub' ? (
+                {/* 2. RITUAL BRIDGE (Left) */}
+                <div className="absolute top-1/2 left-12 -translate-y-1/2 flex items-center gap-4 flex-row-reverse">
+                    {/* Pulse Line */}
+                    <div className={`h-[1px] w-24 transition-all duration-500 ${activeBridge === 'ritual' || completedBridges.has('ritual') ? 'bg-rose-500 shadow-[0_0_10px_#f43f5e]' : 'bg-slate-800'}`} />
+                    
+                    <div className="relative group">
+                        {activeBridge === 'ritual' && (
                             <motion.div 
-                                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                                className="bg-slate-900 border border-amber-500/30 rounded-xl p-3 w-48 text-center shadow-2xl"
+                                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+                                className="absolute left-full ml-6 top-1/2 -translate-y-1/2 w-56 bg-slate-900/90 backdrop-blur-md border border-rose-500/30 p-4 rounded-xl shadow-2xl"
                             >
-                                <div className="text-[10px] font-bold text-amber-500 uppercase mb-2">Мудрость</div>
-                                <button onClick={handleHubAction} className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs rounded transition-colors uppercase tracking-wider">
-                                    Позвать учителя
+                                <div className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mb-3">Закрепить поведением</div>
+                                <button onClick={handleIntegrateRitual} className="w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] py-2 rounded uppercase tracking-wider transition-colors border border-rose-500/20 mb-2">
+                                    Создать ритуал (Daily)
                                 </button>
-                                <button onClick={() => setActivePortal(null)} className="mt-2 text-[9px] text-slate-500 hover:text-slate-300">Отмена</button>
+                                <button onClick={() => setActiveBridge(null)} className="w-full text-center text-[9px] text-slate-500 hover:text-slate-300">
+                                    Отмена
+                                </button>
                             </motion.div>
-                        ) : (
-                            <button 
-                                onClick={() => setActivePortal('hub')}
-                                className={`w-14 h-14 rounded-full bg-slate-900 border flex items-center justify-center transition-all duration-500 ${completedPaths.has('hub') ? 'border-amber-500 text-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.4)]' : 'border-slate-700 text-slate-500 hover:border-amber-500 hover:text-amber-500'}`}
-                            >
-                                <Box size={24} strokeWidth={1.5} />
-                            </button>
                         )}
-                    </AnimatePresence>
+
+                        <button 
+                            onClick={() => setActiveBridge('ritual')}
+                            disabled={completedBridges.has('ritual')}
+                            className={`
+                                w-16 h-16 rounded-full border flex items-center justify-center transition-all duration-500
+                                ${completedBridges.has('ritual') 
+                                    ? 'bg-rose-500/10 border-rose-500 text-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.3)]' 
+                                    : activeBridge === 'ritual' ? 'bg-rose-500 text-white border-rose-500' : 'bg-slate-900/50 border-slate-700 text-slate-500 hover:border-rose-500/50 hover:text-rose-400'}
+                            `}
+                        >
+                            <Flame size={24} strokeWidth={1.5} />
+                        </button>
+                        <div className="absolute top-full mt-2 w-full text-center text-[9px] font-mono uppercase tracking-widest text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                            Трекер
+                        </div>
+                    </div>
                 </div>
 
-                {/* RIGHT: KANBAN (SPRINT) */}
-                <div className="absolute right-[10%] top-1/2 -translate-y-1/2 z-40">
-                    <AnimatePresence>
-                        {activePortal === 'kanban' ? (
+                {/* 3. JOURNAL BRIDGE (Bottom) */}
+                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">
+                    <div className="relative group">
+                        {activeBridge === 'journal' && (
                             <motion.div 
-                                initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
-                                className="bg-slate-900 border border-emerald-500/30 rounded-xl p-3 w-64 shadow-2xl"
+                                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                                className="absolute bottom-full mb-6 left-1/2 -translate-x-1/2 w-48 bg-slate-900/90 backdrop-blur-md border border-cyan-500/30 p-4 rounded-xl shadow-2xl text-center"
                             >
-                                <div className="text-[10px] font-bold text-emerald-500 uppercase mb-2">Создать задачу</div>
-                                <input 
-                                    value={taskTitle} 
-                                    onChange={(e) => setTaskTitle(e.target.value)}
-                                    className="w-full bg-black/30 border border-slate-700 rounded p-1.5 text-xs text-white mb-2 outline-none focus:border-emerald-500"
-                                    placeholder="Название задачи..."
-                                />
-                                <button onClick={handleCreateTask} className="w-full py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs rounded transition-colors uppercase tracking-wider">
-                                    Отправить в спринт
+                                <div className="text-[9px] font-bold text-cyan-500 uppercase tracking-widest mb-3">Осознать инсайт</div>
+                                <button onClick={handleIntegrateJournal} className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-[10px] py-2 rounded uppercase tracking-wider transition-colors border border-cyan-500/20 mb-2">
+                                    В Дневник
                                 </button>
-                                <button onClick={() => setActivePortal(null)} className="mt-2 w-full text-center text-[9px] text-slate-500 hover:text-slate-300">Отмена</button>
-                            </motion.div>
-                        ) : (
-                            <button 
-                                onClick={() => setActivePortal('kanban')}
-                                className={`w-14 h-14 rounded-full bg-slate-900 border flex items-center justify-center transition-all duration-500 ${completedPaths.has('kanban') ? 'border-emerald-500 text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'border-slate-700 text-slate-500 hover:border-emerald-500 hover:text-emerald-500'}`}
-                            >
-                                <Kanban size={24} strokeWidth={1.5} />
-                            </button>
-                        )}
-                    </AnimatePresence>
-                </div>
-
-                {/* BOTTOM: JOURNAL (INSIGHT) */}
-                <div className="absolute bottom-[15%] left-1/2 -translate-x-1/2 z-40">
-                    <AnimatePresence>
-                        {activePortal === 'journal' ? (
-                            <motion.div 
-                                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                                className="bg-slate-900 border border-cyan-500/30 rounded-xl p-3 w-48 text-center shadow-2xl"
-                            >
-                                <div className="text-[10px] font-bold text-cyan-500 uppercase mb-2">Рефлексия</div>
-                                <button onClick={handleCreateInsight} className="w-full py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-xs rounded transition-colors uppercase tracking-wider">
-                                    Инсайт в дневник
+                                <button onClick={() => setActiveBridge(null)} className="text-[9px] text-slate-500 hover:text-slate-300">
+                                    Отмена
                                 </button>
-                                <button onClick={() => setActivePortal(null)} className="mt-2 text-[9px] text-slate-500 hover:text-slate-300">Отмена</button>
                             </motion.div>
-                        ) : (
-                            <button 
-                                onClick={() => setActivePortal('journal')}
-                                className={`w-14 h-14 rounded-full bg-slate-900 border flex items-center justify-center transition-all duration-500 ${completedPaths.has('journal') ? 'border-cyan-500 text-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.4)]' : 'border-slate-700 text-slate-500 hover:border-cyan-500 hover:text-cyan-500'}`}
-                            >
-                                <Book size={24} strokeWidth={1.5} />
-                            </button>
                         )}
-                    </AnimatePresence>
+
+                        <button 
+                            onClick={() => setActiveBridge('journal')}
+                            disabled={completedBridges.has('journal')}
+                            className={`
+                                w-14 h-14 rounded-xl rotate-45 border flex items-center justify-center transition-all duration-500
+                                ${completedBridges.has('journal') 
+                                    ? 'bg-cyan-500/10 border-cyan-500 text-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.3)]' 
+                                    : activeBridge === 'journal' ? 'bg-cyan-500 text-white border-cyan-500' : 'bg-slate-900/50 border-slate-700 text-slate-500 hover:border-cyan-500/50 hover:text-cyan-400'}
+                            `}
+                        >
+                            <Book size={20} strokeWidth={1.5} className="-rotate-45" />
+                        </button>
+                    </div>
+                    {/* Portal Beam */}
+                    <div className={`w-[1px] h-16 transition-all duration-500 ${activeBridge === 'journal' || completedBridges.has('journal') ? 'bg-cyan-500 shadow-[0_0_10px_#06b6d4]' : 'bg-slate-800'}`} />
                 </div>
 
-                {/* LEFT: RITUALS (HABIT) */}
-                <div className="absolute left-[10%] top-1/2 -translate-y-1/2 z-40">
-                    <AnimatePresence>
-                        {activePortal === 'habits' ? (
-                            <motion.div 
-                                initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}
-                                className="bg-slate-900 border border-rose-500/30 rounded-xl p-3 w-56 shadow-2xl"
-                            >
-                                <div className="text-[10px] font-bold text-rose-500 uppercase mb-2">Сделать привычкой</div>
-                                <div className="flex gap-2 mb-3">
-                                    <button 
-                                        onClick={() => setHabitFreq('daily')}
-                                        className={`flex-1 py-1 text-[9px] uppercase border rounded ${habitFreq === 'daily' ? 'bg-rose-500 text-white border-rose-500' : 'border-slate-600 text-slate-400'}`}
-                                    >
-                                        Daily
-                                    </button>
-                                    <button 
-                                        onClick={() => setHabitFreq('specific_days')}
-                                        className={`flex-1 py-1 text-[9px] uppercase border rounded ${habitFreq === 'specific_days' ? 'bg-rose-500 text-white border-rose-500' : 'border-slate-600 text-slate-400'}`}
-                                    >
-                                        Days
-                                    </button>
-                                </div>
-                                <button onClick={handleCreateHabit} className="w-full py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs rounded transition-colors uppercase tracking-wider">
-                                    Создать ритуал
-                                </button>
-                                <button onClick={() => setActivePortal(null)} className="mt-2 w-full text-center text-[9px] text-slate-500 hover:text-slate-300">Отмена</button>
-                            </motion.div>
-                        ) : (
-                            <button 
-                                onClick={() => setActivePortal('habits')}
-                                className={`w-14 h-14 rounded-full bg-slate-900 border flex items-center justify-center transition-all duration-500 ${completedPaths.has('habits') ? 'border-rose-500 text-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.4)]' : 'border-slate-700 text-slate-500 hover:border-rose-500 hover:text-rose-500'}`}
-                            >
-                                <Flame size={24} strokeWidth={1.5} />
-                            </button>
-                        )}
-                    </AnimatePresence>
-                </div>
+                {/* FOOTER: BIO-BALANCE & ACTION */}
+                <div className="mt-auto h-20 bg-slate-900/50 border-t border-white/5 flex items-center justify-between px-8 relative z-20 backdrop-blur-md">
+                    <div className="flex items-center gap-4">
+                        <div className="flex flex-col gap-1">
+                            <div className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Bio-Balance Impact</div>
+                            <div className="flex gap-2">
+                                {completedBridges.has('sprint') && <span className="text-[10px] text-emerald-400 font-bold uppercase">+5% Growth</span>}
+                                {completedBridges.has('ritual') && <span className="text-[10px] text-rose-400 font-bold uppercase">+3% Willpower</span>}
+                                {completedBridges.has('journal') && <span className="text-[10px] text-cyan-400 font-bold uppercase">+4% Wisdom</span>}
+                                {completedBridges.size === 0 && <span className="text-[10px] text-slate-600 font-mono">-- WAITING FOR INPUT --</span>}
+                            </div>
+                        </div>
+                    </div>
 
-                {/* TELEMETRY CORNERS */}
-                <div className="absolute top-0 left-0 font-mono text-[10px] text-slate-500 leading-tight">
-                    <div>[ЭТАП]: ВЫБОР ПУТИ</div>
-                    <div>[СТАТУС]: АНАЛИЗ</div>
-                </div>
-                
-                <div className="absolute top-0 right-0 font-mono text-[10px] text-slate-500 leading-tight text-right">
-                    <div>[ЭНЕРГИЯ]: 100%</div>
-                    <div>ID: {note.id.slice(-4)}</div>
-                </div>
-
-                {/* FOOTER ACTION */}
-                <div className="absolute bottom-0 w-full flex justify-center">
                     <button 
                         onClick={onClose}
-                        className="px-6 py-2 border border-slate-700 rounded-full text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400 hover:bg-slate-800 hover:text-white transition-all"
+                        className={`
+                            px-8 py-3 rounded-full font-mono text-[10px] uppercase tracking-[0.2em] font-bold transition-all duration-500
+                            ${completedBridges.size > 0 
+                                ? 'bg-white text-black hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)]' 
+                                : 'bg-slate-800 text-slate-500 hover:text-slate-300'}
+                        `}
                     >
-                        ОСТАВИТЬ В БИБЛИОТЕКЕ
+                        ЗАФИКСИРОВАТЬ ТРАНСФОРМАЦИЮ
                     </button>
                 </div>
 
-            </motion.div>
+            </div>
         </div>,
         document.body
     );
@@ -1867,10 +1856,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </div>
       </div>
       
-      {/* HERO JOURNEY MODAL */}
+      {/* SYNTHESIS CHAMBER (Replaced Hero's Journey Modal) */}
       <AnimatePresence>
           {heroJourneyNote && (
-              <HeroJourneyModal 
+              <SynthesisChamber 
                   note={heroJourneyNote} 
                   onClose={() => setHeroJourneyNote(null)}
                   onAddTask={onAddTask}
