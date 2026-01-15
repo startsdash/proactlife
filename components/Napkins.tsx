@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -10,7 +12,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Link as LinkIcon, CheckCircle2 } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -32,10 +34,6 @@ interface Props {
   initialNoteId?: string | null;
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
-  // Selection Mode Props
-  selectionMode?: boolean;
-  onLinkSelected?: (ids: string[]) => void;
-  onCancelSelection?: () => void;
 }
 
 const colors = [
@@ -88,27 +86,42 @@ const getPreviewContent = (content: string) => {
     cleanText = cleanText.replace(/[ \t]+/g, ' ').trim();
 
     // 3. Smart Truncation (2-3 sentences)
+    // Split by sentence terminators followed by space or newline
     const sentences = cleanText.match(/[^\.!\?]+[\.!\?]+(?=\s|$)/g) || [cleanText];
+    
+    // Determine how many sentences to show based on length
     let limit = 0;
     let sentenceCount = 0;
     
+    // Try to get at least 2 sentences, up to 3, but watch char count
     for (let s of sentences) {
-        if (sentenceCount >= 3) break; 
-        if (limit + s.length > 300 && sentenceCount >= 1) break; 
+        if (sentenceCount >= 3) break; // Max 3 sentences
+        if (limit + s.length > 300 && sentenceCount >= 1) break; // If adding next makes it huge, stop
         limit += s.length;
         sentenceCount++;
     }
 
     let preview = sentences.slice(0, sentenceCount).join(' ');
-    if (preview.length === 0 && cleanText.length > 0) preview = cleanText;
+    
+    // Fallback if sentences detection failed or text is one giant block
+    if (preview.length === 0 && cleanText.length > 0) {
+        preview = cleanText;
+    }
 
+    // Hard cap at 300 chars to prevent overflow, but respect word boundaries
     if (preview.length > 300) {
         preview = preview.slice(0, 300);
         const lastSpace = preview.lastIndexOf(' ');
-        if (lastSpace > 0) preview = preview.slice(0, lastSpace);
+        if (lastSpace > 0) {
+            preview = preview.slice(0, lastSpace);
+        }
     }
 
-    if (preview.length < cleanText.length) preview = preview.replace(/[\.!\?,\s]+$/, '') + '...';
+    // Add ellipsis if we cut content
+    if (preview.length < cleanText.length) {
+        // Remove trailing punctuation before adding ellipsis
+        preview = preview.replace(/[\.!\?,\s]+$/, '') + '...';
+    }
     
     return preview;
 };
@@ -199,6 +212,7 @@ const htmlToMarkdown = (html: string) => {
                 case 'code': return `\`${content}\``;
                 case 'h1': return `\n# ${content}\n`;
                 case 'h2': return `\n## ${content}\n`;
+                // Improved block handling:
                 case 'div': return content ? `\n${content}` : '\n'; 
                 case 'p': return `\n${content}\n`;
                 case 'br': return '\n';
@@ -210,6 +224,7 @@ const htmlToMarkdown = (html: string) => {
     };
     
     let md = walk(temp);
+    // Cleanup aggressive newlines but keep paragraphs
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
@@ -219,22 +234,28 @@ const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
     
+    // Headers
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
     
+    // Formatting
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
     html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
     html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
     html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
     
+    // Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
     
+    // Improved Line Breaks: Wrap loose lines in divs to simulate standard contentEditable behavior
     const lines = html.split('\n');
     const processedLines = lines.map(line => {
+        // Leave block elements alone
         if (line.match(/^<(h1|h2|div|p|ul|ol|li|blockquote)/i)) return line;
+        // Wrap text lines in div
         return line.trim() ? `<div>${line}</div>` : '<div><br></div>';
     });
     
@@ -245,6 +266,7 @@ const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorI
 
 // --- COMPONENTS ---
 
+// Lightbox
 const Lightbox = ({ src, onClose }: { src: string, onClose: () => void }) => {
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -344,6 +366,7 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
 
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
+    // Graphite Ghost Style Links - No color change on hover, just underline
     a: ({node, ...props}: any) => <a className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer underline-offset-4 decoration-slate-300 dark:decoration-slate-600 transition-colors font-sans text-sm font-medium relative z-20 break-all" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
@@ -386,6 +409,7 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
         };
         
         const handleScroll = (event: Event) => {
+            // Fix: Check if scrolling happens inside the dropdown
             if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
                 return;
             }
@@ -633,7 +657,6 @@ interface NoteCardProps {
     note: Note;
     isArchived: boolean;
     isLinkedToJournal?: boolean;
-    selectionState?: { isSelected: boolean, isSelectionMode: boolean }; // New Prop
     handlers: {
         handleDragStart: (e: React.DragEvent, id: string) => void;
         handleDragOver: (e: React.DragEvent) => void;
@@ -650,7 +673,7 @@ interface NoteCardProps {
     }
 }
 
-const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal, selectionState, handlers }) => {
+const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal, handlers }) => {
     const [isExiting, setIsExiting] = useState(false);
     const linkUrl = findFirstUrl(note.content);
     
@@ -719,17 +742,14 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
         }
     };
 
-    const isSelectionMode = selectionState?.isSelectionMode;
-    const isSelected = selectionState?.isSelected;
-
     return (
         <div 
-            draggable={!isSelectionMode}
-            onDragStart={(e) => !isSelectionMode && handlers.handleDragStart(e, note.id)}
+            draggable
+            onDragStart={(e) => handlers.handleDragStart(e, note.id)}
             onDragOver={handlers.handleDragOver}
-            onDrop={(e) => !isSelectionMode && handlers.handleDrop(e, note.id)}
+            onDrop={(e) => handlers.handleDrop(e, note.id)}
             onClick={() => handlers.handleOpenNote(note)}
-            className={`${getNoteColorClass(note.color)} rounded-3xl transition-all duration-500 hover:-translate-y-[4px] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] group/card flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden mb-6 ${isExiting ? 'opacity-0 translate-x-full scale-90' : ''} ${isSelectionMode ? (isSelected ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-900' : 'opacity-60 hover:opacity-100') : ''}`}
+            className={`${getNoteColorClass(note.color)} rounded-3xl transition-all duration-500 hover:-translate-y-[4px] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] group/card flex flex-col cursor-default relative break-inside-avoid ${isArchived && !note.isPinned ? 'opacity-90' : ''} overflow-hidden mb-6 ${isExiting ? 'opacity-0 translate-x-full scale-90' : ''}`}
         >
             <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
@@ -737,29 +757,19 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                 <div className="h-40 w-full shrink-0 relative z-10"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
             )}
 
-            {isSelectionMode && (
-                <div className="absolute top-5 left-5 z-40">
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'bg-white/50 border-slate-300 dark:border-slate-600'}`}>
-                        {isSelected && <Check size={14} className="text-white" strokeWidth={3} />}
-                    </div>
-                </div>
-            )}
-
             <div className="absolute top-5 right-5 z-30">
-                {!isSelectionMode && (
-                    <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
-                        <button 
-                            onClick={(e) => handlers.togglePin(e, note)} 
-                            className={`p-2 rounded-full transition-all duration-300 ${
-                                note.isPinned 
-                                ? 'text-[#B0A0FF] opacity-50 hover:opacity-100 bg-transparent' 
-                                : 'text-slate-400 dark:text-slate-500 opacity-0 group-hover/card:opacity-100 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent'
-                            }`}
-                        >
-                            <Pin size={16} strokeWidth={1.5} className={note.isPinned ? "fill-current" : ""} />
-                        </button>
-                    </Tooltip>
-                )}
+                <Tooltip content={note.isPinned ? "Открепить" : "Закрепить"}>
+                    <button 
+                        onClick={(e) => handlers.togglePin(e, note)} 
+                        className={`p-2 rounded-full transition-all duration-300 ${
+                            note.isPinned 
+                            ? 'text-[#B0A0FF] opacity-50 hover:opacity-100 bg-transparent' 
+                            : 'text-slate-400 dark:text-slate-500 opacity-0 group-hover/card:opacity-100 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent'
+                        }`}
+                    >
+                        <Pin size={16} strokeWidth={1.5} className={note.isPinned ? "fill-current" : ""} />
+                    </button>
+                </Tooltip>
             </div>
 
             <div className="p-8 pb-16 w-full flex-1 relative z-10">
@@ -821,7 +831,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
             
             <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
-                    {!isSelectionMode && (!isArchived ? (
+                    {!isArchived ? (
                         <>
                             <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
                             
@@ -852,7 +862,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                         <Tooltip content="Вернуть во входящие">
                             <button onClick={(e) => { e.stopPropagation(); if(window.confirm('Вернуть во входящие?')) { handlers.moveNoteToInbox(note.id); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><RotateCcw size={16} strokeWidth={1.5} /></button>
                         </Tooltip>
-                    ))}
+                    )}
                 </div>
                 
                 <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
@@ -863,7 +873,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries, selectionMode, onLinkSelected, onCancelSelection }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -914,9 +924,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Selection Mode State
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
   // Memoize linked note IDs from journal entries for efficient checking
   const linkedNoteIds = useMemo(() => {
       const ids = new Set<string>();
@@ -925,23 +932,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
               if (entry.linkedNoteId && !entry.isArchived) {
                   ids.add(entry.linkedNoteId);
               }
-              if (entry.linkedNoteIds) {
-                  entry.linkedNoteIds.forEach(id => ids.add(id));
-              }
           });
       }
       return ids;
   }, [journalEntries]);
-
-  // Reset Selection Mode on unmount or mode change
-  useEffect(() => {
-      if (!selectionMode) {
-          setSelectedIds(new Set());
-      } else {
-          // Force active tab to inbox when entering selection mode
-          setActiveTab('inbox');
-      }
-  }, [selectionMode]);
 
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab as any);
@@ -1273,15 +1267,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   };
 
   const handleOpenNote = (note: Note) => {
-      if (selectionMode) {
-          // Toggle selection
-          const newSet = new Set(selectedIds);
-          if (newSet.has(note.id)) newSet.delete(note.id);
-          else newSet.add(note.id);
-          setSelectedIds(newSet);
-          return;
-      }
-
       setSelectedNote(note);
       setEditTitle(note.title || '');
       setEditTagsList(note.tags ? note.tags.map(t => t.replace(/^#/, '')) : []);
@@ -1290,16 +1275,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       setEditHistory([contentHtml]);
       setEditHistoryIndex(0);
       setIsEditing(false);
-  };
-
-  const handleConfirmSelection = () => {
-      if (onLinkSelected) {
-          onLinkSelected(Array.from(selectedIds));
-      }
-  };
-
-  const handleCancelSelection = () => {
-      if (onCancelSelection) onCancelSelection();
   };
 
   const handleSaveEdit = () => {
@@ -1365,7 +1340,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       onAddJournalEntry,
       addSketchItem,
       onImageClick: (src: string) => setLightboxSrc(src)
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc, selectionMode, selectedIds]);
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
 
   const markdownRenderComponents = {
       ...markdownComponents,
@@ -1382,24 +1357,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden relative">
+    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
       
-      {/* SELECTION BANNER */}
-      <AnimatePresence>
-      {selectionMode && (
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 dark:bg-white/90 backdrop-blur-md text-white dark:text-slate-900 pl-6 pr-3 py-2.5 rounded-full shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-4 zoom-in-95 duration-300">
-             <span className="text-sm font-medium font-sans">Выбрано: <b>{selectedIds.size}</b></span>
-             <div className="h-4 w-px bg-white/20 dark:bg-black/10"></div>
-             <button onClick={handleConfirmSelection} disabled={selectedIds.size === 0} className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50">
-                 Связать
-             </button>
-             <button onClick={handleCancelSelection} className="p-1.5 hover:bg-white/10 dark:hover:bg-black/10 rounded-full transition-colors">
-                 <X size={18}/>
-             </button>
-          </div>
-      )}
-      </AnimatePresence>
-
       {/* Global Lightbox for viewing images */}
       <AnimatePresence>
           {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
@@ -1408,19 +1367,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       <div className="shrink-0 w-full px-4 md:px-8 pt-4 md:pt-8 mb-4 z-50">
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">
-                    {selectionMode ? 'Выбор заметок' : 'Заметки'}
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">
-                    {selectionMode ? 'Отметьте заметки для привязки' : 'На скорости мысли'}
-                </p>
+                <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Заметки</h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">На скорости мысли</p>
                 </div>
-                {!selectionMode && (
-                    <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
-                        <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
-                        <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
-                    </div>
-                )}
+                <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
+                    <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
+                    <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
+                </div>
             </header>
       </div>
 
@@ -1480,13 +1433,13 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                         <Tooltip content="Поиск по тегам" side="bottom"><button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button></Tooltip>
                                         <Tooltip content="Фильтр по цвету" side="bottom"><button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button></Tooltip>
                                         {hasMoodMatcher && <Tooltip content="Подбор по теме (ИИ)" side="bottom"><button onClick={() => setShowMoodInput(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-purple-500 hover:bg-purple-50'}`}><Sparkles size={20} /></button></Tooltip>}
-                                        {!selectionMode && <Tooltip content="Рандом" side="bottom">
+                                        <Tooltip content="Рандом" side="bottom">
                                             <button onClick={startOracle} className="group relative p-3 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none">
                                                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
                                                 <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
                                                 <Dices size={20} className="relative z-10 text-white transition-transform duration-500 group-hover:rotate-180" />
                                             </button>
-                                        </Tooltip>}
+                                        </Tooltip>
                                     </>
                                 )}
                             </div>
@@ -1506,10 +1459,10 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     </div>
                 </motion.div>
 
-                <div className="w-full px-4 md:px-8 pt-6 pb-24">
+                <div className="w-full px-4 md:px-8 pt-6 pb-8">
                     {activeTab === 'inbox' && (
                         <>
-                            {!selectionMode && !searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
+                            {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
                                 <div className="max-w-3xl mx-auto w-full">
                                     <div ref={editorRef} className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative mb-8 ${isExpanded ? 'shadow-xl z-30' : 'shadow-sm hover:shadow-md'}`}>
                                         <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0 rounded-3xl"></div>
@@ -1572,16 +1525,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                             )}
                             {inboxNotes.length > 0 ? (
                                 <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                    {inboxNotes.map((note) => (
-                                        <NoteCard 
-                                            key={note.id} 
-                                            note={note} 
-                                            isArchived={false} 
-                                            handlers={cardHandlers} 
-                                            isLinkedToJournal={linkedNoteIds.has(note.id)} 
-                                            selectionState={selectionMode ? { isSelectionMode: true, isSelected: selectedIds.has(note.id) } : undefined}
-                                        />
-                                    ))}
+                                    {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
                                 </Masonry>
                             ) : (
                                 <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
@@ -1592,16 +1536,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         <>
                             {archivedNotes.length > 0 ? (
                                 <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                    {archivedNotes.map((note) => (
-                                        <NoteCard 
-                                            key={note.id} 
-                                            note={note} 
-                                            isArchived={true} 
-                                            handlers={cardHandlers} 
-                                            isLinkedToJournal={linkedNoteIds.has(note.id)} 
-                                            selectionState={selectionMode ? { isSelectionMode: true, isSelected: selectedIds.has(note.id) } : undefined}
-                                        />
-                                    ))}
+                                    {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
                                 </Masonry>
                             ) : (
                                 <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
