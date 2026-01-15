@@ -30,13 +30,12 @@ export interface Note {
   content: string;
   tags: string[];
   createdAt: number;
-  status: 'inbox' | 'sandbox' | 'archived' | 'trash' | 'journey';
-  previousStatus?: 'inbox' | 'sandbox' | 'archived' | 'journey';
+  status: 'inbox' | 'sandbox' | 'archived' | 'trash';
+  previousStatus?: 'inbox' | 'sandbox' | 'archived';
   isPinned?: boolean;
   color?: string;
   coverUrl?: string;
   connectedNoteIds?: string[];
-  journeyStartedAt?: number;
 }
 
 export interface SketchItem {
@@ -79,7 +78,6 @@ export interface Task {
   
   spheres?: string[];
   isArchived?: boolean;
-  originNoteId?: string; // Link to source note
 }
 
 export interface Flashcard {
@@ -113,7 +111,6 @@ export interface Habit {
   spheres?: string[];
   isArchived?: boolean;
   createdAt: number;
-  originNoteId?: string; // Link to source note
 }
 
 export interface Challenge {
