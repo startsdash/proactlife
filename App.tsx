@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
@@ -360,6 +361,12 @@ const App: React.FC = () => {
     };
   }, [data.config, isOwner, data.user]);
 
+  // Stats for Journey Map (Note: Passed into Napkins)
+  const journeyStats = useMemo(() => ({
+      notesCount: data.notes.length,
+      actionsCount: data.tasks.length + data.habits.length
+  }), [data.notes.length, data.tasks.length, data.habits.length]);
+
   // INVITE CODE VALIDATION
   const validateGuestSession = (code: string | null): boolean => {
       if (!code) return false;
@@ -458,16 +465,18 @@ const App: React.FC = () => {
             addNote={addNote} 
             moveNoteToSandbox={moveNoteToSandbox} 
             moveNoteToInbox={moveNoteToInbox} 
-            deleteNote={deleteNote} // Use soft delete
+            deleteNote={deleteNote} 
             reorderNote={reorderNote} 
             updateNote={updateNote} 
             archiveNote={archiveNote} 
             onAddTask={addTask} 
             onAddJournalEntry={addJournalEntry}
+            onAddHabit={addHabit} // Added for JourneyMap
             addSketchItem={addSketchItem} 
             initialNoteId={napkinsContextNoteId}
             onClearInitialNote={() => setNapkinsContextNoteId(null)}
             journalEntries={data.journal}
+            stats={journeyStats} // Added for JourneyMap
           />
       )}
       
@@ -501,8 +510,8 @@ const App: React.FC = () => {
             journal={data.journal} 
             restoreTask={restoreTask} 
             deleteTask={deleteTask} 
-            moveNoteToInbox={restoreNote} // Restore soft-deleted notes
-            deleteNote={hardDeleteNote} // Permanently delete notes
+            moveNoteToInbox={restoreNote} 
+            deleteNote={hardDeleteNote} 
             deleteJournalEntry={deleteJournalEntry} 
             restoreJournalEntry={restoreJournalEntry} 
           />
