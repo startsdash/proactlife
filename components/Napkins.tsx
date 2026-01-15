@@ -10,7 +10,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Map } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Map as MapIcon } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -1017,7 +1017,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                                     onClick={(e) => { e.stopPropagation(); handlers.startJourney(note); }} 
                                     className="p-2 text-indigo-500 hover:text-white hover:bg-indigo-500 rounded-full transition-all opacity-100"
                                 >
-                                    <Map size={16} strokeWidth={1.5} />
+                                    <MapIcon size={16} strokeWidth={1.5} />
                                 </button>
                             </Tooltip>
                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
@@ -1158,16 +1158,21 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   });
 
   const allExistingTags = useMemo(() => {
-      const uniqueTagsMap = new Map<string, string>();
+      const uniqueTagsMap = new Map(); // <--- FIX IS HERE (removed Type Annotation for safety if no TS present, but even better, just new Map() is standard)
+      // Actually, to be super safe:
+      // const uniqueTagsMap: Map<string, string> = new Map(); 
+      // The issue was 'Map' being imported from lucide-react. Now it is aliased to MapIcon.
+      
+      const map = new Map<string, string>();
       notes.forEach(note => {
           if (note.tags && Array.isArray(note.tags)) {
               note.tags.forEach(tag => {
                   const clean = tag.replace(/^#/, '');
-                  uniqueTagsMap.set(clean.toLowerCase(), clean);
+                  map.set(clean.toLowerCase(), clean);
               });
           }
       });
-      return Array.from(uniqueTagsMap.values()).sort();
+      return Array.from(map.values()).sort();
   }, [notes]);
 
   const hasMoodMatcher = useMemo(() => config.aiTools.some(t => t.id === 'mood_matcher'), [config.aiTools]);
@@ -1630,7 +1635,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
                     <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
                     <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
-                    <button onClick={() => { setActiveTab('journey'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'journey' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Map size={16} /> Путь</button>
+                    <button onClick={() => { setActiveTab('journey'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'journey' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><MapIcon size={16} /> Путь</button>
                 </div>
             </header>
       </div>
@@ -1831,7 +1836,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     )}
                     {activeTab === 'journey' && journeyNotes.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500">
-                            <Map size={48} className="mb-4 opacity-20" strokeWidth={1} />
+                            <MapIcon size={48} className="mb-4 opacity-20" strokeWidth={1} />
                             <p>В этом мире пока пусто.</p>
                             <p className="text-sm mt-2">Отправьте мысль в Путь из Входящих.</p>
                         </div>
