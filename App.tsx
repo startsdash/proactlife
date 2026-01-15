@@ -20,9 +20,7 @@ import LearningMode from './components/LearningMode';
 import UserSettings from './components/UserSettings';
 import Onboarding from './components/Onboarding';
 import Profile from './components/Profile'; 
-import JourneyLens from './components/JourneyLens';
 import { LogIn, Shield, CloudOff, ArrowRight } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
 
 const App: React.FC = () => {
   // --- THEME LOGIC ---
@@ -102,9 +100,6 @@ const App: React.FC = () => {
   const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
   const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null); // Context for navigation (Napkins)
   
-  // JOURNEY STATE
-  const [journeyNote, setJourneyNote] = useState<Note | null>(null);
-
   // INVITE CODE LOGIC
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [guestSessionCode, setGuestSessionCode] = useState<string | null>(() => {
@@ -443,96 +438,80 @@ const App: React.FC = () => {
   }
 
   return (
-    <>
-      <Layout 
-          currentModule={module} setModule={handleNavigate} syncStatus={syncStatus}
-          onConnectDrive={() => handleDriveConnect(false)} isDriveConnected={isDriveConnected}
-          isOwner={isOwner}
-          role={data.profileConfig?.role || 'architect'}
-          habits={data.habits}
-          config={data.config}
-          userEmail={data.user?.email}
-      >
-        <Onboarding onClose={() => setShowOnboarding(false)} />
-        {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
-        {module === Module.DASHBOARD && <Dashboard notes={data.notes.filter(n => n.status !== 'archived' && n.status !== 'trash')} tasks={data.tasks.filter(t => !t.isArchived)} habits={data.habits} journal={data.journal.filter(j => !j.isArchived)} onNavigate={handleNavigate} flashcards={data.flashcards} />}
-        
-        {module === Module.NAPKINS && (
-            <Napkins 
-              notes={data.notes.filter(n => n.status !== 'trash')} 
-              config={visibleConfig} 
-              addNote={addNote} 
-              moveNoteToSandbox={moveNoteToSandbox} 
-              moveNoteToInbox={moveNoteToInbox} 
-              deleteNote={deleteNote} // Use soft delete
-              reorderNote={reorderNote} 
-              updateNote={updateNote} 
-              archiveNote={archiveNote} 
-              onAddTask={addTask} 
-              onAddJournalEntry={addJournalEntry}
-              addSketchItem={addSketchItem} 
-              initialNoteId={napkinsContextNoteId}
-              onClearInitialNote={() => setNapkinsContextNoteId(null)}
-              journalEntries={data.journal}
-              onStartJourney={(note) => setJourneyNote(note)}
-            />
-        )}
-        
-        {module === Module.SKETCHPAD && (
-            <Sketchpad 
-              items={data.sketchpad || []} 
-              addItem={addSketchItem} 
-              deleteItem={deleteSketchItem} 
-              updateItem={updateSketchItem} 
-            />
-        )}
-
-        {module === Module.ETHER && (
-            <Ether 
-              notes={data.notes.filter(n => n.status !== 'archived' && n.status !== 'trash')} 
-              onUpdateNote={updateNote} 
-            />
-        )}
-
-        {module === Module.SANDBOX && <Sandbox notes={data.notes} tasks={data.tasks} flashcards={data.flashcards} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
-        {module === Module.KANBAN && <Kanban tasks={data.tasks.filter(t => !t.isArchived)} journalEntries={data.journal.filter(j => !j.isArchived)} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={archiveTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
-        {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
-        {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
-        {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} notes={data.notes} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} onNavigateToNote={handleNavigateToNote} />}
-        {module === Module.MOODBAR && <Moodbar entries={data.journal.filter(j => !j.isArchived)} onAddEntry={addJournalEntry} />}
-        
-        {module === Module.ARCHIVE && (
-            <Archive 
-              tasks={data.tasks} 
-              notes={data.notes} 
-              journal={data.journal} 
-              restoreTask={restoreTask} 
-              deleteTask={deleteTask} 
-              moveNoteToInbox={restoreNote} // Restore soft-deleted notes
-              deleteNote={hardDeleteNote} // Permanently delete notes
-              deleteJournalEntry={deleteJournalEntry} 
-              restoreJournalEntry={restoreJournalEntry} 
-            />
-        )}
-        
-        {module === Module.PROFILE && <Profile notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} flashcards={data.flashcards} config={data.profileConfig || { role: 'architect', manifesto: '...' }} onUpdateConfig={updateProfileConfig} />}
-        {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
-        {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}
-      </Layout>
-
-      <AnimatePresence>
-        {journeyNote && (
-          <JourneyLens 
-            note={journeyNote} 
-            config={visibleConfig}
-            onClose={() => setJourneyNote(null)}
-            onAddTask={addTask}
-            onAddHabit={addHabit}
+    <Layout 
+        currentModule={module} setModule={handleNavigate} syncStatus={syncStatus}
+        onConnectDrive={() => handleDriveConnect(false)} isDriveConnected={isDriveConnected}
+        isOwner={isOwner}
+        role={data.profileConfig?.role || 'architect'}
+        habits={data.habits}
+        config={data.config}
+        userEmail={data.user?.email}
+    >
+      <Onboarding onClose={() => setShowOnboarding(false)} />
+      {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
+      {module === Module.DASHBOARD && <Dashboard notes={data.notes.filter(n => n.status !== 'archived' && n.status !== 'trash')} tasks={data.tasks.filter(t => !t.isArchived)} habits={data.habits} journal={data.journal.filter(j => !j.isArchived)} onNavigate={handleNavigate} flashcards={data.flashcards} />}
+      
+      {module === Module.NAPKINS && (
+          <Napkins 
+            notes={data.notes.filter(n => n.status !== 'trash')} 
+            config={visibleConfig} 
+            addNote={addNote} 
+            moveNoteToSandbox={moveNoteToSandbox} 
+            moveNoteToInbox={moveNoteToInbox} 
+            deleteNote={deleteNote} // Use soft delete
+            reorderNote={reorderNote} 
+            updateNote={updateNote} 
+            archiveNote={archiveNote} 
+            onAddTask={addTask} 
             onAddJournalEntry={addJournalEntry}
+            addSketchItem={addSketchItem} 
+            initialNoteId={napkinsContextNoteId}
+            onClearInitialNote={() => setNapkinsContextNoteId(null)}
+            journalEntries={data.journal}
           />
-        )}
-      </AnimatePresence>
-    </>
+      )}
+      
+      {module === Module.SKETCHPAD && (
+          <Sketchpad 
+            items={data.sketchpad || []} 
+            addItem={addSketchItem} 
+            deleteItem={deleteSketchItem} 
+            updateItem={updateSketchItem} 
+          />
+      )}
+
+      {module === Module.ETHER && (
+          <Ether 
+            notes={data.notes.filter(n => n.status !== 'archived' && n.status !== 'trash')} 
+            onUpdateNote={updateNote} 
+          />
+      )}
+
+      {module === Module.SANDBOX && <Sandbox notes={data.notes} tasks={data.tasks} flashcards={data.flashcards} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
+      {module === Module.KANBAN && <Kanban tasks={data.tasks.filter(t => !t.isArchived)} journalEntries={data.journal.filter(j => !j.isArchived)} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={archiveTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
+      {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
+      {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
+      {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} notes={data.notes} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} onNavigateToNote={handleNavigateToNote} />}
+      {module === Module.MOODBAR && <Moodbar entries={data.journal.filter(j => !j.isArchived)} onAddEntry={addJournalEntry} />}
+      
+      {module === Module.ARCHIVE && (
+          <Archive 
+            tasks={data.tasks} 
+            notes={data.notes} 
+            journal={data.journal} 
+            restoreTask={restoreTask} 
+            deleteTask={deleteTask} 
+            moveNoteToInbox={restoreNote} // Restore soft-deleted notes
+            deleteNote={hardDeleteNote} // Permanently delete notes
+            deleteJournalEntry={deleteJournalEntry} 
+            restoreJournalEntry={restoreJournalEntry} 
+          />
+      )}
+      
+      {module === Module.PROFILE && <Profile notes={data.notes} tasks={data.tasks} habits={data.habits} journal={data.journal} flashcards={data.flashcards} config={data.profileConfig || { role: 'architect', manifesto: '...' }} onUpdateConfig={updateProfileConfig} />}
+      {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
+      {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}
+    </Layout>
   );
 };
 export default App;
