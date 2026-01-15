@@ -26,7 +26,8 @@ import {
   Flame,
   Book,
   Kanban as KanbanIcon,
-  CheckCircle2
+  CheckCircle2,
+  Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip } from './Tooltip';
