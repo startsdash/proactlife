@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
@@ -333,21 +332,6 @@ const App: React.FC = () => {
     handleNavigate(Module.NAPKINS);
   };
 
-  const handleConsultMentor = (content: string, mentorId: string) => {
-      // Create a temporary "sandbox" note to analyze
-      const tempId = Date.now().toString();
-      addNote({
-          id: tempId,
-          content: content,
-          createdAt: Date.now(),
-          status: 'sandbox',
-          tags: []
-      });
-      // Navigate to Sandbox
-      handleNavigate(Module.SANDBOX);
-      // In a real app, we might pass the mentorID context to Sandbox to auto-trigger analysis
-  };
-
   const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
   const updateProfileConfig = (newProfileConfig: UserProfileConfig) => setData(p => ({ ...p, profileConfig: newProfileConfig }));
   
@@ -481,6 +465,7 @@ const App: React.FC = () => {
             onAddTask={addTask} 
             onAddJournalEntry={addJournalEntry}
             addSketchItem={addSketchItem} 
+            addHabit={addHabit}
             initialNoteId={napkinsContextNoteId}
             onClearInitialNote={() => setNapkinsContextNoteId(null)}
             journalEntries={data.journal}
@@ -520,13 +505,7 @@ const App: React.FC = () => {
             moveNoteToInbox={restoreNote} // Restore soft-deleted notes
             deleteNote={hardDeleteNote} // Permanently delete notes
             deleteJournalEntry={deleteJournalEntry} 
-            restoreJournalEntry={restoreJournalEntry}
-            // Pass Journey Props
-            config={visibleConfig}
-            onAddTask={addTask}
-            onAddHabit={addHabit}
-            onAddJournalEntry={addJournalEntry}
-            onConsultMentor={handleConsultMentor}
+            restoreJournalEntry={restoreJournalEntry} 
           />
       )}
       

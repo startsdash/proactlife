@@ -4,13 +4,12 @@ import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
-import { Task, Note, JournalEntry, Habit } from '../types';
-import { RotateCcw, Trash2, Calendar, CheckCircle2, FileText, X, Zap, Circle, Archive as ArchiveIcon, Trophy, StickyNote, Book, Link, Map } from 'lucide-react';
+import { Task, Note, JournalEntry } from '../types';
+import { RotateCcw, Trash2, Calendar, CheckCircle2, FileText, X, Zap, Circle, Archive as ArchiveIcon, Trophy, StickyNote, Book, Link } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
 import { applyTypography } from '../constants';
-import { JourneyVisualizationModal } from './JourneyVisualizationModal';
 
 interface Props {
   tasks: Task[];
@@ -22,13 +21,6 @@ interface Props {
   deleteNote: (id: string) => void;
   deleteJournalEntry: (id: string) => void;
   restoreJournalEntry: (id: string) => void;
-  
-  // Props for Journey Modal Integration
-  config?: any; // To pass mentors to the modal
-  onAddTask?: (task: Task) => void;
-  onAddHabit?: (habit: Habit) => void;
-  onAddJournalEntry?: (entry: JournalEntry) => void;
-  onConsultMentor?: (content: string, mentorId: string) => void; // Could navigate to Sandbox
 }
 
 const colors = [
@@ -95,9 +87,8 @@ const markdownComponents = {
     img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
 };
 
-const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTask, moveNoteToInbox, deleteNote, deleteJournalEntry, restoreJournalEntry, config, onAddTask, onAddHabit, onAddJournalEntry, onConsultMentor }) => {
+const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTask, moveNoteToInbox, deleteNote, deleteJournalEntry, restoreJournalEntry }) => {
   const [activeTab, setActiveTab] = useState<'hall_of_fame' | 'notes' | 'journal'>('hall_of_fame');
-  const [selectedNoteForJourney, setSelectedNoteForJourney] = useState<Note | null>(null);
 
   // --- DATA FILTERING ---
   const archivedTasks = tasks
@@ -266,21 +257,10 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                     {/* Footer: Ghost Style - Hover Only */}
                     <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                         <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
-                            <Tooltip content="Начать Путь (Превратить в Действие)">
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); setSelectedNoteForJourney(note); }} 
-                                    className="p-2 text-indigo-500 hover:text-white bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-500 dark:hover:bg-indigo-500 rounded-full transition-all"
-                                >
-                                    <Map size={16} strokeWidth={1.5} />
-                                </button>
-                            </Tooltip>
-                            
-                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-
                             <Tooltip content="Вернуть в заметки">
                                 <button onClick={(e) => { e.stopPropagation(); if(confirm("Вернуть в заметки?")) moveNoteToInbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><RotateCcw size={16} strokeWidth={1.5} /></button>
                             </Tooltip>
-                            
+                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                             <Tooltip content="Удалить навсегда">
                                 <button onClick={(e) => { e.stopPropagation(); if(confirm('Удалить навсегда?')) deleteNote(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Trash2 size={16} strokeWidth={1.5} /></button>
                             </Tooltip>
@@ -425,21 +405,6 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
             {activeTab === 'journal' && renderJournal()}
         </motion.div>
       </div>
-
-      {/* Journey Modal */}
-      <AnimatePresence>
-          {selectedNoteForJourney && config && onAddTask && onAddHabit && onAddJournalEntry && onConsultMentor && (
-              <JourneyVisualizationModal 
-                  note={selectedNoteForJourney}
-                  config={config}
-                  onClose={() => setSelectedNoteForJourney(null)}
-                  onCreateTask={(t) => { onAddTask(t); deleteNote(selectedNoteForJourney.id); }} // Consumes note (soft delete)
-                  onCreateHabit={(h) => { onAddHabit(h); deleteNote(selectedNoteForJourney.id); }}
-                  onCreateEntry={(e) => { onAddJournalEntry(e); deleteNote(selectedNoteForJourney.id); }}
-                  onConsultMentor={(c, m) => { onConsultMentor(c, m); deleteNote(selectedNoteForJourney.id); }}
-              />
-          )}
-      </AnimatePresence>
     </div>
   );
 };
