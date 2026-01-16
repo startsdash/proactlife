@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
@@ -466,6 +467,8 @@ const App: React.FC = () => {
             onAddTask={addTask} 
             onAddJournalEntry={addJournalEntry}
             addSketchItem={addSketchItem} 
+            deleteFlashcard={deleteFlashcard} // Added
+            toggleFlashcardStar={toggleFlashcardStar} // Added
             initialNoteId={napkinsContextNoteId}
             onClearInitialNote={() => setNapkinsContextNoteId(null)}
             journalEntries={data.journal}
