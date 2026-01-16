@@ -845,9 +845,10 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                             <Tooltip content="В путь">
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); handlers.startHeroJourney(note); }}
-                                    className="p-2 text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-full transition-all hover:scale-110 shadow-[0_0_10px_rgba(99,102,241,0.3)] animate-pulse hover:animate-none"
+                                    className="relative p-2 text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-full transition-all hover:scale-110 shadow-[0_0_15px_rgba(99,102,241,0.5)] group/rocket overflow-hidden"
                                 >
-                                    <Rocket size={16} strokeWidth={1.5} className="fill-current" />
+                                    <div className="absolute inset-0 bg-indigo-400/20 blur-md rounded-full animate-pulse"></div>
+                                    <Rocket size={16} strokeWidth={1.5} className="fill-current relative z-10 group-hover/rocket:animate-bounce" />
                                 </button>
                             </Tooltip>
                             

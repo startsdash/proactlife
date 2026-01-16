@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Note, Task, Habit, JournalEntry, Module } from '../types';
+import { Note } from '../types';
 import { classifyNoteAction } from '../services/geminiService';
 import { AppConfig } from '../types';
-import { Rocket, Kanban as KanbanIcon, Flame, Book, Box, ArrowRight, BrainCircuit, Check, X, Sparkles, User, Orbit, Fingerprint } from 'lucide-react';
+import { Rocket, Kanban as KanbanIcon, Flame, Book, Box, ArrowRight, BrainCircuit, Check, X, Sparkles, User, Orbit, Fingerprint, Activity, Zap, Layers, Target, Shield, Heart } from 'lucide-react';
 
 interface Props {
     note: Note;
@@ -13,286 +13,349 @@ interface Props {
     onCommit: (action: 'task' | 'habit' | 'journal' | 'sandbox', payload?: any) => void;
 }
 
-const STAGES = [
-    { id: 1, label: 'Обыденный мир', desc: 'Исходная мысль' },
-    { id: 2, label: 'Призыв', desc: 'Анализ потенциала' },
-    { id: 3, label: 'Выбор пути', desc: 'Принятие решения' },
-    { id: 4, label: 'Трансформация', desc: 'Интеграция в систему' }
+// STAGES ENUM FOR CLEAR STATE MANAGEMENT
+enum Stage {
+    OPENING = 1,
+    MAP = 2,
+    SELECTION = 3,
+    FUSION = 4
+}
+
+// PATH OPTIONS
+const PATHS = [
+    { id: 'task', label: 'Действие', icon: KanbanIcon, color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/50', desc: '+20 XP / Спринт' },
+    { id: 'habit', label: 'Ритуал', icon: Flame, color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/50', desc: '+30 XP / Трекер' },
+    { id: 'journal', label: 'Рефлексия', icon: Book, color: 'text-cyan-400', bg: 'bg-cyan-500/20', border: 'border-cyan-500/50', desc: '+15 XP / Дневник' },
+    { id: 'sandbox', label: 'Проработка', icon: Box, color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/50', desc: '+25 XP / Хаб' },
 ];
 
 const HeroJourney: React.FC<Props> = ({ note, config, onClose, onCommit }) => {
-    const [stage, setStage] = useState(1);
+    const [stage, setStage] = useState<Stage>(Stage.OPENING);
     const [aiSuggestion, setAiSuggestion] = useState<{ action: string, reason: string } | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [selectedPath, setSelectedPath] = useState<string | null>(null);
+    const [xp, setXp] = useState(0);
     const [bioSync, setBioSync] = useState(0);
+    const [selectedPathId, setSelectedPathId] = useState<string | null>(null);
 
-    // Initial Animation Sequence
+    // Initial sequence
     useEffect(() => {
-        // Stage 1 -> 2
-        setTimeout(() => setStage(2), 1500);
-        
-        // Stage 2: Bio Sync & AI Analysis
-        setTimeout(() => {
-            const interval = setInterval(() => {
-                setBioSync(prev => {
-                    if (prev >= 100) {
-                        clearInterval(interval);
-                        return 100;
-                    }
-                    return prev + Math.floor(Math.random() * 10) + 5;
-                });
-            }, 100);
-            
-            setIsAnalyzing(true);
-            classifyNoteAction(note.content, config).then(result => {
-                setAiSuggestion(result);
-                setIsAnalyzing(false);
-                setStage(3); // Move to Selection
+        // Transition to Map after initial "Morph"
+        setTimeout(() => setStage(Stage.MAP), 2000);
+
+        // Start Bio-Sync simulation
+        const bioInterval = setInterval(() => {
+            setBioSync(prev => {
+                if (prev >= 100) {
+                    clearInterval(bioInterval);
+                    return 100;
+                }
+                return prev + 2;
             });
-        }, 2000);
+        }, 50);
+
+        // Run AI Analysis in background
+        setIsAnalyzing(true);
+        classifyNoteAction(note.content, config).then(result => {
+            setAiSuggestion(result);
+            setIsAnalyzing(false);
+            // Auto-advance to selection once analysis is ready if in Map stage
+            // We'll let the user watch the map for a bit first though (min 3s total)
+            setTimeout(() => {
+                setStage(prev => prev === Stage.MAP ? Stage.SELECTION : prev);
+            }, 3500); 
+        });
+
+        return () => clearInterval(bioInterval);
     }, []);
 
-    const handlePathSelect = (path: string) => {
-        setSelectedPath(path);
-        setStage(4); // Transformation
+    const handlePathSelect = (pathId: string) => {
+        setSelectedPathId(pathId);
         
-        // Commit after animation
+        // Award XP
+        const path = PATHS.find(p => p.id === pathId);
+        const reward = path ? parseInt(path.desc.match(/\+(\d+)/)?.[1] || '0') : 0;
+        
+        // Animate XP
+        let currentXp = xp;
+        const targetXp = xp + reward;
+        const xpInterval = setInterval(() => {
+            currentXp += 1;
+            setXp(currentXp);
+            if (currentXp >= targetXp) clearInterval(xpInterval);
+        }, 50);
+
+        // Transition to Fusion
+        setTimeout(() => setStage(Stage.FUSION), 800);
+
+        // Commit and Close
         setTimeout(() => {
-            onCommit(path as any);
-        }, 2500);
+            onCommit(pathId as any);
+        }, 3500); // Allow fusion animation to play
     };
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            {/* Cosmic Background */}
-            <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-[#020410] overflow-hidden"
-            >
-                {/* Stars */}
-                {[...Array(50)].map((_, i) => (
-                    <div 
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 font-sans text-white overflow-hidden">
+            
+            {/* 1. COSMIC BACKGROUND LAYER */}
+            <div className="absolute inset-0 bg-[#020410]">
+                {/* Radial Haze */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#0B1121]/50 to-[#020410]" />
+                
+                {/* Stars/Dust Particles */}
+                {[...Array(60)].map((_, i) => (
+                    <motion.div
                         key={i}
                         className="absolute bg-white rounded-full opacity-60"
-                        style={{
-                            top: `${Math.random() * 100}%`,
+                        initial={{ 
+                            top: `${Math.random() * 100}%`, 
                             left: `${Math.random() * 100}%`,
-                            width: `${Math.random() * 2 + 1}px`,
-                            height: `${Math.random() * 2 + 1}px`,
-                            animation: `twinkle ${Math.random() * 5 + 2}s infinite`
+                            scale: Math.random() 
                         }}
+                        animate={{ 
+                            opacity: [0.2, 0.8, 0.2], 
+                            scale: [0.5, 1.2, 0.5] 
+                        }}
+                        transition={{ 
+                            duration: Math.random() * 3 + 2, 
+                            repeat: Infinity, 
+                            delay: Math.random() * 2 
+                        }}
+                        style={{ width: '2px', height: '2px' }}
                     />
                 ))}
-                {/* Nebula */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-900/20 rounded-full blur-[100px] animate-pulse" />
-                <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-blue-900/10 rounded-full blur-[80px]" />
-            </motion.div>
-
-            {/* Main Content Container */}
-            <motion.div 
-                layout
-                className="relative z-10 w-full max-w-4xl h-[80vh] flex flex-col items-center justify-center"
-            >
                 
-                {/* HEADER: Timeline */}
-                <div className="absolute top-0 w-full flex justify-between px-8 py-6">
-                    {STAGES.map((s, i) => (
-                        <div key={s.id} className="flex flex-col items-center gap-2 relative">
-                            <div className={`
-                                w-3 h-3 rounded-full border-2 transition-all duration-500 z-10
-                                ${stage >= s.id ? 'bg-indigo-500 border-indigo-500 shadow-[0_0_10px_#6366f1]' : 'bg-transparent border-slate-700'}
-                                ${stage === s.id ? 'scale-125' : ''}
-                            `} />
-                            {i < STAGES.length - 1 && (
-                                <div className={`absolute top-1.5 left-1/2 w-[calc(100%_+_2rem)] h-0.5 -z-0 transition-colors duration-700 ${stage > s.id ? 'bg-indigo-500/50' : 'bg-slate-800'}`} />
-                            )}
-                            <span className={`text-[9px] uppercase tracking-widest font-mono transition-colors duration-300 ${stage >= s.id ? 'text-indigo-300' : 'text-slate-600'}`}>
-                                {s.label}
-                            </span>
+                {/* Nebula Clouds */}
+                <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 120, repeat: Infinity, ease: "linear" }}
+                    className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay" 
+                />
+            </div>
+
+            {/* 2. HUD INTERFACE (Always Visible) */}
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-50 pointer-events-none">
+                {/* Bio-Monitor (Left) */}
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-cyan-400">
+                        <Activity size={16} className="animate-pulse" />
+                        <span className="text-[10px] font-mono font-bold tracking-widest">BIO_SYNC</span>
+                    </div>
+                    <div className="flex items-end gap-2">
+                        <div className="h-1 w-24 bg-cyan-900/30 rounded-full overflow-hidden">
+                            <motion.div 
+                                className="h-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]"
+                                animate={{ width: `${bioSync}%` }}
+                            />
                         </div>
-                    ))}
+                        <span className="text-[10px] font-mono text-cyan-200/50">{bioSync}%</span>
+                    </div>
                 </div>
 
-                {/* STAGE 1: INTRO (Living Note) */}
-                <AnimatePresence>
-                    {stage === 1 && (
-                        <motion.div 
-                            key="stage1"
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 1.5, opacity: 0 }}
-                            className="text-center max-w-lg"
+                {/* XP Counter (Right) */}
+                <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-2 text-amber-400">
+                        <span className="text-[10px] font-mono font-bold tracking-widest">XP_EARNED</span>
+                        <Shield size={16} />
+                    </div>
+                    <div className="text-2xl font-bold font-mono text-amber-100 tabular-nums shadow-amber-500/20 drop-shadow-lg">
+                        {xp.toString().padStart(4, '0')}
+                    </div>
+                </div>
+            </div>
+
+            {/* 3. MAIN STAGE CONTENT */}
+            <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+                <AnimatePresence mode="wait">
+                    
+                    {/* STAGE 1: MORPHING (Opening) */}
+                    {stage === Stage.OPENING && (
+                        <motion.div
+                            key="opening"
+                            className="relative flex flex-col items-center justify-center"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0, scale: 0.5, filter: 'blur(20px)' }}
+                            transition={{ duration: 0.8 }}
                         >
-                            <div className="mb-8 relative">
-                                <motion.div 
-                                    animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.8, 0.5] }}
-                                    transition={{ duration: 3, repeat: Infinity }}
-                                    className="absolute inset-0 bg-indigo-500/30 blur-2xl rounded-full"
-                                />
-                                <Rocket size={64} className="text-white relative z-10 mx-auto" />
-                            </div>
-                            <h2 className="text-2xl md:text-3xl font-light text-white mb-4 tracking-tight">Мысль обретает форму</h2>
-                            <p className="text-indigo-200/60 font-serif italic text-lg">"{note.content.substring(0, 100)}..."</p>
+                            {/* The Orb */}
+                            <motion.div
+                                layoutId="hero-orb"
+                                className="w-32 h-32 rounded-full bg-white flex items-center justify-center relative z-20"
+                                style={{
+                                    background: 'radial-gradient(circle at 30% 30%, #ffffff, #6366f1, #1e1b4b)',
+                                    boxShadow: '0 0 60px rgba(99,102,241,0.6), inset 0 0 20px rgba(255,255,255,0.5)'
+                                }}
+                                animate={{ scale: [1, 1.1, 1] }}
+                                transition={{ duration: 3, repeat: Infinity }}
+                            >
+                                <Rocket size={40} className="text-white drop-shadow-md" />
+                            </motion.div>
+                            
+                            <motion.h2 
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.5 }}
+                                className="mt-8 text-2xl font-light tracking-widest text-indigo-100 uppercase"
+                            >
+                                Инициализация
+                            </motion.h2>
                         </motion.div>
                     )}
-                </AnimatePresence>
 
-                {/* STAGE 2: ANALYSIS (Biometrics) */}
-                <AnimatePresence>
-                    {stage === 2 && (
-                        <motion.div 
-                            key="stage2"
+                    {/* STAGE 2: TRAJECTORY MAP */}
+                    {stage === Stage.MAP && (
+                        <motion.div
+                            key="map"
+                            className="w-full max-w-4xl relative h-[60vh] flex items-center justify-center"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="w-full max-w-md bg-black/40 backdrop-blur-xl border border-indigo-500/30 rounded-2xl p-8 text-center"
                         >
-                            <div className="flex justify-center mb-6">
-                                <div className="relative w-24 h-24 flex items-center justify-center">
-                                    <svg className="w-full h-full absolute inset-0 animate-spin-slow">
-                                        <circle cx="48" cy="48" r="46" stroke="#312e81" strokeWidth="1" fill="none" strokeDasharray="10 10" />
-                                    </svg>
-                                    <Fingerprint size={40} className="text-indigo-400 animate-pulse" />
-                                </div>
+                            {/* Central Sun (User) */}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-white/5 backdrop-blur-md rounded-full border border-white/20 flex items-center justify-center z-10 shadow-[0_0_40px_rgba(255,255,255,0.1)]">
+                                <User size={32} className="text-white/80" />
                             </div>
-                            <div className="space-y-4">
-                                <div>
-                                    <div className="flex justify-between text-xs font-mono text-indigo-300 mb-1">
-                                        <span>BIO_SYNC_STATUS</span>
-                                        <span>{bioSync}%</span>
-                                    </div>
-                                    <div className="h-1 w-full bg-indigo-900/50 rounded-full overflow-hidden">
-                                        <motion.div 
-                                            className="h-full bg-indigo-500 shadow-[0_0_10px_#6366f1]"
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${bioSync}%` }}
-                                        />
-                                    </div>
+
+                            {/* Orbit Rings */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div className="w-[300px] h-[300px] border border-white/5 rounded-full animate-[spin_20s_linear_infinite]" />
+                                <div className="w-[500px] h-[500px] border border-white/5 rounded-full animate-[spin_30s_linear_infinite_reverse]" />
+                            </div>
+
+                            {/* The Traveling Orb */}
+                            <motion.div
+                                layoutId="hero-orb"
+                                className="absolute w-8 h-8 rounded-full bg-white shadow-[0_0_20px_#6366f1] z-20 flex items-center justify-center"
+                                animate={{ 
+                                    offsetDistance: "100%",
+                                    scale: [1, 1.5, 1],
+                                }}
+                                style={{
+                                    offsetPath: "path('M -250 0 Q -150 -150 0 -200 T 250 0')", // Bezier curve attempt in CSS logic or framer
+                                    top: '50%', left: '50%', // Fallback centering
+                                }}
+                            >
+                                <div className="w-full h-full bg-indigo-500 rounded-full blur-sm absolute inset-0" />
+                                <div className="w-2 h-2 bg-white rounded-full relative z-10" />
+                            </motion.div>
+
+                            {/* System Log */}
+                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center space-y-2">
+                                <div className="text-xs font-mono text-indigo-300 animate-pulse">
+                                    &gt; SCANNING_SEMANTICS... {isAnalyzing ? 'ACTIVE' : 'DONE'}
                                 </div>
-                                <div className="text-xs text-slate-400 font-mono animate-pulse">
-                                    &gt; ANALYZING_CONTEXT... <br/>
+                                <div className="text-xs font-mono text-cyan-300 animate-pulse delay-75">
                                     &gt; CALCULATING_TRAJECTORY...
                                 </div>
                             </div>
                         </motion.div>
                     )}
-                </AnimatePresence>
 
-                {/* STAGE 3: SELECTION (The Crossroad) */}
-                <AnimatePresence>
-                    {stage === 3 && (
-                        <motion.div 
-                            key="stage3"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 px-4"
+                    {/* STAGE 3: SELECTION (Cards) */}
+                    {stage === Stage.SELECTION && (
+                        <motion.div
+                            key="selection"
+                            className="w-full max-w-5xl px-4 flex flex-col items-center"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.1 }}
                         >
-                            {/* AI Suggestion Banner */}
-                            <div className="col-span-1 md:col-span-2 lg:col-span-4 flex justify-center mb-8">
-                                <div className="bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3 rounded-full flex items-center gap-3">
-                                    <Sparkles size={16} className="text-yellow-400" />
-                                    <span className="text-sm text-white font-medium">
-                                        AI рекомендует: <span className="text-indigo-300 font-bold uppercase">{aiSuggestion?.action || '...'}</span> — {aiSuggestion?.reason}
-                                    </span>
+                            {/* AI Banner */}
+                            <div className="mb-12 bg-white/10 backdrop-blur-xl border border-white/20 px-8 py-4 rounded-full flex items-center gap-4 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                                <Sparkles size={20} className="text-amber-400" />
+                                <div className="text-sm">
+                                    <span className="text-white/60 mr-2">СИСТЕМА РЕКОМЕНДУЕТ:</span>
+                                    <span className="font-bold text-white uppercase tracking-wider text-lg">{aiSuggestion?.action === 'task' ? 'ДЕЙСТВИЕ' : aiSuggestion?.action === 'habit' ? 'РИТУАЛ' : aiSuggestion?.action === 'journal' ? 'РЕФЛЕКСия' : 'ПРОРАБОТКА'}</span>
+                                    <span className="mx-3 text-white/30">|</span>
+                                    <span className="text-indigo-200 italic">{aiSuggestion?.reason}</span>
                                 </div>
                             </div>
 
-                            {/* Option 1: Task */}
-                            <button 
-                                onClick={() => handlePathSelect('task')}
-                                className={`group relative p-6 rounded-2xl bg-gradient-to-br from-blue-900/40 to-slate-900/40 border transition-all duration-300 hover:scale-105 ${aiSuggestion?.action === 'task' ? 'border-blue-400 shadow-[0_0_20px_rgba(96,165,250,0.3)]' : 'border-white/10 hover:border-blue-400/50'}`}
-                            >
-                                <div className="mb-4 p-3 bg-blue-500/20 rounded-xl w-fit group-hover:bg-blue-500 transition-colors">
-                                    <KanbanIcon size={24} className="text-blue-300 group-hover:text-white" />
-                                </div>
-                                <h3 className="text-lg font-bold text-white mb-2">Действие</h3>
-                                <p className="text-xs text-slate-400 leading-relaxed">Превратить в конкретную задачу для Спринта.</p>
-                            </button>
+                            {/* Cards Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+                                {PATHS.map(path => {
+                                    const isRecommended = aiSuggestion?.action === path.id;
+                                    
+                                    return (
+                                        <motion.button
+                                            key={path.id}
+                                            onClick={() => handlePathSelect(path.id)}
+                                            whileHover={{ y: -10, scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            className={`
+                                                relative h-64 rounded-3xl border backdrop-blur-md overflow-hidden group transition-all duration-500
+                                                flex flex-col items-center justify-center gap-4 p-6
+                                                ${isRecommended ? `bg-white/10 ${path.border} shadow-[0_0_30px_rgba(99,102,241,0.2)]` : 'bg-white/5 border-white/10 hover:border-white/30'}
+                                            `}
+                                        >
+                                            {/* Glow blob */}
+                                            <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 ${path.bg} blur-[60px] rounded-full group-hover:blur-[80px] transition-all`} />
+                                            
+                                            <div className={`p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm relative z-10 group-hover:bg-white/10 transition-colors`}>
+                                                <path.icon size={32} className={`${path.color} drop-shadow-md`} />
+                                            </div>
+                                            
+                                            <div className="relative z-10 text-center">
+                                                <h3 className="text-xl font-bold text-white tracking-tight mb-1">{path.label}</h3>
+                                                <div className="text-[10px] font-mono text-white/50 uppercase tracking-widest">{path.desc}</div>
+                                            </div>
 
-                            {/* Option 2: Habit */}
-                            <button 
-                                onClick={() => handlePathSelect('habit')}
-                                className={`group relative p-6 rounded-2xl bg-gradient-to-br from-emerald-900/40 to-slate-900/40 border transition-all duration-300 hover:scale-105 ${aiSuggestion?.action === 'habit' ? 'border-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.3)]' : 'border-white/10 hover:border-emerald-400/50'}`}
-                            >
-                                <div className="mb-4 p-3 bg-emerald-500/20 rounded-xl w-fit group-hover:bg-emerald-500 transition-colors">
-                                    <Flame size={24} className="text-emerald-300 group-hover:text-white" />
-                                </div>
-                                <h3 className="text-lg font-bold text-white mb-2">Ритуал</h3>
-                                <p className="text-xs text-slate-400 leading-relaxed">Внедрить как регулярную привычку в Трекер.</p>
-                            </button>
-
-                            {/* Option 3: Journal */}
-                            <button 
-                                onClick={() => handlePathSelect('journal')}
-                                className={`group relative p-6 rounded-2xl bg-gradient-to-br from-cyan-900/40 to-slate-900/40 border transition-all duration-300 hover:scale-105 ${aiSuggestion?.action === 'journal' ? 'border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.3)]' : 'border-white/10 hover:border-cyan-400/50'}`}
-                            >
-                                <div className="mb-4 p-3 bg-cyan-500/20 rounded-xl w-fit group-hover:bg-cyan-500 transition-colors">
-                                    <Book size={24} className="text-cyan-300 group-hover:text-white" />
-                                </div>
-                                <h3 className="text-lg font-bold text-white mb-2">Рефлексия</h3>
-                                <p className="text-xs text-slate-400 leading-relaxed">Сохранить в Дневник для анализа и инсайтов.</p>
-                            </button>
-
-                            {/* Option 4: Sandbox */}
-                            <button 
-                                onClick={() => handlePathSelect('sandbox')}
-                                className={`group relative p-6 rounded-2xl bg-gradient-to-br from-amber-900/40 to-slate-900/40 border transition-all duration-300 hover:scale-105 ${aiSuggestion?.action === 'sandbox' ? 'border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.3)]' : 'border-white/10 hover:border-amber-400/50'}`}
-                            >
-                                <div className="mb-4 p-3 bg-amber-500/20 rounded-xl w-fit group-hover:bg-amber-500 transition-colors">
-                                    <Box size={24} className="text-amber-300 group-hover:text-white" />
-                                </div>
-                                <h3 className="text-lg font-bold text-white mb-2">Проработка</h3>
-                                <p className="text-xs text-slate-400 leading-relaxed">Отправить в Хаб для работы с Ментором.</p>
-                            </button>
+                                            {/* Connection Line (Visual) */}
+                                            {selectedPathId === path.id && (
+                                                <motion.div 
+                                                    layoutId="hero-orb"
+                                                    className="absolute inset-0 z-50 bg-white mix-blend-overlay"
+                                                />
+                                            )}
+                                        </motion.button>
+                                    );
+                                })}
+                            </div>
                         </motion.div>
                     )}
-                </AnimatePresence>
 
-                {/* STAGE 4: TRANSFORMATION (Warp Speed) */}
-                <AnimatePresence>
-                    {stage === 4 && (
-                        <motion.div 
-                            key="stage4"
-                            className="absolute inset-0 flex items-center justify-center"
+                    {/* STAGE 4: FUSION (Closing) */}
+                    {stage === Stage.FUSION && (
+                        <motion.div
+                            key="fusion"
+                            className="absolute inset-0 flex items-center justify-center z-50"
                         >
-                            {/* Implosion/Explosion Effect */}
-                            <motion.div 
-                                initial={{ scale: 0, opacity: 0 }}
-                                animate={{ scale: [0, 1.5, 30], opacity: [0, 1, 0] }}
-                                transition={{ duration: 1.5, times: [0, 0.5, 1], ease: "easeInOut" }}
-                                className="w-32 h-32 bg-white rounded-full blur-xl"
+                            {/* Implosion */}
+                            <motion.div
+                                initial={{ scale: 20, opacity: 0 }}
+                                animate={{ scale: 0, opacity: 1 }}
+                                transition={{ duration: 0.5, ease: "circIn" }}
+                                className="absolute inset-0 bg-white z-10"
                             />
                             
+                            {/* Explosion/Reveal */}
                             <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.5 }}
-                                className="z-20 text-center"
+                                initial={{ opacity: 0, scale: 0.5 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.6, duration: 0.8 }}
+                                className="relative z-20 text-center"
                             >
-                                <h1 className="text-4xl md:text-6xl font-light text-white tracking-widest uppercase mb-4">
-                                    Синтез завершен
-                                </h1>
-                                <p className="text-indigo-300 font-mono text-sm">
-                                    МЫСЛЬ ИНТЕГРИРОВАНА В ЛИЧНОСТЬ
-                                </p>
+                                <div className="mb-8 relative inline-block">
+                                    <div className="absolute inset-0 bg-indigo-500 blur-[60px] opacity-50" />
+                                    <Fingerprint size={120} className="text-white relative z-10" strokeWidth={0.5} />
+                                </div>
+                                <h2 className="text-5xl md:text-7xl font-light text-white uppercase tracking-widest mb-4 mix-blend-overlay">Синтез</h2>
+                                <p className="text-indigo-200 font-mono text-sm tracking-[0.5em] uppercase">Мысль стала частью тебя</p>
                             </motion.div>
                         </motion.div>
                     )}
+
                 </AnimatePresence>
+            </div>
 
-            </motion.div>
-
-            {/* Close Button */}
+            {/* CLOSE BUTTON */}
             <button 
                 onClick={onClose}
-                className="absolute top-6 right-6 z-50 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                className="absolute top-6 right-6 z-[60] p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/30 text-white/50 hover:text-white transition-all backdrop-blur-md"
             >
-                <X size={24} />
+                <X size={24} strokeWidth={1} />
             </button>
+
         </div>
     );
 };
