@@ -1989,8 +1989,27 @@ const Journal: React.FC<Props> = ({ entries, mentorAnalyses, tasks, notes, confi
                                         <CollapsibleSection title="Контекст: Заметки" icon={<StickyNote size={14}/>}>
                                             <div className="space-y-4">
                                                 {linkedNotesList.map((note, index) => (
-                                                    <div key={note.id} className={index > 0 ? "pt-3 border-t border-slate-200/50 dark:border-slate-700/50" : ""}>
-                                                        <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-serif cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => onNavigateToNote?.(note.id)}>
+                                                    <div key={note.id} className={`flex gap-3 ${index > 0 ? "pt-3 border-t border-slate-200/50 dark:border-slate-700/50" : ""}`}>
+                                                        <div className="shrink-0 pt-0.5">
+                                                            <Tooltip content="Открепить заметку">
+                                                                <button
+                                                                    onClick={(e) => { 
+                                                                        e.stopPropagation(); 
+                                                                        const newIds = (selectedEntry.linkedNoteIds || []).filter(id => id !== note.id);
+                                                                        const isLegacy = selectedEntry.linkedNoteId === note.id;
+                                                                        updateEntry({ 
+                                                                            ...selectedEntry, 
+                                                                            linkedNoteIds: newIds,
+                                                                            linkedNoteId: isLegacy ? undefined : selectedEntry.linkedNoteId
+                                                                        }); 
+                                                                    }}
+                                                                    className="text-slate-300 hover:text-red-500 transition-colors p-0.5"
+                                                                >
+                                                                    <Unlink size={14} />
+                                                                </button>
+                                                            </Tooltip>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0 text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-serif cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => onNavigateToNote?.(note.id)}>
                                                             <ReactMarkdown components={markdownComponents}>{getNotePreviewContent(note.content)}</ReactMarkdown>
                                                         </div>
                                                     </div>
