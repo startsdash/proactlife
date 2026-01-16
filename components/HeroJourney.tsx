@@ -173,8 +173,8 @@ const HeroJourney: React.FC<Props> = ({ note, config, onClose, onCommit }) => {
                                     </div>
                                 </div>
                                 <div className="text-xs text-slate-400 font-mono animate-pulse">
-                                    > ANALYZING_CONTEXT... <br/>
-                                    > CALCULATING_TRAJECTORY...
+                                    &gt; ANALYZING_CONTEXT... <br/>
+                                    &gt; CALCULATING_TRAJECTORY...
                                 </div>
                             </div>
                         </motion.div>
