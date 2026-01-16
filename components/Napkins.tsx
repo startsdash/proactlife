@@ -269,6 +269,7 @@ const KineticFlashcardDeck = ({ cards }: { cards: Flashcard[] }) => {
     const [index, setIndex] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
 
+    // Guard clause for empty deck
     if (!cards || cards.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-full py-20 text-center animate-in fade-in duration-500">
@@ -285,50 +286,55 @@ const KineticFlashcardDeck = ({ cards }: { cards: Flashcard[] }) => {
 
     const nextCard = () => {
         setIsFlipped(false);
-        setTimeout(() => {
-            setIndex((prev) => (prev + 1) % cards.length);
-        }, 200);
+        // Switch immediately to trigger AnimatePresence exit
+        setIndex((prev) => (prev + 1) % cards.length);
     };
 
     const toggleFlip = () => setIsFlipped(!isFlipped);
 
     return (
-        <div className="flex flex-col items-center justify-center h-full min-h-[500px] relative w-full overflow-hidden">
+        <div className="flex flex-col items-center justify-center h-full min-h-[600px] relative w-full overflow-hidden">
             
             {/* Background Atmosphere */}
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-full blur-3xl opacity-50" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-full blur-3xl opacity-50" />
             </div>
 
-            <div className="relative z-10 w-full max-w-md aspect-square flex items-center justify-center">
+            <div className="relative z-10 w-full max-w-2xl aspect-square flex items-center justify-center">
                 
                 {/* The Kinetic Capsule */}
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={currentCard.id}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ 
-                            opacity: 1, 
-                            scale: isFlipped ? [1, 1.05, 1] : [1, 1.02, 1],
-                        }}
+                        initial={{ opacity: 0, scale: 0.8, filter: 'blur(10px)' }}
+                        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
                         exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
                         transition={{ 
-                            scale: { 
-                                duration: isFlipped ? 0.8 : 4, 
-                                repeat: Infinity, 
-                                ease: "easeInOut" 
-                            },
-                            opacity: { duration: 0.5 }
+                            duration: 0.4,
+                            ease: "easeOut" 
                         }}
-                        className={`
-                            relative w-64 h-64 md:w-80 md:h-80 rounded-full flex flex-col items-center justify-center text-center p-8 cursor-pointer shadow-2xl transition-all duration-500
-                            ${isFlipped 
-                                ? 'bg-gradient-to-br from-white via-amber-200 to-yellow-500 text-slate-900 shadow-[0_0_100px_rgba(251,191,36,0.4)]' 
-                                : 'bg-gradient-to-br from-indigo-900 via-purple-900 to-rose-900 text-white shadow-[0_0_60px_rgba(79,70,229,0.3)]'
-                            }
-                        `}
+                        className="relative w-80 h-80 md:w-[500px] md:h-[500px] flex flex-col items-center justify-center text-center p-12 cursor-pointer z-10"
                         onClick={toggleFlip}
                     >
+                        {/* Background Layer with Breathing Animation */}
+                        <motion.div 
+                            className={`
+                                absolute inset-0 rounded-full shadow-2xl transition-colors duration-500
+                                ${isFlipped 
+                                    ? 'bg-gradient-to-br from-white via-amber-200 to-yellow-500 shadow-[0_0_100px_rgba(251,191,36,0.4)]' 
+                                    : 'bg-gradient-to-br from-indigo-900 via-purple-900 to-rose-900 shadow-[0_0_60px_rgba(79,70,229,0.3)]'
+                                }
+                            `}
+                            animate={{ 
+                                scale: isFlipped ? 1.05 : [1, 1.02, 1]
+                            }}
+                            transition={{ 
+                                duration: isFlipped ? 0.5 : 4, 
+                                repeat: isFlipped ? 0 : Infinity, 
+                                ease: "easeInOut" 
+                            }}
+                        />
+
                         {/* Fog Layers */}
                         <div className={`absolute inset-0 rounded-full overflow-hidden pointer-events-none ${isFlipped ? 'opacity-30' : 'opacity-50'}`}>
                             <motion.div 
@@ -344,19 +350,19 @@ const KineticFlashcardDeck = ({ cards }: { cards: Flashcard[] }) => {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3 }}
-                            className="relative z-10 flex flex-col items-center gap-4"
+                            className={`relative z-10 flex flex-col items-center gap-6 ${isFlipped ? 'text-slate-900' : 'text-white'}`}
                         >
-                            <div className="font-mono text-[9px] uppercase tracking-[0.2em] opacity-60">
+                            <div className="font-mono text-[10px] uppercase tracking-[0.2em] opacity-60">
                                 {isFlipped ? 'RESPONSE_DATA' : `QUERY_NODE // ${String(index + 1).padStart(2, '0')}`}
                             </div>
                             
-                            <div className={`font-serif text-xl md:text-2xl leading-tight ${isFlipped ? 'font-medium' : 'font-light'}`}>
+                            <div className={`font-serif text-2xl md:text-4xl leading-tight ${isFlipped ? 'font-medium' : 'font-light'}`}>
                                 {isFlipped ? currentCard.back : currentCard.front}
                             </div>
 
                             {!isFlipped && (
-                                <div className="mt-2">
-                                    <Aperture size={20} className="animate-spin-slow opacity-50" />
+                                <div className="mt-4">
+                                    <Aperture size={24} className="animate-spin-slow opacity-50" />
                                 </div>
                             )}
                         </motion.div>
@@ -365,7 +371,7 @@ const KineticFlashcardDeck = ({ cards }: { cards: Flashcard[] }) => {
                         <div className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
                         
                         {/* Status Indicators */}
-                        <div className="absolute bottom-8 font-mono text-[8px] opacity-40 uppercase tracking-widest">
+                        <div className={`absolute bottom-12 font-mono text-[9px] opacity-40 uppercase tracking-widest ${isFlipped ? 'text-slate-800' : 'text-white'}`}>
                             {isFlipped ? 'SYSTEM_REVEALED' : 'AWAITING_INPUT'}
                         </div>
 
@@ -385,9 +391,9 @@ const KineticFlashcardDeck = ({ cards }: { cards: Flashcard[] }) => {
 
                 <button 
                     onClick={nextCard}
-                    className="group px-8 py-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md text-xs font-mono uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-all flex items-center gap-3"
+                    className="group px-10 py-4 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md text-sm font-mono uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-all flex items-center gap-3"
                 >
-                    NEXT_NODE <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                    NEXT_NODE <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                 </button>
             </div>
 
