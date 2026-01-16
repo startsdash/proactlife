@@ -915,7 +915,7 @@ const FlashcardView: React.FC<{ flashcards: Flashcard[], deleteFlashcard?: (id: 
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
-                            className="aspect-[4/5] relative perspective-1000 group"
+                            className="aspect-square relative perspective-1000 group"
                         >
                             {/* Card Container with Flip Transition */}
                             <motion.div 
@@ -923,74 +923,69 @@ const FlashcardView: React.FC<{ flashcards: Flashcard[], deleteFlashcard?: (id: 
                                 animate={{ rotateY: isFlipped ? 180 : 0 }}
                             >
                                 {/* Front Side (A) - Sunrise */}
-                                <div className="absolute inset-0 backface-hidden bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/5 flex flex-col items-center justify-center p-8 text-center">
+                                <div className="absolute inset-0 backface-hidden bg-slate-900 rounded-full overflow-hidden shadow-2xl border border-white/5 flex flex-col items-center justify-center p-8 text-center">
                                     {/* Visual Effects */}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 opacity-80" />
-                                    <div className="absolute inset-0 pointer-events-none backdrop-blur-3xl bg-black/20" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-indigo-900 via-purple-900 to-slate-900 opacity-90" />
                                     
-                                    {/* Pulsing Orb - Sunrise */}
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-rose-500/20 rounded-full blur-[60px] animate-pulse" />
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-indigo-500/10 rounded-full blur-[40px]" />
+                                    {/* Fog/Sunrise Glow at bottom */}
+                                    <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-rose-500/30 blur-[40px] animate-pulse" />
+                                    <div className="absolute bottom-10 left-10 right-10 h-20 bg-indigo-500/20 blur-[30px]" />
 
                                     {/* Content */}
-                                    <div className="relative z-10 w-full h-full flex flex-col">
-                                        <div className="flex justify-between items-start mb-4 opacity-50">
-                                            <span className="text-[10px] font-mono text-indigo-300 uppercase tracking-widest">Question</span>
-                                            {deleteFlashcard && (
-                                                <button onClick={(e) => { e.stopPropagation(); if(confirm('Удалить карточку?')) deleteFlashcard(card.id); }} className="text-slate-500 hover:text-red-500 transition-colors">
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            )}
-                                        </div>
-                                        
+                                    <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
                                         <div className="flex-1 flex items-center justify-center">
-                                            <h3 className="text-2xl font-serif text-white/90 leading-tight drop-shadow-md">
+                                            <h3 className="text-xl md:text-2xl font-serif text-white/90 leading-tight drop-shadow-md select-none">
                                                 {card.front}
                                             </h3>
                                         </div>
 
-                                        <div className="mt-auto pt-8 flex justify-center">
+                                        <div className="absolute bottom-8">
                                             <button 
                                                 onClick={() => handleFlip(card.id)}
-                                                className="p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group/btn"
+                                                className="p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group/btn backdrop-blur-md"
                                             >
                                                 <Maximize2 size={20} className="text-white/70 group-hover/btn:text-white" strokeWidth={1.5} />
                                             </button>
                                         </div>
                                     </div>
                                     
+                                    {/* Delete Button (Top Right absolute) */}
+                                    {deleteFlashcard && (
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); if(confirm('Удалить карточку?')) deleteFlashcard(card.id); }} 
+                                            className="absolute top-6 right-6 text-white/20 hover:text-red-500 transition-colors z-20 p-2"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+
                                     {/* Neon Ring */}
-                                    <div className="absolute inset-0 rounded-3xl border border-rose-500/30 shadow-[inset_0_0_20px_rgba(244,63,94,0.1)] pointer-events-none" />
+                                    <div className="absolute inset-0 rounded-full border border-rose-500/30 shadow-[0_0_20px_rgba(244,63,94,0.3)] pointer-events-none" />
                                 </div>
 
                                 {/* Back Side (B) - Sun */}
-                                <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/5 flex flex-col items-center justify-center p-8 text-center">
+                                <div className="absolute inset-0 backface-hidden rotate-y-180 bg-amber-950 rounded-full overflow-hidden shadow-2xl border border-white/5 flex flex-col items-center justify-center p-8 text-center">
                                     {/* Visual Effects */}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-amber-300 via-orange-400 to-yellow-200 opacity-20" />
-                                    <div className="absolute inset-0 pointer-events-none backdrop-blur-md bg-black/40" />
+                                    <div className="absolute inset-0 bg-gradient-to-br from-amber-900 via-orange-900 to-amber-950 opacity-90" />
 
-                                    {/* Glowing Orb - Sun */}
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-amber-400/20 rounded-full blur-[80px] animate-pulse" />
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-white/10 rounded-full blur-[30px]" />
+                                    {/* Glowing Sun Core */}
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2/3 h-2/3 bg-amber-400/20 blur-[50px] animate-pulse" />
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/3 h-1/3 bg-white/10 rounded-full blur-[20px]" />
 
                                     {/* Content */}
-                                    <div className="relative z-10 w-full h-full flex flex-col">
-                                        <div className="flex justify-between items-start mb-4 opacity-50">
-                                            <span className="text-[10px] font-mono text-amber-200 uppercase tracking-widest">Answer</span>
-                                        </div>
-                                        
-                                        <div className="flex-1 flex items-center justify-center overflow-y-auto custom-scrollbar-ghost">
-                                            <div className="text-lg font-serif text-white/90 leading-relaxed drop-shadow-md">
+                                    <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+                                        <div className="flex-1 flex items-center justify-center overflow-y-auto custom-scrollbar-ghost w-full px-4">
+                                            <div className="text-lg font-serif text-white/95 leading-relaxed drop-shadow-md select-none">
                                                 <ReactMarkdown components={{ p: ({children}) => <p className="mb-2 last:mb-0">{children}</p> }}>
                                                     {card.back}
                                                 </ReactMarkdown>
                                             </div>
                                         </div>
 
-                                        <div className="mt-auto pt-8 flex justify-center">
+                                        <div className="absolute bottom-8">
                                             <button 
                                                 onClick={() => handleFlip(card.id)}
-                                                className="p-3 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all group/btn"
+                                                className="p-3 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all group/btn backdrop-blur-md"
                                             >
                                                 <Minimize2 size={20} className="text-white/90 group-hover/btn:text-white" strokeWidth={1.5} />
                                             </button>
@@ -998,7 +993,7 @@ const FlashcardView: React.FC<{ flashcards: Flashcard[], deleteFlashcard?: (id: 
                                     </div>
 
                                     {/* Neon Ring */}
-                                    <div className="absolute inset-0 rounded-3xl border border-amber-400/40 shadow-[inset_0_0_30px_rgba(251,191,36,0.2)] pointer-events-none" />
+                                    <div className="absolute inset-0 rounded-full border border-amber-400/40 shadow-[0_0_30px_rgba(251,191,36,0.4)] pointer-events-none" />
                                 </div>
                             </motion.div>
                         </motion.div>
