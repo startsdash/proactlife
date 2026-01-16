@@ -323,6 +323,11 @@ const KineticFlashcardDeck = ({
         setIndex((prev) => (prev + 1) % displayedCards.length);
     };
 
+    const prevCard = () => {
+        setIsFlipped(false);
+        setIndex((prev) => (prev - 1 + displayedCards.length) % displayedCards.length);
+    };
+
     const toggleFlip = () => setIsFlipped(!isFlipped);
 
     const handleDelete = (e: React.MouseEvent) => {
@@ -332,7 +337,7 @@ const KineticFlashcardDeck = ({
             // Index logic handles itself via safeIndex recalculation, 
             // but we might want to ensure we don't jump too far if it was the last card.
             if (safeIndex >= displayedCards.length - 1) {
-                setIndex(0);
+                setIndex(Math.max(0, safeIndex - 1));
             }
         }
     };
@@ -378,7 +383,7 @@ const KineticFlashcardDeck = ({
                             </button>
                         </Tooltip>
                         
-                        <Tooltip content="Добавить в избранное/Убрать из избранного">
+                        <Tooltip content={currentCard.isStarred ? "Убрать из избранного" : "Добавить в избранное"}>
                             <button 
                                 onClick={() => onToggleStar(currentCard.id)}
                                 className={`p-2 rounded-full transition-all ${currentCard.isStarred ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600 hover:text-amber-400 hover:bg-black/5 dark:hover:bg-white/5'}`}
@@ -401,7 +406,7 @@ const KineticFlashcardDeck = ({
                             className="w-full h-full flex items-center justify-center"
                         >
                             {/* Scrollable container for text to keep card size fixed */}
-                            <div className="w-full max-h-[55vh] overflow-y-auto custom-scrollbar-ghost px-4 py-2">
+                            <div className="w-full h-[320px] overflow-y-auto pr-2">
                                 <div className="font-serif text-xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-100 select-none whitespace-pre-wrap">
                                     {isFlipped ? currentCard.back : currentCard.front}
                                 </div>
@@ -413,7 +418,14 @@ const KineticFlashcardDeck = ({
                 {/* Footer / Controls */}
                 <div className="pb-8 px-8 flex justify-between items-end relative z-20" onClick={e => e.stopPropagation()}>
                     {/* Centered Navigation */}
-                    <div className="flex-1 flex justify-center gap-8 pl-12"> {/* Padding left compensates for delete button to keep nav centered */}
+                    <div className="flex-1 flex justify-center gap-8 pl-12">
+                        <button 
+                            onClick={prevCard}
+                            className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1 flex items-center gap-2"
+                        >
+                            <ArrowLeft size={12} /> [ ПРЕД ]
+                        </button>
+
                         <button 
                             onClick={toggleFlip}
                             className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center gap-2 group"
@@ -426,7 +438,7 @@ const KineticFlashcardDeck = ({
                             onClick={nextCard}
                             className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1 flex items-center gap-2"
                         >
-                            [ СЛЕДУЮЩАЯ ] <ArrowRight size={12} />
+                            [ СЛЕД ] <ArrowRight size={12} />
                         </button>
                     </div>
 
@@ -1562,6 +1574,13 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
           return showFavorites ? cards.filter(c => c.isStarred) : cards;
       }, [cards, showFavorites]);
 
+      // Ensure index stays valid if cards are removed
+      useEffect(() => {
+          if (index >= displayedCards.length && displayedCards.length > 0) {
+              setIndex(Math.max(0, displayedCards.length - 1));
+          }
+      }, [displayedCards.length, index]);
+
       // Handle empty filtered state
       if (displayedCards.length === 0) {
           return (
@@ -1596,16 +1615,20 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
           setIndex((prev) => (prev + 1) % displayedCards.length);
       };
 
+      const prevCard = () => {
+          setIsFlipped(false);
+          setIndex((prev) => (prev - 1 + displayedCards.length) % displayedCards.length);
+      };
+
       const toggleFlip = () => setIsFlipped(!isFlipped);
 
       const handleDelete = (e: React.MouseEvent) => {
           e.stopPropagation();
           if (confirm("Удалить эту карточку?")) {
               onDelete(currentCard.id);
-              // Index logic handles itself via safeIndex recalculation, 
-              // but we might want to ensure we don't jump too far if it was the last card.
+              // If we delete the last card, move index back
               if (safeIndex >= displayedCards.length - 1) {
-                  setIndex(0);
+                  setIndex(Math.max(0, safeIndex - 1));
               }
           }
       };
@@ -1651,7 +1674,7 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
                               </button>
                           </Tooltip>
                           
-                          <Tooltip content="Добавить в избранное/Убрать из избранного">
+                          <Tooltip content={currentCard.isStarred ? "Убрать из избранного" : "Добавить в избранное"}>
                               <button 
                                   onClick={() => onToggleStar(currentCard.id)}
                                   className={`p-2 rounded-full transition-all ${currentCard.isStarred ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600 hover:text-amber-400 hover:bg-black/5 dark:hover:bg-white/5'}`}
@@ -1674,7 +1697,7 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
                               className="w-full h-full flex items-center justify-center"
                           >
                               {/* Scrollable container for text to keep card size fixed */}
-                              <div className="w-full max-h-[55vh] overflow-y-auto custom-scrollbar-ghost px-4 py-2">
+                              <div className="w-full h-[320px] overflow-y-auto pr-2">
                                   <div className="font-serif text-xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-100 select-none whitespace-pre-wrap">
                                       {isFlipped ? currentCard.back : currentCard.front}
                                   </div>
@@ -1688,6 +1711,13 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
                       {/* Centered Navigation */}
                       <div className="flex-1 flex justify-center gap-8 pl-12">
                           <button 
+                              onClick={prevCard}
+                              className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1 flex items-center gap-2"
+                          >
+                              <ArrowLeft size={12} /> [ ПРЕД ]
+                          </button>
+
+                          <button 
                               onClick={toggleFlip}
                               className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center gap-2 group"
                           >
@@ -1699,7 +1729,7 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
                               onClick={nextCard}
                               className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1 flex items-center gap-2"
                           >
-                              [ СЛЕДУЮЩАЯ ] <ArrowRight size={12} />
+                              [ СЛЕД ] <ArrowRight size={12} />
                           </button>
                       </div>
 
