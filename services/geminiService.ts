@@ -1,36 +1,14 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig, JournalEntry } from "../types";
-import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL, applyTypography, BASE_OUTPUT_INSTRUCTION } from '../constants';
+import { applyTypography, BASE_OUTPUT_INSTRUCTION } from '../constants';
 
 // --- API Access ---
-const getApiKey = (): string => {
-  try {
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-      return process.env.API_KEY;
-    }
-  } catch (e) {
-    console.warn("Error reading API key:", e);
-  }
-  return '';
-};
+// Directly use process.env.API_KEY for initialization as per guidelines
 
-// Initialize client lazily to prevent crash on module load if key is missing
-const getAiClient = () => {
-    const apiKey = getApiKey();
-    return new GoogleGenAI({ apiKey: apiKey || 'MISSING_KEY' });
-};
-
-// Helper to check if model requires legacy/chat handling
-const isGemmaModel = (model: string) => model.toLowerCase().includes('gemma');
-
-// Helper to get dynamic config for Gemma to prevent determinism
-const getGemmaConfig = () => ({
-  temperature: 0.85,
-  topP: 0.95,
-  topK: 40,
-  seed: Math.floor(Math.random() * 2147483647), // Use a random seed to force variety
-});
+// Helper to determine the best model for the task
+const TEXT_TASK_MODEL = 'gemini-3-flash-preview';
+const COMPLEX_TASK_MODEL = 'gemini-3-pro-preview';
 
 // Improved JSON Parser that finds the first valid JSON object block
 const parseJSON = <T>(text: string | undefined, fallback: T): T => {
@@ -74,49 +52,40 @@ const parseJSON = <T>(text: string | undefined, fallback: T): T => {
 };
 
 const getToolConfig = (id: string, config: AppConfig): AIToolConfig => {
+  const DEFAULT_AI_TOOLS = config.aiTools || [];
   return config.aiTools?.find(t => t.id === id) || 
          DEFAULT_AI_TOOLS.find(t => t.id === id) || 
          { 
            id: 'default', 
            name: 'Default Tool',
            systemPrompt: 'You are a helpful assistant.', 
-           model: DEFAULT_MODEL 
+           model: TEXT_TASK_MODEL 
          };
 };
 
 export const autoTagNote = async (content: string, config: AppConfig): Promise<string[]> => {
   const tool = getToolConfig('tagger', config);
-  const model = tool.model || DEFAULT_MODEL;
   const fullPrompt = `${tool.systemPrompt}\n\nБаза знаний (контекст): ${config.coreLibrary}`;
-  const ai = getAiClient();
+  
+  // Create instance right before call using process.env.API_KEY directly
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
-    let response;
-    
-    if (isGemmaModel(model)) {
-        // Gemma Strategy: Prompt Engineering instead of Config
-        const gemmaPrompt = `${fullPrompt}\n\n[TASK]\nAnalyze the text below and extract 1-5 relevant tags.\nText: "${content}"\n\n[OUTPUT]\nReturn ONLY raw JSON in this format: { "tags": ["tag1", "tag2"] }`;
-        response = await ai.models.generateContent({
-            model,
-            contents: gemmaPrompt,
-            config: getGemmaConfig()
-        });
-    } else {
-        // Gemini Strategy: Native Config
-        response = await ai.models.generateContent({
-          model,
-          contents: content,
-          config: {
-            systemInstruction: fullPrompt,
-            responseMimeType: tool.responseMimeType || "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: { tags: { type: Type.ARRAY, items: { type: Type.STRING } } }
-            }
-          }
-        });
-    }
+    // Using Gemini 3 series model with native JSON support
+    const response = await ai.models.generateContent({
+      model: TEXT_TASK_MODEL,
+      contents: content,
+      config: {
+        systemInstruction: fullPrompt,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: { tags: { type: Type.ARRAY, items: { type: Type.STRING } } }
+        }
+      }
+    });
 
+    // Access .text property directly
     const json = parseJSON<{tags: string[]}>(response.text, { tags: [] });
     return json.tags || [];
 
@@ -128,37 +97,29 @@ export const autoTagNote = async (content: string, config: AppConfig): Promise<s
 
 export const findNotesByMood = async (notes: Note[], mood: string, config: AppConfig): Promise<string[]> => {
     const tool = getToolConfig('mood_matcher', config);
-    const model = tool.model || DEFAULT_MODEL;
-    const ai = getAiClient();
     
     // Prepare simplified notes for context
     const notesContext = notes.map(n => `ID: ${n.id}\nContent: ${n.content.substring(0, 200)}...`).join('\n---\n');
     const fullPrompt = `${tool.systemPrompt}\n\n[NOTES DATABASE]\n${notesContext}`;
 
+    // Create instance right before call using process.env.API_KEY directly
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
     try {
-        let response;
-        if (isGemmaModel(model)) {
-             const gemmaPrompt = `${fullPrompt}\n\n[TASK]\nUser Mood: "${mood}"\nFind relevant Note IDs.\n\n[OUTPUT]\nReturn ONLY raw JSON: { "ids": ["id1", "id2"] }`;
-             response = await ai.models.generateContent({
-                model,
-                contents: gemmaPrompt,
-                config: getGemmaConfig()
-             });
-        } else {
-            response = await ai.models.generateContent({
-                model,
-                contents: `Mood: ${mood}`,
-                config: {
-                    systemInstruction: fullPrompt,
-                    responseMimeType: tool.responseMimeType || "application/json",
-                    responseSchema: {
-                        type: Type.OBJECT,
-                        properties: { ids: { type: Type.ARRAY, items: { type: Type.STRING } } }
-                    }
+        const response = await ai.models.generateContent({
+            model: TEXT_TASK_MODEL,
+            contents: `Mood: ${mood}`,
+            config: {
+                systemInstruction: fullPrompt,
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: { ids: { type: Type.ARRAY, items: { type: Type.STRING } } }
                 }
-            });
-        }
+            }
+        });
         
+        // Access .text property directly
         const json = parseJSON<{ids: string[]}>(response.text, { ids: [] });
         return json.ids || [];
     } catch (e) {
@@ -176,40 +137,31 @@ export interface SandboxAnalysis {
 
 export const analyzeSandboxItem = async (content: string, mentorId: string, config: AppConfig): Promise<SandboxAnalysis | null> => {
     const mentor = config.mentors.find(m => m.id === mentorId) || config.mentors[0];
-    const model = mentor.model || DEFAULT_MODEL;
-    const ai = getAiClient();
-    
     const systemInstruction = `${mentor.systemPrompt}\n\n${BASE_OUTPUT_INSTRUCTION}\n\nCONTEXT:\n${config.coreLibrary}`;
 
+    // Create instance right before call using process.env.API_KEY directly
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
     try {
-        let response;
-        if (isGemmaModel(model)) {
-             const gemmaPrompt = `${systemInstruction}\n\n[INPUT TEXT]\n"${content}"\n\n[OUTPUT]\nReturn ONLY raw JSON conforming to the schema described above.`;
-             response = await ai.models.generateContent({
-                model,
-                contents: gemmaPrompt,
-                config: getGemmaConfig()
-             });
-        } else {
-             response = await ai.models.generateContent({
-                model,
-                contents: content,
-                config: {
-                    systemInstruction,
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: Type.OBJECT,
-                        properties: {
-                            analysis: { type: Type.STRING },
-                            suggestedTask: { type: Type.STRING },
-                            suggestedFlashcardFront: { type: Type.STRING },
-                            suggestedFlashcardBack: { type: Type.STRING },
-                        }
+        const response = await ai.models.generateContent({
+            model: COMPLEX_TASK_MODEL,
+            contents: content,
+            config: {
+                systemInstruction,
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        analysis: { type: Type.STRING },
+                        suggestedTask: { type: Type.STRING },
+                        suggestedFlashcardFront: { type: Type.STRING },
+                        suggestedFlashcardBack: { type: Type.STRING },
                     }
                 }
-             });
-        }
+            }
+        });
 
+        // Access .text property directly
         return parseJSON<SandboxAnalysis>(response.text, { 
             analysis: "Could not analyze.", 
             suggestedTask: "Review content", 
@@ -225,8 +177,6 @@ export const analyzeSandboxItem = async (content: string, mentorId: string, conf
 
 export const getKanbanTherapy = async (taskContent: string, type: 'stuck' | 'completed', config: AppConfig): Promise<string> => {
     const tool = getToolConfig('kanban_therapist', config);
-    const model = tool.model || DEFAULT_MODEL;
-    const ai = getAiClient();
     
     const context = type === 'stuck' 
         ? "The user is STUCK on this task. Help them unblock it using stoic/cognitive reframing." 
@@ -234,12 +184,16 @@ export const getKanbanTherapy = async (taskContent: string, type: 'stuck' | 'com
     
     const fullPrompt = `${tool.systemPrompt}\n\nCONTEXT: ${context}\n\nTASK: "${taskContent}"`;
 
+    // Create instance right before call using process.env.API_KEY directly
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
     try {
         const response = await ai.models.generateContent({
-            model,
-            contents: fullPrompt, // Simple text generation
-            config: isGemmaModel(model) ? getGemmaConfig() : { systemInstruction: tool.systemPrompt }
+            model: COMPLEX_TASK_MODEL,
+            contents: fullPrompt,
+            config: { systemInstruction: tool.systemPrompt }
         });
+        // Access .text property directly
         return applyTypography(response.text || "Thinking...");
     } catch (e) {
         console.error("Kanban Therapy Error", e);
@@ -251,16 +205,18 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
     const author = config.challengeAuthors[0]; // Default to first author (Popper usually)
     if (!author) return "No challenge author configured.";
     
-    const model = author.model || DEFAULT_MODEL;
     const fullPrompt = `${author.systemPrompt}\n\nTASK: "${taskContent}"\n\nGenerate a challenge description (Markdown). Do not use checklists.`;
-    const ai = getAiClient();
+    
+    // Create instance right before call using process.env.API_KEY directly
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     try {
         const response = await ai.models.generateContent({
-            model,
+            model: COMPLEX_TASK_MODEL,
             contents: fullPrompt,
-            config: isGemmaModel(model) ? getGemmaConfig() : { systemInstruction: author.systemPrompt }
+            config: { systemInstruction: author.systemPrompt }
         });
+        // Access .text property directly
         return applyTypography(response.text || "");
     } catch (e) {
         console.error("Challenge Generation Error", e);
@@ -270,20 +226,21 @@ export const generateTaskChallenge = async (taskContent: string, config: AppConf
 
 export const analyzeJournalPath = async (entries: JournalEntry[], config: AppConfig): Promise<string> => {
     const tool = getToolConfig('journal_mentor', config);
-    const model = tool.model || DEFAULT_MODEL;
-    const ai = getAiClient();
 
     // Prepare journal context (last 10 entries to fit context window)
     const contextEntries = entries.slice(0, 10).map(e => `[${new Date(e.date).toLocaleDateString()}] ${e.content}`).join('\n---\n');
-    
     const fullPrompt = `${tool.systemPrompt}\n\nJOURNAL ENTRIES:\n${contextEntries}`;
+
+    // Create instance right before call using process.env.API_KEY directly
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     try {
         const response = await ai.models.generateContent({
-            model,
+            model: COMPLEX_TASK_MODEL,
             contents: fullPrompt,
-            config: isGemmaModel(model) ? getGemmaConfig() : { systemInstruction: tool.systemPrompt }
+            config: { systemInstruction: tool.systemPrompt }
         });
+        // Access .text property directly
         return applyTypography(response.text || "");
     } catch (e) {
         console.error("Journal Analysis Error", e);
