@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -10,7 +11,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Map as MapIcon } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Map as MapIcon, Compass, Target, Shield, Cpu, Activity } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -278,164 +279,216 @@ const HeroJourneyView: React.FC<{
     onCreateTask: (content: string) => void,
     onCreateHabit: (title: string) => void,
     onCreateJournal: (content: string) => void,
+    onMoveToHub: () => void,
     onOpenNote: () => void
-}> = ({ note, tasks, habits, journal, onClose, onCreateTask, onCreateHabit, onCreateJournal, onOpenNote }) => {
+}> = ({ note, tasks, habits, journal, onClose, onCreateTask, onCreateHabit, onCreateJournal, onMoveToHub, onOpenNote }) => {
+    
     // Find connected entities
     const connectedTasks = tasks.filter(t => t.linkedNoteId === note.id);
     const connectedHabits = habits.filter(h => h.linkedNoteId === note.id);
     const connectedJournal = journal.filter(j => j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id));
 
-    // Check completion status for golden lines
+    // Check completion status for transformation tracking
     const taskComplete = connectedTasks.some(t => t.column === 'done');
     const habitActive = connectedHabits.some(h => h.streak > 3);
     const journalInsight = connectedJournal.some(j => j.isInsight);
+    const inHub = note.status === 'sandbox';
 
-    // Node Positions (Orbital)
-    const center = { x: 50, y: 50 };
-    const radius = 35;
-    const nodes = [
-        { id: 'action', label: 'Действие', icon: Kanban, angle: -90, color: '#10b981', active: connectedTasks.length > 0, complete: taskComplete, action: () => onCreateTask(note.content) }, // Top
-        { id: 'system', label: 'Система', icon: Flame, angle: 0, color: '#f59e0b', active: connectedHabits.length > 0, complete: habitActive, action: () => onCreateHabit(note.title || 'Новая привычка') }, // Right
-        { id: 'reflect', label: 'Рефлексия', icon: Book, angle: 90, color: '#06b6d4', active: connectedJournal.length > 0, complete: journalInsight, action: () => onCreateJournal(note.content) }, // Bottom
-        { id: 'lab', label: 'Лаборатория', icon: Box, angle: 180, color: '#8b5cf6', active: false, complete: false, action: () => alert("Связь с ментором в разработке") }, // Left
-    ];
+    const transformationScore = [taskComplete, habitActive, journalInsight, inHub].filter(Boolean).length;
+    const isTransformed = transformationScore >= 2; // Arbitrary threshold
 
     return (
-        <div className="fixed inset-0 z-[60] bg-[#020617] text-white flex flex-col items-center justify-center overflow-hidden">
-            {/* Background Grid */}
+        <div className="fixed inset-0 z-[60] bg-[#020617] text-white flex flex-col items-center overflow-hidden font-sans">
+            {/* Background Grid & Nebula */}
             <div className="absolute inset-0 opacity-20 pointer-events-none" 
                 style={{ 
-                    backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)', 
+                    backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(99,102,241,0.15) 1px, transparent 0)', 
                     backgroundSize: '40px 40px' 
                 }} 
             />
-            
+            <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
+            <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
+
             {/* Header */}
             <div className="absolute top-6 left-6 z-20 flex items-center gap-4">
-                <button onClick={onClose} className="p-2 rounded-full border border-white/10 hover:bg-white/10 transition-colors">
+                <button onClick={onClose} className="p-3 rounded-full border border-white/10 hover:bg-white/10 hover:border-white/30 transition-all text-white/70 hover:text-white">
                     <ArrowLeft size={20} />
                 </button>
                 <div className="flex flex-col">
-                    <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/80">Путь Героя</h2>
-                    <span className="text-[10px] font-mono text-white/40">ID: {note.id.slice(-4)}</span>
+                    <h2 className="text-sm font-bold uppercase tracking-[0.25em] text-white/90">Star Gate</h2>
+                    <span className="text-[10px] font-mono text-indigo-400">INITIATION_SEQUENCE // {note.id.slice(-4)}</span>
                 </div>
             </div>
 
-            {/* Central System */}
-            <div className="relative w-full max-w-2xl aspect-square flex items-center justify-center">
+            {/* Main Stage */}
+            <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col items-center justify-center relative p-8">
                 
-                {/* Orbital Rings */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-[70%] h-[70%] rounded-full border border-white/5" />
-                    <div className="w-[40%] h-[40%] rounded-full border border-white/5 border-dashed animate-spin-slow" style={{ animationDuration: '60s' }} />
+                {/* 1. THE ARTIFACT (Source Note) */}
+                <div className="relative z-10 mb-12 group cursor-pointer" onClick={onOpenNote}>
+                    <div className="relative w-24 h-24 md:w-32 md:h-32 flex items-center justify-center">
+                        {/* Orbitals */}
+                        <div className="absolute inset-0 border border-white/20 rounded-full animate-spin-slow" style={{ animationDuration: '20s' }} />
+                        <div className="absolute inset-2 border border-dashed border-white/10 rounded-full animate-spin-reverse-slow" style={{ animationDuration: '30s' }} />
+                        
+                        {/* Core */}
+                        <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(99,102,241,0.5)] transition-all duration-700 ${isTransformed ? 'bg-white text-indigo-600' : 'bg-indigo-600 text-white'}`}>
+                            <Gem size={32} strokeWidth={1} className={isTransformed ? "animate-pulse" : ""} />
+                        </div>
+                    </div>
+                    {/* Tooltip Content */}
+                    <div className="absolute top-full mt-4 left-1/2 -translate-x-1/2 w-64 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <div className="bg-black/80 backdrop-blur-xl border border-white/10 p-4 rounded-xl">
+                            <p className="text-xs font-serif text-slate-300 line-clamp-3">{note.content}</p>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Connection Lines (SVG) */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                    <defs>
-                        <filter id="glow-line">
-                            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                            <feMerge>
-                                <feMergeNode in="coloredBlur"/>
-                                <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                        </filter>
-                    </defs>
-                    {nodes.map((node, i) => {
-                        const rad = (node.angle * Math.PI) / 180;
-                        const x = 50 + radius * Math.cos(rad);
-                        const y = 50 + radius * Math.sin(rad);
-                        
-                        return (
-                            <g key={i}>
-                                <line 
-                                    x1="50%" y1="50%" 
-                                    x2={`${x}%`} y2={`${y}%`} 
-                                    stroke={node.complete ? '#fbbf24' : node.active ? node.color : 'rgba(255,255,255,0.1)'} 
-                                    strokeWidth={node.active ? 1.5 : 1}
-                                    strokeDasharray={node.active ? 'none' : '4 4'}
-                                    className="transition-all duration-500"
-                                    filter={node.active ? "url(#glow-line)" : undefined}
-                                />
-                                {node.active && (
-                                    <circle r="2" fill={node.complete ? '#fbbf24' : 'white'}>
-                                        <animateMotion 
-                                            dur="3s" 
-                                            repeatCount="indefinite"
-                                            path={`M${center.x * (window.innerWidth < 768 ? 4 : 8)},${center.y * (window.innerWidth < 768 ? 4 : 8)} L${x * (window.innerWidth < 768 ? 4 : 8)},${y * (window.innerWidth < 768 ? 4 : 8)}`} 
-                                        />
-                                    </circle>
-                                )}
-                            </g>
-                        );
-                    })}
-                </svg>
+                {/* 2. THE PATHS (Interactive Zones) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl relative z-10">
+                    
+                    {/* LEFT: AUTONOMY PATH */}
+                    <div className="relative group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-transparent rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <div className="relative bg-white/5 backdrop-blur-md border border-white/10 hover:border-emerald-500/50 rounded-3xl p-8 flex flex-col gap-6 transition-all duration-300 h-full group-hover:translate-y-[-4px]">
+                            
+                            <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+                                <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl">
+                                    <Compass size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white tracking-wide">Самостоятельный Путь</h3>
+                                    <p className="text-xs text-slate-400 font-mono mt-1">DIRECT_ACTION_PROTOCOL</p>
+                                </div>
+                            </div>
 
-                {/* Nodes */}
-                {nodes.map((node) => {
-                    const rad = (node.angle * Math.PI) / 180;
-                    // CSS positioning using %
-                    const left = 50 + radius * Math.cos(rad);
-                    const top = 50 + radius * Math.sin(rad);
+                            <div className="grid grid-cols-1 gap-3">
+                                {/* KANBAN BUTTON */}
+                                <button 
+                                    onClick={() => onCreateTask(note.content)}
+                                    className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${connectedTasks.length > 0 ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-black/20 border-white/5 hover:bg-white/10'}`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Kanban size={18} className={connectedTasks.length > 0 ? "text-emerald-400" : "text-slate-400"} />
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-200">Создать Задачу</div>
+                                            {connectedTasks.length > 0 && <div className="text-[10px] text-emerald-400 mt-0.5">АКТИВНО: {connectedTasks.length}</div>}
+                                        </div>
+                                    </div>
+                                    {taskComplete && <Star size={16} className="text-yellow-400 fill-yellow-400 animate-pulse" />}
+                                </button>
 
-                    return (
-                        <div 
-                            key={node.id}
-                            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-3 z-10 group cursor-pointer"
-                            style={{ left: `${left}%`, top: `${top}%` }}
-                            onClick={node.active ? undefined : node.action}
-                        >
-                            <div 
-                                className={`
-                                    w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300 relative
-                                    ${node.active 
-                                        ? `bg-black border-[${node.color}] shadow-[0_0_20px_${node.color}40]` 
-                                        : 'bg-black/50 border-white/10 hover:border-white/30 hover:scale-110'}
-                                `}
-                                style={{ borderColor: node.active ? node.color : undefined }}
-                            >
-                                <node.icon size={20} className={node.active ? 'text-white' : 'text-white/40'} />
-                                {node.complete && (
-                                    <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-0.5 border border-black">
-                                        <Star size={8} className="fill-black text-black" />
+                                {/* HABIT BUTTON */}
+                                <button 
+                                    onClick={() => onCreateHabit(note.title || 'Новая привычка')}
+                                    className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${connectedHabits.length > 0 ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-black/20 border-white/5 hover:bg-white/10'}`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Flame size={18} className={connectedHabits.length > 0 ? "text-emerald-400" : "text-slate-400"} />
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-200">Внедрить Привычку</div>
+                                            {connectedHabits.length > 0 && <div className="text-[10px] text-emerald-400 mt-0.5">АКТИВНО: {connectedHabits.length}</div>}
+                                        </div>
+                                    </div>
+                                    {habitActive && <Star size={16} className="text-yellow-400 fill-yellow-400 animate-pulse" />}
+                                </button>
+
+                                {/* JOURNAL BUTTON */}
+                                <button 
+                                    onClick={() => onCreateJournal(note.content)}
+                                    className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${connectedJournal.length > 0 ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-black/20 border-white/5 hover:bg-white/10'}`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Book size={18} className={connectedJournal.length > 0 ? "text-emerald-400" : "text-slate-400"} />
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-200">Рефлексия (Дневник)</div>
+                                            {connectedJournal.length > 0 && <div className="text-[10px] text-emerald-400 mt-0.5">ЗАПИСЕЙ: {connectedJournal.length}</div>}
+                                        </div>
+                                    </div>
+                                    {journalInsight && <Star size={16} className="text-yellow-400 fill-yellow-400 animate-pulse" />}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* RIGHT: MENTOR PATH */}
+                    <div className="relative group">
+                        <div className="absolute inset-0 bg-gradient-to-bl from-indigo-500/20 to-transparent rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <div className="relative bg-white/5 backdrop-blur-md border border-white/10 hover:border-indigo-500/50 rounded-3xl p-8 flex flex-col gap-6 transition-all duration-300 h-full group-hover:translate-y-[-4px]">
+                            
+                            <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+                                <div className="p-3 bg-indigo-500/20 text-indigo-400 rounded-xl">
+                                    <BrainCircuit size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white tracking-wide">Путь с Учителем</h3>
+                                    <p className="text-xs text-slate-400 font-mono mt-1">MENTOR_GUIDANCE_SYSTEM</p>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 flex flex-col justify-center gap-4">
+                                <p className="text-sm text-slate-300 leading-relaxed">
+                                    Перемести мысль в <strong>Хаб</strong>, чтобы получить разбор от AI-менторов или превратить её в Вызов.
+                                </p>
+                                
+                                <button 
+                                    onClick={onMoveToHub}
+                                    disabled={inHub}
+                                    className={`w-full py-4 rounded-xl border flex items-center justify-center gap-3 transition-all font-bold uppercase tracking-widest text-xs
+                                        ${inHub 
+                                            ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300 cursor-default' 
+                                            : 'bg-indigo-600 hover:bg-indigo-500 text-white border-transparent shadow-lg shadow-indigo-900/50'}
+                                    `}
+                                >
+                                    {inHub ? (
+                                        <>
+                                            <Check size={16} /> Уже в Хабе
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Box size={16} /> Войти в Хаб
+                                        </>
+                                    )}
+                                </button>
+
+                                {inHub && (
+                                    <div className="p-4 bg-indigo-900/20 rounded-xl border border-indigo-500/30">
+                                        <div className="flex items-start gap-3">
+                                            <Zap size={16} className="text-yellow-400 mt-0.5" />
+                                            <div className="text-xs text-indigo-200">
+                                                Мысль находится в Лаборатории. Перейди в раздел <strong>Хаб</strong> для синтеза.
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>
-                            <div className="flex flex-col items-center">
-                                <span className={`text-[10px] font-bold uppercase tracking-widest ${node.active ? 'text-white' : 'text-white/30'}`}>{node.label}</span>
-                                {node.active && (
-                                    <span className="text-[8px] font-mono text-white/50 bg-white/5 px-1.5 rounded mt-1">
-                                        {node.complete ? 'ЗАВЕРШЕНО' : 'АКТИВНО'}
-                                    </span>
-                                )}
-                                {!node.active && (
-                                    <span className="text-[8px] font-mono text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                                        + СОЗДАТЬ
-                                    </span>
-                                )}
-                            </div>
                         </div>
-                    );
-                })}
+                    </div>
 
-                {/* Central Star (The Note) */}
-                <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 group">
-                    <div 
-                        className="w-24 h-24 rounded-full bg-white text-black flex items-center justify-center relative z-10 cursor-pointer hover:scale-105 transition-transform duration-300"
-                        onClick={onOpenNote}
-                    >
-                        <div className="absolute inset-0 rounded-full bg-white blur-xl opacity-20 animate-pulse" />
-                        <div className="text-center px-2">
-                            <Gem size={24} className="mx-auto mb-1 text-indigo-600" />
-                            <div className="text-[8px] font-mono uppercase tracking-widest opacity-60">SOURCE</div>
+                </div>
+
+                {/* 3. TRANSFORMATION STATUS (Stage 4) */}
+                <div className="mt-16 w-full max-w-2xl relative">
+                    <div className="flex items-center justify-between mb-2 px-1">
+                        <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-500">Sync Rate</span>
+                        <span className={`text-[10px] font-mono font-bold ${isTransformed ? 'text-emerald-400' : 'text-slate-500'}`}>
+                            {Math.round((transformationScore / 3) * 100)}%
+                        </span>
+                    </div>
+                    <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                        <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(transformationScore / 3) * 100}%` }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className={`h-full ${isTransformed ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-indigo-500'}`}
+                        />
+                    </div>
+                    {isTransformed && (
+                        <div className="absolute top-10 left-0 right-0 text-center animate-in fade-in slide-in-from-bottom-2 duration-700">
+                            <span className="inline-block px-4 py-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                                Transformation Complete
+                            </span>
                         </div>
-                    </div>
-                    {/* Note Content Tooltip */}
-                    <div className="absolute top-full mt-4 left-1/2 -translate-x-1/2 w-64 bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-4 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        <p className="text-xs font-serif text-white/80 line-clamp-3 leading-relaxed">
-                            {note.content.substring(0, 150)}...
-                        </p>
-                    </div>
+                    )}
                 </div>
 
             </div>
@@ -1012,14 +1065,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                     {!isArchived ? (
                         <>
                             {/* Inbox: Archive + Journey */}
-                            <Tooltip content="В путь">
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); handlers.startJourney(note); }} 
-                                    className="p-2 text-indigo-500 hover:text-white hover:bg-indigo-500 rounded-full transition-all opacity-100"
-                                >
-                                    <MapIcon size={16} strokeWidth={1.5} />
-                                </button>
-                            </Tooltip>
                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                             <Tooltip content="Переместить в библиотеку">
                                 <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
@@ -1028,9 +1073,14 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                     ) : (
                         // Library: Action buttons moved here
                         <>
-                            <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
-                            
-                            <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now(), linkedNoteId: note.id }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
+                            <Tooltip content="В путь">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handlers.startJourney(note); }} 
+                                    className="p-2 text-indigo-500 hover:text-white hover:bg-indigo-500 rounded-full transition-all opacity-100"
+                                >
+                                    <MapIcon size={16} strokeWidth={1.5} />
+                                </button>
+                            </Tooltip>
                             
                             <Tooltip content={isLinkedToJournal ? "В дневнике" : "В дневник"}>
                                 <button 
@@ -1158,10 +1208,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   });
 
   const allExistingTags = useMemo(() => {
-      const uniqueTagsMap = new Map(); // <--- FIX IS HERE (removed Type Annotation for safety if no TS present, but even better, just new Map() is standard)
-      // Actually, to be super safe:
-      // const uniqueTagsMap: Map<string, string> = new Map(); 
-      // The issue was 'Map' being imported from lucide-react. Now it is aliased to MapIcon.
+      const uniqueTagsMap = new Map();
       
       const map = new Map<string, string>();
       notes.forEach(note => {
@@ -1588,6 +1635,12 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       updateNote({...activeJourneyNote});
   };
 
+  const handleMoveToHub = () => {
+      if (!activeJourneyNote) return;
+      moveNoteToSandbox(activeJourneyNote.id);
+      updateNote({...activeJourneyNote}); // Trigger re-render
+  };
+
   const cardHandlers = useMemo(() => ({
       handleDragStart,
       handleDragOver,
@@ -1835,7 +1888,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         </div>
                     )}
                     {activeTab === 'journey' && journeyNotes.length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500">
+                        <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-slate-500">
                             <MapIcon size={48} className="mb-4 opacity-20" strokeWidth={1} />
                             <p>В этом мире пока пусто.</p>
                             <p className="text-sm mt-2">Отправьте мысль в Путь из Входящих.</p>
@@ -2094,6 +2147,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                   onCreateTask={handleCreateTaskFromNote}
                   onCreateHabit={handleCreateHabitFromNote}
                   onCreateJournal={handleCreateJournalFromNote}
+                  onMoveToHub={handleMoveToHub}
                   onOpenNote={() => handleOpenNote(activeJourneyNote)}
               />
           )}
