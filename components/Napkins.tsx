@@ -307,7 +307,7 @@ const KineticFlashcardDeck = ({
                     {showFavorites ? "Нет избранных карточек" : "Колода пуста"}
                 </h3>
                 <p className="text-sm text-slate-500 max-w-xs mt-2">
-                    {showFavorites ? "Отметьте важные карточки звездочкой." : "Кристаллизуй знания в Хабе, чтобы они появились здесь."}
+                    {showFavorites ? "Отметь важные карточки звездочкой" : "Кристаллизуй знания в Хабе, чтобы они появились здесь."}
                 </p>
                 {showFavorites && (
                     <button 
