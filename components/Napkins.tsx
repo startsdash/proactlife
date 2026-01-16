@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -5,12 +6,13 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry, Habit } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
+import HeroJourney from './HeroJourney';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Rocket } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -24,6 +26,7 @@ interface Props {
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
   onAddJournalEntry: (entry: JournalEntry) => void;
+  onAddHabit?: (habit: Habit) => void;
   sketchItems?: SketchItem[];
   addSketchItem?: (item: SketchItem) => void;
   deleteSketchItem?: (id: string) => void;
@@ -668,6 +671,7 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
+        startHeroJourney: (note: Note) => void; // New Handler
     }
 }
 
@@ -837,9 +841,19 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                     ) : (
                         // Library: Action buttons moved here
                         <>
-                            <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
+                            {/* HERO JOURNEY TRIGGER */}
+                            <Tooltip content="В путь">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handlers.startHeroJourney(note); }}
+                                    className="p-2 text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-full transition-all hover:scale-110 shadow-[0_0_10px_rgba(99,102,241,0.3)] animate-pulse hover:animate-none"
+                                >
+                                    <Rocket size={16} strokeWidth={1.5} className="fill-current" />
+                                </button>
+                            </Tooltip>
                             
-                            <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
+                            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1 opacity-50" />
+
+                            <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
                             
                             <Tooltip content={isLinkedToJournal ? "В дневнике" : "В дневник"}>
                                 <button 
@@ -877,7 +891,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, onAddHabit, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -924,6 +938,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const { scrollY } = useScroll({ container: scrollContainerRef });
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [heroJourneyNote, setHeroJourneyNote] = useState<Note | null>(null);
 
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
@@ -1311,6 +1326,54 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       }
   };
 
+  const handleHeroJourneyCommit = (action: 'task' | 'habit' | 'journal' | 'sandbox', payload?: any) => {
+      if (!heroJourneyNote) return;
+
+      switch(action) {
+          case 'task':
+              onAddTask({
+                  id: Date.now().toString(),
+                  title: heroJourneyNote.title,
+                  content: heroJourneyNote.content,
+                  column: 'todo',
+                  createdAt: Date.now()
+              });
+              break;
+          case 'habit':
+              if (onAddHabit) {
+                  onAddHabit({
+                      id: Date.now().toString(),
+                      title: heroJourneyNote.title || 'Новая привычка',
+                      description: heroJourneyNote.content.substring(0, 100),
+                      color: 'indigo',
+                      icon: 'Zap',
+                      frequency: 'daily',
+                      history: {},
+                      streak: 0,
+                      bestStreak: 0,
+                      reminders: [],
+                      createdAt: Date.now()
+                  });
+              } else {
+                  alert("Функция создания привычки не передана");
+              }
+              break;
+          case 'journal':
+              onAddJournalEntry({
+                  id: Date.now().toString(),
+                  date: Date.now(),
+                  content: heroJourneyNote.content,
+                  linkedNoteId: heroJourneyNote.id,
+                  isInsight: false
+              });
+              break;
+          case 'sandbox':
+              moveNoteToSandbox(heroJourneyNote.id);
+              break;
+      }
+      setHeroJourneyNote(null);
+  };
+
   const filterNotes = (list: Note[]) => {
     return list.filter(note => {
       if (showTagInput && tagQuery) {
@@ -1343,8 +1406,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
-      onImageClick: (src: string) => setLightboxSrc(src)
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
+      onImageClick: (src: string) => setLightboxSrc(src),
+      startHeroJourney: (note: Note) => setHeroJourneyNote(note)
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc, setHeroJourneyNote]);
 
   const markdownRenderComponents = {
       ...markdownComponents,
@@ -1366,6 +1430,18 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       {/* Global Lightbox for viewing images */}
       <AnimatePresence>
           {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      </AnimatePresence>
+
+      {/* Hero Journey Modal */}
+      <AnimatePresence>
+          {heroJourneyNote && (
+              <HeroJourney 
+                  note={heroJourneyNote} 
+                  config={config} 
+                  onClose={() => setHeroJourneyNote(null)} 
+                  onCommit={handleHeroJourneyCommit} 
+              />
+          )}
       </AnimatePresence>
 
       <div className="shrink-0 w-full px-4 md:px-8 pt-4 md:pt-8 mb-4 z-50">
