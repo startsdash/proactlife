@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig, HeroQuest } from './types';
+import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
 import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
@@ -20,9 +20,7 @@ import LearningMode from './components/LearningMode';
 import UserSettings from './components/UserSettings';
 import Onboarding from './components/Onboarding';
 import Profile from './components/Profile'; 
-import HeroJourney from './components/HeroJourney'; // IMPORTED
 import { LogIn, Shield, CloudOff, ArrowRight } from 'lucide-react';
-import { CyberpunkQuestData } from './services/geminiService'; // IMPORTED
 
 const App: React.FC = () => {
   // --- THEME LOGIC ---
@@ -91,8 +89,7 @@ const App: React.FC = () => {
 
   const [data, setData] = useState<AppState>({
     notes: [], sketchpad: [], tasks: [], flashcards: [], habits: [], challenges: [], journal: [], mentorAnalyses: [], config: DEFAULT_CONFIG, 
-    profileConfig: { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' },
-    heroQuests: [] // Init
+    profileConfig: { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' }
   });
   
   const [isLoaded, setIsLoaded] = useState(false);
@@ -103,9 +100,6 @@ const App: React.FC = () => {
   const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
   const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null); // Context for navigation (Napkins)
   
-  // QUEST STATE
-  const [questSeedNote, setQuestSeedNote] = useState<Note | null>(null);
-
   // INVITE CODE LOGIC
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [guestSessionCode, setGuestSessionCode] = useState<string | null>(() => {
@@ -171,7 +165,6 @@ const App: React.FC = () => {
               if (!driveData.habits) driveData.habits = [];
               if (!driveData.sketchpad) driveData.sketchpad = [];
               if (!driveData.profileConfig) driveData.profileConfig = { role: 'architect', manifesto: 'Строить системы, которые переживут хаос.' };
-              if (!driveData.heroQuests) driveData.heroQuests = [];
               
               setData(prev => ({...driveData, user: prev.user})); 
               saveState(driveData);
@@ -389,69 +382,6 @@ const App: React.FC = () => {
       }
   };
 
-  // RPG Logic
-  const handleStartQuest = (questData: CyberpunkQuestData, type: 'manual' | 'ai') => {
-      if (!questSeedNote) return;
-
-      const questId = Date.now().toString();
-      
-      const newQuest: HeroQuest = {
-          id: questId,
-          sourceNoteId: questSeedNote.id,
-          status: 'active',
-          theme: questData.theme,
-          title: questData.title,
-          briefing: questData.briefing,
-          linkedTaskIds: [],
-          linkedHabitIds: [],
-          linkedEntryIds: [],
-          xpReward: type === 'ai' ? 500 : 250,
-          createdAt: Date.now()
-      };
-
-      // 1. Create Linked Tasks
-      const newTasks: Task[] = questData.objectives.map(obj => ({
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-          title: obj,
-          content: `Objective derived from: ${questData.title}`,
-          column: 'todo',
-          createdAt: Date.now(),
-          questId: questId,
-          spheres: ['growth']
-      }));
-      newQuest.linkedTaskIds = newTasks.map(t => t.id);
-
-      // 2. Create System Protocol Habit
-      const newHabit: Habit = {
-          id: Date.now().toString() + 'habit',
-          title: questData.systemProtocol,
-          description: `Protocol for ${questData.title}`,
-          color: 'indigo',
-          icon: 'Activity',
-          frequency: 'daily',
-          history: {},
-          streak: 0,
-          bestStreak: 0,
-          reminders: [],
-          createdAt: Date.now(),
-          questId: questId,
-          spheres: ['productivity']
-      };
-      newQuest.linkedHabitIds = [newHabit.id];
-
-      // Update State
-      setData(prev => ({
-          ...prev,
-          heroQuests: [...(prev.heroQuests || []), newQuest],
-          activeQuestId: questId,
-          tasks: [...prev.tasks, ...newTasks],
-          habits: [...prev.habits, newHabit]
-      }));
-
-      setQuestSeedNote(null);
-      handleNavigate(Module.KANBAN);
-  };
-
   if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a] text-slate-800 dark:text-slate-200">Loading...</div>;
 
   // --- GUEST MODE GUARD ---
@@ -518,16 +448,6 @@ const App: React.FC = () => {
         userEmail={data.user?.email}
     >
       <Onboarding onClose={() => setShowOnboarding(false)} />
-      
-      {questSeedNote && (
-          <HeroJourney 
-              note={questSeedNote} 
-              config={visibleConfig} 
-              onClose={() => setQuestSeedNote(null)} 
-              onStartQuest={handleStartQuest} 
-          />
-      )}
-
       {module === Module.LEARNING && <LearningMode onStart={() => handleNavigate(Module.NAPKINS)} onNavigate={handleNavigate} />}
       {module === Module.DASHBOARD && <Dashboard notes={data.notes.filter(n => n.status !== 'archived' && n.status !== 'trash')} tasks={data.tasks.filter(t => !t.isArchived)} habits={data.habits} journal={data.journal.filter(j => !j.isArchived)} onNavigate={handleNavigate} flashcards={data.flashcards} />}
       
@@ -548,7 +468,6 @@ const App: React.FC = () => {
             initialNoteId={napkinsContextNoteId}
             onClearInitialNote={() => setNapkinsContextNoteId(null)}
             journalEntries={data.journal}
-            onStartQuest={setQuestSeedNote}
           />
       )}
       

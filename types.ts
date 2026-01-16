@@ -78,9 +78,6 @@ export interface Task {
   
   spheres?: string[];
   isArchived?: boolean;
-  
-  // Hero Journey Link
-  questId?: string;
 }
 
 export interface Flashcard {
@@ -114,9 +111,6 @@ export interface Habit {
   spheres?: string[];
   isArchived?: boolean;
   createdAt: number;
-  
-  // Hero Journey Link
-  questId?: string;
 }
 
 export interface Challenge {
@@ -144,9 +138,6 @@ export interface JournalEntry {
   mood?: number;
   moodTags?: string[];
   isArchived?: boolean; 
-  
-  // Hero Journey Link
-  questId?: string;
 }
 
 export interface MentorAnalysis {
@@ -228,24 +219,6 @@ export interface UserProfileConfig {
     manifesto: string;
 }
 
-// --- HERO JOURNEY RPG TYPES ---
-export interface HeroQuest {
-    id: string;
-    sourceNoteId: string;
-    status: 'active' | 'completed' | 'failed';
-    theme: 'corpo' | 'nomad' | 'street_kid'; // Cyberpunk Lifepaths
-    title: string; // "Operation: Mindfall"
-    briefing: string; // Narrative context
-    
-    // Linked Entities IDs
-    linkedTaskIds: string[];
-    linkedHabitIds: string[];
-    linkedEntryIds: string[];
-    
-    xpReward: number;
-    createdAt: number;
-}
-
 export interface AppState {
   notes: Note[];
   sketchpad: SketchItem[];
@@ -257,11 +230,7 @@ export interface AppState {
   mentorAnalyses: MentorAnalysis[]; 
   config: AppConfig; 
   user?: UserProfile; 
-  profileConfig?: UserProfileConfig;
-  
-  // RPG State
-  heroQuests?: HeroQuest[];
-  activeQuestId?: string | null;
+  profileConfig?: UserProfileConfig; 
 }
 
 export type SyncStatus = 'disconnected' | 'syncing' | 'synced' | 'error';

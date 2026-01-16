@@ -1,5 +1,4 @@
 
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppConfig, Mentor, ChallengeAuthor, Task, Note, AIToolConfig, JournalEntry } from "../types";
 import { DEFAULT_CONFIG, DEFAULT_AI_TOOLS, DEFAULT_MODEL, applyTypography, BASE_OUTPUT_INSTRUCTION } from '../constants';
@@ -289,72 +288,5 @@ export const analyzeJournalPath = async (entries: JournalEntry[], config: AppCon
     } catch (e) {
         console.error("Journal Analysis Error", e);
         return "Analysis failed.";
-    }
-};
-
-// --- HERO JOURNEY RPG GENERATOR ---
-export interface CyberpunkQuestData {
-    title: string;
-    briefing: string;
-    objectives: string[]; // 3 Tasks
-    systemProtocol: string; // 1 Habit
-    theme: 'corpo' | 'nomad' | 'street_kid';
-}
-
-export const generateCyberpunkQuest = async (noteContent: string, config: AppConfig): Promise<CyberpunkQuestData | null> => {
-    const ai = getAiClient();
-    const model = 'gemini-2.5-flash'; // Good balance of speed and roleplay capability
-
-    const prompt = `
-    ROLE: You are a "Fixer" in a Cyberpunk 2077 world. High tech, low life. Slang: choom, eddies, delta, preem, nova.
-    TASK: Analyze the "INTEL" (User Note) and convert it into a dangerous "Gig" (Quest).
-    
-    INTEL: "${noteContent}"
-
-    OUTPUT SCHEMA (JSON):
-    {
-        "title": "Operation Name (Cyberpunk style)",
-        "briefing": "Atmospheric briefing text explaining why this matters in the dark future (max 3 sentences).",
-        "objectives": [
-            "Actionable Task 1 (Recon/Prep)",
-            "Actionable Task 2 (Execution)",
-            "Actionable Task 3 (Closing/Payoff)"
-        ],
-        "systemProtocol": "A daily habit/ritual to maintain stability during this op.",
-        "theme": "corpo" | "nomad" | "street_kid" (Select best fit)
-    }
-    
-    Be immersive. Use Russian language.
-    `;
-
-    try {
-        const response = await ai.models.generateContent({
-            model,
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        title: { type: Type.STRING },
-                        briefing: { type: Type.STRING },
-                        objectives: { type: Type.ARRAY, items: { type: Type.STRING } },
-                        systemProtocol: { type: Type.STRING },
-                        theme: { type: Type.STRING, enum: ['corpo', 'nomad', 'street_kid'] }
-                    }
-                }
-            }
-        });
-
-        return parseJSON<CyberpunkQuestData>(response.text, {
-            title: "Сбой сети",
-            briefing: "Данные повреждены. Требуется ручное вмешательство.",
-            objectives: ["Проверить соединение", "Перезагрузить протокол", "Связаться с фиксером"],
-            systemProtocol: "Диагностика системы",
-            theme: "street_kid"
-        });
-    } catch (e) {
-        console.error("Cyberpunk Quest Generation Error", e);
-        return null;
     }
 };
