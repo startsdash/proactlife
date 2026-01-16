@@ -289,6 +289,13 @@ const KineticFlashcardDeck = ({
         return showFavorites ? cards.filter(c => c.isStarred) : cards;
     }, [cards, showFavorites]);
 
+    // Ensure index stays valid if cards are removed
+    useEffect(() => {
+        if (index >= displayedCards.length && displayedCards.length > 0) {
+            setIndex(Math.max(0, displayedCards.length - 1));
+        }
+    }, [displayedCards.length, index]);
+
     // Handle empty filtered state
     if (displayedCards.length === 0) {
         return (
@@ -334,8 +341,7 @@ const KineticFlashcardDeck = ({
         e.stopPropagation();
         if (confirm("Удалить эту карточку?")) {
             onDelete(currentCard.id);
-            // Index logic handles itself via safeIndex recalculation, 
-            // but we might want to ensure we don't jump too far if it was the last card.
+            // If we delete the last card, move index back
             if (safeIndex >= displayedCards.length - 1) {
                 setIndex(Math.max(0, safeIndex - 1));
             }
@@ -369,7 +375,7 @@ const KineticFlashcardDeck = ({
                     {/* Status Label */}
                     <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 flex items-center gap-2">
                         {isFlipped ? <Sparkles size={12} className="text-amber-500" /> : <BrainCircuit size={12} className="text-indigo-500" />}
-                        {isFlipped ? 'ОТВЕТ' : 'ВОПРОС'} // {String(safeIndex + 1).padStart(2, '0')}
+                        <span>{isFlipped ? 'ОТВЕТ' : 'ВОПРОС'} <span className="opacity-50 mx-2">//</span> {safeIndex + 1} из {displayedCards.length}</span>
                     </div>
 
                     {/* Top Right Controls: Filter & Star */}
@@ -406,9 +412,11 @@ const KineticFlashcardDeck = ({
                             className="w-full h-full flex items-center justify-center"
                         >
                             {/* Scrollable container for text to keep card size fixed */}
-                            <div className="w-full h-[320px] overflow-y-auto pr-2">
-                                <div className="font-serif text-xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-100 select-none whitespace-pre-wrap">
-                                    {isFlipped ? currentCard.back : currentCard.front}
+                            <div className="w-full h-[320px] overflow-y-auto pr-2 custom-scrollbar-ghost">
+                                <div className="min-h-full flex flex-col justify-center">
+                                    <div className="font-serif text-xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-100 select-none whitespace-pre-wrap py-4">
+                                        {isFlipped ? currentCard.back : currentCard.front}
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
@@ -1553,201 +1561,6 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
               {...props} 
           />
       )
-  };
-
-  // --- KINETIC FLASHCARD DECK (UPDATED) ---
-  const KineticFlashcardDeck = ({ 
-      cards, 
-      onDelete, 
-      onToggleStar 
-  }: { 
-      cards: Flashcard[], 
-      onDelete: (id: string) => void,
-      onToggleStar: (id: string) => void
-  }) => {
-      const [index, setIndex] = useState(0);
-      const [isFlipped, setIsFlipped] = useState(false);
-      const [showFavorites, setShowFavorites] = useState(false);
-
-      // Filter cards based on mode
-      const displayedCards = useMemo(() => {
-          return showFavorites ? cards.filter(c => c.isStarred) : cards;
-      }, [cards, showFavorites]);
-
-      // Ensure index stays valid if cards are removed
-      useEffect(() => {
-          if (index >= displayedCards.length && displayedCards.length > 0) {
-              setIndex(Math.max(0, displayedCards.length - 1));
-          }
-      }, [displayedCards.length, index]);
-
-      // Handle empty filtered state
-      if (displayedCards.length === 0) {
-          return (
-              <div className="flex flex-col items-center justify-center h-full py-20 text-center animate-in fade-in duration-500">
-                  <div className="w-24 h-24 rounded-full border border-slate-200 dark:border-slate-800 flex items-center justify-center mb-6">
-                      <Layers size={32} className="text-slate-300 dark:text-slate-600" />
-                  </div>
-                  <h3 className="text-lg font-light text-slate-800 dark:text-slate-200">
-                      {showFavorites ? "Нет избранных карточек" : "Колода пуста"}
-                  </h3>
-                  <p className="text-sm text-slate-500 max-w-xs mt-2">
-                      {showFavorites ? "Отметьте важные карточки звездочкой." : "Кристаллизуй знания в Хабе, чтобы они появились здесь."}
-                  </p>
-                  {showFavorites && (
-                      <button 
-                          onClick={() => setShowFavorites(false)}
-                          className="mt-6 px-4 py-2 text-xs font-mono uppercase tracking-widest text-indigo-500 hover:text-indigo-600 transition-colors border border-indigo-200 rounded-full hover:bg-indigo-50 dark:border-indigo-900 dark:hover:bg-indigo-900/20"
-                      >
-                          Показать все
-                      </button>
-                  )}
-              </div>
-          );
-      }
-
-      // Ensure index is valid after filter change
-      const safeIndex = index % displayedCards.length;
-      const currentCard = displayedCards[safeIndex];
-
-      const nextCard = () => {
-          setIsFlipped(false);
-          setIndex((prev) => (prev + 1) % displayedCards.length);
-      };
-
-      const prevCard = () => {
-          setIsFlipped(false);
-          setIndex((prev) => (prev - 1 + displayedCards.length) % displayedCards.length);
-      };
-
-      const toggleFlip = () => setIsFlipped(!isFlipped);
-
-      const handleDelete = (e: React.MouseEvent) => {
-          e.stopPropagation();
-          if (confirm("Удалить эту карточку?")) {
-              onDelete(currentCard.id);
-              // If we delete the last card, move index back
-              if (safeIndex >= displayedCards.length - 1) {
-                  setIndex(Math.max(0, safeIndex - 1));
-              }
-          }
-      };
-
-      return (
-          <div className="flex items-center justify-center h-full min-h-[600px] w-full p-4 md:p-8">
-              {/* The "Oracle-like" Window */}
-              <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="relative w-full max-w-2xl min-h-[500px] bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-[40px] shadow-2xl border border-white/50 dark:border-white/10 overflow-hidden flex flex-col transition-colors duration-500"
-                  onClick={toggleFlip}
-              >
-                  {/* Background Atmosphere (Fog/Neon) */}
-                  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[40px]">
-                      <motion.div 
-                          animate={{ 
-                              scale: isFlipped ? 1.2 : 1,
-                              opacity: isFlipped ? 0.4 : 0.2
-                          }}
-                          transition={{ duration: 1 }}
-                          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[100px] transition-colors duration-700 ${isFlipped ? 'bg-amber-500' : 'bg-indigo-500'}`}
-                      />
-                      <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 opacity-10 mix-blend-overlay" />
-                  </div>
-
-                  {/* Header Controls */}
-                  <div className="flex justify-between items-center px-8 pt-8 pb-2 relative z-20" onClick={e => e.stopPropagation()}>
-                      {/* Status Label */}
-                      <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 flex items-center gap-2">
-                          {isFlipped ? <Sparkles size={12} className="text-amber-500" /> : <BrainCircuit size={12} className="text-indigo-500" />}
-                          {isFlipped ? 'ОТВЕТ' : 'ВОПРОС'}
-                      </div>
-
-                      {/* Top Right Controls: Filter & Star */}
-                      <div className="flex items-center gap-3">
-                          <Tooltip content="Показать только избранное">
-                              <button 
-                                  onClick={() => { setShowFavorites(!showFavorites); setIndex(0); }}
-                                  className={`p-2 rounded-full transition-all ${showFavorites ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-300 dark:text-slate-600 hover:text-indigo-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
-                              >
-                                  <Filter size={16} strokeWidth={showFavorites ? 2.5 : 1.5} />
-                              </button>
-                          </Tooltip>
-                          
-                          <Tooltip content={currentCard.isStarred ? "Убрать из избранного" : "Добавить в избранное"}>
-                              <button 
-                                  onClick={() => onToggleStar(currentCard.id)}
-                                  className={`p-2 rounded-full transition-all ${currentCard.isStarred ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600 hover:text-amber-400 hover:bg-black/5 dark:hover:bg-white/5'}`}
-                              >
-                                  <Star size={16} strokeWidth={currentCard.isStarred ? 0 : 1.5} fill={currentCard.isStarred ? "currentColor" : "none"} />
-                              </button>
-                          </Tooltip>
-                      </div>
-                  </div>
-
-                  {/* Main Content Area */}
-                  <div className="flex-1 flex flex-col items-center justify-center p-8 md:p-12 text-center relative z-10 cursor-pointer overflow-hidden">
-                      <AnimatePresence mode="wait">
-                          <motion.div
-                              key={currentCard.id + (isFlipped ? '_back' : '_front')}
-                              initial={{ opacity: 0, y: 10, filter: 'blur(5px)' }}
-                              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                              exit={{ opacity: 0, y: -10, filter: 'blur(5px)' }}
-                              transition={{ duration: 0.4, ease: "easeOut" }}
-                              className="w-full h-full flex items-center justify-center"
-                          >
-                              {/* Scrollable container for text to keep card size fixed */}
-                              <div className="w-full h-[320px] overflow-y-auto pr-2">
-                                  <div className="font-serif text-xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-100 select-none whitespace-pre-wrap">
-                                      {isFlipped ? currentCard.back : currentCard.front}
-                                  </div>
-                              </div>
-                          </motion.div>
-                      </AnimatePresence>
-                  </div>
-
-                  {/* Footer / Controls */}
-                  <div className="pb-8 px-8 flex justify-between items-end relative z-20" onClick={e => e.stopPropagation()}>
-                      {/* Centered Navigation */}
-                      <div className="flex-1 flex justify-center gap-8 pl-12">
-                          <button 
-                              onClick={prevCard}
-                              className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1 flex items-center gap-2"
-                          >
-                              <ArrowLeft size={12} /> [ ПРЕД ]
-                          </button>
-
-                          <button 
-                              onClick={toggleFlip}
-                              className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center gap-2 group"
-                          >
-                              <RotateCw size={14} className={`transition-transform duration-500 ${isFlipped ? 'rotate-180' : ''}`} />
-                              [ ПЕРЕВЕРНУТЬ ]
-                          </button>
-
-                          <button 
-                              onClick={nextCard}
-                              className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1 flex items-center gap-2"
-                          >
-                              [ СЛЕД ] <ArrowRight size={12} />
-                          </button>
-                      </div>
-
-                      {/* Delete Button (Bottom Right) */}
-                      <div className="shrink-0">
-                          <Tooltip content="Удалить карточку">
-                              <button 
-                                  onClick={handleDelete}
-                                  className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
-                              >
-                                  <Trash2 size={16} strokeWidth={1.5} />
-                              </button>
-                          </Tooltip>
-                      </div>
-                  </div>
-              </motion.div>
-          </div>
-      );
   };
 
   return (
