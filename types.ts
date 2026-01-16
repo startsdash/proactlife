@@ -10,8 +10,9 @@ export enum Module {
   DASHBOARD = 'dashboard',
   NAPKINS = 'napkins',
   SKETCHPAD = 'sketchpad',
-  ETHER = 'ether',
+  ETHER = 'ether', // NEW
   SANDBOX = 'sandbox',
+  MENTAL_GYM = 'mental_gym',
   KANBAN = 'kanban',
   RITUALS = 'rituals',
   JOURNAL = 'journal',
@@ -20,8 +21,7 @@ export enum Module {
   SETTINGS = 'settings',
   LEARNING = 'learning',
   USER_SETTINGS = 'user_settings',
-  PROFILE = 'profile',
-  MENTAL_GYM = 'mental_gym'
+  PROFILE = 'profile' 
 }
 
 export interface Note {
@@ -217,6 +217,16 @@ export type IdentityRole = 'hero' | 'explorer' | 'architect';
 export interface UserProfileConfig {
     role: IdentityRole;
     manifesto: string;
+}
+
+// --- HERO JOURNEY TYPES ---
+export interface JourneySession {
+    id: string;
+    sourceNote: Note;
+    startTime: number;
+    stage: 'boot' | 'briefing' | 'choice' | 'action' | 'result';
+    actionType?: 'task' | 'habit' | 'journal';
+    log: string[];
 }
 
 export interface AppState {

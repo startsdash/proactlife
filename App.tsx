@@ -1,7 +1,6 @@
 
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
+import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig, JourneySession } from './types';
 import { loadState, saveState } from './services/storageService';
 import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
@@ -11,6 +10,7 @@ import Napkins from './components/Napkins';
 import Sketchpad from './components/Sketchpad';
 import Ether from './components/Ether';
 import Sandbox from './components/Sandbox';
+import MentalGym from './components/MentalGym';
 import Kanban from './components/Kanban';
 import Rituals from './components/Rituals';
 import Archive from './components/Archive';
@@ -21,7 +21,7 @@ import LearningMode from './components/LearningMode';
 import UserSettings from './components/UserSettings';
 import Onboarding from './components/Onboarding';
 import Profile from './components/Profile'; 
-import MentalGym from './components/MentalGym';
+import HeroJourney from './components/HeroJourney'; // NEW
 import { LogIn, Shield, CloudOff, ArrowRight } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -102,6 +102,9 @@ const App: React.FC = () => {
   const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
   const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null); // Context for navigation (Napkins)
   
+  // HERO JOURNEY STATE
+  const [activeJourney, setActiveJourney] = useState<JourneySession | null>(null);
+
   // INVITE CODE LOGIC
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [guestSessionCode, setGuestSessionCode] = useState<string | null>(() => {
@@ -384,6 +387,59 @@ const App: React.FC = () => {
       }
   };
 
+  // --- HERO JOURNEY LOGIC ---
+  const startHeroJourney = (note: Note) => {
+      setActiveJourney({
+          id: Date.now().toString(),
+          sourceNote: note,
+          startTime: Date.now(),
+          stage: 'boot',
+          log: []
+      });
+  };
+
+  const completeHeroJourney = (actionType: 'task' | 'habit' | 'journal', payload: any) => {
+      // Execute the result
+      if (actionType === 'task') {
+          addTask({
+              id: Date.now().toString(),
+              title: payload.title,
+              content: payload.description || '', // Full context
+              column: 'todo',
+              createdAt: Date.now()
+          });
+          handleNavigate(Module.KANBAN);
+      } else if (actionType === 'habit') {
+          addHabit({
+              id: Date.now().toString(),
+              title: payload.title,
+              description: payload.description,
+              frequency: 'daily',
+              color: 'indigo',
+              icon: 'Zap',
+              history: {},
+              streak: 0,
+              bestStreak: 0,
+              reminders: [],
+              createdAt: Date.now()
+          });
+          handleNavigate(Module.RITUALS);
+      } else if (actionType === 'journal') {
+          addJournalEntry({
+              id: Date.now().toString(),
+              date: Date.now(),
+              title: payload.title,
+              content: payload.content,
+              isInsight: true, // Auto-mark as insight
+              mood: 5 // Positive reinforcement
+          });
+          handleNavigate(Module.JOURNAL);
+      }
+      
+      // Close overlay
+      setTimeout(() => setActiveJourney(null), 2000);
+  };
+
   if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a] text-slate-800 dark:text-slate-200">Loading...</div>;
 
   // --- GUEST MODE GUARD ---
@@ -440,6 +496,7 @@ const App: React.FC = () => {
   }
 
   return (
+    <>
     <Layout 
         currentModule={module} setModule={handleNavigate} syncStatus={syncStatus}
         onConnectDrive={() => handleDriveConnect(false)} isDriveConnected={isDriveConnected}
@@ -460,7 +517,7 @@ const App: React.FC = () => {
             addNote={addNote} 
             moveNoteToSandbox={moveNoteToSandbox} 
             moveNoteToInbox={moveNoteToInbox} 
-            deleteNote={deleteNote} 
+            deleteNote={deleteNote} // Use soft delete
             reorderNote={reorderNote} 
             updateNote={updateNote} 
             archiveNote={archiveNote} 
@@ -470,8 +527,7 @@ const App: React.FC = () => {
             initialNoteId={napkinsContextNoteId}
             onClearInitialNote={() => setNapkinsContextNoteId(null)}
             journalEntries={data.journal}
-            flashcards={data.flashcards}
-            deleteFlashcard={deleteFlashcard}
+            onStartJourney={startHeroJourney}
           />
       )}
       
@@ -491,11 +547,10 @@ const App: React.FC = () => {
           />
       )}
 
-      {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
-
       {module === Module.SANDBOX && <Sandbox notes={data.notes} tasks={data.tasks} flashcards={data.flashcards} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
       {module === Module.KANBAN && <Kanban tasks={data.tasks.filter(t => !t.isArchived)} journalEntries={data.journal.filter(j => !j.isArchived)} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={archiveTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
       {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
+      {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
       {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} notes={data.notes} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} onNavigateToNote={handleNavigateToNote} />}
       {module === Module.MOODBAR && <Moodbar entries={data.journal.filter(j => !j.isArchived)} onAddEntry={addJournalEntry} />}
       
@@ -506,8 +561,8 @@ const App: React.FC = () => {
             journal={data.journal} 
             restoreTask={restoreTask} 
             deleteTask={deleteTask} 
-            moveNoteToInbox={restoreNote} 
-            deleteNote={hardDeleteNote} 
+            moveNoteToInbox={restoreNote} // Restore soft-deleted notes
+            deleteNote={hardDeleteNote} // Permanently delete notes
             deleteJournalEntry={deleteJournalEntry} 
             restoreJournalEntry={restoreJournalEntry} 
           />
@@ -517,6 +572,12 @@ const App: React.FC = () => {
       {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
       {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}
     </Layout>
+    
+    {/* HERO JOURNEY OVERLAY */}
+    {activeJourney && (
+        <HeroJourney session={activeJourney} onClose={() => setActiveJourney(null)} onComplete={completeHeroJourney} />
+    )}
+    </>
   );
 };
 export default App;
