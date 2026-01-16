@@ -290,3 +290,62 @@ export const analyzeJournalPath = async (entries: JournalEntry[], config: AppCon
         return "Analysis failed.";
     }
 };
+
+// HERO JOURNEY PATH ANALYZER
+export interface JourneyRecommendation {
+    bestPath: 'task' | 'habit' | 'hub';
+    reason: string;
+    suggestedTitle?: string;
+}
+
+export const analyzeJourneyPath = async (noteContent: string, config: AppConfig): Promise<JourneyRecommendation> => {
+    const model = DEFAULT_MODEL;
+    const ai = getAiClient();
+    
+    const systemPrompt = `Ты — навигатор "Пути Героя". Твоя задача — проанализировать заметку пользователя и определить лучший следующий шаг для интеграции этой мысли в жизнь.
+    
+    Опции:
+    1. 'task' (Спринт): Если это конкретное действие, проект или то, что можно "сделать".
+    2. 'habit' (Ритуал): Если это повторяющееся действие, практика или состояние, которое нужно поддерживать.
+    3. 'hub' (Хаб/Мудрость): Если это абстрактная идея, цитата, сложная концепция, требующая доработки с Ментором или превращения в знание.
+
+    Верни JSON.`;
+
+    try {
+        let response;
+        if (isGemmaModel(model)) {
+             const gemmaPrompt = `${systemPrompt}\n\n[NOTE CONTENT]\n"${noteContent}"\n\n[OUTPUT]\nReturn ONLY raw JSON: { "bestPath": "task" | "habit" | "hub", "reason": "Short explanation", "suggestedTitle": "Short title" }`;
+             response = await ai.models.generateContent({
+                model,
+                contents: gemmaPrompt,
+                config: getGemmaConfig()
+             });
+        } else {
+            response = await ai.models.generateContent({
+                model,
+                contents: noteContent,
+                config: {
+                    systemInstruction: systemPrompt,
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: Type.OBJECT,
+                        properties: {
+                            bestPath: { type: Type.STRING, enum: ['task', 'habit', 'hub'] },
+                            reason: { type: Type.STRING },
+                            suggestedTitle: { type: Type.STRING },
+                        }
+                    }
+                }
+            });
+        }
+        
+        return parseJSON<JourneyRecommendation>(response.text, { 
+            bestPath: 'hub', 
+            reason: 'Анализ недоступен, рекомендуется доработка.',
+            suggestedTitle: 'Новая идея'
+        });
+    } catch (e) {
+        console.error("Journey Analysis Error", e);
+        return { bestPath: 'hub', reason: 'Сбой навигации.', suggestedTitle: 'Идея' };
+    }
+};
