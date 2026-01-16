@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Note, Task, Habit, JournalEntry } from '../types';
+import { Note, Task, Habit } from '../types';
 import { analyzeJourneyPath, JourneyRecommendation } from '../services/geminiService';
 import { AppConfig } from '../types';
-import { Map, ArrowRight, Kanban, Flame, Box, X, Zap, Loader2, Sparkles, MoveRight, Book, Activity, CircleDashed } from 'lucide-react';
+import { Map as MapIcon, Kanban, Flame, Box, X, Zap, Sparkles, Activity, CircleDashed } from 'lucide-react';
 
 interface Props {
   note: Note;
@@ -23,13 +23,12 @@ const STAGES = [
     { id: 4, label: "Трансформация", desc: "Интеграция" }
 ];
 
-const HeroJourney: React.FC<Props> = ({ note, config, onClose, onCreateTask, onCreateHabit, onMoveToHub, onUpdateNote }) => {
-  const [currentStage, setCurrentStage] = useState(1); // Starts at 1, animates to 2 immediately
+const HeroJourney: React.FC<Props> = ({ note, config, onClose, onCreateTask, onCreateHabit, onMoveToHub }) => {
+  const [currentStage, setCurrentStage] = useState(1);
   const [recommendation, setRecommendation] = useState<JourneyRecommendation | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(true);
-  const [syncProgress, setSyncProgress] = useState(0); // For "Biometric" visual
+  const [syncProgress, setSyncProgress] = useState(0);
   const [selectedPath, setSelectedPath] = useState<'task' | 'habit' | 'hub' | null>(null);
-  const [isTransforming, setIsTransforming] = useState(false);
 
   // Initial Animation Sequence
   useEffect(() => {
@@ -52,12 +51,14 @@ const HeroJourney: React.FC<Props> = ({ note, config, onClose, onCreateTask, onC
         try {
             const result = await analyzeJourneyPath(note.content, config);
             setRecommendation(result);
-            // Move to Threshold (Choice) stage
             setTimeout(() => {
                 setCurrentStage(3);
                 setIsAnalyzing(false);
             }, 1000);
         } catch (e) {
+            console.error("Hero Journey Analysis Failed", e);
+            // Fallback
+            setRecommendation({ bestPath: 'hub', reason: 'System offline', suggestedTitle: note.title });
             setIsAnalyzing(false);
             setCurrentStage(3);
         }
@@ -71,7 +72,6 @@ const HeroJourney: React.FC<Props> = ({ note, config, onClose, onCreateTask, onC
       setSelectedPath(path);
       // Trigger Transformation
       setCurrentStage(4);
-      setIsTransforming(true);
 
       setTimeout(() => {
           executeTransformation(path);
@@ -85,7 +85,7 @@ const HeroJourney: React.FC<Props> = ({ note, config, onClose, onCreateTask, onC
           const newTask: Task = {
               id: Date.now().toString(),
               title: title,
-              content: note.content, // Should probably be summarized or keep full content
+              content: note.content,
               description: "Создано из заметки (Путь Героя)",
               column: 'todo',
               createdAt: Date.now(),
@@ -111,10 +111,8 @@ const HeroJourney: React.FC<Props> = ({ note, config, onClose, onCreateTask, onC
           onMoveToHub(note.id);
       }
 
-      // Final visual feedback then close
       setTimeout(() => {
           onClose();
-          // Ideally show a toast here in parent
       }, 500);
   };
 
@@ -128,7 +126,6 @@ const HeroJourney: React.FC<Props> = ({ note, config, onClose, onCreateTask, onC
             className="absolute inset-0 bg-[#020617]/90 backdrop-blur-xl"
             onClick={onClose}
         >
-            {/* Particles (CSS based for performance) */}
             <div className="absolute inset-0 overflow-hidden opacity-30 pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-white rounded-full animate-ping" style={{ animationDuration: '3s' }} />
                 <div className="absolute top-3/4 right-1/3 w-1 h-1 bg-indigo-400 rounded-full animate-ping" style={{ animationDuration: '5s' }} />
@@ -148,7 +145,7 @@ const HeroJourney: React.FC<Props> = ({ note, config, onClose, onCreateTask, onC
             {/* LEFT: THE MAP */}
             <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-white/10 p-8 flex flex-col relative bg-gradient-to-b from-slate-900/50 to-indigo-950/20">
                 <div className="flex items-center gap-3 mb-10">
-                    <Map size={20} className="text-cyan-400" />
+                    <MapIcon size={20} className="text-cyan-400" />
                     <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-white/80">Карта Пути</h2>
                 </div>
 
@@ -156,7 +153,7 @@ const HeroJourney: React.FC<Props> = ({ note, config, onClose, onCreateTask, onC
                 <div className="flex-1 relative pl-4">
                     <div className="absolute left-[19px] top-2 bottom-10 w-0.5 bg-white/10" />
                     
-                    {STAGES.map((stage, idx) => {
+                    {STAGES.map((stage) => {
                         const isActive = currentStage === stage.id;
                         const isPast = currentStage > stage.id;
                         
