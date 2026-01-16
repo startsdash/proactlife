@@ -8,10 +8,10 @@ import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
 import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
-import { applyTypography, SPHERES, ICON_MAP } from '../constants';
+import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Aperture, Layers, Filter, Target, Minus } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Aperture, Layers, Filter } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -289,13 +289,6 @@ const KineticFlashcardDeck = ({
         return showFavorites ? cards.filter(c => c.isStarred) : cards;
     }, [cards, showFavorites]);
 
-    // Ensure index stays valid if cards are removed
-    useEffect(() => {
-        if (index >= displayedCards.length && displayedCards.length > 0) {
-            setIndex(Math.max(0, displayedCards.length - 1));
-        }
-    }, [displayedCards.length, index]);
-
     // Handle empty filtered state
     if (displayedCards.length === 0) {
         return (
@@ -341,7 +334,8 @@ const KineticFlashcardDeck = ({
         e.stopPropagation();
         if (confirm("Удалить эту карточку?")) {
             onDelete(currentCard.id);
-            // If we delete the last card, move index back
+            // Index logic handles itself via safeIndex recalculation, 
+            // but we might want to ensure we don't jump too far if it was the last card.
             if (safeIndex >= displayedCards.length - 1) {
                 setIndex(Math.max(0, safeIndex - 1));
             }
@@ -375,7 +369,7 @@ const KineticFlashcardDeck = ({
                     {/* Status Label */}
                     <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 flex items-center gap-2">
                         {isFlipped ? <Sparkles size={12} className="text-amber-500" /> : <BrainCircuit size={12} className="text-indigo-500" />}
-                        {isFlipped ? 'ОТВЕТ' : 'ВОПРОС'} <span className="opacity-50">// {safeIndex + 1} ИЗ {displayedCards.length}</span>
+                        {isFlipped ? 'ОТВЕТ' : 'ВОПРОС'} // {String(safeIndex + 1).padStart(2, '0')}
                     </div>
 
                     {/* Top Right Controls: Filter & Star */}
@@ -412,11 +406,9 @@ const KineticFlashcardDeck = ({
                             className="w-full h-full flex items-center justify-center"
                         >
                             {/* Scrollable container for text to keep card size fixed */}
-                            <div className="w-full h-[320px] overflow-y-auto pr-2 custom-scrollbar-ghost">
-                                <div className="min-h-full flex flex-col justify-center">
-                                    <div className="font-serif text-xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-100 select-none whitespace-pre-wrap">
-                                        {isFlipped ? currentCard.back : currentCard.front}
-                                    </div>
+                            <div className="w-full h-[320px] overflow-y-auto pr-2">
+                                <div className="font-serif text-xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-100 select-none whitespace-pre-wrap">
+                                    {isFlipped ? currentCard.back : currentCard.front}
                                 </div>
                             </div>
                         </motion.div>
@@ -565,9 +557,9 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
     );
 });
 
-// --- LITERARY TYPOGRAPHY COMPONENTS (DEFAULT) ---
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
+    // Graphite Ghost Style Links - No color change on hover, just underline
     a: ({node, ...props}: any) => <a className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer underline-offset-4 decoration-slate-300 dark:decoration-slate-600 transition-colors font-sans text-sm font-medium relative z-20 break-all" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
@@ -582,6 +574,7 @@ const markdownComponents = {
             : <code className="block bg-slate-900 dark:bg-black text-slate-50 p-3 rounded-xl text-xs font-mono my-3 overflow-x-auto whitespace-pre-wrap" {...props}>{children}</code>
     },
     img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
+    u: ({node, ...props}: any) => <u {...props} /> 
 };
 
 // Tag Selector
@@ -853,349 +846,24 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
     );
 };
 
-// Color Picker Popover
-const ColorPickerPopover: React.FC<{
-    onSelect: (colorId: string) => void,
-    onClose: () => void,
-    triggerRef: React.RefObject<HTMLElement>
-}> = ({ onSelect, onClose, triggerRef }) => {
-    const [style, setStyle] = useState<React.CSSProperties>({});
-
-    useEffect(() => {
-        if (triggerRef.current) {
-            const rect = triggerRef.current.getBoundingClientRect();
-            // Default to showing below, flip up if near bottom
-            const viewportH = window.innerHeight;
-            const spaceBelow = viewportH - rect.bottom;
-            const height = 60; // Approx height
-
-            let top = rect.bottom + 8;
-            let left = rect.left;
-            
-            // If right edge goes offscreen, align to right
-            if (left + 240 > window.innerWidth) {
-                left = window.innerWidth - 256;
-            }
-
-            if (spaceBelow < height) {
-                top = rect.top - height - 8;
-            }
-
-            setStyle({
-                position: 'fixed',
-                top,
-                left,
-                zIndex: 9999,
-            });
-        }
-    }, [triggerRef]);
-
-    return createPortal(
-        <>
-            <div className="fixed inset-0 z-[9998]" onClick={onClose} />
-            <div
-                className="fixed bg-white dark:bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-[9999] flex-wrap max-w-[240px]"
-                style={style}
-                onMouseDown={e => e.stopPropagation()}
-            >
-                {colors.map(c => (
-                    <button
-                        key={c.id}
-                        onMouseDown={(e) => { e.preventDefault(); onSelect(c.id); onClose(); }}
-                        className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform`}
-                        style={{ backgroundColor: c.hex }}
-                        title={c.id}
-                    />
-                ))}
-            </div>
-        </>,
-        document.body
-    );
-};
-
-// --- HOLOGRAM MARKDOWN COMPONENTS (FOR ANALYSIS MODAL) ---
-const HologramMarkdown = {
-    p: ({node, ...props}: any) => <p className="mb-6 last:mb-0 text-[15px] md:text-[17px] text-slate-600 dark:text-slate-300 leading-7 md:leading-8 font-serif" {...props} />,
-    h1: ({node, ...props}: any) => <h1 className="font-mono text-[10px] uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mb-8 mt-10 text-center select-none" {...props} />,
-    h2: ({node, ...props}: any) => <h2 className="font-mono text-[9px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-4 mt-8 pl-4 border-l border-indigo-500/30" {...props} />,
-    h3: ({node, ...props}: any) => <h3 className="font-sans text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3 mt-6" {...props} />,
-    ul: ({node, ...props}: any) => <ul className="space-y-4 my-6" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="space-y-4 my-6 list-none counter-reset-items" {...props} />,
-    li: ({node, ...props}: any) => (
-        <li className="relative pl-6 group">
-             <div className="absolute left-0 top-[0.6em] w-px h-[1em] bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-500 transition-colors" />
-             <div className="text-slate-700 dark:text-slate-300 font-serif leading-7">{props.children}</div>
-        </li>
-    ),
-    blockquote: ({node, ...props}: any) => (
-        <blockquote className="my-12 px-8 py-6 relative text-center">
-            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
-            <div className="font-serif text-lg md:text-xl italic text-slate-800 dark:text-slate-100 leading-relaxed tracking-wide" {...props} />
-            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
-        </blockquote>
-    ),
-    strong: ({node, ...props}: any) => <span className="font-sans font-bold text-slate-900 dark:text-slate-50 text-xs uppercase tracking-wide" {...props} />,
-    em: ({node, ...props}: any) => <em className="font-serif italic text-indigo-600 dark:text-indigo-400" {...props} />,
-};
-
-// --- REUSABLE SPHERE SELECTOR (AURA RINGS) ---
-const SphereSelector: React.FC<{ selected: string[], onChange: (s: string[]) => void }> = ({ selected, onChange }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const toggleSphere = (id: string) => {
-        if (selected.includes(id)) {
-            onChange(selected.filter(s => s !== id));
-        } else {
-            onChange([...selected, id]);
-        }
-    };
-
-    return (
-        <div className="relative" ref={dropdownRef}>
-            <button 
-                onClick={() => setIsOpen(!isOpen)}
-                className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all outline-none text-left ${
-                  isOpen ? 'border-indigo-300 bg-white/80 dark:bg-slate-800 ring-2 ring-indigo-50/50' : 'border-slate-200/60 dark:border-slate-700/60 bg-transparent hover:bg-slate-50/50 dark:hover:bg-slate-800/50'
-                }`}
-            >
-                <div className="flex items-center gap-2 overflow-hidden">
-                    {selected.length > 0 ? (
-                        <>
-                            <div className="flex -space-x-1.5 shrink-0">
-                                {selected.map(s => {
-                                    const sp = SPHERES.find(x => x.id === s);
-                                    // Aura Ring Style: Hollow circle with colored border, overlapping
-                                    return sp ? (
-                                        <div 
-                                            key={s} 
-                                            className={`w-3.5 h-3.5 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
-                                            style={{ borderWidth: '1.5px' }}
-                                        /> 
-                                    ) : null;
-                                })}
-                            </div>
-                            <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
-                                {selected.map(id => SPHERES.find(s => s.id === id)?.label).join(', ')}
-                            </span>
-                        </>
-                    ) : (
-                        <span className="text-xs text-slate-400">Выбери сферу</span>
-                    )}
-                </div>
-                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1} />
-            </button>
-            
-            {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5">
-                    {SPHERES.map(s => {
-                        const isSelected = selected.includes(s.id);
-                        const Icon = ICON_MAP[s.icon];
-                        return (
-                            <button
-                                key={s.id}
-                                onClick={() => toggleSphere(s.id)}
-                                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                            >
-                                {Icon && <Icon size={14} className={isSelected ? s.text : 'text-slate-400'} strokeWidth={1} />}
-                                <span className="flex-1">{s.label}</span>
-                                {isSelected && <Check size={14} className="text-indigo-500" strokeWidth={1} />}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
-};
-
-const JournalEntrySphereSelector: React.FC<{ 
-    entry: JournalEntry, 
-    updateEntry: (e: JournalEntry) => void,
-    align?: 'left' | 'right',
-    direction?: 'up' | 'down'
-}> = ({ entry, updateEntry, align = 'right', direction = 'down' }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const triggerRef = useRef<HTMLButtonElement>(null);
-    const [style, setStyle] = useState<React.CSSProperties>({});
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (triggerRef.current && triggerRef.current.contains(event.target as Node)) {
-                return;
-            }
-            if ((event.target as Element).closest('.sphere-selector-dropdown')) {
-                return;
-            }
-            setIsOpen(false);
-        };
-        
-        if (isOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-            window.addEventListener('scroll', () => setIsOpen(false), true);
-            window.addEventListener('resize', () => setIsOpen(false));
-        }
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-            window.removeEventListener('scroll', () => setIsOpen(false), true);
-            window.removeEventListener('resize', () => setIsOpen(false));
-        };
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (isOpen && triggerRef.current) {
-            const rect = triggerRef.current.getBoundingClientRect();
-            const width = 192; // w-48 = 12rem = 192px
-
-            let top = direction === 'down' ? rect.bottom + 8 : rect.top - 8;
-            let left = align === 'left' ? rect.left : rect.right - width;
-
-            const newStyle: React.CSSProperties = {
-                position: 'fixed',
-                left: left,
-                zIndex: 9999,
-                minWidth: width,
-            };
-
-            if (direction === 'up') {
-                newStyle.top = rect.top - 8;
-                newStyle.transform = 'translateY(-100%)';
-            } else {
-                newStyle.top = rect.bottom + 8;
-            }
-
-            setStyle(newStyle);
-        }
-    }, [isOpen, direction, align]);
-    
-    const toggleSphere = (sphereId: string) => {
-        const current = entry.spheres || [];
-        const newSpheres = current.includes(sphereId) 
-            ? current.filter(s => s !== sphereId)
-            : [...current, sphereId];
-        updateEntry({ ...entry, spheres: newSpheres });
-    };
-
-    return (
-        <>
-            <Tooltip content="Сферы">
-                <button 
-                    ref={triggerRef}
-                    onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                    className="flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                >
-                    {entry.spheres && entry.spheres.length > 0 ? (
-                        <div className="flex -space-x-1.5">
-                            {entry.spheres.map(s => {
-                                const sp = SPHERES.find(x => x.id === s);
-                                return sp ? (
-                                    <div 
-                                        key={s} 
-                                        className={`w-3 h-3 rounded-full border bg-transparent ${sp.text.replace('text-', 'border-')}`} 
-                                        style={{ borderWidth: '1.5px' }}
-                                    />
-                                ) : null;
-                            })}
-                        </div>
-                    ) : (
-                        <Target size={16} strokeWidth={1.5} className="text-slate-300 hover:text-slate-500 dark:hover:text-slate-400" />
-                    )}
-                </button>
-            </Tooltip>
-            
-            {isOpen && createPortal(
-                <div 
-                    className="sphere-selector-dropdown absolute bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5"
-                    style={style}
-                    onClick={e => e.stopPropagation()}
-                >
-                    {SPHERES.map(s => {
-                        const isSelected = entry.spheres?.includes(s.id);
-                        const Icon = ICON_MAP[s.icon];
-                        return (
-                            <button
-                                key={s.id}
-                                onClick={() => toggleSphere(s.id)}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full text-left ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                            >
-                                {Icon && <Icon size={12} className={isSelected ? s.text : 'text-slate-400'} strokeWidth={1} />}
-                                <span className="flex-1">{s.label}</span>
-                                {isSelected && <Check size={12} className="text-indigo-500" strokeWidth={1} />}
-                            </button>
-                        );
-                    })}
-                </div>,
-                document.body
-            )}
-        </>
-    );
-};
-
-const CollapsibleSection: React.FC<{
-  title: string;
-  children: React.ReactNode;
-  icon?: React.ReactNode;
-  actions?: React.ReactNode;
-  defaultOpen?: boolean;
-}> = ({ title, children, icon, actions, defaultOpen = false }) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
-  return (
-    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden mb-3">
-      <div 
-        onClick={() => setIsOpen(!isOpen)} 
-        className="w-full flex items-center justify-between p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-      >
-        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-           {icon}
-           {title}
-        </div>
-        <div className="flex items-center gap-2">
-            {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
-            <div className="text-slate-400">
-                {isOpen ? <Minus size={14} strokeWidth={1} /> : <Plus size={14} strokeWidth={1} />}
-            </div>
-        </div>
-      </div>
-      {isOpen && (
-        <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-1 duration-200">
-           <div className="pt-3 border-t border-slate-200/50 dark:border-slate-700/50 text-sm">
-             {children}
-           </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 interface NoteCardProps {
     note: Note;
     isArchived: boolean;
-    isLinkedToJournal: boolean;
+    isLinkedToJournal?: boolean;
     handlers: {
         handleDragStart: (e: React.DragEvent, id: string) => void;
         handleDragOver: (e: React.DragEvent) => void;
         handleDrop: (e: React.DragEvent, id: string) => void;
         handleOpenNote: (note: Note) => void;
         togglePin: (e: React.MouseEvent, note: Note) => void;
-        archiveNote: (id: string) => void;
-        moveNoteToSandbox: (id: string) => void;
-        moveNoteToInbox: (id: string) => void;
         onAddTask: (task: Task) => void;
+        moveNoteToSandbox: (id: string) => void;
+        archiveNote: (id: string) => void;
+        moveNoteToInbox: (id: string) => void;
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
-    };
+    }
 }
 
 const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal, handlers }) => {
@@ -1570,17 +1238,134 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
       }
   };
 
-  const execCmd = (command: string, value: string | undefined = undefined) => {
-      document.execCommand(command, false, value);
-      if (contentEditableRef.current) {
-          contentEditableRef.current.focus();
-          saveHistorySnapshot(contentEditableRef.current.innerHTML);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('.portal-popup')) return;
+
+        // Prevent closing if any picker is active
+        if (showCreationCoverPicker || showEditCoverPicker || showColorPicker || showModalColorPicker) return;
+
+        if (editorRef.current && !editorRef.current.contains(target)) {
+            if (isExpanded) {
+                if (target.closest('.color-picker-dropdown')) return;
+                if (target.closest('.image-delete-btn')) return;
+                setIsExpanded(false);
+            }
+        }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isExpanded, showCreationCoverPicker, showEditCoverPicker, showColorPicker, showModalColorPicker]);
+
+  useEffect(() => {
+    if (isEditing && editContentRef.current && selectedNote) {
+        editContentRef.current.innerHTML = markdownToHtml(selectedNote.content);
+        setActiveImage(null);
+    }
+  }, [isEditing, selectedNote?.id]); 
+
+  const saveSelection = () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          const container = isEditing ? editContentRef.current : contentEditableRef.current;
+          if (container && container.contains(range.commonAncestorContainer)) lastSelectionRange.current = range.cloneRange();
       }
   };
 
-  const execEditCmd = (command: string, value: string | undefined = undefined) => {
+  const handleEditorClick = (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG') {
+          if (activeImage && activeImage !== target) activeImage.style.outline = 'none';
+          const img = target as HTMLImageElement;
+          img.style.outline = '3px solid #6366f1'; 
+          img.style.borderRadius = '4px';
+          setActiveImage(img);
+      } else {
+          if (activeImage) { activeImage.style.outline = 'none'; setActiveImage(null); }
+      }
+      saveSelection();
+  };
+
+  const deleteActiveImage = (e?: React.MouseEvent) => {
+      if(e) { e.preventDefault(); e.stopPropagation(); }
+      if (activeImage) {
+          activeImage.remove();
+          setActiveImage(null);
+          if (isEditing && editContentRef.current) saveEditHistorySnapshot(editContentRef.current.innerHTML);
+          else if (contentEditableRef.current) saveHistorySnapshot(contentEditableRef.current.innerHTML);
+      }
+  };
+
+  const insertImageAtCursor = (base64: string, targetEl: HTMLElement, onSave: (content: string) => void) => {
+        targetEl.focus();
+        let range = lastSelectionRange.current;
+        if (!range || !targetEl.contains(range.commonAncestorContainer)) {
+             range = document.createRange();
+             range.selectNodeContents(targetEl);
+             range.collapse(false);
+        }
+        const img = document.createElement('img');
+        img.src = base64;
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '8px';
+        img.style.display = 'block';
+        img.style.margin = '8px 0';
+        img.style.cursor = 'pointer';
+        range.deleteContents();
+        range.insertNode(img);
+        range.setStartAfter(img);
+        range.setEndAfter(img);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        onSave(targetEl.innerHTML); 
+  };
+
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+        const target = e.target as HTMLElement;
+        if (!target.isContentEditable) return;
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                e.preventDefault();
+                const blob = items[i].getAsFile();
+                if (blob) {
+                    try {
+                        const compressedBase64 = await processImage(blob);
+                        if (isEditing && editContentRef.current && target === editContentRef.current) insertImageAtCursor(compressedBase64, editContentRef.current, saveEditHistorySnapshot);
+                        else if (contentEditableRef.current && target === contentEditableRef.current) insertImageAtCursor(compressedBase64, contentEditableRef.current, saveHistorySnapshot);
+                    } catch (err) { console.error("Image paste failed", err); }
+                }
+            }
+        }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isEditing]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          try {
+              const compressedBase64 = await processImage(file);
+              if (isEditing && editContentRef.current) insertImageAtCursor(compressedBase64, editContentRef.current, saveEditHistorySnapshot);
+              else if (contentEditableRef.current) insertImageAtCursor(compressedBase64, contentEditableRef.current, saveHistorySnapshot);
+          } catch (err) { console.error("Image upload failed", err); }
+          e.target.value = '';
+      }
+  };
+
+  const execCmd = (command: string, value: string | undefined = undefined) => {
       document.execCommand(command, false, value);
-      if (editContentRef.current) {
+      if (contentEditableRef.current && isExpanded && !isEditing) {
+          contentEditableRef.current.focus();
+          saveHistorySnapshot(contentEditableRef.current.innerHTML);
+      }
+      else if (editContentRef.current && isEditing) {
           editContentRef.current.focus();
           saveEditHistorySnapshot(editContentRef.current.innerHTML);
       }
@@ -1592,773 +1377,818 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
       execCmd('formatBlock', 'div'); 
   };
 
-  const handleEditClearStyle = (e: React.MouseEvent) => {
-      e.preventDefault();
-      execEditCmd('removeFormat');
-      execEditCmd('formatBlock', 'div'); 
-  };
-
-  const handleEditorClick = (e: React.MouseEvent, isEditModal: boolean = false) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'IMG') {
-          if (activeImage && activeImage !== target) activeImage.style.outline = 'none';
-          const img = target as HTMLImageElement;
-          img.style.outline = '3px solid #6366f1'; 
-          img.style.borderRadius = '8px';
-          setActiveImage(img);
-      } else {
-          if (activeImage) { activeImage.style.outline = 'none'; setActiveImage(null); }
-      }
-      
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-          lastSelectionRange.current = sel.getRangeAt(0).cloneRange();
-      }
-  };
-
-  const deleteActiveImage = (e?: React.MouseEvent) => {
-      if(e) { e.preventDefault(); e.stopPropagation(); }
-      if (activeImage) {
-          activeImage.remove();
-          setActiveImage(null);
-          // Save history for relevant editor
-          if (contentEditableRef.current && contentEditableRef.current.contains(activeImage)) {
-              saveHistorySnapshot(contentEditableRef.current.innerHTML);
-          } else if (editContentRef.current && editContentRef.current.contains(activeImage)) {
-              saveEditHistorySnapshot(editContentRef.current.innerHTML);
-          }
-      }
-  };
-
-  const insertImageAtCursor = (base64: string, targetEl: HTMLElement) => {
-        targetEl.focus();
-        let range = lastSelectionRange.current;
-        if (!range || !targetEl.contains(range.commonAncestorContainer)) {
-             range = document.createRange();
-             range.selectNodeContents(targetEl);
-             range.collapse(false);
-        }
-        
-        const img = document.createElement('img');
-        img.src = base64;
-        img.style.maxWidth = '100%';
-        img.style.borderRadius = '8px';
-        img.style.display = 'block';
-        img.style.margin = '8px 0';
-        img.style.cursor = 'pointer';
-        
-        range.deleteContents();
-        range.insertNode(img);
-        range.setStartAfter(img);
-        range.setEndAfter(img);
-        
-        const sel = window.getSelection();
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file && contentEditableRef.current) {
-          try {
-              const compressedBase64 = await processImage(file);
-              insertImageAtCursor(compressedBase64, contentEditableRef.current);
-              saveHistorySnapshot(contentEditableRef.current.innerHTML);
-          } catch (err) { console.error("Image upload failed", err); }
-          e.target.value = '';
-      }
-  };
-
-  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file && editContentRef.current) {
-          try {
-              const compressedBase64 = await processImage(file);
-              insertImageAtCursor(compressedBase64, editContentRef.current);
-              saveEditHistorySnapshot(editContentRef.current.innerHTML);
-          } catch (err) { console.error("Image upload failed", err); }
-          e.target.value = '';
-      }
-  };
-
-  // Image Paste Listener
-  useEffect(() => {
-    const handlePaste = async (e: ClipboardEvent) => {
-        const target = e.target as HTMLElement;
-        let activeEditor = null;
-        
-        if (contentEditableRef.current && (contentEditableRef.current === target || contentEditableRef.current.contains(target))) {
-            activeEditor = contentEditableRef.current;
-        } else if (editContentRef.current && (editContentRef.current === target || editContentRef.current.contains(target))) {
-            activeEditor = editContentRef.current;
-        }
-
-        if (!activeEditor) return;
-
-        const items = e.clipboardData?.items;
-        if (!items) return;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-                e.preventDefault();
-                const blob = items[i].getAsFile();
-                if (blob) {
-                    try {
-                        const compressedBase64 = await processImage(blob);
-                        insertImageAtCursor(compressedBase64, activeEditor);
-                        if (activeEditor === contentEditableRef.current) saveHistorySnapshot(activeEditor.innerHTML);
-                        else saveEditHistorySnapshot(activeEditor.innerHTML);
-                    } catch (err) { console.error("Image paste failed", err); }
-                }
-            }
-        }
-    };
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, [isExpanded, isEditing]);
-
-  const handleAutoTag = async () => {
-      if (!contentEditableRef.current) return;
-      const rawHtml = contentEditableRef.current.innerHTML;
-      const markdown = htmlToMarkdown(rawHtml);
-      if (!markdown.trim()) return;
-      setIsProcessing(true);
-      const tags = await autoTagNote(markdown, config);
-      setCreationTags([...creationTags, ...tags]);
-      setIsProcessing(false);
-  };
-
-  const handleMoodAnalysis = async () => {
-      if (!moodQuery.trim()) return;
-      setIsMoodAnalyzing(true);
-      try {
-          const ids = await findNotesByMood(notes, moodQuery, config);
-          setAiFilteredIds(ids);
-      } catch (e) { console.error(e); }
-      setIsMoodAnalyzing(false);
-  };
-
-  const handleClearMood = () => {
-      setMoodQuery('');
-      setAiFilteredIds(null);
-      setShowMoodInput(false);
-  };
-
-  const handleSubmit = async () => {
+  const handleDump = async () => {
     const rawHtml = contentEditableRef.current?.innerHTML || '';
-    const markdownContent = htmlToMarkdown(rawHtml);
-    
-    if (!markdownContent.trim() && !title.trim()) return;
+    const textContent = contentEditableRef.current?.innerText.trim() || '';
+    const hasImages = contentEditableRef.current?.querySelector('img');
 
-    const formattedContent = applyTypography(markdownContent);
+    if (!textContent && !hasImages && !title.trim()) {
+        setIsExpanded(false); setHistory(['']); setHistoryIndex(0); return;
+    }
+    
+    setIsProcessing(true);
+    const markdownContent = htmlToMarkdown(rawHtml);
+    let autoTags: string[] = [];
+    if (hasTagger && creationTags.length === 0 && markdownContent.length > 20) {
+        autoTags = await autoTagNote(markdownContent, config);
+    }
+    
     const newNote: Note = {
       id: Date.now().toString(),
       title: title.trim() ? applyTypography(title.trim()) : undefined,
-      content: formattedContent,
-      tags: creationTags,
+      content: markdownContent,
+      tags: [...creationTags, ...autoTags],
       createdAt: Date.now(),
       status: 'inbox',
       color: creationColor,
-      coverUrl: creationCover || undefined
+      coverUrl: creationCover || undefined,
+      isPinned: false
     };
-
     addNote(newNote);
-    setTitle('');
-    setCreationTags([]);
-    setCreationColor('white');
-    setCreationCover(null);
-    if(contentEditableRef.current) contentEditableRef.current.innerHTML = '';
-    setHistory(['']);
-    setHistoryIndex(0);
-    setIsExpanded(false);
+    setTitle(''); setCreationColor('white'); setCreationCover(null);
+    if (contentEditableRef.current) contentEditableRef.current.innerHTML = '';
+    setHistory(['']); setHistoryIndex(0); setCreationTags([]);
+    setIsProcessing(false); setIsExpanded(false);
+  };
+
+  const handleMoodSearch = async () => {
+      if (!moodQuery.trim()) return;
+      setIsMoodAnalyzing(true);
+      const relevantList = activeTab === 'inbox' ? notes.filter(n => n.status === 'inbox') : notes.filter(n => n.status === 'archived');
+      const matchedIds = await findNotesByMood(relevantList, moodQuery, config);
+      setAiFilteredIds(matchedIds);
+      setIsMoodAnalyzing(false);
+      setShowMoodInput(false);
+  };
+
+  const clearMoodFilter = () => { setAiFilteredIds(null); setMoodQuery(''); };
+
+  const startOracle = () => {
+      if (notes.length === 0) { alert("Сначала добавь пару мыслей в Заметки"); return; }
+      setShowOracle(true); setOracleState('select');
+  };
+
+  const castOracleSpell = (vibe: typeof ORACLE_VIBES[0]) => {
+      setOracleVibe(vibe); setOracleState('thinking');
+      setTimeout(() => {
+          const allNotes = notes;
+          const random = allNotes[Math.floor(Math.random() * allNotes.length)];
+          setOracleNote(random); setOracleState('result');
+      }, 1500);
+  };
+
+  const closeOracle = () => { setShowOracle(false); setTimeout(() => setOracleState('select'), 300); };
+
+  const handleAcceptOracleResult = () => {
+    if (!oracleNote) return;
+    
+    const newTask: Task = {
+        id: Date.now().toString(),
+        title: oracleNote.title || 'Инсайт из Оракула',
+        content: oracleNote.content,
+        column: 'todo',
+        createdAt: Date.now(),
+        spheres: [],
+    };
+    onAddTask(newTask);
+    closeOracle();
   };
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
       e.dataTransfer.setData('noteId', id);
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.effectAllowed = "move";
   };
-
-  const handleDragOver = (e: React.DragEvent) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-  };
-
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); };
   const handleDrop = (e: React.DragEvent, targetId: string) => {
       e.preventDefault();
       const draggedId = e.dataTransfer.getData('noteId');
-      if (draggedId && draggedId !== targetId) {
-          reorderNote(draggedId, targetId);
+      if (draggedId && draggedId !== targetId) reorderNote(draggedId, targetId);
+  };
+
+  const handleOpenNote = (note: Note) => {
+      setSelectedNote(note);
+      setEditTitle(note.title || '');
+      setEditTagsList(note.tags ? note.tags.map(t => t.replace(/^#/, '')) : []);
+      setEditCover(note.coverUrl || null);
+      const contentHtml = markdownToHtml(note.content);
+      setEditHistory([contentHtml]);
+      setEditHistoryIndex(0);
+      setIsEditing(false);
+  };
+
+  const handleSaveEdit = () => {
+      if (selectedNote) {
+          const rawHtml = editContentRef.current?.innerHTML || '';
+          const markdownContent = htmlToMarkdown(rawHtml);
+          if (markdownContent.trim() !== '' || editTitle.trim() !== '') {
+              const updated = { 
+                  ...selectedNote, 
+                  title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
+                  content: markdownContent, 
+                  tags: editTagsList,
+                  coverUrl: editCover || undefined 
+              };
+              updateNote(updated); setSelectedNote(updated); setIsEditing(false);
+          }
       }
   };
 
   const togglePin = (e: React.MouseEvent, note: Note) => {
       e.stopPropagation();
       updateNote({ ...note, isPinned: !note.isPinned });
+      if (selectedNote?.id === note.id) setSelectedNote({ ...selectedNote, isPinned: !note.isPinned });
   };
 
-  // Oracle Logic
-  const handleOracleClick = () => {
-      if (oracleState === 'select') {
-          // 1. Pick a random unarchived note
-          const validNotes = notes.filter(n => n.status !== 'trash');
-          if (validNotes.length === 0) { alert("Нет заметок для Оракула"); return; }
-          const randomNote = validNotes[Math.floor(Math.random() * validNotes.length)];
-          
-          setOracleNote(randomNote);
-          setOracleState('thinking');
-          
-          // Simulate "thinking"
-          setTimeout(() => setOracleState('result'), 2000);
-      } else if (oracleState === 'result') {
-          // Reset
-          setShowOracle(false);
-          setOracleState('select');
-          setOracleNote(null);
+  const setColor = (colorId: string) => {
+      if (selectedNote) {
+          const updated = { ...selectedNote, color: colorId };
+          updateNote(updated); setSelectedNote(updated);
       }
   };
 
-  // --- EDIT LOGIC ---
-  useEffect(() => {
-      if (selectedNote && isEditing && editContentRef.current) {
-          const html = markdownToHtml(selectedNote.content);
-          editContentRef.current.innerHTML = html;
-          setEditHistory([html]);
-          setEditHistoryIndex(0);
-          setEditTitle(selectedNote.title || '');
-          setEditTagsList(selectedNote.tags || []);
-          setEditCover(selectedNote.coverUrl || null);
+  const filterNotes = (list: Note[]) => {
+    return list.filter(note => {
+      if (showTagInput && tagQuery) {
+          const q = tagQuery.toLowerCase().replace('#', '');
+          if (!note.tags || !note.tags.some(t => t.toLowerCase().includes(q))) return false;
       }
-  }, [selectedNote, isEditing]);
-
-  const handleSaveEdit = () => {
-      if (!selectedNote) return;
-      const rawHtml = editContentRef.current?.innerHTML || '';
-      const markdownContent = htmlToMarkdown(rawHtml);
-      
-      updateNote({
-          ...selectedNote,
-          title: editTitle.trim() ? applyTypography(editTitle.trim()) : undefined,
-          content: applyTypography(markdownContent),
-          tags: editTagsList,
-          coverUrl: editCover || undefined
-      });
-      setIsEditing(false);
-  };
-
-  const filteredNotes = notes
-    .filter(note => {
-        if (activeTab === 'inbox') return note.status === 'inbox';
-        if (activeTab === 'library') return note.status === 'archived' || note.status === 'sandbox'; // Show Sandbox in Library too
-        return false;
-    })
-    .filter(note => {
-        if (aiFilteredIds) return aiFilteredIds.includes(note.id);
-        const query = searchQuery.toLowerCase();
-        if (tagQuery && !note.tags?.some(t => t.toLowerCase().includes(tagQuery.toLowerCase()))) return false;
-        if (activeColorFilter && note.color !== activeColorFilter) return false;
-        if (!query) return true;
-        return (note.title?.toLowerCase().includes(query) || note.content.toLowerCase().includes(query));
-    })
-    .sort((a, b) => {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        return b.createdAt - a.createdAt;
+      if (!showTagInput && searchQuery) {
+          const query = searchQuery.toLowerCase();
+          const matchesSearch = note.content.toLowerCase().includes(query) || (note.title && note.title.toLowerCase().includes(query)) || (note.tags && note.tags.some(t => t.toLowerCase().includes(query)));
+          if (!matchesSearch) return false;
+      }
+      const matchesColor = activeColorFilter === null || note.color === activeColorFilter;
+      const matchesMood = aiFilteredIds === null || aiFilteredIds.includes(note.id);
+      return matchesColor && matchesMood;
     });
+  };
+
+  const inboxNotes = filterNotes(notes.filter(n => n.status === 'inbox').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
+  const archivedNotes = filterNotes(notes.filter(n => n.status === 'archived').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
+
+  const cardHandlers = useMemo(() => ({
+      handleDragStart,
+      handleDragOver,
+      handleDrop,
+      handleOpenNote,
+      togglePin,
+      onAddTask,
+      moveNoteToSandbox,
+      archiveNote,
+      moveNoteToInbox,
+      onAddJournalEntry,
+      addSketchItem,
+      onImageClick: (src: string) => setLightboxSrc(src)
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
+
+  const markdownRenderComponents = {
+      ...markdownComponents,
+      img: ({node, src, alt, ...props}: any) => (
+          <img 
+              src={src} 
+              alt={alt} 
+              className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm cursor-zoom-in hover:opacity-95 transition-opacity" 
+              onClick={(e) => { e.stopPropagation(); if(src) setLightboxSrc(src); }} 
+              loading="lazy" 
+              {...props} 
+          />
+      )
+  };
+
+  // --- KINETIC FLASHCARD DECK (UPDATED) ---
+  const KineticFlashcardDeck = ({ 
+      cards, 
+      onDelete, 
+      onToggleStar 
+  }: { 
+      cards: Flashcard[], 
+      onDelete: (id: string) => void,
+      onToggleStar: (id: string) => void
+  }) => {
+      const [index, setIndex] = useState(0);
+      const [isFlipped, setIsFlipped] = useState(false);
+      const [showFavorites, setShowFavorites] = useState(false);
+
+      // Filter cards based on mode
+      const displayedCards = useMemo(() => {
+          return showFavorites ? cards.filter(c => c.isStarred) : cards;
+      }, [cards, showFavorites]);
+
+      // Ensure index stays valid if cards are removed
+      useEffect(() => {
+          if (index >= displayedCards.length && displayedCards.length > 0) {
+              setIndex(Math.max(0, displayedCards.length - 1));
+          }
+      }, [displayedCards.length, index]);
+
+      // Handle empty filtered state
+      if (displayedCards.length === 0) {
+          return (
+              <div className="flex flex-col items-center justify-center h-full py-20 text-center animate-in fade-in duration-500">
+                  <div className="w-24 h-24 rounded-full border border-slate-200 dark:border-slate-800 flex items-center justify-center mb-6">
+                      <Layers size={32} className="text-slate-300 dark:text-slate-600" />
+                  </div>
+                  <h3 className="text-lg font-light text-slate-800 dark:text-slate-200">
+                      {showFavorites ? "Нет избранных карточек" : "Колода пуста"}
+                  </h3>
+                  <p className="text-sm text-slate-500 max-w-xs mt-2">
+                      {showFavorites ? "Отметьте важные карточки звездочкой." : "Кристаллизуй знания в Хабе, чтобы они появились здесь."}
+                  </p>
+                  {showFavorites && (
+                      <button 
+                          onClick={() => setShowFavorites(false)}
+                          className="mt-6 px-4 py-2 text-xs font-mono uppercase tracking-widest text-indigo-500 hover:text-indigo-600 transition-colors border border-indigo-200 rounded-full hover:bg-indigo-50 dark:border-indigo-900 dark:hover:bg-indigo-900/20"
+                      >
+                          Показать все
+                      </button>
+                  )}
+              </div>
+          );
+      }
+
+      // Ensure index is valid after filter change
+      const safeIndex = index % displayedCards.length;
+      const currentCard = displayedCards[safeIndex];
+
+      const nextCard = () => {
+          setIsFlipped(false);
+          setIndex((prev) => (prev + 1) % displayedCards.length);
+      };
+
+      const prevCard = () => {
+          setIsFlipped(false);
+          setIndex((prev) => (prev - 1 + displayedCards.length) % displayedCards.length);
+      };
+
+      const toggleFlip = () => setIsFlipped(!isFlipped);
+
+      const handleDelete = (e: React.MouseEvent) => {
+          e.stopPropagation();
+          if (confirm("Удалить эту карточку?")) {
+              onDelete(currentCard.id);
+              // If we delete the last card, move index back
+              if (safeIndex >= displayedCards.length - 1) {
+                  setIndex(Math.max(0, safeIndex - 1));
+              }
+          }
+      };
+
+      return (
+          <div className="flex items-center justify-center h-full min-h-[600px] w-full p-4 md:p-8">
+              {/* The "Oracle-like" Window */}
+              <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="relative w-full max-w-2xl min-h-[500px] bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-[40px] shadow-2xl border border-white/50 dark:border-white/10 overflow-hidden flex flex-col transition-colors duration-500"
+                  onClick={toggleFlip}
+              >
+                  {/* Background Atmosphere (Fog/Neon) */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[40px]">
+                      <motion.div 
+                          animate={{ 
+                              scale: isFlipped ? 1.2 : 1,
+                              opacity: isFlipped ? 0.4 : 0.2
+                          }}
+                          transition={{ duration: 1 }}
+                          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[100px] transition-colors duration-700 ${isFlipped ? 'bg-amber-500' : 'bg-indigo-500'}`}
+                      />
+                      <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 opacity-10 mix-blend-overlay" />
+                  </div>
+
+                  {/* Header Controls */}
+                  <div className="flex justify-between items-center px-8 pt-8 pb-2 relative z-20" onClick={e => e.stopPropagation()}>
+                      {/* Status Label */}
+                      <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 flex items-center gap-2">
+                          {isFlipped ? <Sparkles size={12} className="text-amber-500" /> : <BrainCircuit size={12} className="text-indigo-500" />}
+                          {isFlipped ? 'ОТВЕТ' : 'ВОПРОС'}
+                      </div>
+
+                      {/* Top Right Controls: Filter & Star */}
+                      <div className="flex items-center gap-3">
+                          <Tooltip content="Показать только избранное">
+                              <button 
+                                  onClick={() => { setShowFavorites(!showFavorites); setIndex(0); }}
+                                  className={`p-2 rounded-full transition-all ${showFavorites ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-300 dark:text-slate-600 hover:text-indigo-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
+                              >
+                                  <Filter size={16} strokeWidth={showFavorites ? 2.5 : 1.5} />
+                              </button>
+                          </Tooltip>
+                          
+                          <Tooltip content={currentCard.isStarred ? "Убрать из избранного" : "Добавить в избранное"}>
+                              <button 
+                                  onClick={() => onToggleStar(currentCard.id)}
+                                  className={`p-2 rounded-full transition-all ${currentCard.isStarred ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600 hover:text-amber-400 hover:bg-black/5 dark:hover:bg-white/5'}`}
+                              >
+                                  <Star size={16} strokeWidth={currentCard.isStarred ? 0 : 1.5} fill={currentCard.isStarred ? "currentColor" : "none"} />
+                              </button>
+                          </Tooltip>
+                      </div>
+                  </div>
+
+                  {/* Main Content Area */}
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 md:p-12 text-center relative z-10 cursor-pointer overflow-hidden">
+                      <AnimatePresence mode="wait">
+                          <motion.div
+                              key={currentCard.id + (isFlipped ? '_back' : '_front')}
+                              initial={{ opacity: 0, y: 10, filter: 'blur(5px)' }}
+                              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                              exit={{ opacity: 0, y: -10, filter: 'blur(5px)' }}
+                              transition={{ duration: 0.4, ease: "easeOut" }}
+                              className="w-full h-full flex items-center justify-center"
+                          >
+                              {/* Scrollable container for text to keep card size fixed */}
+                              <div className="w-full h-[320px] overflow-y-auto pr-2">
+                                  <div className="font-serif text-xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-100 select-none whitespace-pre-wrap">
+                                      {isFlipped ? currentCard.back : currentCard.front}
+                                  </div>
+                              </div>
+                          </motion.div>
+                      </AnimatePresence>
+                  </div>
+
+                  {/* Footer / Controls */}
+                  <div className="pb-8 px-8 flex justify-between items-end relative z-20" onClick={e => e.stopPropagation()}>
+                      {/* Centered Navigation */}
+                      <div className="flex-1 flex justify-center gap-8 pl-12">
+                          <button 
+                              onClick={prevCard}
+                              className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1 flex items-center gap-2"
+                          >
+                              <ArrowLeft size={12} /> [ ПРЕД ]
+                          </button>
+
+                          <button 
+                              onClick={toggleFlip}
+                              className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center gap-2 group"
+                          >
+                              <RotateCw size={14} className={`transition-transform duration-500 ${isFlipped ? 'rotate-180' : ''}`} />
+                              [ ПЕРЕВЕРНУТЬ ]
+                          </button>
+
+                          <button 
+                              onClick={nextCard}
+                              className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1 flex items-center gap-2"
+                          >
+                              [ СЛЕД ] <ArrowRight size={12} />
+                          </button>
+                      </div>
+
+                      {/* Delete Button (Bottom Right) */}
+                      <div className="shrink-0">
+                          <Tooltip content="Удалить карточку">
+                              <button 
+                                  onClick={handleDelete}
+                                  className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
+                              >
+                                  <Trash2 size={16} strokeWidth={1.5} />
+                              </button>
+                          </Tooltip>
+                      </div>
+                  </div>
+              </motion.div>
+          </div>
+      );
+  };
 
   return (
-    <div ref={scrollContainerRef} className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] relative overflow-hidden overflow-y-auto">
-        
-        {/* HEADER SECTION (Tabs) */}
-        <div className="w-full px-4 md:px-8 pt-4 md:pt-8 mb-4 shrink-0 z-50">
-             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] overflow-hidden">
+      
+      {/* Global Lightbox for viewing images */}
+      <AnimatePresence>
+          {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      </AnimatePresence>
+
+      <div className="shrink-0 w-full px-4 md:px-8 pt-4 md:pt-8 mb-4 z-50">
+            <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">
-                        {activeTab === 'inbox' ? 'Входящие' : activeTab === 'library' ? 'Библиотека' : 'Картотека'}
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">
-                        {activeTab === 'inbox' ? 'Поток мыслей' : activeTab === 'library' ? 'Хранилище знаний' : 'Нейронные связи'}
-                    </p>
+                <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">Заметки</h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">На скорости мысли</p>
                 </div>
-             </header>
-        </div>
-
-        <div className="flex-1 flex flex-col relative">
-             {/* Sticky Toolbar */}
-             <motion.div 
-                className="sticky top-0 z-40 w-full mb-[-20px]"
-                animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-             >
-                 <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
-                    <div 
-                        className="absolute inset-0 backdrop-blur-xl bg-[#f8fafc]/90 dark:bg-[#0f172a]/90"
-                        style={{
-                            maskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)',
-                            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)'
-                        }}
-                    />
+                <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
+                    <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
+                    <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
+                    <button onClick={() => { setActiveTab('flashcards'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'flashcards' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Layers size={16} /> Flashcards</button>
                 </div>
-                
-                <div className="relative z-10 w-full px-4 md:px-8 pb-2">
-                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none items-center">
-                        <div className="bg-white dark:bg-[#1e293b] p-1 rounded-2xl flex shadow-sm border border-slate-200 dark:border-slate-800 shrink-0">
-                            <button onClick={() => setActiveTab('inbox')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'inbox' ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Входящие</button>
-                            <button onClick={() => setActiveTab('library')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'library' ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Библиотека</button>
-                            <button onClick={() => setActiveTab('flashcards')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'flashcards' ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Карточки</button>
-                        </div>
+            </header>
+      </div>
 
-                        <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2 shrink-0"></div>
-
-                        {/* Search & Filter */}
-                        <div className="relative flex-1 group min-w-[200px]">
-                            <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-indigo-500' : 'text-slate-400 group-focus-within:text-indigo-500'}`} />
-                            <input 
-                                type="text" 
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Поиск..."
-                                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-shadow shadow-sm placeholder:text-slate-400"
-                            />
-                            {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
-                        </div>
-
-                        <Tooltip content="Фильтры">
-                            <button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || tagQuery || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400'}`}>
-                                <Filter size={18} />
-                            </button>
-                        </Tooltip>
-
-                        {/* AI Mood Matcher */}
-                        {hasMoodMatcher && (
-                            <Tooltip content="AI Подбор">
-                                <button onClick={() => setShowMoodInput(!showMoodInput)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showMoodInput || aiFilteredIds ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-violet-500 dark:hover:text-violet-400'}`}>
-                                    <Sparkles size={18} />
-                                </button>
-                            </Tooltip>
-                        )}
-
-                        <Tooltip content="Оракул">
-                            <button onClick={() => setShowOracle(true)} className="p-3 rounded-2xl border-none transition-all shadow-sm bg-white dark:bg-[#1e293b] text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20">
-                                <Dices size={18} />
-                            </button>
-                        </Tooltip>
+      <div className="flex-1 min-h-0 relative">
+            <div 
+                ref={scrollContainerRef}
+                className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar-light"
+                onScroll={() => setActiveImage(null)}
+            >
+                {activeTab !== 'flashcards' && (
+                <motion.div 
+                    className="sticky top-0 z-40 w-full mb-[-20px]"
+                    animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                >
+                    <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
+                        <div 
+                            className="absolute inset-0 backdrop-blur-xl"
+                            style={{
+                                maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)',
+                                WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)'
+                            }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
                     </div>
 
-                    {/* EXPANDABLE FILTERS */}
-                    <AnimatePresence>
-                        {(showFilters || showMoodInput) && (
-                            <motion.div 
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden"
-                            >
-                                <div className="pt-4 pb-2 space-y-4">
-                                    {showFilters && (
-                                        <div className="flex flex-col gap-3 p-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-700">
-                                            {/* Tag Filter */}
-                                            <div className="flex items-center gap-2">
-                                                <TagIcon size={14} className="text-slate-400" />
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Фильтр по тегу..." 
-                                                    value={tagQuery}
-                                                    onChange={(e) => setTagQuery(e.target.value)}
-                                                    className="bg-transparent border-b border-slate-200 dark:border-slate-600 text-xs py-1 outline-none text-slate-700 dark:text-slate-300 w-40"
-                                                />
+                    <div className="relative z-10 w-full px-4 md:px-8 pb-2">
+                        <div className="max-w-3xl mx-auto w-full">
+                            <div className="flex gap-2">
+                                <div className="relative flex-1 group">
+                                    {showMoodInput ? (
+                                        <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                                            <div className="relative flex-1">
+                                                <Sparkles size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500" />
+                                                <input type="text" placeholder="На какую тему подобрать заметки?" value={moodQuery} onChange={(e) => setMoodQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleMoodSearch()} className="w-full pl-10 pr-4 py-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 focus:border-purple-300 transition-all text-purple-900 dark:text-purple-300 placeholder:text-purple-300" autoFocus />
                                             </div>
-                                            {/* Color Filter */}
-                                            <div className="flex gap-2 overflow-x-auto scrollbar-none">
-                                                <button onClick={() => setActiveColorFilter(null)} className={`w-5 h-5 rounded-full border flex items-center justify-center ${!activeColorFilter ? 'border-slate-400' : 'border-slate-200 dark:border-slate-700'}`}><X size={10} className="text-slate-400"/></button>
-                                                {colors.filter(c => c.id !== 'white').map(c => (
-                                                    <button 
-                                                        key={c.id} 
-                                                        onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)}
-                                                        className={`w-5 h-5 rounded-full transition-transform ${c.class.split(' ')[0]} ${activeColorFilter === c.id ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110' : ''} border border-black/5`}
-                                                    />
-                                                ))}
+                                            <button onClick={handleMoodSearch} disabled={isMoodAnalyzing || !moodQuery.trim()} className="px-5 py-2 bg-purple-600 text-white rounded-2xl text-xs font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 shadow-sm">{isMoodAnalyzing ? 'Думаю...' : 'Найти'}</button>
+                                            <button onClick={() => setShowMoodInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                                        </div>
+                                    ) : showTagInput ? (
+                                        <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                                            <div className="relative flex-1">
+                                                <TagIcon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" />
+                                                <input type="text" placeholder="Поиск по #тегам..." value={tagQuery} onChange={(e) => setTagQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 focus:border-indigo-300 transition-all text-indigo-900 dark:text-indigo-300 placeholder:text-indigo-300" autoFocus />
                                             </div>
+                                            <button onClick={() => setShowTagInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
                                         </div>
-                                    )}
-
-                                    {showMoodInput && (
-                                        <div className="flex gap-2 items-center p-2 bg-violet-50 dark:bg-violet-900/10 rounded-2xl border border-violet-100 dark:border-violet-800">
-                                            <input 
-                                                type="text" 
-                                                placeholder="Опиши свое состояние..." 
-                                                value={moodQuery}
-                                                onChange={(e) => setMoodQuery(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handleMoodAnalysis()}
-                                                className="flex-1 bg-transparent border-none outline-none text-sm px-2 text-violet-900 dark:text-violet-100 placeholder:text-violet-400"
-                                            />
-                                            {aiFilteredIds && (
-                                                <button onClick={handleClearMood} className="p-1 text-violet-400 hover:text-violet-600"><X size={14}/></button>
-                                            )}
-                                            <button 
-                                                onClick={handleMoodAnalysis} 
-                                                disabled={!moodQuery.trim() || isMoodAnalyzing}
-                                                className="p-2 bg-violet-500 text-white rounded-xl hover:bg-violet-600 disabled:opacity-50 transition-colors shadow-sm"
-                                            >
-                                                {isMoodAnalyzing ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                                            </button>
-                                        </div>
+                                    ) : (
+                                        <>
+                                            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                                            <input type="text" placeholder="Поиск" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-shadow shadow-sm placeholder:text-slate-400" />
+                                            {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
+                                        </>
                                     )}
                                 </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-             </motion.div>
+                                {!showMoodInput && !showTagInput && (
+                                    <>
+                                        <Tooltip content="Поиск по тегам" side="bottom"><button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button></Tooltip>
+                                        <Tooltip content="Фильтр по цвету" side="bottom"><button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button></Tooltip>
+                                        {hasMoodMatcher && <Tooltip content="Подбор по теме (ИИ)" side="bottom"><button onClick={() => setShowMoodInput(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-purple-500 hover:bg-purple-50'}`}><Sparkles size={20} /></button></Tooltip>}
+                                        <Tooltip content="Рандом" side="bottom">
+                                            <button onClick={startOracle} className="group relative p-3 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none">
+                                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
+                                                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+                                                <Dices size={20} className="relative z-10 text-white transition-transform duration-500 group-hover:rotate-180" />
+                                            </button>
+                                        </Tooltip>
+                                    </>
+                                )}
+                            </div>
+                            {aiFilteredIds !== null && !showMoodInput && (
+                                <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl px-4 py-3 animate-in fade-in slide-in-from-top-1">
+                                    <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300"><Sparkles size={14} /><span>Найдено {aiFilteredIds.length} заметок на тему: <b>«{moodQuery}»</b></span></div>
+                                    <button onClick={clearMoodFilter} className="text-[10px] font-bold uppercase tracking-wider text-purple-400 hover:text-purple-700 dark:hover:text-purple-200 flex items-center gap-1"><X size={12} /> Сброс</button>
+                                </div>
+                            )}
+                            {(showFilters || activeColorFilter) && (
+                                <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200">
+                                    <button onClick={() => setActiveColorFilter(null)} className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${activeColorFilter === null ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}>Все</button>
+                                    {colors.map(c => <button key={c.id} onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)} className={`w-6 h-6 rounded-full border shadow-sm transition-transform ${activeColorFilter === c.id ? 'ring-2 ring-indigo-400 ring-offset-2 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: c.hex, borderColor: '#cbd5e1' }} title={c.id} />)}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+                )}
 
-             <div className="w-full px-4 md:px-8 pt-6 pb-20 relative z-10 flex-1 min-h-0">
-                {activeTab === 'flashcards' ? (
-                    <KineticFlashcardDeck 
-                        cards={flashcards || []} 
-                        onDelete={deleteFlashcard}
-                        onToggleStar={toggleFlashcardStar}
-                    />
-                ) : (
-                    <>
-                        {/* INPUT FIELD (COLLAPSED STATE) for Inbox Only */}
-                        {activeTab === 'inbox' && (
-                            <div className="max-w-3xl mx-auto w-full mb-8 relative z-30">
-                                {!isExpanded ? (
-                                    <div 
-                                        onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 100); }}
-                                        className="bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-sm p-4 cursor-text flex items-center justify-between group hover:shadow-md transition-all h-[52px]"
-                                    >
-                                        <span className="text-slate-400 dark:text-slate-500 font-serif italic text-base pl-2">Новая мысль...</span>
-                                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 group-hover:text-indigo-500 transition-colors">
-                                            <PenTool size={18} />
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className={`${getNoteColorClass(creationColor)} backdrop-blur-xl rounded-2xl border border-white/40 dark:border-white/5 shadow-lg p-5 flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200 relative`}>
-                                        {creationCover && (
-                                            <div className="relative w-full h-32 group rounded-t-xl overflow-hidden -mt-5 -mx-5 mb-3 w-[calc(100%_+_2.5rem)]">
-                                                <img src={creationCover} alt="Cover" className="w-full h-full object-cover" />
-                                                <button onClick={() => setCreationCover(null)} className="absolute top-3 right-3 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={14} /></button>
+                <div className="w-full px-4 md:px-8 pt-6 pb-8 h-full">
+                    {activeTab === 'inbox' && (
+                        <>
+                            {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
+                                <div className="max-w-3xl mx-auto w-full">
+                                    <div ref={editorRef} className={`${getNoteColorClass(creationColor)} rounded-3xl transition-all duration-300 shrink-0 relative mb-8 ${isExpanded ? 'shadow-xl z-30' : 'shadow-sm hover:shadow-md'}`}>
+                                        <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0 rounded-3xl"></div>
+                                        
+                                        {!isExpanded ? (
+                                            <div onClick={() => { setIsExpanded(true); setTimeout(() => contentEditableRef.current?.focus(), 10); }} className="p-5 text-slate-400 dark:text-slate-500 cursor-text text-base font-medium flex items-center justify-between relative z-10"><span>Заметка...</span><div className="flex gap-4 text-slate-300 hover:text-slate-400 transition-colors"><PenTool size={20} /><ImageIcon size={20} /></div></div>
+                                        ) : (
+                                            <div className="flex flex-col animate-in fade-in duration-200 relative z-10">
+                                                {creationCover && <div className="relative w-full h-32 md:h-48 group rounded-t-3xl overflow-hidden"><img src={creationCover} alt="Cover" className="w-full h-full object-cover" /><button onClick={() => setCreationCover(null)} className="absolute top-5 right-5 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button></div>}
+                                                <input type="text" placeholder="Название" value={title} onChange={(e) => setTitle(e.target.value)} className="px-6 pt-6 pb-2 bg-transparent text-xl font-sans font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 outline-none" />
+                                                <div 
+                                                    ref={contentEditableRef} 
+                                                    contentEditable 
+                                                    onInput={handleEditorInput} 
+                                                    onClick={handleEditorClick} 
+                                                    onBlur={saveSelection} 
+                                                    onMouseUp={saveSelection} 
+                                                    onKeyUp={saveSelection} 
+                                                    className="w-full min-h-[140px] outline-none text-base text-slate-700 dark:text-slate-200 px-6 py-2 leading-relaxed font-serif [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                                    style={{ whiteSpace: 'pre-wrap' }} 
+                                                    data-placeholder="О чём ты думаешь?" 
+                                                />
+                                                <div className="px-6 py-2"><TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} /></div>
+                                                <div className="flex items-center justify-between px-4 py-3 gap-2 bg-transparent">
+                                                    <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0 mask-fade-right">
+                                                        <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCcw size={18} /></button></Tooltip>
+                                                        <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors disabled:opacity-30"><RotateCw size={18} /></button></Tooltip>
+                                                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                        <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Bold size={18} /></button></Tooltip>
+                                                        <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Italic size={18} /></button></Tooltip>
+                                                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                        <Tooltip content="Очистить форматирование"><button onMouseDown={handleClearStyle} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Eraser size={18} /></button></Tooltip>
+                                                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+                                                        <Tooltip content="Вставить картинку"><label className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={18} /></label></Tooltip>
+                                                        {activeImage && !isEditing && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 transition-colors"><Trash2 size={18} /></button></Tooltip>}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <div className="relative">
+                                                            <Tooltip content="Обложка"><button ref={creationCoverBtnRef} onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400'}`}><Layout size={18} /></button></Tooltip>
+                                                            {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationCoverBtnRef} />}
+                                                        </div>
+                                                        <div className="relative">
+                                                            <Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"><Palette size={18} /></button></Tooltip>
+                                                            {showColorPicker && (
+                                                                <>
+                                                                    <div className="fixed inset-0 z-40" onClick={() => setShowColorPicker(false)} />
+                                                                    <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                                        {colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setCreationColor(c.id); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${creationColor === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                        <button onClick={handleDump} disabled={isProcessing} className="font-mono text-[10px] uppercase tracking-widest px-5 py-2.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold disabled:opacity-50">Сохранить</button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
+                                    </div>
+                                </div>
+                            )}
+                            {inboxNotes.length > 0 ? (
+                                <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
+                                    {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
+                                </Masonry>
+                            ) : (
+                                <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
+                            )}
+                        </>
+                    )}
+                    {activeTab === 'library' && (
+                        <>
+                            {archivedNotes.length > 0 ? (
+                                <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
+                                    {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
+                                </Masonry>
+                            ) : (
+                                <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
+                            )}
+                        </>
+                    )}
+                    {activeTab === 'flashcards' && (
+                        <div className="h-full flex items-center justify-center p-4">
+                            <KineticFlashcardDeck 
+                                cards={flashcards || []} 
+                                onDelete={deleteFlashcard}
+                                onToggleStar={toggleFlashcardStar}
+                            />
+                        </div>
+                    )}
+                </div>
+            </div>
+      </div>
+      
+      {showOracle && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 backdrop-blur-[70px] bg-white/30 dark:bg-black/40"
+            onClick={closeOracle}
+          />
+          
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="relative w-full max-w-2xl bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-[40px] shadow-2xl overflow-hidden border border-white/50 dark:border-white/10 flex flex-col min-h-[500px] max-h-[85vh]"
+            onClick={e => e.stopPropagation()}
+          >
+             <button onClick={closeOracle} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors z-20">
+                 <X size={20} className="text-slate-400" />
+             </button>
+
+             <div className="flex justify-center items-center gap-6 pt-8 pb-4 border-b border-transparent shrink-0">
+                {ORACLE_VIBES.map(vibe => (
+                    <button 
+                    key={vibe.id}
+                    onClick={() => setOracleVibe(vibe)}
+                    className={`text-[10px] font-mono uppercase tracking-widest transition-all flex items-center gap-2 pb-1 ${oracleVibe.id === vibe.id ? 'text-slate-900 dark:text-slate-100 border-b border-slate-900 dark:border-slate-100' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border-b border-transparent'}`}
+                    >
+                    <vibe.icon size={14} className={oracleVibe.id === vibe.id ? "text-indigo-500" : "text-slate-400"} />
+                    {vibe.label}
+                    </button>
+                ))}
+             </div>
+
+             <div className="flex-1 flex flex-col relative overflow-hidden">
+                 {oracleState === 'select' && (
+                     <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500">
+                         <Diamond size={24} strokeWidth={1} className="text-slate-300 mb-8" />
+                         <button 
+                             onClick={() => castOracleSpell(oracleVibe)}
+                             className="px-8 py-4 border border-slate-300 dark:border-slate-600 rounded-full text-xs font-mono uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-500 active:scale-95"
+                         >
+                             [ ВЫЗВАТЬ МЫСЛЬ ]
+                         </button>
+                     </div>
+                 )}
+
+                 {oracleState === 'thinking' && (
+                     <div className="flex-1 flex flex-col items-center justify-center">
+                         <div className="relative">
+                             <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-20 animate-pulse"></div>
+                             <Diamond size={48} strokeWidth={0.5} className="text-slate-800 dark:text-white animate-pulse relative z-10" />
+                         </div>
+                         <div className="mt-8 text-[10px] font-mono uppercase tracking-[0.3em] text-slate-400 animate-pulse">
+                             Сканирую архив...
+                         </div>
+                     </div>
+                 )}
+
+                 {oracleState === 'result' && oracleNote && (
+                     <div className="flex-1 flex flex-col p-8 md:p-12 overflow-y-auto custom-scrollbar-ghost min-h-0">
+                        <div className="flex justify-center mb-8 shrink-0">
+                            <Diamond size={16} strokeWidth={1} className="text-indigo-500" />
+                        </div>
+                        
+                        <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className="my-auto text-center w-full"
+                        >
+                            <div className="font-serif text-2xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-200">
+                                <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                    {oracleNote.content}
+                                </ReactMarkdown>
+                            </div>
+                        </motion.div>
+
+                        <div className="mt-12 text-center shrink-0 flex flex-col items-center gap-6">
+                            <div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest opacity-40">
+                                {new Date(oracleNote.createdAt).toLocaleDateString()} • ID: {oracleNote.id.slice(-5)}
+                            </div>
+
+                            <button 
+                                onClick={() => castOracleSpell(oracleVibe)}
+                                className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center gap-2"
+                            >
+                                <RotateCw size={12} /> [ ЕЩЕ РАЗ ]
+                            </button>
+                            
+                            <button 
+                                onClick={handleAcceptOracleResult}
+                                className="text-xs font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1"
+                            >
+                                [ ПРИНЯТЬ В РАБОТУ ]
+                            </button>
+                        </div>
+                     </div>
+                 )}
+             </div>
+          </motion.div>
+      </div>
+      )}
+
+      {selectedNote && (
+        <AnimatePresence>
+            <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedNote(null)}>
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="w-full max-w-lg bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-[40px] saturate-150 border border-black/5 dark:border-white/10 rounded-[32px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col max-h-[90vh] relative overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                    onScroll={() => setActiveImage(null)}
+                >
+                    {(isEditing ? editCover : selectedNote.coverUrl) && <div className="h-40 w-full shrink-0 relative group -mx-10 -mt-10 mb-6 w-[calc(100%_+_5rem)] overflow-hidden"><img src={isEditing ? editCover! : selectedNote.coverUrl!} alt="Cover" className="w-full h-full object-cover" />{isEditing && <button onClick={() => setEditCover(null)} className="absolute top-5 right-5 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button>}</div>}
+                    
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <div className="flex justify-between items-start mb-4 gap-4 shrink-0">
+                            <div className="flex-1 pt-1 min-w-0">
+                                {isEditing ? (
+                                    <div className="flex flex-col gap-2">
                                         <input 
-                                            type="text" 
+                                            value={editTitle} 
+                                            onChange={(e) => setEditTitle(e.target.value)} 
+                                            className="w-full bg-transparent p-0 text-xl font-sans font-bold text-slate-900 dark:text-slate-100 border-none outline-none placeholder:text-slate-300" 
                                             placeholder="Название" 
-                                            value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
-                                            className="w-full bg-transparent text-xl font-sans font-bold text-slate-900 dark:text-white outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 mb-2"
-                                            autoFocus
                                         />
-                                        
-                                        <div className="relative">
-                                            <div 
-                                                ref={contentEditableRef}
-                                                contentEditable 
-                                                onInput={handleEditorInput} 
-                                                onClick={handleEditorClick}
-                                                onBlur={() => { /* save selection */ }}
-                                                className="w-full min-h-[120px] max-h-[400px] overflow-y-auto outline-none text-base text-slate-800 dark:text-slate-200 bg-transparent p-1 font-serif leading-relaxed custom-scrollbar-ghost [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:dark:text-slate-500"
-                                                data-placeholder="Текст заметки..."
-                                            />
-                                            <div className="absolute bottom-0 left-0 w-full h-px bg-slate-200/50 dark:bg-slate-700/50" />
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-1">
+                                        <div className="font-mono text-[9px] text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1 opacity-50">
+                                            <span>{new Date(selectedNote.createdAt).toLocaleDateString()}</span>
+                                            <span className="opacity-50 mx-2">|</span>
+                                            <span>ID // {selectedNote.id.slice(-5).toLowerCase()}</span>
                                         </div>
-
-                                        {/* Tag Selector */}
-                                        <div className="mt-2">
-                                            <TagSelector selectedTags={creationTags} onChange={setCreationTags} existingTags={allExistingTags} variant="ghost" direction="up" />
-                                        </div>
-
-                                        {/* TOOLBAR */}
-                                        <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-white/5 mb-1">
-                                            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none mask-fade-right">
-                                                <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execUndo(); }} disabled={historyIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
-                                                <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execRedo(); }} disabled={historyIndex >= history.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
-                                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                                <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
-                                                <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
-                                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                                <Tooltip content="Очистить"><button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
-                                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                                <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
-                                                {activeImage && contentEditableRef.current && contentEditableRef.current.contains(activeImage) && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
-                                            </div>
-                                            {/* Right Container for Styling */}
-                                            <div className="flex items-center gap-1 shrink-0 ml-2">
-                                                {hasTagger && (
-                                                    <Tooltip content="Авто-теги (AI)">
-                                                        <button 
-                                                            onClick={handleAutoTag} 
-                                                            disabled={isProcessing}
-                                                            className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors ${isProcessing ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
-                                                        >
-                                                            {isProcessing ? <RefreshCw size={16} className="animate-spin" /> : <TagIcon size={16} />}
-                                                        </button>
-                                                    </Tooltip>
-                                                )}
-                                                <div className="relative">
-                                                    <Tooltip content="Обложка">
-                                                        <button 
-                                                            ref={creationCoverBtnRef}
-                                                            onMouseDown={(e) => { e.preventDefault(); setShowCreationCoverPicker(!showCreationCoverPicker); }} 
-                                                            className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors ${creationCover ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
-                                                        >
-                                                            <Layout size={16} />
-                                                        </button>
-                                                    </Tooltip>
-                                                    {showCreationCoverPicker && <CoverPicker onSelect={setCreationCover} onClose={() => setShowCreationCoverPicker(false)} triggerRef={creationCoverBtnRef} />}
-                                                </div>
-                                                <div className="relative">
-                                                    <Tooltip content="Фон записи">
-                                                        <button 
-                                                            ref={creationCoverBtnRef}
-                                                            onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} 
-                                                            className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors ${creationColor !== 'white' ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
-                                                        >
-                                                            <Palette size={16} />
-                                                        </button>
-                                                    </Tooltip>
-                                                    {showModalColorPicker && (
-                                                        <ColorPickerPopover
-                                                            onSelect={setCreationColor}
-                                                            onClose={() => setShowModalColorPicker(false)}
-                                                            triggerRef={creationCoverBtnRef}
-                                                        />
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="flex gap-2">
-                                            <button 
-                                                onClick={handleSubmit} 
-                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium text-sm transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-[0.98]"
-                                            >
-                                                <Send size={16} strokeWidth={1} /> 
-                                                <span className="font-serif">Сохранить</span>
-                                            </button>
-                                            <button 
-                                                onClick={() => setIsExpanded(false)} 
-                                                className="px-4 py-3 rounded-xl border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                                            >
-                                                <X size={20} strokeWidth={1} />
-                                            </button>
-                                        </div>
+                                        {selectedNote.title ? <h2 className="font-sans text-2xl font-bold text-slate-900 dark:text-slate-200 leading-tight break-words">{selectedNote.title}</h2> : null}
                                     </div>
                                 )}
                             </div>
-                        )}
+                            <div className="flex items-center gap-1 shrink-0 -mt-1 relative z-20" style={{top: '5px', right: '5px'}}>
+                                {!isEditing && (
+                                    <>
+                                        <Tooltip content={selectedNote.isPinned ? "Открепить" : "Закрепить"}><button onClick={(e) => togglePin(e, selectedNote)} className={`p-2 rounded-lg transition-colors ${selectedNote.isPinned ? 'text-indigo-500 bg-transparent' : 'text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-black/5 dark:hover:bg-white/5'}`}><Pin size={16} className={selectedNote.isPinned ? "fill-current" : ""} /></button></Tooltip>
+                                        <Tooltip content="Редактировать"><button onClick={() => setIsEditing(true)} className="p-2 text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Edit3 size={16} /></button></Tooltip>
+                                        <Tooltip content="Отправить в архив"><button onClick={() => { if(window.confirm('Отправить в архив?')) { deleteNote(selectedNote.id); setSelectedNote(null); } }} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-transparent rounded-lg transition-colors"><Trash2 size={16} /></button></Tooltip>
+                                    </>
+                                )}
+                                <button onClick={() => setSelectedNote(null)} className="p-2 text-slate-300 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg ml-2"><X size={20}/></button>
+                            </div>
+                        </div>
 
-                        {filteredNotes.length === 0 ? (
-                            <div className="py-20">
-                                <EmptyState 
-                                    icon={StickyNote} 
-                                    title={searchQuery ? "Ничего не найдено" : "Чистый лист"} 
-                                    description={searchQuery ? "Попробуй изменить запрос" : "Здесь пока пусто. Начни с первой мысли."} 
-                                    color="indigo" 
-                                />
+                        {isEditing ? (
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                <div className="relative flex-1 overflow-hidden flex flex-col">
+                                    <div className="flex items-center justify-between mb-2 gap-2 shrink-0">
+                                        <div className="flex items-center gap-1 pb-1 overflow-x-auto scrollbar-none flex-1 mask-fade-right">
+                                            <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
+                                            <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
+                                            <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Очистить"><button onMouseDown={handleClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-1 shrink-0"></div>
+                                            <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /><ImageIcon size={16} /></label></Tooltip>
+                                            {activeImage && <Tooltip content="Удалить картинку"><button onMouseDown={deleteActiveImage} className="image-delete-btn p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-500"><Trash2 size={16} /></button></Tooltip>}
+                                        </div>
+                                        <div className="shrink-0 relative flex gap-1">
+                                            <div className="relative">
+                                                <Tooltip content="Обложка"><button ref={editCoverBtnRef} onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 ${editCover ? 'text-indigo-500' : ''}`}><Layout size={16} /></button></Tooltip>
+                                                {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editCoverBtnRef} />}
+                                            </div>
+                                            <div className="relative">
+                                                <Tooltip content="Фон заметки"><button onMouseDown={(e) => { e.preventDefault(); setShowModalColorPicker(!showModalColorPicker); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Palette size={16} /></button></Tooltip>
+                                                {showModalColorPicker && (
+                                                    <>
+                                                        <div className="fixed inset-0 z-40" onClick={() => setShowModalColorPicker(false)} />
+                                                        <div className="absolute top-full mt-1 right-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 flex gap-2 z-50 color-picker-dropdown">
+                                                            {colors.map(c => <button key={c.id} onMouseDown={(e) => { e.preventDefault(); setColor(c.id); setShowModalColorPicker(false); }} className={`w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform ${selectedNote.color === c.id ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`} style={{ backgroundColor: c.hex }} title={c.id} />)}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div 
+                                        ref={editContentRef} 
+                                        contentEditable 
+                                        onInput={handleEditModalInput} 
+                                        onClick={handleEditorClick} 
+                                        onBlur={saveSelection} 
+                                        onMouseUp={saveSelection} 
+                                        onKeyUp={saveSelection} 
+                                        onScroll={() => setActiveImage(null)} 
+                                        className="w-full flex-1 bg-transparent p-1 text-base leading-relaxed text-slate-800 dark:text-slate-200 outline-none overflow-y-auto font-serif custom-scrollbar-ghost [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1" 
+                                    />
+                                </div>
+                                <div className="pt-4 border-t border-black/5 dark:border-white/5 mt-2">
+                                    <TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} placeholder="Добавить теги..." variant="ghost" direction="up" />
+                                </div>
                             </div>
                         ) : (
-                            <Masonry
-                                breakpointCols={breakpointColumnsObj}
-                                className="my-masonry-grid"
-                                columnClassName="my-masonry-grid_column"
-                            >
-                                {filteredNotes.map(note => (
-                                    <NoteCard 
-                                        key={note.id} 
-                                        note={note} 
-                                        isArchived={activeTab !== 'inbox'} 
-                                        isLinkedToJournal={linkedNoteIds.has(note.id)} 
-                                        handlers={{
-                                            handleDragStart: (e, id) => e.dataTransfer.setData('noteId', id),
-                                            handleDragOver: (e) => e.preventDefault(),
-                                            handleDrop: (e, id) => reorderNote(e.dataTransfer.getData('noteId'), id),
-                                            handleOpenNote: (n) => { setSelectedNote(n); setIsExpanded(true); },
-                                            togglePin,
-                                            archiveNote,
-                                            moveNoteToSandbox,
-                                            moveNoteToInbox,
-                                            onAddTask,
-                                            onAddJournalEntry,
-                                            addSketchItem,
-                                            onImageClick: (src) => setLightboxSrc(src),
-                                            deleteFlashcard,
-                                            toggleFlashcardStar,
-                                            deleteNote
-                                        }} 
-                                    />
-                                ))}
-                            </Masonry>
-                        )}
-                    </>
-                )}
-             </div>
-        </div>
-
-        {/* ORACLE MODAL */}
-        <AnimatePresence>
-            {showOracle && (
-                <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setShowOracle(false)}>
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="w-full max-w-sm bg-white dark:bg-[#1e293b] rounded-3xl shadow-2xl overflow-hidden relative border border-white/20"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        {/* Animated Background */}
-                        <div className={`absolute inset-0 bg-gradient-to-br ${oracleVibe.color} opacity-10`} />
-                        
-                        <div className="relative z-10 p-8 flex flex-col items-center text-center">
-                            {oracleState === 'select' && (
-                                <>
-                                    <div className="mb-8">
-                                        <h3 className="text-xl font-light text-slate-800 dark:text-white mb-2 font-serif">Оракул</h3>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Выбери намерение</p>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4 w-full">
-                                        {ORACLE_VIBES.map(vibe => (
-                                            <button
-                                                key={vibe.id}
-                                                onClick={() => { setOracleVibe(vibe); setOracleState('thinking'); setTimeout(() => {
-                                                    const validNotes = notes.filter(n => n.status !== 'trash');
-                                                    if (validNotes.length === 0) { alert("Нет заметок"); setShowOracle(false); return; }
-                                                    // Simple random for now, could be smarter based on vibe
-                                                    const randomNote = validNotes[Math.floor(Math.random() * validNotes.length)];
-                                                    setOracleNote(randomNote);
-                                                    setOracleState('result');
-                                                }, 2000); }}
-                                                className="aspect-square rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 hover:shadow-lg transition-all flex flex-col items-center justify-center gap-3 group"
-                                            >
-                                                <vibe.icon size={28} className={`text-slate-300 dark:text-slate-600 group-hover:${vibe.text} transition-colors`} />
-                                                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-white">{vibe.label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </>
-                            )}
-
-                            {oracleState === 'thinking' && (
-                                <div className="py-12 flex flex-col items-center">
-                                    <div className="relative w-24 h-24 mb-6">
-                                        <div className={`absolute inset-0 rounded-full bg-gradient-to-tr ${oracleVibe.color} opacity-20 animate-ping`} />
-                                        <div className="absolute inset-0 rounded-full border-2 border-slate-200 dark:border-slate-700 animate-[spin_3s_linear_infinite]" />
-                                        <div className="absolute inset-2 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-600 animate-[spin_4s_linear_infinite_reverse]" />
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <oracleVibe.icon size={32} className={`${oracleVibe.text} animate-pulse`} />
-                                        </div>
-                                    </div>
-                                    <p className="text-sm font-mono uppercase tracking-widest text-slate-500 animate-pulse">Синхронизация...</p>
-                                </div>
-                            )}
-
-                            {oracleState === 'result' && oracleNote && (
-                                <div className="w-full">
-                                    <div className="mb-6 flex justify-center">
-                                        <div className={`p-4 rounded-full bg-gradient-to-br ${oracleVibe.color} shadow-lg shadow-indigo-500/20`}>
-                                            <oracleVibe.icon size={32} className="text-white" />
-                                        </div>
-                                    </div>
-                                    <div className="bg-white/50 dark:bg-black/20 rounded-xl p-6 border border-slate-100 dark:border-white/5 mb-6 relative">
-                                        <Quote size={24} className="absolute -top-3 -left-2 text-slate-200 dark:text-slate-700" />
-                                        <div className="text-sm md:text-base font-serif italic text-slate-700 dark:text-slate-200 leading-relaxed line-clamp-6">
-                                            {oracleNote.content}
-                                        </div>
-                                    </div>
-                                    <button 
-                                        onClick={() => { setSelectedNote(oracleNote); setShowOracle(false); setOracleState('select'); }}
-                                        className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-black rounded-xl font-bold uppercase tracking-widest text-xs hover:scale-105 transition-transform"
+                            <div className="flex-1 overflow-y-auto custom-scrollbar-ghost pr-1">
+                                <div className={`text-slate-800 dark:text-slate-200 text-base leading-relaxed font-serif font-normal min-h-[4rem] mb-6 ${!selectedNote.title ? 'mt-1' : ''}`}>
+                                    {/* Enable Lightbox when clicking images in View mode */}
+                                    <ReactMarkdown 
+                                        components={markdownRenderComponents} 
+                                        urlTransform={allowDataUrls} 
+                                        remarkPlugins={[remarkGfm]} 
+                                        rehypePlugins={[rehypeRaw]}
                                     >
-                                        Открыть
-                                    </button>
+                                        {selectedNote.content.replace(/\n/g, '  \n')}
+                                    </ReactMarkdown>
                                 </div>
-                            )}
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
-
-        {/* EDIT MODAL */}
-        <AnimatePresence>
-            {isEditing && selectedNote && (
-                <div className="fixed inset-0 z-[100] bg-slate-900/20 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setIsEditing(false)}>
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.98 }}
-                        className="w-full max-w-2xl bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col max-h-[90vh] relative overflow-hidden"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        {/* Cover Image in Edit Mode */}
-                        {editCover && (
-                            <div className="h-40 shrink-0 relative mb-6 -mx-6 -mt-6 md:-mx-8 md:-mt-8 w-[calc(100%_+_3rem)] md:w-[calc(100%_+_4rem)] group overflow-hidden">
-                                <img src={editCover} alt="Cover" className="w-full h-full object-cover" />
-                                <button onClick={() => setEditCover(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100">
-                                    <X size={16} />
-                                </button>
+                                {selectedNote.tags && selectedNote.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-3 pt-4 border-t border-black/5 dark:border-white/5">
+                                        {selectedNote.tags.map(tag => <span key={tag} className="text-[9px] text-slate-500/80 dark:text-slate-400/80 font-sans uppercase tracking-[0.15em]">#{tag.replace(/^#/, '')}</span>)}
+                                    </div>
+                                )}
+                                {(() => { const url = findFirstUrl(selectedNote.content); return url ? <div className="mt-6"><LinkPreview url={url} /></div> : null; })()}
                             </div>
                         )}
-
-                        <input 
-                            type="text" 
-                            placeholder="Название" 
-                            value={editTitle} 
-                            onChange={(e) => setEditTitle(e.target.value)} 
-                            className="text-2xl font-sans font-bold text-slate-900 dark:text-white leading-tight bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 mb-4" 
-                        />
-
-                        {/* Toolbar */}
-                        <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-white/5 mb-2">
-                            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none mask-fade-right">
-                                <Tooltip content="Отменить"><button onMouseDown={(e) => { e.preventDefault(); execEditUndo(); }} disabled={editHistoryIndex <= 0} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCcw size={16} /></button></Tooltip>
-                                <Tooltip content="Повторить"><button onMouseDown={(e) => { e.preventDefault(); execEditRedo(); }} disabled={editHistoryIndex >= editHistory.length - 1} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500 disabled:opacity-30"><RotateCw size={16} /></button></Tooltip>
-                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                <Tooltip content="Жирный"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('bold'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Bold size={16} /></button></Tooltip>
-                                <Tooltip content="Курсив"><button onMouseDown={(e) => { e.preventDefault(); execEditCmd('italic'); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Italic size={16} /></button></Tooltip>
-                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                <Tooltip content="Очистить"><button onMouseDown={handleEditClearStyle} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-400 dark:text-slate-500"><Eraser size={16} /></button></Tooltip>
-                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                                <Tooltip content="Вставить картинку"><label className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-slate-400 dark:text-slate-500 flex items-center justify-center"><input type="file" accept="image/*" className="hidden" onChange={handleEditImageUpload} /><ImageIcon size={16} /></label></Tooltip>
+                        
+                        {isEditing && (
+                            <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-black/5 dark:border-white/5 shrink-0">
+                                <button onClick={() => setIsEditing(false)} className="font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">Отмена</button>
+                                <button onClick={handleSaveEdit} className="font-mono text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-bold">Сохранить</button>
                             </div>
-                            <div className="flex items-center gap-1 shrink-0 ml-2">
-                                <div className="relative">
-                                    <Tooltip content="Обложка">
-                                        <button 
-                                            ref={editCoverBtnRef}
-                                            onMouseDown={(e) => { e.preventDefault(); setShowEditCoverPicker(!showEditCoverPicker); }} 
-                                            className={`p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors ${editCover ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
-                                        >
-                                            <Layout size={16} />
-                                        </button>
-                                    </Tooltip>
-                                    {showEditCoverPicker && <CoverPicker onSelect={setEditCover} onClose={() => setShowEditCoverPicker(false)} triggerRef={editCoverBtnRef} />}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div 
-                            ref={editContentRef} 
-                            contentEditable 
-                            suppressContentEditableWarning={true}
-                            style={{ whiteSpace: 'pre-wrap' }}
-                            onInput={handleEditModalInput} 
-                            onClick={(e) => handleEditorClick(e, true)}
-                            className="w-full flex-1 bg-transparent rounded-none p-0 text-base text-slate-800 dark:text-slate-200 border-none outline-none font-serif leading-relaxed custom-scrollbar-ghost [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 cursor-text"
-                        />
-
-                        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-                            <TagSelector selectedTags={editTagsList} onChange={setEditTagsList} existingTags={allExistingTags} variant="ghost" direction="up" />
-                        </div>
-
-                        <div className="flex justify-end gap-3 mt-6">
-                            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Отмена</button>
-                            <button onClick={handleSaveEdit} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-bold">Сохранить</button>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
+                        )}
+                    </div>
+                </motion.div>
+            </div>
         </AnimatePresence>
-
-        {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      )}
     </div>
   );
 };
