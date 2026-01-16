@@ -5,15 +5,16 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Aperture, Layers } from 'lucide-react';
 
 interface Props {
   notes: Note[];
+  flashcards?: Flashcard[];
   config: AppConfig;
   addNote: (note: Note) => void;
   moveNoteToSandbox: (id: string) => void;
@@ -28,7 +29,7 @@ interface Props {
   addSketchItem?: (item: SketchItem) => void;
   deleteSketchItem?: (id: string) => void;
   updateSketchItem?: (item: SketchItem) => void;
-  defaultTab?: 'inbox' | 'library';
+  defaultTab?: 'inbox' | 'library' | 'flashcards';
   initialNoteId?: string | null;
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
@@ -263,6 +264,139 @@ const markdownToHtml = (md: string) => {
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 // --- COMPONENTS ---
+
+const KineticFlashcardDeck = ({ cards }: { cards: Flashcard[] }) => {
+    const [index, setIndex] = useState(0);
+    const [isFlipped, setIsFlipped] = useState(false);
+
+    if (!cards || cards.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full py-20 text-center animate-in fade-in duration-500">
+                <div className="w-24 h-24 rounded-full border border-slate-200 dark:border-slate-800 flex items-center justify-center mb-6">
+                    <Layers size={32} className="text-slate-300 dark:text-slate-600" />
+                </div>
+                <h3 className="text-lg font-light text-slate-800 dark:text-slate-200">Колода пуста</h3>
+                <p className="text-sm text-slate-500 max-w-xs mt-2">Кристаллизуй знания в Хабе, чтобы они появились здесь.</p>
+            </div>
+        );
+    }
+
+    const currentCard = cards[index];
+
+    const nextCard = () => {
+        setIsFlipped(false);
+        setTimeout(() => {
+            setIndex((prev) => (prev + 1) % cards.length);
+        }, 200);
+    };
+
+    const toggleFlip = () => setIsFlipped(!isFlipped);
+
+    return (
+        <div className="flex flex-col items-center justify-center h-full min-h-[500px] relative w-full overflow-hidden">
+            
+            {/* Background Atmosphere */}
+            <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-full blur-3xl opacity-50" />
+            </div>
+
+            <div className="relative z-10 w-full max-w-md aspect-square flex items-center justify-center">
+                
+                {/* The Kinetic Capsule */}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={currentCard.id}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ 
+                            opacity: 1, 
+                            scale: isFlipped ? [1, 1.05, 1] : [1, 1.02, 1],
+                        }}
+                        exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
+                        transition={{ 
+                            scale: { 
+                                duration: isFlipped ? 0.8 : 4, 
+                                repeat: Infinity, 
+                                ease: "easeInOut" 
+                            },
+                            opacity: { duration: 0.5 }
+                        }}
+                        className={`
+                            relative w-64 h-64 md:w-80 md:h-80 rounded-full flex flex-col items-center justify-center text-center p-8 cursor-pointer shadow-2xl transition-all duration-500
+                            ${isFlipped 
+                                ? 'bg-gradient-to-br from-white via-amber-200 to-yellow-500 text-slate-900 shadow-[0_0_100px_rgba(251,191,36,0.4)]' 
+                                : 'bg-gradient-to-br from-indigo-900 via-purple-900 to-rose-900 text-white shadow-[0_0_60px_rgba(79,70,229,0.3)]'
+                            }
+                        `}
+                        onClick={toggleFlip}
+                    >
+                        {/* Fog Layers */}
+                        <div className={`absolute inset-0 rounded-full overflow-hidden pointer-events-none ${isFlipped ? 'opacity-30' : 'opacity-50'}`}>
+                            <motion.div 
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                                className="absolute -inset-10 bg-gradient-to-t from-transparent via-white/10 to-transparent blur-xl"
+                            />
+                        </div>
+
+                        {/* Content */}
+                        <motion.div 
+                            key={isFlipped ? 'back' : 'front'}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="relative z-10 flex flex-col items-center gap-4"
+                        >
+                            <div className="font-mono text-[9px] uppercase tracking-[0.2em] opacity-60">
+                                {isFlipped ? 'RESPONSE_DATA' : `QUERY_NODE // ${String(index + 1).padStart(2, '0')}`}
+                            </div>
+                            
+                            <div className={`font-serif text-xl md:text-2xl leading-tight ${isFlipped ? 'font-medium' : 'font-light'}`}>
+                                {isFlipped ? currentCard.back : currentCard.front}
+                            </div>
+
+                            {!isFlipped && (
+                                <div className="mt-2">
+                                    <Aperture size={20} className="animate-spin-slow opacity-50" />
+                                </div>
+                            )}
+                        </motion.div>
+
+                        {/* Border Ring */}
+                        <div className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
+                        
+                        {/* Status Indicators */}
+                        <div className="absolute bottom-8 font-mono text-[8px] opacity-40 uppercase tracking-widest">
+                            {isFlipped ? 'SYSTEM_REVEALED' : 'AWAITING_INPUT'}
+                        </div>
+
+                    </motion.div>
+                </AnimatePresence>
+
+            </div>
+
+            {/* Controls */}
+            <div className="mt-12 flex items-center gap-8 relative z-20">
+                <button 
+                    onClick={toggleFlip}
+                    className="p-4 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md text-slate-400 hover:text-white transition-all group"
+                >
+                    <RefreshCw size={20} className={`transition-transform duration-500 ${isFlipped ? 'rotate-180' : ''}`} />
+                </button>
+
+                <button 
+                    onClick={nextCard}
+                    className="group px-8 py-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md text-xs font-mono uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-all flex items-center gap-3"
+                >
+                    NEXT_NODE <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+            </div>
+
+            <div className="absolute bottom-6 right-6 font-mono text-[9px] text-slate-500 uppercase tracking-widest opacity-50">
+                DECK_SIZE: {cards.length}
+            </div>
+        </div>
+    );
+};
 
 // Lightbox
 const Lightbox = ({ src, onClose }: { src: string, onClose: () => void }) => {
@@ -877,14 +1011,14 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
+const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
   const [creationCover, setCreationCover] = useState<string | null>(null);
   
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'inbox' | 'library'>((defaultTab as any) || 'inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'library' | 'flashcards'>((defaultTab as any) || 'inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
@@ -1377,6 +1511,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
                     <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
                     <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
+                    <button onClick={() => { setActiveTab('flashcards'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'flashcards' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Layers size={16} /> Flashcards</button>
                 </div>
             </header>
       </div>
@@ -1387,6 +1522,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar-light"
                 onScroll={() => setActiveImage(null)}
             >
+                {activeTab !== 'flashcards' && (
                 <motion.div 
                     className="sticky top-0 z-40 w-full mb-[-20px]"
                     animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
@@ -1462,8 +1598,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         </div>
                     </div>
                 </motion.div>
+                )}
 
-                <div className="w-full px-4 md:px-8 pt-6 pb-8">
+                <div className="w-full px-4 md:px-8 pt-6 pb-8 h-full">
                     {activeTab === 'inbox' && (
                         <>
                             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
@@ -1546,6 +1683,11 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
                             )}
                         </>
+                    )}
+                    {activeTab === 'flashcards' && (
+                        <div className="h-full flex items-center justify-center">
+                            <KineticFlashcardDeck cards={flashcards || []} />
+                        </div>
                     )}
                 </div>
             </div>
