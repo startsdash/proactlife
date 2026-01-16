@@ -6,7 +6,7 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard, Habit } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
@@ -16,6 +16,8 @@ import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, Che
 interface Props {
   notes: Note[];
   flashcards?: Flashcard[];
+  tasks?: Task[]; // Added
+  habits?: Habit[]; // Added
   config: AppConfig;
   addNote: (note: Note) => void;
   moveNoteToSandbox: (id: string) => void;
@@ -857,7 +859,12 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
 interface NoteCardProps {
     note: Note;
     isArchived: boolean;
-    isLinkedToJournal?: boolean;
+    pathStatus: {
+        hub: boolean;
+        sprint: boolean;
+        habit: boolean;
+        journal: boolean;
+    };
     handlers: {
         handleDragStart: (e: React.DragEvent, id: string) => void;
         handleDragOver: (e: React.DragEvent) => void;
@@ -874,7 +881,74 @@ interface NoteCardProps {
     }
 }
 
-const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal, handlers }) => {
+const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: boolean, journal: boolean } }) => {
+    return (
+        <div className="flex flex-col items-center py-6 px-1 h-full relative w-10 shrink-0 border-r border-slate-100 dark:border-white/5">
+            {/* The Vertical Line */}
+            <div className="absolute top-8 bottom-8 left-1/2 -translate-x-1/2 w-px bg-slate-200/60 dark:bg-white/10" />
+            
+            <div className="flex flex-col justify-between h-full relative z-10 gap-2">
+                {/* 1. Waiting (Default Start) */}
+                <div className="relative group/node">
+                    <div className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-400">
+                        <Circle size={8} />
+                    </div>
+                    <Tooltip content="Ожидание пути" side="right"><div className="absolute inset-0" /></Tooltip>
+                </div>
+
+                {/* 2. Hub (Logos) */}
+                <div className="relative group/node">
+                    <motion.div 
+                        animate={status.hub ? { scale: [1, 1.1, 1] } : {}}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.hub ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
+                    >
+                        <Box size={10} strokeWidth={status.hub ? 2 : 1.5} />
+                    </motion.div>
+                    <Tooltip content={status.hub ? "В Хабе" : "Хаб"} side="right"><div className="absolute inset-0" /></Tooltip>
+                </div>
+
+                {/* 3. Sprint (Action) */}
+                <div className="relative group/node">
+                    <motion.div 
+                        animate={status.sprint ? { scale: [1, 1.1, 1] } : {}}
+                        transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                        className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.sprint ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
+                    >
+                        <Zap size={10} strokeWidth={status.sprint ? 2 : 1.5} className={status.sprint ? "fill-emerald-500/20" : ""} />
+                    </motion.div>
+                    <Tooltip content={status.sprint ? "В Спринтах" : "Спринт"} side="right"><div className="absolute inset-0" /></Tooltip>
+                </div>
+
+                {/* 4. Habit (System) */}
+                <div className="relative group/node">
+                    <motion.div 
+                        animate={status.habit ? { scale: [1, 1.1, 1] } : {}}
+                        transition={{ duration: 2, repeat: Infinity, delay: 1 }}
+                        className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.habit ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800 text-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
+                    >
+                        <Flame size={10} strokeWidth={status.habit ? 2 : 1.5} className={status.habit ? "fill-rose-500/20" : ""} />
+                    </motion.div>
+                    <Tooltip content={status.habit ? "В Трекере" : "Привычка"} side="right"><div className="absolute inset-0" /></Tooltip>
+                </div>
+
+                {/* 5. Journal (Reflection) */}
+                <div className="relative group/node">
+                    <motion.div 
+                        animate={status.journal ? { scale: [1, 1.1, 1] } : {}}
+                        transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
+                        className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.journal ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
+                    >
+                        <Gem size={10} strokeWidth={status.journal ? 2 : 1.5} className={status.journal ? "fill-purple-500/20" : ""} />
+                    </motion.div>
+                    <Tooltip content={status.journal ? "В Дневнике" : "Рефлексия"} side="right"><div className="absolute inset-0" /></Tooltip>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handlers }) => {
     const [isExiting, setIsExiting] = useState(false);
     const linkUrl = findFirstUrl(note.content);
     
@@ -973,64 +1047,69 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                 </Tooltip>
             </div>
 
-            <div className="p-8 pb-16 w-full flex-1 relative z-10">
-                <div className="block w-full mb-2">
-                    {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words pr-6 ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
-                    <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words relative max-h-[400px] mask-linear-fade ${!note.title ? 'pr-6' : ''}`}>
-                        <ReactMarkdown 
-                            components={renderComponents} 
-                            urlTransform={allowDataUrls} 
-                            remarkPlugins={[remarkGfm]} 
-                            rehypePlugins={[rehypeRaw]}
-                        >
-                            {previewText.replace(/\n/g, '  \n')}
-                        </ReactMarkdown>
-                    </div>
-                    
-                    {/* Thumbnail Grid for Content Images */}
-                    {thumbnailImages.length > 0 && (
-                        <div className={`grid gap-1 mt-4 rounded-xl overflow-hidden border border-black/5 dark:border-white/5 ${
-                            thumbnailImages.length === 1 ? 'grid-cols-1' : 
-                            thumbnailImages.length === 2 ? 'grid-cols-2' : 
-                            'grid-cols-3'
-                        }`}>
-                            {thumbnailImages.map((img, i) => (
-                                <div key={i} className="relative bg-slate-100 dark:bg-slate-800 overflow-hidden group/image">
-                                    <img 
-                                        src={img} 
-                                        alt="" 
-                                        className={`w-full object-cover object-top transition-transform duration-500 hover:scale-105 ${
-                                            thumbnailImages.length === 1 ? 'h-auto max-h-[500px]' : 
-                                            thumbnailImages.length === 2 ? 'aspect-[3/4]' : 
-                                            'aspect-square'
-                                        }`} 
-                                        loading="lazy" 
-                                    />
-                                    {/* Count Overlay */}
-                                    {i === thumbnailImages.length - 1 && remainingImagesCount > 0 && (
-                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-[2px]">
-                                            <span className="text-white font-sans font-bold text-lg tracking-wider">+{remainingImagesCount}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+            {/* Content Container (Flex Row for Library Path) */}
+            <div className="flex h-full relative z-10">
+                {isArchived && <NotePath status={pathStatus} />}
+                
+                <div className="flex-1 flex flex-col min-w-0 p-8 pb-16">
+                    <div className="block w-full mb-2">
+                        {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words pr-6 ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
+                        <div className={`text-slate-700 dark:text-slate-300 font-serif text-base leading-relaxed overflow-hidden break-words relative max-h-[400px] mask-linear-fade ${!note.title ? 'pr-6' : ''}`}>
+                            <ReactMarkdown 
+                                components={renderComponents} 
+                                urlTransform={allowDataUrls} 
+                                remarkPlugins={[remarkGfm]} 
+                                rehypePlugins={[rehypeRaw]}
+                            >
+                                {previewText.replace(/\n/g, '  \n')}
+                            </ReactMarkdown>
                         </div>
-                    )}
+                        
+                        {/* Thumbnail Grid for Content Images */}
+                        {thumbnailImages.length > 0 && (
+                            <div className={`grid gap-1 mt-4 rounded-xl overflow-hidden border border-black/5 dark:border-white/5 ${
+                                thumbnailImages.length === 1 ? 'grid-cols-1' : 
+                                thumbnailImages.length === 2 ? 'grid-cols-2' : 
+                                'grid-cols-3'
+                            }`}>
+                                {thumbnailImages.map((img, i) => (
+                                    <div key={i} className="relative bg-slate-100 dark:bg-slate-800 overflow-hidden group/image">
+                                        <img 
+                                            src={img} 
+                                            alt="" 
+                                            className={`w-full object-cover object-top transition-transform duration-500 hover:scale-105 ${
+                                                thumbnailImages.length === 1 ? 'h-auto max-h-[500px]' : 
+                                                thumbnailImages.length === 2 ? 'aspect-[3/4]' : 
+                                                'aspect-square'
+                                            }`} 
+                                            loading="lazy" 
+                                        />
+                                        {/* Count Overlay */}
+                                        {i === thumbnailImages.length - 1 && remainingImagesCount > 0 && (
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-[2px]">
+                                                <span className="text-white font-sans font-bold text-lg tracking-wider">+{remainingImagesCount}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
-                    {linkUrl && <LinkPreview url={linkUrl} />}
-                    {note.tags && note.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-3 mt-6">
-                            {note.tags.map(tag => (
-                                <span key={tag} className="text-[9px] text-slate-500/80 dark:text-slate-400/80 font-sans uppercase tracking-[0.15em] hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer">
-                                    #{tag.replace(/^#/, '')}
-                                </span>
-                            ))}
-                        </div>
-                    )}
+                        {linkUrl && <LinkPreview url={linkUrl} />}
+                        {note.tags && note.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-3 mt-6">
+                                {note.tags.map(tag => (
+                                    <span key={tag} className="text-[9px] text-slate-500/80 dark:text-slate-400/80 font-sans uppercase tracking-[0.15em] hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer">
+                                        #{tag.replace(/^#/, '')}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
             
-            <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
+            <div className={`absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end ${isArchived ? 'pl-16' : ''}`}>
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
                         // Inbox: Only Archive button
@@ -1044,12 +1123,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
                             
                             <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
                             
-                            <Tooltip content={isLinkedToJournal ? "В дневнике" : "В дневник"}>
+                            <Tooltip content={pathStatus.journal ? "В дневнике" : "В дневник"}>
                                 <button 
-                                    onClick={isLinkedToJournal ? undefined : handleToJournal} 
-                                    disabled={isLinkedToJournal}
+                                    onClick={pathStatus.journal ? undefined : handleToJournal} 
+                                    disabled={pathStatus.journal}
                                     className={`p-2 rounded-full transition-all ${
-                                        isLinkedToJournal 
+                                        pathStatus.journal 
                                         ? 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 opacity-100 cursor-default' 
                                         : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
                                     }`}
@@ -1080,7 +1159,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, deleteFlashcard, toggleFlashcardStar, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
+const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, deleteFlashcard, toggleFlashcardStar, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -1132,6 +1211,7 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
 
   // Memoize linked note IDs from journal entries for efficient checking
+  // Used for quick prop, but also used inside loop
   const linkedNoteIds = useMemo(() => {
       const ids = new Set<string>();
       if (journalEntries) {
@@ -1139,10 +1219,46 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
               if (entry.linkedNoteId && !entry.isArchived) {
                   ids.add(entry.linkedNoteId);
               }
+              if (entry.linkedNoteIds && !entry.isArchived) {
+                  entry.linkedNoteIds.forEach(id => ids.add(id));
+              }
           });
       }
       return ids;
   }, [journalEntries]);
+
+  // Derived state for path status checking
+  const getPathStatus = useCallback((note: Note) => {
+      const isLinkedToHub = note.previousStatus === 'sandbox' || note.status === 'sandbox';
+      
+      // Sprint: Check heuristic (content match)
+      const isLinkedToSprint = tasks.some(t => {
+          if (!t.isArchived) {
+              // Heuristic: check if title matches or content starts with
+              if (note.title && t.title === note.title) return true;
+              if (t.content.includes(note.content.substring(0, 50))) return true;
+          }
+          return false;
+      });
+
+      // Habit: Heuristic
+      const isLinkedToHabit = habits.some(h => {
+          if (!h.isArchived) {
+              if (h.description?.includes(note.content.substring(0, 50))) return true;
+              if (note.title && h.title === note.title) return true;
+          }
+          return false;
+      });
+
+      const isLinkedToJournal = linkedNoteIds.has(note.id);
+
+      return {
+          hub: isLinkedToHub,
+          sprint: isLinkedToSprint,
+          habit: isLinkedToHabit,
+          journal: isLinkedToJournal
+      };
+  }, [tasks, habits, linkedNoteIds]);
 
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab as any);
@@ -1735,7 +1851,7 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
                             )}
                             {inboxNotes.length > 0 ? (
                                 <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                    {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
+                                    {inboxNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={false} pathStatus={getPathStatus(note)} handlers={cardHandlers} />)}
                                 </Masonry>
                             ) : (
                                 <div className="py-6"><EmptyState icon={PenTool} title="Чистый лист" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'Ничего не найдено по вашему запросу' : 'Входящие пусты. Отличное начало для новых мыслей'} /></div>
@@ -1746,7 +1862,7 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
                         <>
                             {archivedNotes.length > 0 ? (
                                 <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
-                                    {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} handlers={cardHandlers} isLinkedToJournal={linkedNoteIds.has(note.id)} />)}
+                                    {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} pathStatus={getPathStatus(note)} handlers={cardHandlers} />)}
                                 </Masonry>
                             ) : (
                                 <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
