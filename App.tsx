@@ -460,15 +460,15 @@ const App: React.FC = () => {
             addNote={addNote} 
             moveNoteToSandbox={moveNoteToSandbox} 
             moveNoteToInbox={moveNoteToInbox} 
-            deleteNote={deleteNote} 
+            deleteNote={deleteNote} // Use soft delete
             reorderNote={reorderNote} 
             updateNote={updateNote} 
             archiveNote={archiveNote} 
             onAddTask={addTask} 
             onAddJournalEntry={addJournalEntry}
             addSketchItem={addSketchItem} 
-            deleteFlashcard={deleteFlashcard}
-            toggleFlashcardStar={toggleFlashcardStar}
+            deleteFlashcard={deleteFlashcard} // Added
+            toggleFlashcardStar={toggleFlashcardStar} // Added
             initialNoteId={napkinsContextNoteId}
             onClearInitialNote={() => setNapkinsContextNoteId(null)}
             journalEntries={data.journal}
@@ -505,8 +505,8 @@ const App: React.FC = () => {
             journal={data.journal} 
             restoreTask={restoreTask} 
             deleteTask={deleteTask} 
-            moveNoteToInbox={restoreNote} 
-            deleteNote={hardDeleteNote} 
+            moveNoteToInbox={restoreNote} // Restore soft-deleted notes
+            deleteNote={hardDeleteNote} // Permanently delete notes
             deleteJournalEntry={deleteJournalEntry} 
             restoreJournalEntry={restoreJournalEntry} 
           />
