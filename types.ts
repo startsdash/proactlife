@@ -219,6 +219,16 @@ export interface UserProfileConfig {
     manifesto: string;
 }
 
+// --- HERO JOURNEY TYPES ---
+export interface JourneySession {
+    id: string;
+    sourceNote: Note;
+    startTime: number;
+    stage: 'boot' | 'briefing' | 'choice' | 'action' | 'result';
+    actionType?: 'task' | 'habit' | 'journal';
+    log: string[];
+}
+
 export interface AppState {
   notes: Note[];
   sketchpad: SketchItem[];

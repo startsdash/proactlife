@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
+import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig, JourneySession } from './types';
 import { loadState, saveState } from './services/storageService';
 import { initGapi, initGis, loadFromDrive, saveToDrive, requestAuth, restoreSession, getUserProfile, signOut } from './services/driveService';
 import { DEFAULT_CONFIG } from './constants';
@@ -20,6 +21,7 @@ import LearningMode from './components/LearningMode';
 import UserSettings from './components/UserSettings';
 import Onboarding from './components/Onboarding';
 import Profile from './components/Profile'; 
+import HeroJourney from './components/HeroJourney'; // NEW
 import { LogIn, Shield, CloudOff, ArrowRight } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -100,6 +102,9 @@ const App: React.FC = () => {
   const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
   const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null); // Context for navigation (Napkins)
   
+  // HERO JOURNEY STATE
+  const [activeJourney, setActiveJourney] = useState<JourneySession | null>(null);
+
   // INVITE CODE LOGIC
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [guestSessionCode, setGuestSessionCode] = useState<string | null>(() => {
@@ -382,6 +387,59 @@ const App: React.FC = () => {
       }
   };
 
+  // --- HERO JOURNEY LOGIC ---
+  const startHeroJourney = (note: Note) => {
+      setActiveJourney({
+          id: Date.now().toString(),
+          sourceNote: note,
+          startTime: Date.now(),
+          stage: 'boot',
+          log: []
+      });
+  };
+
+  const completeHeroJourney = (actionType: 'task' | 'habit' | 'journal', payload: any) => {
+      // Execute the result
+      if (actionType === 'task') {
+          addTask({
+              id: Date.now().toString(),
+              title: payload.title,
+              content: payload.description || '', // Full context
+              column: 'todo',
+              createdAt: Date.now()
+          });
+          handleNavigate(Module.KANBAN);
+      } else if (actionType === 'habit') {
+          addHabit({
+              id: Date.now().toString(),
+              title: payload.title,
+              description: payload.description,
+              frequency: 'daily',
+              color: 'indigo',
+              icon: 'Zap',
+              history: {},
+              streak: 0,
+              bestStreak: 0,
+              reminders: [],
+              createdAt: Date.now()
+          });
+          handleNavigate(Module.RITUALS);
+      } else if (actionType === 'journal') {
+          addJournalEntry({
+              id: Date.now().toString(),
+              date: Date.now(),
+              title: payload.title,
+              content: payload.content,
+              isInsight: true, // Auto-mark as insight
+              mood: 5 // Positive reinforcement
+          });
+          handleNavigate(Module.JOURNAL);
+      }
+      
+      // Close overlay
+      setTimeout(() => setActiveJourney(null), 2000);
+  };
+
   if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a] text-slate-800 dark:text-slate-200">Loading...</div>;
 
   // --- GUEST MODE GUARD ---
@@ -438,6 +496,7 @@ const App: React.FC = () => {
   }
 
   return (
+    <>
     <Layout 
         currentModule={module} setModule={handleNavigate} syncStatus={syncStatus}
         onConnectDrive={() => handleDriveConnect(false)} isDriveConnected={isDriveConnected}
@@ -468,6 +527,7 @@ const App: React.FC = () => {
             initialNoteId={napkinsContextNoteId}
             onClearInitialNote={() => setNapkinsContextNoteId(null)}
             journalEntries={data.journal}
+            onStartJourney={startHeroJourney}
           />
       )}
       
@@ -512,6 +572,12 @@ const App: React.FC = () => {
       {module === Module.USER_SETTINGS && <UserSettings user={data.user} syncStatus={syncStatus} isDriveConnected={isDriveConnected} onConnect={() => handleDriveConnect(false)} onSignOut={handleSignOut} onClose={() => handleNavigate(Module.NAPKINS)} theme={theme} toggleTheme={toggleTheme} />}
       {module === Module.SETTINGS && isOwner && <Settings config={data.config} onUpdateConfig={updateConfig} onClose={() => handleNavigate(Module.NAPKINS)} />}
     </Layout>
+    
+    {/* HERO JOURNEY OVERLAY */}
+    {activeJourney && (
+        <HeroJourney session={activeJourney} onClose={() => setActiveJourney(null)} onComplete={completeHeroJourney} />
+    )}
+    </>
   );
 };
 export default App;
