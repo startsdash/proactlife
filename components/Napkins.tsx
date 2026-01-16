@@ -286,120 +286,77 @@ const KineticFlashcardDeck = ({ cards }: { cards: Flashcard[] }) => {
 
     const nextCard = () => {
         setIsFlipped(false);
-        // Switch immediately to trigger AnimatePresence exit
         setIndex((prev) => (prev + 1) % cards.length);
     };
 
     const toggleFlip = () => setIsFlipped(!isFlipped);
 
     return (
-        <div className="flex flex-col items-center justify-center h-full min-h-[600px] relative w-full overflow-hidden">
-            
-            {/* Background Atmosphere */}
-            <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-full blur-3xl opacity-50" />
-            </div>
-
-            <div className="relative z-10 w-full max-w-2xl aspect-square flex items-center justify-center">
-                
-                {/* The Kinetic Capsule */}
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={currentCard.id}
-                        initial={{ opacity: 0, scale: 0.8, filter: 'blur(10px)' }}
-                        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                        exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
-                        transition={{ 
-                            duration: 0.4,
-                            ease: "easeOut" 
+        <div className="flex items-center justify-center h-full min-h-[600px] w-full p-4 md:p-8">
+            {/* The "Oracle-like" Window */}
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative w-full max-w-2xl min-h-[500px] bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-[40px] shadow-2xl border border-white/50 dark:border-white/10 overflow-hidden flex flex-col transition-colors duration-500"
+                onClick={toggleFlip}
+            >
+                {/* Background Atmosphere (Fog/Neon) */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[40px]">
+                    <motion.div 
+                        animate={{ 
+                            scale: isFlipped ? 1.2 : 1,
+                            opacity: isFlipped ? 0.4 : 0.2
                         }}
-                        className="relative w-80 h-80 md:w-[500px] md:h-[500px] flex flex-col items-center justify-center text-center p-12 cursor-pointer z-10"
-                        onClick={toggleFlip}
-                    >
-                        {/* Background Layer with Breathing Animation */}
-                        <motion.div 
-                            className={`
-                                absolute inset-0 rounded-full shadow-2xl transition-colors duration-500
-                                ${isFlipped 
-                                    ? 'bg-gradient-to-br from-white via-amber-200 to-yellow-500 shadow-[0_0_100px_rgba(251,191,36,0.4)]' 
-                                    : 'bg-gradient-to-br from-indigo-900 via-purple-900 to-rose-900 shadow-[0_0_60px_rgba(79,70,229,0.3)]'
-                                }
-                            `}
-                            animate={{ 
-                                scale: isFlipped ? 1.05 : [1, 1.02, 1]
-                            }}
-                            transition={{ 
-                                duration: isFlipped ? 0.5 : 4, 
-                                repeat: isFlipped ? 0 : Infinity, 
-                                ease: "easeInOut" 
-                            }}
-                        />
+                        transition={{ duration: 1 }}
+                        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[100px] transition-colors duration-700 ${isFlipped ? 'bg-amber-500' : 'bg-indigo-500'}`}
+                    />
+                    <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 opacity-10 mix-blend-overlay" />
+                </div>
 
-                        {/* Fog Layers */}
-                        <div className={`absolute inset-0 rounded-full overflow-hidden pointer-events-none ${isFlipped ? 'opacity-30' : 'opacity-50'}`}>
-                            <motion.div 
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                                className="absolute -inset-10 bg-gradient-to-t from-transparent via-white/10 to-transparent blur-xl"
-                            />
-                        </div>
+                {/* Header */}
+                <div className="flex justify-center pt-8 pb-4 relative z-10">
+                    <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 flex items-center gap-2">
+                        {isFlipped ? <Sparkles size={12} className="text-amber-500" /> : <BrainCircuit size={12} className="text-indigo-500" />}
+                        {isFlipped ? 'RESPONSE' : 'QUERY'} // {String(index + 1).padStart(2, '0')}
+                    </div>
+                </div>
 
-                        {/* Content */}
-                        <motion.div 
-                            key={isFlipped ? 'back' : 'front'}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className={`relative z-10 flex flex-col items-center gap-6 ${isFlipped ? 'text-slate-900' : 'text-white'}`}
+                {/* Main Content */}
+                <div className="flex-1 flex flex-col items-center justify-center p-8 md:p-16 text-center relative z-10 cursor-pointer">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={currentCard.id + (isFlipped ? '_back' : '_front')}
+                            initial={{ opacity: 0, y: 10, filter: 'blur(5px)' }}
+                            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                            exit={{ opacity: 0, y: -10, filter: 'blur(5px)' }}
+                            transition={{ duration: 0.4, ease: "easeOut" }}
+                            className="w-full"
                         >
-                            <div className="font-mono text-[10px] uppercase tracking-[0.2em] opacity-60">
-                                {isFlipped ? 'RESPONSE_DATA' : `QUERY_NODE // ${String(index + 1).padStart(2, '0')}`}
-                            </div>
-                            
-                            <div className={`font-serif text-2xl md:text-4xl leading-tight ${isFlipped ? 'font-medium' : 'font-light'}`}>
+                            <div className="font-serif text-2xl md:text-4xl leading-relaxed text-slate-800 dark:text-slate-100 select-none">
                                 {isFlipped ? currentCard.back : currentCard.front}
                             </div>
-
-                            {!isFlipped && (
-                                <div className="mt-4">
-                                    <Aperture size={24} className="animate-spin-slow opacity-50" />
-                                </div>
-                            )}
                         </motion.div>
+                    </AnimatePresence>
+                </div>
 
-                        {/* Border Ring */}
-                        <div className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
-                        
-                        {/* Status Indicators */}
-                        <div className={`absolute bottom-12 font-mono text-[9px] opacity-40 uppercase tracking-widest ${isFlipped ? 'text-slate-800' : 'text-white'}`}>
-                            {isFlipped ? 'SYSTEM_REVEALED' : 'AWAITING_INPUT'}
-                        </div>
+                {/* Footer / Controls */}
+                <div className="pb-8 md:pb-10 flex justify-center gap-8 relative z-20" onClick={e => e.stopPropagation()}>
+                    <button 
+                        onClick={toggleFlip}
+                        className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center gap-2 group"
+                    >
+                        <RotateCw size={14} className={`transition-transform duration-500 ${isFlipped ? 'rotate-180' : ''}`} />
+                        [ FLIP ]
+                    </button>
 
-                    </motion.div>
-                </AnimatePresence>
-
-            </div>
-
-            {/* Controls */}
-            <div className="mt-12 flex items-center gap-8 relative z-20">
-                <button 
-                    onClick={toggleFlip}
-                    className="p-4 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md text-slate-400 hover:text-white transition-all group"
-                >
-                    <RefreshCw size={20} className={`transition-transform duration-500 ${isFlipped ? 'rotate-180' : ''}`} />
-                </button>
-
-                <button 
-                    onClick={nextCard}
-                    className="group px-10 py-4 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md text-sm font-mono uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-all flex items-center gap-3"
-                >
-                    NEXT_NODE <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-            </div>
-
-            <div className="absolute bottom-6 right-6 font-mono text-[9px] text-slate-500 uppercase tracking-widest opacity-50">
-                DECK_SIZE: {cards.length}
-            </div>
+                    <button 
+                        onClick={nextCard}
+                        className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-900 dark:text-white border-b border-transparent hover:border-slate-900 dark:hover:border-white transition-all pb-1 flex items-center gap-2"
+                    >
+                        [ NEXT_NODE ] <ArrowRight size={12} />
+                    </button>
+                </div>
+            </motion.div>
         </div>
     );
 };
@@ -1691,7 +1648,7 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, config, addNote, moveNote
                         </>
                     )}
                     {activeTab === 'flashcards' && (
-                        <div className="h-full flex items-center justify-center">
+                        <div className="h-full flex items-center justify-center p-4">
                             <KineticFlashcardDeck cards={flashcards || []} />
                         </div>
                     )}
