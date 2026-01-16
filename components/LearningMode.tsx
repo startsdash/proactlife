@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Module } from '../types';
 import { StickyNote, Box, Dumbbell, Kanban as KanbanIcon, Book, ArrowRight, ArrowLeft, FlaskConical, X, Flame } from 'lucide-react';
@@ -54,16 +55,6 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
     },
     {
       id: 3,
-      title: "Скиллы",
-      subtitle: "Нейропластичность",
-      description: "Важные принципы нужно помнить. В «Хабе» ты создаешь «навыки» (флеш-карточки). Здесь ты тренируешь свой мозг, чтобы новые знания стали частью тебя.",
-      icon: Dumbbell,
-      color: "bg-indigo-500",
-      module: Module.MENTAL_GYM,
-      actionLabel: "В Скиллы"
-    },
-    {
-      id: 4,
       title: "Трекер",
       subtitle: "Система",
       description: "Сила в системе. Заведи полезные привычки и отслеживай прогресс.",
@@ -73,7 +64,7 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
       actionLabel: "К Трекеру"
     },
     {
-      id: 5,
+      id: 4,
       title: "Дневник",
       subtitle: "Рефлексия",
       description: "Здесь можно порефлексировать. Свяжи запись в дневнике с конкретной задачей, или просто пиши. ИИ-наставник прокомментирует твой опыт, помогая извлечь уроки из каждой победы или поражения.",
@@ -145,7 +136,7 @@ const LearningMode: React.FC<Props> = ({ onStart, onNavigate }) => {
            <div className="p-8 md:p-12 flex flex-col md:flex-row gap-10 items-center">
               
               <div className={`shrink-0 w-32 h-32 md:w-48 md:h-48 rounded-3xl ${current.color} flex items-center justify-center text-white shadow-2xl transition-all duration-500`}>
-                 <current.icon size={currentStep === 5 ? 64 : 80} strokeWidth={1} />
+                 <current.icon size={currentStep === 4 ? 64 : 80} strokeWidth={1} />
               </div>
 
               <div className="flex-1 space-y-6 text-center md:text-left">

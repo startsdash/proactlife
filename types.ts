@@ -10,9 +10,8 @@ export enum Module {
   DASHBOARD = 'dashboard',
   NAPKINS = 'napkins',
   SKETCHPAD = 'sketchpad',
-  ETHER = 'ether', // NEW
+  ETHER = 'ether',
   SANDBOX = 'sandbox',
-  MENTAL_GYM = 'mental_gym',
   KANBAN = 'kanban',
   RITUALS = 'rituals',
   JOURNAL = 'journal',
@@ -21,7 +20,8 @@ export enum Module {
   SETTINGS = 'settings',
   LEARNING = 'learning',
   USER_SETTINGS = 'user_settings',
-  PROFILE = 'profile' 
+  PROFILE = 'profile',
+  MENTAL_GYM = 'mental_gym'
 }
 
 export interface Note {

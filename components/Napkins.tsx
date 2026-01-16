@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -5,12 +6,12 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Dumbbell, Minimize2 } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -28,10 +29,12 @@ interface Props {
   addSketchItem?: (item: SketchItem) => void;
   deleteSketchItem?: (id: string) => void;
   updateSketchItem?: (item: SketchItem) => void;
-  defaultTab?: 'inbox' | 'library';
+  defaultTab?: 'inbox' | 'library' | 'flashcards';
   initialNoteId?: string | null;
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
+  flashcards?: Flashcard[];
+  deleteFlashcard?: (id: string) => void;
 }
 
 const colors = [
@@ -59,6 +62,9 @@ const UNSPLASH_PRESETS = [
 ];
 
 const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E")`;
+
+// Grid Background for Flashcards
+const GRID_PATTERN = `radial-gradient(#cbd5e1 1px, transparent 1px)`;
 
 const breakpointColumnsObj = {
   default: 4,
@@ -877,14 +883,150 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
+const FlashcardView: React.FC<{ flashcards: Flashcard[], deleteFlashcard?: (id: string) => void }> = ({ flashcards, deleteFlashcard }) => {
+    const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
+
+    const handleFlip = (id: string) => {
+        setFlippedCards(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    return (
+        <div 
+            className="flex-1 p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 overflow-y-auto custom-scrollbar-light"
+            style={{ 
+                backgroundImage: GRID_PATTERN, 
+                backgroundSize: '24px 24px',
+                backgroundAttachment: 'local'
+            }}
+        >
+            <AnimatePresence>
+                {flashcards.map(card => {
+                    const isFlipped = flippedCards.has(card.id);
+                    
+                    return (
+                        <motion.div
+                            key={card.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="aspect-[4/5] relative perspective-1000 group"
+                        >
+                            {/* Card Container with Flip Transition */}
+                            <motion.div 
+                                className="w-full h-full relative transform-style-3d transition-transform duration-700"
+                                animate={{ rotateY: isFlipped ? 180 : 0 }}
+                            >
+                                {/* Front Side (A) - Sunrise */}
+                                <div className="absolute inset-0 backface-hidden bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/5 flex flex-col items-center justify-center p-8 text-center">
+                                    {/* Visual Effects */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 opacity-80" />
+                                    <div className="absolute inset-0 pointer-events-none backdrop-blur-3xl bg-black/20" />
+                                    
+                                    {/* Pulsing Orb - Sunrise */}
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-rose-500/20 rounded-full blur-[60px] animate-pulse" />
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-indigo-500/10 rounded-full blur-[40px]" />
+
+                                    {/* Content */}
+                                    <div className="relative z-10 w-full h-full flex flex-col">
+                                        <div className="flex justify-between items-start mb-4 opacity-50">
+                                            <span className="text-[10px] font-mono text-indigo-300 uppercase tracking-widest">Question</span>
+                                            {deleteFlashcard && (
+                                                <button onClick={(e) => { e.stopPropagation(); if(confirm('Удалить карточку?')) deleteFlashcard(card.id); }} className="text-slate-500 hover:text-red-500 transition-colors">
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="flex-1 flex items-center justify-center">
+                                            <h3 className="text-2xl font-serif text-white/90 leading-tight drop-shadow-md">
+                                                {card.front}
+                                            </h3>
+                                        </div>
+
+                                        <div className="mt-auto pt-8 flex justify-center">
+                                            <button 
+                                                onClick={() => handleFlip(card.id)}
+                                                className="p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group/btn"
+                                            >
+                                                <Maximize2 size={20} className="text-white/70 group-hover/btn:text-white" strokeWidth={1.5} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Neon Ring */}
+                                    <div className="absolute inset-0 rounded-3xl border border-rose-500/30 shadow-[inset_0_0_20px_rgba(244,63,94,0.1)] pointer-events-none" />
+                                </div>
+
+                                {/* Back Side (B) - Sun */}
+                                <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/5 flex flex-col items-center justify-center p-8 text-center">
+                                    {/* Visual Effects */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-amber-300 via-orange-400 to-yellow-200 opacity-20" />
+                                    <div className="absolute inset-0 pointer-events-none backdrop-blur-md bg-black/40" />
+
+                                    {/* Glowing Orb - Sun */}
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-amber-400/20 rounded-full blur-[80px] animate-pulse" />
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-white/10 rounded-full blur-[30px]" />
+
+                                    {/* Content */}
+                                    <div className="relative z-10 w-full h-full flex flex-col">
+                                        <div className="flex justify-between items-start mb-4 opacity-50">
+                                            <span className="text-[10px] font-mono text-amber-200 uppercase tracking-widest">Answer</span>
+                                        </div>
+                                        
+                                        <div className="flex-1 flex items-center justify-center overflow-y-auto custom-scrollbar-ghost">
+                                            <div className="text-lg font-serif text-white/90 leading-relaxed drop-shadow-md">
+                                                <ReactMarkdown components={{ p: ({children}) => <p className="mb-2 last:mb-0">{children}</p> }}>
+                                                    {card.back}
+                                                </ReactMarkdown>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-auto pt-8 flex justify-center">
+                                            <button 
+                                                onClick={() => handleFlip(card.id)}
+                                                className="p-3 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all group/btn"
+                                            >
+                                                <Minimize2 size={20} className="text-white/90 group-hover/btn:text-white" strokeWidth={1.5} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Neon Ring */}
+                                    <div className="absolute inset-0 rounded-3xl border border-amber-400/40 shadow-[inset_0_0_30px_rgba(251,191,36,0.2)] pointer-events-none" />
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )
+                })}
+            </AnimatePresence>
+            {flashcards.length === 0 && (
+                <div className="col-span-full py-20 flex justify-center">
+                    <EmptyState 
+                        icon={Dumbbell} 
+                        title="Здесь пусто" 
+                        description="Кристаллизуй мысли в Хабе, чтобы создать карточки знаний." 
+                        color="amber"
+                    />
+                </div>
+            )}
+        </div>
+    );
+};
+
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries, flashcards = [], deleteFlashcard }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
   const [creationCover, setCreationCover] = useState<string | null>(null);
   
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'inbox' | 'library'>((defaultTab as any) || 'inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'library' | 'flashcards'>((defaultTab as any) || 'inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
@@ -1377,6 +1519,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
                     <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
                     <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
+                    <button onClick={() => { setActiveTab('flashcards'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'flashcards' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Dumbbell size={16} /> Flashcards</button>
                 </div>
             </header>
       </div>
@@ -1387,6 +1530,7 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar-light"
                 onScroll={() => setActiveImage(null)}
             >
+                {activeTab !== 'flashcards' && (
                 <motion.div 
                     className="sticky top-0 z-40 w-full mb-[-20px]"
                     animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
@@ -1462,8 +1606,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                         </div>
                     </div>
                 </motion.div>
+                )}
 
-                <div className="w-full px-4 md:px-8 pt-6 pb-8">
+                <div className="w-full px-4 md:px-8 pt-6 pb-8 h-full">
                     {activeTab === 'inbox' && (
                         <>
                             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
@@ -1546,6 +1691,9 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
                             )}
                         </>
+                    )}
+                    {activeTab === 'flashcards' && (
+                        <FlashcardView flashcards={flashcards} deleteFlashcard={deleteFlashcard} />
                     )}
                 </div>
             </div>
