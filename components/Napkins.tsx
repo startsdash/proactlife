@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -6,12 +5,12 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry, Habit } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Map as MapIcon, Compass, Target, Shield, Cpu, Activity } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -25,18 +24,14 @@ interface Props {
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
   onAddJournalEntry: (entry: JournalEntry) => void;
-  addHabit?: (habit: Habit) => void;
   sketchItems?: SketchItem[];
   addSketchItem?: (item: SketchItem) => void;
   deleteSketchItem?: (id: string) => void;
   updateSketchItem?: (item: SketchItem) => void;
-  defaultTab?: 'inbox' | 'library' | 'journey';
+  defaultTab?: 'inbox' | 'library';
   initialNoteId?: string | null;
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
-  tasks?: Task[];
-  habits?: Habit[];
-  journal?: JournalEntry[];
 }
 
 const colors = [
@@ -268,233 +263,6 @@ const markdownToHtml = (md: string) => {
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
 // --- COMPONENTS ---
-
-// Hero Journey View Component
-const HeroJourneyView: React.FC<{ 
-    note: Note, 
-    tasks: Task[], 
-    habits: Habit[], 
-    journal: JournalEntry[], 
-    onClose: () => void,
-    onCreateTask: (content: string) => void,
-    onCreateHabit: (title: string) => void,
-    onCreateJournal: (content: string) => void,
-    onMoveToHub: () => void,
-    onOpenNote: () => void
-}> = ({ note, tasks, habits, journal, onClose, onCreateTask, onCreateHabit, onCreateJournal, onMoveToHub, onOpenNote }) => {
-    
-    // Find connected entities
-    const connectedTasks = tasks.filter(t => t.linkedNoteId === note.id);
-    const connectedHabits = habits.filter(h => h.linkedNoteId === note.id);
-    const connectedJournal = journal.filter(j => j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id));
-
-    // Check completion status for transformation tracking
-    const taskComplete = connectedTasks.some(t => t.column === 'done');
-    const habitActive = connectedHabits.some(h => h.streak > 3);
-    const journalInsight = connectedJournal.some(j => j.isInsight);
-    const inHub = note.status === 'sandbox';
-
-    const transformationScore = [taskComplete, habitActive, journalInsight, inHub].filter(Boolean).length;
-    const isTransformed = transformationScore >= 2; // Arbitrary threshold
-
-    return (
-        <div className="fixed inset-0 z-[60] bg-[#020617] text-white flex flex-col items-center overflow-hidden font-sans">
-            {/* Background Grid & Nebula */}
-            <div className="absolute inset-0 opacity-20 pointer-events-none" 
-                style={{ 
-                    backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(99,102,241,0.15) 1px, transparent 0)', 
-                    backgroundSize: '40px 40px' 
-                }} 
-            />
-            <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
-            <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
-
-            {/* Header */}
-            <div className="absolute top-6 left-6 z-20 flex items-center gap-4">
-                <button onClick={onClose} className="p-3 rounded-full border border-white/10 hover:bg-white/10 hover:border-white/30 transition-all text-white/70 hover:text-white">
-                    <ArrowLeft size={20} />
-                </button>
-                <div className="flex flex-col">
-                    <h2 className="text-sm font-bold uppercase tracking-[0.25em] text-white/90">Star Gate</h2>
-                    <span className="text-[10px] font-mono text-indigo-400">INITIATION_SEQUENCE // {note.id.slice(-4)}</span>
-                </div>
-            </div>
-
-            {/* Main Stage */}
-            <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col items-center justify-center relative p-8">
-                
-                {/* 1. THE ARTIFACT (Source Note) */}
-                <div className="relative z-10 mb-12 group cursor-pointer" onClick={onOpenNote}>
-                    <div className="relative w-24 h-24 md:w-32 md:h-32 flex items-center justify-center">
-                        {/* Orbitals */}
-                        <div className="absolute inset-0 border border-white/20 rounded-full animate-spin-slow" style={{ animationDuration: '20s' }} />
-                        <div className="absolute inset-2 border border-dashed border-white/10 rounded-full animate-spin-reverse-slow" style={{ animationDuration: '30s' }} />
-                        
-                        {/* Core */}
-                        <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(99,102,241,0.5)] transition-all duration-700 ${isTransformed ? 'bg-white text-indigo-600' : 'bg-indigo-600 text-white'}`}>
-                            <Gem size={32} strokeWidth={1} className={isTransformed ? "animate-pulse" : ""} />
-                        </div>
-                    </div>
-                    {/* Tooltip Content */}
-                    <div className="absolute top-full mt-4 left-1/2 -translate-x-1/2 w-64 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        <div className="bg-black/80 backdrop-blur-xl border border-white/10 p-4 rounded-xl">
-                            <p className="text-xs font-serif text-slate-300 line-clamp-3">{note.content}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 2. THE PATHS (Interactive Zones) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl relative z-10">
-                    
-                    {/* LEFT: AUTONOMY PATH */}
-                    <div className="relative group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-transparent rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                        <div className="relative bg-white/5 backdrop-blur-md border border-white/10 hover:border-emerald-500/50 rounded-3xl p-8 flex flex-col gap-6 transition-all duration-300 h-full group-hover:translate-y-[-4px]">
-                            
-                            <div className="flex items-center gap-4 border-b border-white/5 pb-4">
-                                <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl">
-                                    <Compass size={24} />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-white tracking-wide">Самостоятельный Путь</h3>
-                                    <p className="text-xs text-slate-400 font-mono mt-1">DIRECT_ACTION_PROTOCOL</p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-3">
-                                {/* KANBAN BUTTON */}
-                                <button 
-                                    onClick={() => onCreateTask(note.content)}
-                                    className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${connectedTasks.length > 0 ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-black/20 border-white/5 hover:bg-white/10'}`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Kanban size={18} className={connectedTasks.length > 0 ? "text-emerald-400" : "text-slate-400"} />
-                                        <div>
-                                            <div className="text-sm font-bold text-slate-200">Создать Задачу</div>
-                                            {connectedTasks.length > 0 && <div className="text-[10px] text-emerald-400 mt-0.5">АКТИВНО: {connectedTasks.length}</div>}
-                                        </div>
-                                    </div>
-                                    {taskComplete && <Star size={16} className="text-yellow-400 fill-yellow-400 animate-pulse" />}
-                                </button>
-
-                                {/* HABIT BUTTON */}
-                                <button 
-                                    onClick={() => onCreateHabit(note.title || 'Новая привычка')}
-                                    className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${connectedHabits.length > 0 ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-black/20 border-white/5 hover:bg-white/10'}`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Flame size={18} className={connectedHabits.length > 0 ? "text-emerald-400" : "text-slate-400"} />
-                                        <div>
-                                            <div className="text-sm font-bold text-slate-200">Внедрить Привычку</div>
-                                            {connectedHabits.length > 0 && <div className="text-[10px] text-emerald-400 mt-0.5">АКТИВНО: {connectedHabits.length}</div>}
-                                        </div>
-                                    </div>
-                                    {habitActive && <Star size={16} className="text-yellow-400 fill-yellow-400 animate-pulse" />}
-                                </button>
-
-                                {/* JOURNAL BUTTON */}
-                                <button 
-                                    onClick={() => onCreateJournal(note.content)}
-                                    className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${connectedJournal.length > 0 ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-black/20 border-white/5 hover:bg-white/10'}`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Book size={18} className={connectedJournal.length > 0 ? "text-emerald-400" : "text-slate-400"} />
-                                        <div>
-                                            <div className="text-sm font-bold text-slate-200">Рефлексия (Дневник)</div>
-                                            {connectedJournal.length > 0 && <div className="text-[10px] text-emerald-400 mt-0.5">ЗАПИСЕЙ: {connectedJournal.length}</div>}
-                                        </div>
-                                    </div>
-                                    {journalInsight && <Star size={16} className="text-yellow-400 fill-yellow-400 animate-pulse" />}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* RIGHT: MENTOR PATH */}
-                    <div className="relative group">
-                        <div className="absolute inset-0 bg-gradient-to-bl from-indigo-500/20 to-transparent rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                        <div className="relative bg-white/5 backdrop-blur-md border border-white/10 hover:border-indigo-500/50 rounded-3xl p-8 flex flex-col gap-6 transition-all duration-300 h-full group-hover:translate-y-[-4px]">
-                            
-                            <div className="flex items-center gap-4 border-b border-white/5 pb-4">
-                                <div className="p-3 bg-indigo-500/20 text-indigo-400 rounded-xl">
-                                    <BrainCircuit size={24} />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-white tracking-wide">Путь с Учителем</h3>
-                                    <p className="text-xs text-slate-400 font-mono mt-1">MENTOR_GUIDANCE_SYSTEM</p>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 flex flex-col justify-center gap-4">
-                                <p className="text-sm text-slate-300 leading-relaxed">
-                                    Перемести мысль в <strong>Хаб</strong>, чтобы получить разбор от AI-менторов или превратить её в Вызов.
-                                </p>
-                                
-                                <button 
-                                    onClick={onMoveToHub}
-                                    disabled={inHub}
-                                    className={`w-full py-4 rounded-xl border flex items-center justify-center gap-3 transition-all font-bold uppercase tracking-widest text-xs
-                                        ${inHub 
-                                            ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300 cursor-default' 
-                                            : 'bg-indigo-600 hover:bg-indigo-500 text-white border-transparent shadow-lg shadow-indigo-900/50'}
-                                    `}
-                                >
-                                    {inHub ? (
-                                        <>
-                                            <Check size={16} /> Уже в Хабе
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Box size={16} /> Войти в Хаб
-                                        </>
-                                    )}
-                                </button>
-
-                                {inHub && (
-                                    <div className="p-4 bg-indigo-900/20 rounded-xl border border-indigo-500/30">
-                                        <div className="flex items-start gap-3">
-                                            <Zap size={16} className="text-yellow-400 mt-0.5" />
-                                            <div className="text-xs text-indigo-200">
-                                                Мысль находится в Лаборатории. Перейди в раздел <strong>Хаб</strong> для синтеза.
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                {/* 3. TRANSFORMATION STATUS (Stage 4) */}
-                <div className="mt-16 w-full max-w-2xl relative">
-                    <div className="flex items-center justify-between mb-2 px-1">
-                        <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-500">Sync Rate</span>
-                        <span className={`text-[10px] font-mono font-bold ${isTransformed ? 'text-emerald-400' : 'text-slate-500'}`}>
-                            {Math.round((transformationScore / 3) * 100)}%
-                        </span>
-                    </div>
-                    <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                        <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${(transformationScore / 3) * 100}%` }}
-                            transition={{ duration: 1, ease: "easeOut" }}
-                            className={`h-full ${isTransformed ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-indigo-500'}`}
-                        />
-                    </div>
-                    {isTransformed && (
-                        <div className="absolute top-10 left-0 right-0 text-center animate-in fade-in slide-in-from-bottom-2 duration-700">
-                            <span className="inline-block px-4 py-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-                                Transformation Complete
-                            </span>
-                        </div>
-                    )}
-                </div>
-
-            </div>
-        </div>
-    );
-};
 
 // Lightbox
 const Lightbox = ({ src, onClose }: { src: string, onClose: () => void }) => {
@@ -900,7 +668,6 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
-        startJourney: (note: Note) => void;
     }
 }
 
@@ -1063,24 +830,16 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
             <div className="absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end">
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
-                        <>
-                            {/* Inbox: Archive + Journey */}
-                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-                            <Tooltip content="Переместить в библиотеку">
-                                <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
-                            </Tooltip>
-                        </>
+                        // Inbox: Only Archive button
+                        <Tooltip content="Переместить в библиотеку">
+                            <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
+                        </Tooltip>
                     ) : (
                         // Library: Action buttons moved here
                         <>
-                            <Tooltip content="В путь">
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); handlers.startJourney(note); }} 
-                                    className="p-2 text-indigo-500 hover:text-white hover:bg-indigo-500 rounded-full transition-all opacity-100"
-                                >
-                                    <MapIcon size={16} strokeWidth={1.5} />
-                                </button>
-                            </Tooltip>
+                            <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
+                            
+                            <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
                             
                             <Tooltip content={isLinkedToJournal ? "В дневнике" : "В дневник"}>
                                 <button 
@@ -1118,14 +877,14 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, isLinkedToJournal
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addHabit, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries, tasks, habits, journal }) => {
+const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
   const [creationCover, setCreationCover] = useState<string | null>(null);
   
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'inbox' | 'library' | 'journey'>((defaultTab as any) || 'inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'library'>((defaultTab as any) || 'inbox');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showModalColorPicker, setShowModalColorPicker] = useState(false); 
@@ -1166,9 +925,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
-  // HeroJourney state
-  const [activeJourneyNote, setActiveJourneyNote] = useState<Note | null>(null);
-
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -1208,18 +964,16 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
   });
 
   const allExistingTags = useMemo(() => {
-      const uniqueTagsMap = new Map();
-      
-      const map = new Map<string, string>();
+      const uniqueTagsMap = new Map<string, string>();
       notes.forEach(note => {
           if (note.tags && Array.isArray(note.tags)) {
               note.tags.forEach(tag => {
                   const clean = tag.replace(/^#/, '');
-                  map.set(clean.toLowerCase(), clean);
+                  uniqueTagsMap.set(clean.toLowerCase(), clean);
               });
           }
       });
-      return Array.from(map.values()).sort();
+      return Array.from(uniqueTagsMap.values()).sort();
   }, [notes]);
 
   const hasMoodMatcher = useMemo(() => config.aiTools.some(t => t.id === 'mood_matcher'), [config.aiTools]);
@@ -1576,70 +1330,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
 
   const inboxNotes = filterNotes(notes.filter(n => n.status === 'inbox').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
   const archivedNotes = filterNotes(notes.filter(n => n.status === 'archived').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
-  
-  // HeroJourney: Filter notes that have 'isJourneyActive'
-  const journeyNotes = filterNotes(notes.filter(n => n.isJourneyActive));
-
-  // --- JOURNEY HANDLERS ---
-  const startJourney = (note: Note) => {
-      const updatedNote = { ...note, isJourneyActive: true };
-      updateNote(updatedNote);
-      setActiveJourneyNote(updatedNote); // Set immediately for modal
-      setActiveTab('journey');
-  };
-
-  const handleCreateTaskFromNote = (content: string) => {
-      if (!activeJourneyNote) return;
-      const newTask: Task = {
-          id: Date.now().toString(),
-          title: activeJourneyNote.title || 'Новая задача',
-          content: content,
-          column: 'todo',
-          createdAt: Date.now(),
-          linkedNoteId: activeJourneyNote.id
-      };
-      onAddTask(newTask);
-      // Force update note to trigger re-render of connections
-      updateNote({...activeJourneyNote}); 
-  };
-
-  const handleCreateHabitFromNote = (title: string) => {
-      if (!activeJourneyNote || !addHabit) return;
-      const newHabit: Habit = {
-          id: Date.now().toString(),
-          title: title,
-          description: activeJourneyNote.content.substring(0, 100) + '...',
-          frequency: 'daily',
-          createdAt: Date.now(),
-          history: {},
-          streak: 0,
-          bestStreak: 0,
-          reminders: [],
-          color: 'indigo',
-          icon: 'Zap',
-          linkedNoteId: activeJourneyNote.id
-      };
-      addHabit(newHabit);
-      updateNote({...activeJourneyNote});
-  };
-
-  const handleCreateJournalFromNote = (content: string) => {
-      if (!activeJourneyNote) return;
-      const entry: JournalEntry = {
-          id: Date.now().toString(),
-          date: Date.now(),
-          content: content,
-          linkedNoteId: activeJourneyNote.id
-      };
-      onAddJournalEntry(entry);
-      updateNote({...activeJourneyNote});
-  };
-
-  const handleMoveToHub = () => {
-      if (!activeJourneyNote) return;
-      moveNoteToSandbox(activeJourneyNote.id);
-      updateNote({...activeJourneyNote}); // Trigger re-render
-  };
 
   const cardHandlers = useMemo(() => ({
       handleDragStart,
@@ -1653,9 +1343,8 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
-      onImageClick: (src: string) => setLightboxSrc(src),
-      startJourney
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc, startJourney]);
+      onImageClick: (src: string) => setLightboxSrc(src)
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
 
   const markdownRenderComponents = {
       ...markdownComponents,
@@ -1688,7 +1377,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                 <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl shrink-0 self-start md:self-auto w-full md:w-auto backdrop-blur-sm overflow-x-auto">
                     <button onClick={() => { setActiveTab('inbox'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><LayoutGrid size={16} /> Входящие</button>
                     <button onClick={() => { setActiveTab('library'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><Library size={16} /> Библиотека</button>
-                    <button onClick={() => { setActiveTab('journey'); clearMoodFilter(); }} className={`flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${activeTab === 'journey' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}><MapIcon size={16} /> Путь</button>
                 </div>
             </header>
       </div>
@@ -1704,84 +1392,78 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                     animate={{ y: isHeaderHidden ? '-100%' : '0%' }}
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
                 >
-                    {/* Only show header gradient for non-journey tabs */}
-                    {activeTab !== 'journey' && (
-                        <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
-                            <div 
-                                className="absolute inset-0 backdrop-blur-xl"
-                                style={{
-                                    maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)',
-                                    WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)'
-                                }}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
-                        </div>
-                    )}
+                    <div className="absolute inset-0 h-[140%] pointer-events-none -z-10">
+                        <div 
+                            className="absolute inset-0 backdrop-blur-xl"
+                            style={{
+                                maskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)',
+                                WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 50%, transparent 100%)'
+                            }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-[#f8fafc] via-[#f8fafc]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95 dark:to-transparent" />
+                    </div>
 
-                    {/* Filter Bar (Hidden in Journey) */}
-                    {activeTab !== 'journey' && (
-                        <div className="relative z-10 w-full px-4 md:px-8 pb-2">
-                            <div className="max-w-3xl mx-auto w-full">
-                                <div className="flex gap-2">
-                                    <div className="relative flex-1 group">
-                                        {showMoodInput ? (
-                                            <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                                                <div className="relative flex-1">
-                                                    <Sparkles size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500" />
-                                                    <input type="text" placeholder="На какую тему подобрать заметки?" value={moodQuery} onChange={(e) => setMoodQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleMoodSearch()} className="w-full pl-10 pr-4 py-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 focus:border-purple-300 transition-all text-purple-900 dark:text-purple-300 placeholder:text-purple-300" autoFocus />
-                                                </div>
-                                                <button onClick={handleMoodSearch} disabled={isMoodAnalyzing || !moodQuery.trim()} className="px-5 py-2 bg-purple-600 text-white rounded-2xl text-xs font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 shadow-sm">{isMoodAnalyzing ? 'Думаю...' : 'Найти'}</button>
-                                                <button onClick={() => setShowMoodInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                    <div className="relative z-10 w-full px-4 md:px-8 pb-2">
+                        <div className="max-w-3xl mx-auto w-full">
+                            <div className="flex gap-2">
+                                <div className="relative flex-1 group">
+                                    {showMoodInput ? (
+                                        <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                                            <div className="relative flex-1">
+                                                <Sparkles size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500" />
+                                                <input type="text" placeholder="На какую тему подобрать заметки?" value={moodQuery} onChange={(e) => setMoodQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleMoodSearch()} className="w-full pl-10 pr-4 py-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 focus:border-purple-300 transition-all text-purple-900 dark:text-purple-300 placeholder:text-purple-300" autoFocus />
                                             </div>
-                                        ) : showTagInput ? (
-                                            <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                                                <div className="relative flex-1">
-                                                    <TagIcon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" />
-                                                    <input type="text" placeholder="Поиск по #тегам..." value={tagQuery} onChange={(e) => setTagQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 focus:border-indigo-300 transition-all text-indigo-900 dark:text-indigo-300 placeholder:text-indigo-300" autoFocus />
-                                                </div>
-                                                <button onClick={() => setShowTagInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                                            <button onClick={handleMoodSearch} disabled={isMoodAnalyzing || !moodQuery.trim()} className="px-5 py-2 bg-purple-600 text-white rounded-2xl text-xs font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 shadow-sm">{isMoodAnalyzing ? 'Думаю...' : 'Найти'}</button>
+                                            <button onClick={() => setShowMoodInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                                        </div>
+                                    ) : showTagInput ? (
+                                        <div className="flex gap-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                                            <div className="relative flex-1">
+                                                <TagIcon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" />
+                                                <input type="text" placeholder="Поиск по #тегам..." value={tagQuery} onChange={(e) => setTagQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 focus:border-indigo-300 transition-all text-indigo-900 dark:text-indigo-300 placeholder:text-indigo-300" autoFocus />
                                             </div>
-                                        ) : (
-                                            <>
-                                                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                                                <input type="text" placeholder="Поиск" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-shadow shadow-sm placeholder:text-slate-400" />
-                                                {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
-                                            </>
-                                        )}
-                                    </div>
-                                    {!showMoodInput && !showTagInput && (
+                                            <button onClick={() => setShowTagInput(false)} className="p-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><X size={20} /></button>
+                                        </div>
+                                    ) : (
                                         <>
-                                            <Tooltip content="Поиск по тегам" side="bottom"><button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button></Tooltip>
-                                            <Tooltip content="Фильтр по цвету" side="bottom"><button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button></Tooltip>
-                                            {hasMoodMatcher && <Tooltip content="Подбор по теме (ИИ)" side="bottom"><button onClick={() => setShowMoodInput(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-purple-500 hover:bg-purple-50'}`}><Sparkles size={20} /></button></Tooltip>}
-                                            <Tooltip content="Рандом" side="bottom">
-                                                <button onClick={startOracle} className="group relative p-3 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none">
-                                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
-                                                    <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                                                    <Dices size={20} className="relative z-10 text-white transition-transform duration-500 group-hover:rotate-180" />
-                                                </button>
-                                            </Tooltip>
+                                            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                                            <input type="text" placeholder="Поиск" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 dark:text-slate-200 transition-shadow shadow-sm placeholder:text-slate-400" />
+                                            {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
                                         </>
                                     )}
                                 </div>
-                                {aiFilteredIds !== null && !showMoodInput && (
-                                    <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl px-4 py-3 animate-in fade-in slide-in-from-top-1">
-                                        <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300"><Sparkles size={14} /><span>Найдено {aiFilteredIds.length} заметок на тему: <b>«{moodQuery}»</b></span></div>
-                                        <button onClick={clearMoodFilter} className="text-[10px] font-bold uppercase tracking-wider text-purple-400 hover:text-purple-700 dark:hover:text-purple-200 flex items-center gap-1"><X size={12} /> Сброс</button>
-                                    </div>
-                                )}
-                                {(showFilters || activeColorFilter) && (
-                                    <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200">
-                                        <button onClick={() => setActiveColorFilter(null)} className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${activeColorFilter === null ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}>Все</button>
-                                        {colors.map(c => <button key={c.id} onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)} className={`w-6 h-6 rounded-full border shadow-sm transition-transform ${activeColorFilter === c.id ? 'ring-2 ring-indigo-400 ring-offset-2 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: c.hex, borderColor: '#cbd5e1' }} title={c.id} />)}
-                                    </div>
+                                {!showMoodInput && !showTagInput && (
+                                    <>
+                                        <Tooltip content="Поиск по тегам" side="bottom"><button onClick={() => setShowTagInput(true)} className="p-3 rounded-2xl border-none transition-all bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm"><TagIcon size={20} /></button></Tooltip>
+                                        <Tooltip content="Фильтр по цвету" side="bottom"><button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${showFilters || activeColorFilter ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}><Palette size={20} /></button></Tooltip>
+                                        {hasMoodMatcher && <Tooltip content="Подбор по теме (ИИ)" side="bottom"><button onClick={() => setShowMoodInput(true)} className={`p-3 rounded-2xl border-none transition-all shadow-sm ${aiFilteredIds !== null ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' : 'bg-white dark:bg-[#1e293b] text-slate-400 hover:text-purple-500 hover:bg-purple-50'}`}><Sparkles size={20} /></button></Tooltip>}
+                                        <Tooltip content="Рандом" side="bottom">
+                                            <button onClick={startOracle} className="group relative p-3 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-none">
+                                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
+                                                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+                                                <Dices size={20} className="relative z-10 text-white transition-transform duration-500 group-hover:rotate-180" />
+                                            </button>
+                                        </Tooltip>
+                                    </>
                                 )}
                             </div>
+                            {aiFilteredIds !== null && !showMoodInput && (
+                                <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl px-4 py-3 animate-in fade-in slide-in-from-top-1">
+                                    <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300"><Sparkles size={14} /><span>Найдено {aiFilteredIds.length} заметок на тему: <b>«{moodQuery}»</b></span></div>
+                                    <button onClick={clearMoodFilter} className="text-[10px] font-bold uppercase tracking-wider text-purple-400 hover:text-purple-700 dark:hover:text-purple-200 flex items-center gap-1"><X size={12} /> Сброс</button>
+                                </div>
+                            )}
+                            {(showFilters || activeColorFilter) && (
+                                <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-2 animate-in slide-in-from-top-2 duration-200">
+                                    <button onClick={() => setActiveColorFilter(null)} className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all whitespace-nowrap ${activeColorFilter === null ? 'bg-slate-800 dark:bg-slate-700 text-white border-slate-800 dark:border-slate-600' : 'bg-white dark:bg-[#1e293b] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}>Все</button>
+                                    {colors.map(c => <button key={c.id} onClick={() => setActiveColorFilter(activeColorFilter === c.id ? null : c.id)} className={`w-6 h-6 rounded-full border shadow-sm transition-transform ${activeColorFilter === c.id ? 'ring-2 ring-indigo-400 ring-offset-2 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: c.hex, borderColor: '#cbd5e1' }} title={c.id} />)}
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </motion.div>
 
-                <div className={`w-full ${activeTab !== 'journey' ? 'px-4 md:px-8 pt-6 pb-8' : ''}`}>
+                <div className="w-full px-4 md:px-8 pt-6 pb-8">
                     {activeTab === 'inbox' && (
                         <>
                             {!searchQuery && !activeColorFilter && aiFilteredIds === null && !showMoodInput && !tagQuery && !showTagInput && (
@@ -1864,35 +1546,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
                                 <div className="py-6"><EmptyState icon={Library} title="Библиотека пуста" description={searchQuery || activeColorFilter || aiFilteredIds || tagQuery ? 'В архиве ничего не найдено.' : 'Собери лучшие мысли и идеи здесь'} color="indigo" /></div>
                             )}
                         </>
-                    )}
-                    {activeTab === 'journey' && journeyNotes.length > 0 && (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4 md:px-8 py-8">
-                            {journeyNotes.map(note => (
-                                <div 
-                                    key={note.id} 
-                                    onClick={() => setActiveJourneyNote(note)}
-                                    className="aspect-square bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-2xl flex flex-col items-center justify-center cursor-pointer group transition-all"
-                                >
-                                    <div className="relative mb-4">
-                                        <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                            <Gem size={24} className="text-indigo-400" />
-                                        </div>
-                                        <div className="absolute inset-0 rounded-full bg-indigo-500 blur-xl opacity-20 group-hover:opacity-40 transition-opacity" />
-                                    </div>
-                                    <div className="text-center px-4">
-                                        <h4 className="text-white text-sm font-bold line-clamp-1">{note.title || 'Безымянная мысль'}</h4>
-                                        <p className="text-slate-500 text-[10px] font-mono mt-1 uppercase">ID: {note.id.slice(-4)}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {activeTab === 'journey' && journeyNotes.length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-slate-500">
-                            <MapIcon size={48} className="mb-4 opacity-20" strokeWidth={1} />
-                            <p>В этом мире пока пусто.</p>
-                            <p className="text-sm mt-2">Отправьте мысль в Путь из Входящих.</p>
-                        </div>
                     )}
                 </div>
             </div>
@@ -2134,24 +1787,6 @@ const Napkins: React.FC<Props> = ({ notes, config, addNote, moveNoteToSandbox, m
             </div>
         </AnimatePresence>
       )}
-
-      {/* Hero Journey Visualization */}
-      <AnimatePresence>
-          {activeTab === 'journey' && activeJourneyNote && (
-              <HeroJourneyView 
-                  note={activeJourneyNote} 
-                  tasks={tasks || []}
-                  habits={habits || []}
-                  journal={journal || []}
-                  onClose={() => setActiveJourneyNote(null)}
-                  onCreateTask={handleCreateTaskFromNote}
-                  onCreateHabit={handleCreateHabitFromNote}
-                  onCreateJournal={handleCreateJournalFromNote}
-                  onMoveToHub={handleMoveToHub}
-                  onOpenNote={() => handleOpenNote(activeJourneyNote)}
-              />
-          )}
-      </AnimatePresence>
     </div>
   );
 };

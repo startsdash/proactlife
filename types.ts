@@ -36,9 +36,6 @@ export interface Note {
   color?: string;
   coverUrl?: string;
   connectedNoteIds?: string[];
-  
-  // HeroJourney Props
-  isJourneyActive?: boolean;
 }
 
 export interface SketchItem {
@@ -81,9 +78,6 @@ export interface Task {
   
   spheres?: string[];
   isArchived?: boolean;
-  
-  // HeroJourney Link
-  linkedNoteId?: string;
 }
 
 export interface Flashcard {
@@ -117,9 +111,6 @@ export interface Habit {
   spheres?: string[];
   isArchived?: boolean;
   createdAt: number;
-  
-  // HeroJourney Link
-  linkedNoteId?: string;
 }
 
 export interface Challenge {
