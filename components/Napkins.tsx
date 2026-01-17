@@ -1850,6 +1850,7 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
                     )}
                     {activeTab === 'library' && (
                         <>
+                            <div className="h-8 w-full" />
                             {archivedNotes.length > 0 ? (
                                 <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid pb-20 md:pb-0" columnClassName="my-masonry-grid_column">
                                     {archivedNotes.map((note) => <NoteCard key={note.id} note={note} isArchived={true} pathStatus={getPathStatus(note)} handlers={cardHandlers} />)}
