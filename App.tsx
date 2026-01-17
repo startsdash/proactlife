@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Module, AppState, Note, Task, Flashcard, SyncStatus, AppConfig, JournalEntry, AccessControl, MentorAnalysis, Habit, SketchItem, UserProfileConfig } from './types';
 import { loadState, saveState } from './services/storageService';
@@ -61,7 +62,6 @@ const App: React.FC = () => {
   const [module, setModule] = useState<Module>(getInitialModule);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [isTutorialActive, setIsTutorialActive] = useState(false);
-  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
   
   // Custom Navigation Handler that syncs with Browser History
   const handleNavigate = (newModule: Module) => {
@@ -74,22 +74,10 @@ const App: React.FC = () => {
         }
     } else {
         setModule(newModule);
-        setHighlightedItemId(null); // Clear highlight on standard nav
         const url = new URL(window.location.href);
         url.searchParams.set('tab', newModule);
         window.history.pushState({ module: newModule }, '', url.toString());
     }
-  };
-
-  const handleNavigateToItem = (newModule: Module, itemId: string) => {
-      setModule(newModule);
-      setHighlightedItemId(itemId);
-      const url = new URL(window.location.href);
-      url.searchParams.set('tab', newModule);
-      window.history.pushState({ module: newModule }, '', url.toString());
-      
-      // Auto-clear highlight after delay
-      setTimeout(() => setHighlightedItemId(null), 3000);
   };
 
   // Listen for Browser Back/Forward buttons
@@ -510,7 +498,6 @@ const App: React.FC = () => {
               onClearInitialNote={() => setNapkinsContextNoteId(null)}
               journalEntries={data.journal}
               onNavigate={handleNavigate}
-              onNavigateToItem={handleNavigateToItem}
             />
         )}
         
@@ -519,8 +506,7 @@ const App: React.FC = () => {
               items={data.sketchpad || []} 
               addItem={addSketchItem} 
               deleteItem={deleteSketchItem} 
-              updateItem={updateSketchItem}
-              highlightedItemId={highlightedItemId}
+              updateItem={updateSketchItem} 
             />
         )}
 
@@ -531,11 +517,11 @@ const App: React.FC = () => {
             />
         )}
 
-        {module === Module.SANDBOX && <Sandbox notes={data.notes} tasks={data.tasks} flashcards={data.flashcards} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} highlightedItemId={highlightedItemId} />}
-        {module === Module.KANBAN && <Kanban tasks={data.tasks} journalEntries={data.journal.filter(j => !j.isArchived)} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={archiveTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} highlightedItemId={highlightedItemId} />}
+        {module === Module.SANDBOX && <Sandbox notes={data.notes} tasks={data.tasks} flashcards={data.flashcards} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
+        {module === Module.KANBAN && <Kanban tasks={data.tasks.filter(t => !t.isArchived)} journalEntries={data.journal.filter(j => !j.isArchived)} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={archiveTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
         {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
         {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
-        {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} notes={data.notes} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} onNavigateToNote={handleNavigateToNote} highlightedItemId={highlightedItemId} />}
+        {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} notes={data.notes} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} onNavigateToNote={handleNavigateToNote} />}
         {module === Module.MOODBAR && <Moodbar entries={data.journal.filter(j => !j.isArchived)} onAddEntry={addJournalEntry} />}
         
         {module === Module.ARCHIVE && (
@@ -548,8 +534,7 @@ const App: React.FC = () => {
               moveNoteToInbox={restoreNote} 
               deleteNote={hardDeleteNote} 
               deleteJournalEntry={deleteJournalEntry} 
-              restoreJournalEntry={restoreJournalEntry}
-              highlightedItemId={highlightedItemId}
+              restoreJournalEntry={restoreJournalEntry} 
             />
         )}
         
