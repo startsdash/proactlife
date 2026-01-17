@@ -898,7 +898,13 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
             handlers.onNavigate(Module.KANBAN);
         } else {
             if(window.confirm('В спринты?')) { 
-                handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); 
+                handlers.onAddTask({ 
+                    id: Date.now().toString(), 
+                    title: isArchived ? 'Новая задача' : note.title, 
+                    content: note.content, 
+                    column: 'todo', 
+                    createdAt: Date.now() 
+                }); 
             }
         }
     };
@@ -1495,7 +1501,7 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
     
     const newTask: Task = {
         id: Date.now().toString(),
-        title: oracleNote.title || 'Инсайт из Оракула',
+        title: 'Новая задача',
         content: oracleNote.content,
         column: 'todo',
         createdAt: Date.now(),

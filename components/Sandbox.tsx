@@ -100,7 +100,7 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
     if (!analysis || !activeNote) return;
     onAddTask({
       id: Date.now().toString(),
-      title: analysis.suggestedTask.split('\n')[0].substring(0, 50),
+      title: 'Новая задача',
       content: analysis.suggestedTask,
       description: activeNote.content,
       column: 'todo',
