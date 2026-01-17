@@ -921,6 +921,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
         }
     };
 
+    const hasConnections = !!(pathStatus.hubId || pathStatus.sprintId || pathStatus.journalId || pathStatus.sketchpadId);
+
     return (
         <div 
             draggable
@@ -934,6 +936,17 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
 
             {note.coverUrl && (
                 <div className="h-40 w-full shrink-0 relative z-10"><img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
+            )}
+
+            {isArchived && hasConnections && (
+                <div className="absolute top-5 left-5 z-30">
+                    <Tooltip content="Есть связи">
+                        <div className="relative w-2.5 h-2.5">
+                            <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-75"></div>
+                            <div className="relative w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+                        </div>
+                    </Tooltip>
+                </div>
             )}
 
             <div className="absolute top-5 right-5 z-30">
@@ -1562,7 +1575,21 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
   };
 
   const inboxNotes = filterNotes(notes.filter(n => n.status === 'inbox').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
-  const archivedNotes = filterNotes(notes.filter(n => n.status === 'archived').sort((a, b) => (Number(b.isPinned || 0) - Number(a.isPinned || 0))));
+  
+  // UPDATED SORTING FOR ARCHIVE
+  const archivedNotes = filterNotes(notes.filter(n => n.status === 'archived').sort((a, b) => {
+      // 1. Pinned Priority
+      const pinDiff = (Number(b.isPinned || 0) - Number(a.isPinned || 0));
+      if (pinDiff !== 0) return pinDiff;
+
+      // 2. Connection Priority
+      const aStats = getPathStatus(a);
+      const bStats = getPathStatus(b);
+      const aHasConn = !!(aStats.hubId || aStats.sprintId || aStats.journalId || aStats.sketchpadId);
+      const bHasConn = !!(bStats.hubId || bStats.sprintId || bStats.journalId || bStats.sketchpadId);
+      
+      return (Number(bHasConn) - Number(aHasConn));
+  }));
 
   const cardHandlers = useMemo(() => ({
       handleDragStart,
