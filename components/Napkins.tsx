@@ -882,45 +882,6 @@ interface NoteCardProps {
     }
 }
 
-const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: boolean, journal: boolean, journalInsight: boolean } }) => {
-    const inactiveClass = "bg-slate-300 dark:bg-slate-600";
-    const activeClass = "bg-indigo-500 shadow-[0_0_6px_rgba(99,102,241,0.6)]";
-    // Reduced spacing in line to keep it tight with smaller dots
-    const lineClass = "w-px h-1.5 bg-slate-200 dark:bg-slate-700/50"; 
-
-    return (
-        <div className="w-8 shrink-0 flex flex-col items-center gap-0.5">
-            {/* 1. Hub - Square */}
-            <Tooltip content="Хаб" side="right">
-                <div className={`w-1 h-1 rounded-[0.5px] transition-colors duration-300 ${status.hub ? activeClass : inactiveClass}`} />
-            </Tooltip>
-
-            <div className={lineClass} />
-
-            {/* 2. Sprint - Triangle (Scaled down to ~4px width/height) */}
-            <Tooltip content="Спринты" side="right">
-                <div 
-                    className={`w-0 h-0 border-l-[2px] border-l-transparent border-r-[2px] border-r-transparent border-b-[3.5px] transition-colors duration-300 ${status.sprint ? 'border-b-indigo-500 drop-shadow-[0_0_4px_rgba(99,102,241,0.6)]' : 'border-b-slate-300 dark:border-b-slate-600'}`} 
-                />
-            </Tooltip>
-
-            <div className={lineClass} />
-
-            {/* 3. Tracker - Circle */}
-            <Tooltip content="Трекер" side="right">
-                <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${status.habit ? activeClass : inactiveClass}`} />
-            </Tooltip>
-
-            <div className={lineClass} />
-
-            {/* 4. Journal - Diamond */}
-            <Tooltip content={status.journalInsight ? "Инсайт" : "Рефлексия"} side="right">
-                <div className={`w-1 h-1 rotate-45 rounded-[0.5px] transition-colors duration-300 ${status.journal ? (status.journalInsight ? 'bg-indigo-400 border border-white dark:border-slate-900 shadow-[0_0_6px_rgba(99,102,241,0.8)]' : activeClass) : inactiveClass}`} />
-            </Tooltip>
-        </div>
-    );
-};
-
 const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handlers }) => {
     const [isExiting, setIsExiting] = useState(false);
     const linkUrl = findFirstUrl(note.content);
@@ -1022,8 +983,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
 
             {/* Content Container (Flex Row for Library Path) */}
             <div className="flex h-full relative z-10">
-                {isArchived && <div className="pl-6 flex flex-col justify-center"><NotePath status={pathStatus} /></div>}
-                
                 <div className="flex-1 flex flex-col min-w-0 p-8 pb-16">
                     <div className="block w-full mb-2">
                         {note.title && <h3 className={`font-sans text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-tight break-words pr-6 ${isArchived ? 'tracking-wide' : 'tracking-tight'}`}>{note.title}</h3>}
@@ -1082,7 +1041,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
                 </div>
             </div>
             
-            <div className={`absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end ${isArchived ? 'pl-12' : ''}`}>
+            <div className={`absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end`}>
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
                         // Inbox: Only Archive button
