@@ -885,21 +885,22 @@ interface NoteCardProps {
 const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: boolean, journal: boolean, journalInsight: boolean } }) => {
     const inactiveClass = "bg-slate-300 dark:bg-slate-600";
     const activeClass = "bg-indigo-500 shadow-[0_0_6px_rgba(99,102,241,0.6)]";
-    const lineClass = "w-px h-2 bg-slate-200 dark:bg-slate-700/50";
+    // Reduced spacing in line to keep it tight with smaller dots
+    const lineClass = "w-px h-1.5 bg-slate-200 dark:bg-slate-700/50"; 
 
     return (
-        <div className="w-8 shrink-0 flex flex-col items-center pt-9 gap-0.5">
+        <div className="w-8 shrink-0 flex flex-col items-center gap-0.5">
             {/* 1. Hub - Square */}
             <Tooltip content="Хаб" side="right">
-                <div className={`w-1.5 h-1.5 rounded-[1px] transition-colors duration-300 ${status.hub ? activeClass : inactiveClass}`} />
+                <div className={`w-1 h-1 rounded-[0.5px] transition-colors duration-300 ${status.hub ? activeClass : inactiveClass}`} />
             </Tooltip>
 
             <div className={lineClass} />
 
-            {/* 2. Sprint - Triangle */}
+            {/* 2. Sprint - Triangle (Scaled down to ~4px width/height) */}
             <Tooltip content="Спринты" side="right">
                 <div 
-                    className={`w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-b-[5px] transition-colors duration-300 ${status.sprint ? 'border-b-indigo-500 drop-shadow-[0_0_4px_rgba(99,102,241,0.6)]' : 'border-b-slate-300 dark:border-b-slate-600'}`} 
+                    className={`w-0 h-0 border-l-[2px] border-l-transparent border-r-[2px] border-r-transparent border-b-[3.5px] transition-colors duration-300 ${status.sprint ? 'border-b-indigo-500 drop-shadow-[0_0_4px_rgba(99,102,241,0.6)]' : 'border-b-slate-300 dark:border-b-slate-600'}`} 
                 />
             </Tooltip>
 
@@ -907,14 +908,14 @@ const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: 
 
             {/* 3. Tracker - Circle */}
             <Tooltip content="Трекер" side="right">
-                <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${status.habit ? activeClass : inactiveClass}`} />
+                <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${status.habit ? activeClass : inactiveClass}`} />
             </Tooltip>
 
             <div className={lineClass} />
 
             {/* 4. Journal - Diamond */}
             <Tooltip content={status.journalInsight ? "Инсайт" : "Рефлексия"} side="right">
-                <div className={`w-1.5 h-1.5 rotate-45 rounded-[1px] transition-colors duration-300 ${status.journal ? (status.journalInsight ? 'bg-indigo-400 border border-white dark:border-slate-900 shadow-[0_0_6px_rgba(99,102,241,0.8)]' : activeClass) : inactiveClass}`} />
+                <div className={`w-1 h-1 rotate-45 rounded-[0.5px] transition-colors duration-300 ${status.journal ? (status.journalInsight ? 'bg-indigo-400 border border-white dark:border-slate-900 shadow-[0_0_6px_rgba(99,102,241,0.8)]' : activeClass) : inactiveClass}`} />
             </Tooltip>
         </div>
     );
@@ -1021,7 +1022,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
 
             {/* Content Container (Flex Row for Library Path) */}
             <div className="flex h-full relative z-10">
-                {isArchived && <div className="pl-6"><NotePath status={pathStatus} /></div>}
+                {isArchived && <div className="pl-6 flex flex-col justify-center"><NotePath status={pathStatus} /></div>}
                 
                 <div className="flex-1 flex flex-col min-w-0 p-8 pb-16">
                     <div className="block w-full mb-2">
