@@ -6,7 +6,7 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard, Habit } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard, Habit, Module } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
@@ -16,8 +16,9 @@ import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, Che
 interface Props {
   notes: Note[];
   flashcards?: Flashcard[];
-  tasks?: Task[]; // Added
-  habits?: Habit[]; // Added
+  tasks?: Task[];
+  habits?: Habit[];
+  sketchItems?: SketchItem[];
   config: AppConfig;
   addNote: (note: Note) => void;
   moveNoteToSandbox: (id: string) => void;
@@ -28,12 +29,10 @@ interface Props {
   updateNote: (note: Note) => void;
   onAddTask: (task: Task) => void;
   onAddJournalEntry: (entry: JournalEntry) => void;
-  sketchItems?: SketchItem[];
   addSketchItem?: (item: SketchItem) => void;
   deleteSketchItem?: (id: string) => void;
   updateSketchItem?: (item: SketchItem) => void;
   
-  // Flashcard Handlers
   deleteFlashcard: (id: string) => void;
   toggleFlashcardStar: (id: string) => void;
 
@@ -41,6 +40,7 @@ interface Props {
   initialNoteId?: string | null;
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
+  onNavigate: (module: Module) => void;
 }
 
 const colors = [
@@ -86,50 +86,25 @@ const extractImages = (content: string): string[] => {
 };
 
 const getPreviewContent = (content: string) => {
-    // 1. Remove images
     let cleanText = content.replace(/!\[.*?\]\(.*?\)/g, '');
-    
-    // 2. Normalize horizontal spaces (keep newlines for card formatting)
     cleanText = cleanText.replace(/[ \t]+/g, ' ').trim();
-
-    // 3. Smart Truncation (2-3 sentences)
-    // Split by sentence terminators followed by space or newline
     const sentences = cleanText.match(/[^\.!\?]+[\.!\?]+(?=\s|$)/g) || [cleanText];
-    
-    // Determine how many sentences to show based on length
     let limit = 0;
     let sentenceCount = 0;
-    
-    // Try to get at least 2 sentences, up to 3, but watch char count
     for (let s of sentences) {
-        if (sentenceCount >= 3) break; // Max 3 sentences
-        if (limit + s.length > 300 && sentenceCount >= 1) break; // If adding next makes it huge, stop
+        if (sentenceCount >= 3) break;
+        if (limit + s.length > 300 && sentenceCount >= 1) break;
         limit += s.length;
         sentenceCount++;
     }
-
     let preview = sentences.slice(0, sentenceCount).join(' ');
-    
-    // Fallback if sentences detection failed or text is one giant block
-    if (preview.length === 0 && cleanText.length > 0) {
-        preview = cleanText;
-    }
-
-    // Hard cap at 300 chars to prevent overflow, but respect word boundaries
+    if (preview.length === 0 && cleanText.length > 0) preview = cleanText;
     if (preview.length > 300) {
         preview = preview.slice(0, 300);
         const lastSpace = preview.lastIndexOf(' ');
-        if (lastSpace > 0) {
-            preview = preview.slice(0, lastSpace);
-        }
+        if (lastSpace > 0) preview = preview.slice(0, lastSpace);
     }
-
-    // Add ellipsis if we cut content
-    if (preview.length < cleanText.length) {
-        // Remove trailing punctuation before adding ellipsis
-        preview = preview.replace(/[\.!\?,\s]+$/, '') + '...';
-    }
-    
+    if (preview.length < cleanText.length) preview = preview.replace(/[\.!\?,\s]+$/, '') + '...';
     return preview;
 };
 
@@ -186,8 +161,6 @@ const findFirstUrl = (text: string): string | null => {
     return match ? match[0] : null;
 };
 
-// --- HTML <-> Markdown Converters (IMPROVED) ---
-
 const htmlToMarkdown = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
@@ -219,7 +192,6 @@ const htmlToMarkdown = (html: string) => {
                 case 'code': return `\`${content}\``;
                 case 'h1': return `\n# ${content}\n`;
                 case 'h2': return `\n## ${content}\n`;
-                // Improved block handling:
                 case 'div': return content ? `\n${content}` : '\n'; 
                 case 'p': return `\n${content}\n`;
                 case 'br': return '\n';
@@ -231,7 +203,6 @@ const htmlToMarkdown = (html: string) => {
     };
     
     let md = walk(temp);
-    // Cleanup aggressive newlines but keep paragraphs
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     md = md.replace(/&nbsp;/g, ' ');
     return applyTypography(md);
@@ -240,65 +211,41 @@ const htmlToMarkdown = (html: string) => {
 const markdownToHtml = (md: string) => {
     if (!md) return '';
     let html = md;
-    
-    // Headers
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    
-    // Formatting
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
     html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
     html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
     html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    
-    // Images
     html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
         return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px; margin: 8px 0; display: block; max-width: 100%; cursor: pointer;" />`;
     });
-    
-    // Improved Line Breaks: Wrap loose lines in divs to simulate standard contentEditable behavior
     const lines = html.split('\n');
     const processedLines = lines.map(line => {
-        // Leave block elements alone
         if (line.match(/^<(h1|h2|div|p|ul|ol|li|blockquote)/i)) return line;
-        // Wrap text lines in div
         return line.trim() ? `<div>${line}</div>` : '<div><br></div>';
     });
-    
     return processedLines.join('');
 };
 
 const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
 
-// --- COMPONENTS ---
-
-const KineticFlashcardDeck = ({ 
-    cards, 
-    onDelete, 
-    onToggleStar 
-}: { 
-    cards: Flashcard[], 
-    onDelete: (id: string) => void,
-    onToggleStar: (id: string) => void
-}) => {
+const KineticFlashcardDeck = ({ cards, onDelete, onToggleStar }: { cards: Flashcard[], onDelete: (id: string) => void, onToggleStar: (id: string) => void }) => {
     const [index, setIndex] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
     const [showFavorites, setShowFavorites] = useState(false);
 
-    // Filter cards based on mode
     const displayedCards = useMemo(() => {
         return showFavorites ? cards.filter(c => c.isStarred) : cards;
     }, [cards, showFavorites]);
 
-    // Ensure index stays valid if cards are removed
     useEffect(() => {
         if (index >= displayedCards.length && displayedCards.length > 0) {
             setIndex(Math.max(0, displayedCards.length - 1));
         }
     }, [displayedCards.length, index]);
 
-    // Handle empty filtered state
     if (displayedCards.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-full py-20 text-center animate-in fade-in duration-500">
@@ -323,7 +270,6 @@ const KineticFlashcardDeck = ({
         );
     }
 
-    // Ensure index is valid after filter change
     const safeIndex = index % displayedCards.length;
     const currentCard = displayedCards[safeIndex];
 
@@ -343,7 +289,6 @@ const KineticFlashcardDeck = ({
         e.stopPropagation();
         if (confirm("Удалить эту карточку?")) {
             onDelete(currentCard.id);
-            // If we delete the last card, move index back
             if (safeIndex >= displayedCards.length - 1) {
                 setIndex(Math.max(0, safeIndex - 1));
             }
@@ -352,14 +297,12 @@ const KineticFlashcardDeck = ({
 
     return (
         <div className="flex items-center justify-center h-full min-h-[600px] w-full p-4 md:p-8">
-            {/* The "Oracle-like" Window */}
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="relative w-full max-w-2xl min-h-[500px] bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-[40px] shadow-2xl border border-white/50 dark:border-white/10 overflow-hidden flex flex-col transition-colors duration-500"
                 onClick={toggleFlip}
             >
-                {/* Background Atmosphere (Fog/Neon) */}
                 <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[40px]">
                     <motion.div 
                         animate={{ 
@@ -372,15 +315,12 @@ const KineticFlashcardDeck = ({
                     <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 opacity-10 mix-blend-overlay" />
                 </div>
 
-                {/* Header Controls */}
                 <div className="flex justify-between items-center px-8 pt-8 pb-2 relative z-20" onClick={e => e.stopPropagation()}>
-                    {/* Status Label */}
                     <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 flex items-center gap-2">
                         {isFlipped ? <Sparkles size={12} className="text-amber-500" /> : <BrainCircuit size={12} className="text-indigo-500" />}
                         <span>{isFlipped ? 'ОТВЕТ' : 'ВОПРОС'} <span className="opacity-50 mx-2">//</span> {safeIndex + 1} из {displayedCards.length}</span>
                     </div>
 
-                    {/* Top Right Controls: Filter & Star */}
                     <div className="flex items-center gap-3">
                         <Tooltip content="Показать только избранное">
                             <button 
@@ -402,7 +342,6 @@ const KineticFlashcardDeck = ({
                     </div>
                 </div>
 
-                {/* Main Content Area */}
                 <div className="flex-1 flex flex-col items-center justify-center p-8 md:p-12 text-center relative z-10 cursor-pointer overflow-hidden">
                     <AnimatePresence mode="wait">
                         <motion.div
@@ -413,7 +352,6 @@ const KineticFlashcardDeck = ({
                             transition={{ duration: 0.4, ease: "easeOut" }}
                             className="w-full h-full flex items-center justify-center"
                         >
-                            {/* Scrollable container for text to keep card size fixed */}
                             <div className="w-full h-[320px] overflow-y-auto pr-2 custom-scrollbar-ghost">
                                 <div className="min-h-full flex flex-col justify-center">
                                     <div className="font-serif text-xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-100 select-none whitespace-pre-wrap py-4">
@@ -425,9 +363,7 @@ const KineticFlashcardDeck = ({
                     </AnimatePresence>
                 </div>
 
-                {/* Footer / Controls */}
                 <div className="pb-8 px-8 flex justify-between items-end relative z-20" onClick={e => e.stopPropagation()}>
-                    {/* Centered Navigation */}
                     <div className="flex-1 flex justify-center gap-8 pl-12">
                         <button 
                             onClick={prevCard}
@@ -452,7 +388,6 @@ const KineticFlashcardDeck = ({
                         </button>
                     </div>
 
-                    {/* Delete Button (Bottom Right) */}
                     <div className="shrink-0">
                         <Tooltip content="Удалить карточку">
                             <button 
@@ -469,7 +404,6 @@ const KineticFlashcardDeck = ({
     );
 };
 
-// Lightbox
 const Lightbox = ({ src, onClose }: { src: string, onClose: () => void }) => {
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -569,7 +503,6 @@ const LinkPreview = React.memo(({ url }: { url: string }) => {
 
 const markdownComponents = {
     p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
-    // Graphite Ghost Style Links - No color change on hover, just underline
     a: ({node, ...props}: any) => <a className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer underline-offset-4 decoration-slate-300 dark:decoration-slate-600 transition-colors font-sans text-sm font-medium relative z-20 break-all" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
     ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
     ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
@@ -612,7 +545,6 @@ const TagSelector: React.FC<{ selectedTags: string[], onChange: (tags: string[])
         };
         
         const handleScroll = (event: Event) => {
-            // Fix: Check if scrolling happens inside the dropdown
             if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
                 return;
             }
@@ -856,16 +788,17 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
     );
 };
 
+interface PathStatus {
+    hubId?: string;
+    sprintId?: string;
+    journalId?: string;
+    sketchpadId?: string;
+}
+
 interface NoteCardProps {
     note: Note;
     isArchived: boolean;
-    pathStatus: {
-        hub: boolean;
-        sprint: boolean;
-        habit: boolean;
-        journal: boolean;
-        journalInsight: boolean;
-    };
+    pathStatus: PathStatus;
     handlers: {
         handleDragStart: (e: React.DragEvent, id: string) => void;
         handleDragOver: (e: React.DragEvent) => void;
@@ -879,6 +812,7 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
+        onNavigate: (module: Module) => void;
     }
 }
 
@@ -886,10 +820,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
     const [isExiting, setIsExiting] = useState(false);
     const linkUrl = findFirstUrl(note.content);
     
-    // Extract text for preview
     const previewText = useMemo(() => getPreviewContent(note.content), [note.content]);
     
-    // Extract images for thumbnails and calculate count
     const contentImages = useMemo(() => extractImages(note.content), [note.content]);
     const imagesToShow = contentImages.filter(img => img !== note.coverUrl);
     const thumbnailImages = imagesToShow.slice(0, 3);
@@ -951,6 +883,44 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
         }
     };
 
+    const handleToSandbox = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if(pathStatus.hubId) {
+            handlers.onNavigate(Module.SANDBOX);
+        } else {
+            if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id);
+        }
+    };
+
+    const handleToSprint = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if(pathStatus.sprintId) {
+            handlers.onNavigate(Module.KANBAN);
+        } else {
+            if(window.confirm('В спринты?')) { 
+                handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); 
+            }
+        }
+    };
+
+    const handleJournalClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if(pathStatus.journalId) {
+            handlers.onNavigate(Module.JOURNAL);
+        } else {
+            handleToJournal(e);
+        }
+    };
+
+    const handleSketchpadClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if(pathStatus.sketchpadId) {
+            handlers.onNavigate(Module.SKETCHPAD);
+        } else if(handlers.addSketchItem) {
+            handleToSketchpad(e);
+        }
+    };
+
     return (
         <div 
             draggable
@@ -981,7 +951,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
                 </Tooltip>
             </div>
 
-            {/* Content Container (Flex Row for Library Path) */}
             <div className="flex h-full relative z-10">
                 <div className="flex-1 flex flex-col min-w-0 p-8 pb-16">
                     <div className="block w-full mb-2">
@@ -997,7 +966,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
                             </ReactMarkdown>
                         </div>
                         
-                        {/* Thumbnail Grid for Content Images */}
                         {thumbnailImages.length > 0 && (
                             <div className={`grid gap-1 mt-4 rounded-xl overflow-hidden border border-black/5 dark:border-white/5 ${
                                 thumbnailImages.length === 1 ? 'grid-cols-1' : 
@@ -1016,7 +984,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
                                             }`} 
                                             loading="lazy" 
                                         />
-                                        {/* Count Overlay */}
                                         {i === thumbnailImages.length - 1 && remainingImagesCount > 0 && (
                                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-[2px]">
                                                 <span className="text-white font-sans font-bold text-lg tracking-wider">+{remainingImagesCount}</span>
@@ -1044,24 +1011,43 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
             <div className={`absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end`}>
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
-                        // Inbox: Only Archive button
                         <Tooltip content="Переместить в библиотеку">
                             <button onClick={handleArchive} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Library size={16} strokeWidth={1.5} /></button>
                         </Tooltip>
                     ) : (
-                        // Library: Action buttons moved here
                         <>
-                            <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
-                            
-                            <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
-                            
-                            <Tooltip content={pathStatus.journal ? "В дневнике" : "В дневник"}>
+                            <Tooltip content={pathStatus.hubId ? "В хабе" : "В хаб"}>
                                 <button 
-                                    onClick={pathStatus.journal ? undefined : handleToJournal} 
-                                    disabled={pathStatus.journal}
+                                    onClick={handleToSandbox}
                                     className={`p-2 rounded-full transition-all ${
-                                        pathStatus.journal 
-                                        ? 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 opacity-100 cursor-default' 
+                                        pathStatus.hubId 
+                                        ? 'text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 opacity-100' 
+                                        : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
+                                    }`}
+                                >
+                                    <Box size={16} strokeWidth={1.5} />
+                                </button>
+                            </Tooltip>
+                            
+                            <Tooltip content={pathStatus.sprintId ? "В спринтах" : "В спринты"}>
+                                <button 
+                                    onClick={handleToSprint}
+                                    className={`p-2 rounded-full transition-all ${
+                                        pathStatus.sprintId 
+                                        ? 'text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 opacity-100' 
+                                        : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
+                                    }`}
+                                >
+                                    <Kanban size={16} strokeWidth={1.5} />
+                                </button>
+                            </Tooltip>
+                            
+                            <Tooltip content={pathStatus.journalId ? "В дневнике" : "В дневник"}>
+                                <button 
+                                    onClick={handleJournalClick}
+                                    className={`p-2 rounded-full transition-all ${
+                                        pathStatus.journalId 
+                                        ? 'text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 opacity-100' 
                                         : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
                                     }`}
                                 >
@@ -1069,12 +1055,24 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
                                 </button>
                             </Tooltip>
                             
-                            {handlers.addSketchItem && <Tooltip content="В скетчпад"><button onClick={handleToSketchpad} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Tablet size={16} strokeWidth={1.5} /></button></Tooltip>}
+                            {handlers.addSketchItem && (
+                                <Tooltip content={pathStatus.sketchpadId ? "В скетчпаде" : "В скетчпад"}>
+                                    <button 
+                                        onClick={handleSketchpadClick}
+                                        className={`p-2 rounded-full transition-all ${
+                                            pathStatus.sketchpadId 
+                                            ? 'text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 opacity-100' 
+                                            : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
+                                        }`}
+                                    >
+                                        <Tablet size={16} strokeWidth={1.5} />
+                                    </button>
+                                </Tooltip>
+                            )}
                         </>
                     )}
                 </div>
                 
-                {/* Right Side: ID or Restore Button */}
                 {!isArchived ? (
                     <div className="p-2 font-mono text-[8px] text-slate-900 dark:text-white select-none opacity-30 tracking-widest">
                         ID // {note.id.slice(-5).toLowerCase()}
@@ -1091,7 +1089,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, deleteFlashcard, toggleFlashcardStar, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
+const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], sketchItems = [], config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, deleteFlashcard, toggleFlashcardStar, defaultTab, initialNoteId, onClearInitialNote, journalEntries, onNavigate }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -1142,62 +1140,39 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Memoize linked note IDs from journal entries for efficient checking
-  // Used for quick prop, but also used inside loop
-  const linkedNoteIds = useMemo(() => {
-      const ids = new Set<string>();
-      if (journalEntries) {
-          journalEntries.forEach(entry => {
-              if (entry.linkedNoteId && !entry.isArchived) {
-                  ids.add(entry.linkedNoteId);
-              }
-              if (entry.linkedNoteIds && !entry.isArchived) {
-                  entry.linkedNoteIds.forEach(id => ids.add(id));
-              }
-          });
-      }
-      return ids;
-  }, [journalEntries]);
-
   // Derived state for path status checking
   const getPathStatus = useCallback((note: Note) => {
-      // Hub Check: Status 'sandbox' (cloned or current) or Content Match in Sandbox
-      const isLinkedToHub = note.previousStatus === 'sandbox' || note.status === 'sandbox' || notes.some(n => n.status === 'sandbox' && n.content === note.content);
+      // Hub Check: Look for a note in sandbox with same content
+      const hubNote = notes.find(n => n.status === 'sandbox' && n.content === note.content);
+      const hubId = hubNote?.id;
       
       // Sprint: Check heuristic (content match)
-      const isLinkedToSprint = tasks.some(t => {
-          if (!t.isArchived) {
-              // Heuristic: check if title matches or content starts with
-              if (note.title && t.title === note.title) return true;
-              if (t.content.includes(note.content.substring(0, 50))) return true;
-          }
-          return false;
-      });
+      const task = tasks.find(t => !t.isArchived && (t.title === note.title || t.content.includes(note.content.substring(0, 50))));
+      const sprintId = task?.id;
 
       // Habit: Heuristic
-      const isLinkedToHabit = habits.some(h => {
-          if (!h.isArchived) {
-              if (h.description?.includes(note.content.substring(0, 50))) return true;
-              if (note.title && h.title === note.title) return true;
-          }
-          return false;
-      });
-
-      // Journal: Check for links and insights
-      const journalLinks = journalEntries?.filter(j => 
+      const habit = habits.find(h => !h.isArchived && (h.description?.includes(note.content.substring(0, 50)) || (note.title && h.title === note.title)));
+      
+      // Journal: Check for links
+      const entry = journalEntries?.find(j => 
           (j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id)) && !j.isArchived
-      ) || [];
-      const isLinkedToJournal = journalLinks.length > 0;
-      const hasInsight = journalLinks.some(j => j.isInsight);
+      );
+      const journalId = entry?.id;
+      const journalInsight = entry?.isInsight || false;
+
+      // Sketchpad
+      const sketchItem = sketchItems?.find(i => i.content === note.content);
+      const sketchpadId = sketchItem?.id;
 
       return {
-          hub: isLinkedToHub,
-          sprint: isLinkedToSprint,
-          habit: isLinkedToHabit,
-          journal: isLinkedToJournal,
-          journalInsight: hasInsight
+          hubId,
+          sprintId,
+          journalId,
+          sketchpadId,
+          habit: !!habit,
+          journalInsight
       };
-  }, [tasks, habits, journalEntries, notes]);
+  }, [tasks, habits, journalEntries, notes, sketchItems]);
 
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab as any);
@@ -1601,8 +1576,9 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
+      onNavigate,
       onImageClick: (src: string) => setLightboxSrc(src)
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, onNavigate, setLightboxSrc]);
 
   const markdownRenderComponents = {
       ...markdownComponents,

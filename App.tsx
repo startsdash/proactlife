@@ -478,8 +478,9 @@ const App: React.FC = () => {
             <Napkins 
               notes={data.notes.filter(n => n.status !== 'trash')} 
               flashcards={data.flashcards}
-              tasks={data.tasks} // Added
-              habits={data.habits} // Added
+              tasks={data.tasks} 
+              habits={data.habits}
+              sketchItems={data.sketchpad} 
               config={visibleConfig} 
               addNote={addNote} 
               moveNoteToSandbox={moveNoteToSandbox} 
@@ -496,6 +497,7 @@ const App: React.FC = () => {
               initialNoteId={napkinsContextNoteId}
               onClearInitialNote={() => setNapkinsContextNoteId(null)}
               journalEntries={data.journal}
+              onNavigate={handleNavigate}
             />
         )}
         
