@@ -18,8 +18,6 @@ interface Props {
   onAddTask: (task: Task) => void;
   onAddFlashcard: (card: Flashcard) => void;
   deleteNote: (id: string) => void;
-  initialNoteId?: string | null;
-  onClearInitialNote?: () => void;
 }
 
 // --- UTILS ---
@@ -59,7 +57,7 @@ const GlassPod: React.FC<GlassPodProps> = ({ children, className = "" }) => (
 
 // --- MAIN COMPONENT ---
 
-const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessNote, onAddTask, onAddFlashcard, deleteNote, initialNoteId, onClearInitialNote }) => {
+const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessNote, onAddTask, onAddFlashcard, deleteNote }) => {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<SandboxAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -70,16 +68,6 @@ const Sandbox: React.FC<Props> = ({ notes, tasks, flashcards, config, onProcessN
 
   const incomingNotes = useMemo(() => notes.filter(n => n.status === 'sandbox'), [notes]);
   const activeNote = useMemo(() => notes.find(n => n.id === selectedNoteId), [notes, selectedNoteId]);
-
-  useEffect(() => {
-      if (initialNoteId) {
-          const noteExists = notes.some(n => n.id === initialNoteId && n.status === 'sandbox');
-          if (noteExists) {
-              setSelectedNoteId(initialNoteId);
-          }
-          onClearInitialNote?.();
-      }
-  }, [initialNoteId, notes, onClearInitialNote]);
 
   const flowData = useMemo(() => {
       const recentTasks = tasks.filter(t => t.createdAt > Date.now() - 7 * 86400000).length;
