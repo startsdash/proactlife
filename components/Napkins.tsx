@@ -7,11 +7,10 @@ import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
 import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard, Habit, Module } from '../types';
-import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Aperture, Layers, Filter } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Aperture, Layers, Filter, StickyNote } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -36,7 +35,6 @@ interface Props {
   deleteFlashcard: (id: string) => void;
   toggleFlashcardStar: (id: string) => void;
 
-  defaultTab?: 'inbox' | 'library' | 'flashcards';
   initialNoteId?: string | null;
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
@@ -54,30 +52,12 @@ const colors = [
     { id: 'purple', class: 'bg-purple-50 dark:bg-purple-900/20', hex: '#faf5ff' },
 ];
 
-const ORACLE_VIBES = [
-    { id: 'cosmos', icon: Gem, label: 'Инсайт', color: 'from-indigo-500 to-purple-600', text: 'text-indigo-100' },
-    { id: 'fire', icon: Zap, label: 'Энергия', color: 'from-orange-500 to-red-600', text: 'text-orange-100' },
-    { id: 'zen', icon: Circle, label: 'Дзен', color: 'from-emerald-500 to-teal-600', text: 'text-emerald-100' },
-    { id: 'luck', icon: Dices, label: 'Случай', color: 'from-slate-700 to-slate-900', text: 'text-slate-200' },
-];
-
-const UNSPLASH_PRESETS = [
-    'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=400&q=80',
-    'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&q=80',
-    'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=400&q=80',
-    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80',
-];
-
-const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E")`;
-
 const breakpointColumnsObj = {
   default: 4,
   1600: 3,
   1100: 2,
   700: 1
 };
-
-// --- HELPER FUNCTIONS ---
 
 const allowDataUrls = (url: string) => url;
 
@@ -156,68 +136,234 @@ const processImage = (file: File | Blob): Promise<string> => {
     });
 };
 
-const findFirstUrl = (text: string): string | null => {
-    const maskedText = text.replace(/!\[.*?\]\(.*?\)/g, '');
-    const match = maskedText.match(/(https?:\/\/[^\s\)]+)/);
-    return match ? match[0] : null;
+const markdownComponents = {
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
+    a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1 text-slate-800 dark:text-slate-200" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1 text-slate-800 dark:text-slate-200" {...props} />,
+    li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
+    h1: ({node, ...props}: any) => <h1 className="font-sans font-bold text-xl mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+    h2: ({node, ...props}: any) => <h2 className="font-sans font-bold text-lg mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 dark:border-slate-600 pl-4 italic text-slate-500 dark:text-slate-400 my-3 font-serif" {...props} />,
+    img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
 };
 
-const htmlToMarkdown = (html: string) => {
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
+const Napkins: React.FC<Props> = ({ 
+    notes, flashcards = [], tasks = [], habits = [], sketchItems = [], config, 
+    addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, 
+    reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, 
+    deleteSketchItem, updateSketchItem, deleteFlashcard, toggleFlashcardStar,
+    initialNoteId, onClearInitialNote, journalEntries = [], onNavigate, onNavigateToItem 
+}) => {
+  const [activeTab, setActiveTab] = useState<'inbox' | 'library'>('inbox');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Compute visible notes based on tab and search
+  const visibleNotes = useMemo(() => {
+      let filtered = notes.filter(n => {
+          // Status filtering logic
+          if (activeTab === 'inbox') return n.status === 'inbox';
+          if (activeTab === 'library') return n.status !== 'trash' && n.status !== 'inbox'; // Show Archive/Sandbox/Processed in Library?
+          // If "Library" means just "All Notes" excluding trash:
+          return n.status !== 'trash'; 
+      });
 
-    const wrap = (text: string, marker: string) => {
-        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
-        if (match && match[2]) {
-            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
-        }
-        return text.trim() ? `${marker}${text}${marker}` : '';
-    };
+      // Simple fix: if Library tab is meant to show everything that's not inbox or trash
+      if (activeTab === 'library') {
+          filtered = notes.filter(n => n.status !== 'trash' && n.status !== 'inbox');
+      } else {
+          filtered = notes.filter(n => n.status === 'inbox');
+      }
 
-    const walk = (node: Node): string => {
-        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
-        if (node.nodeType === Node.ELEMENT_NODE) {
-            const el = node as HTMLElement;
-            const tag = el.tagName.toLowerCase();
-            let content = '';
-            el.childNodes.forEach(child => content += walk(child));
-            
-            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
-            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
-            if (el.style.fontStyle === 'italic') return wrap(content, '*');
-            
-            switch (tag) {
-                case 'b': case 'strong': return wrap(content, '**');
-                case 'i': case 'em': return wrap(content, '*');
-                case 'u': return content.trim() ? `<u>${content}</u>` : '';
-                case 'code': return `\`${content}\``;
-                case 'h1': return `\n# ${content}\n`;
-                case 'h2': return `\n## ${content}\n`;
-                case 'div': return content ? `\n${content}` : '\n'; 
-                case 'p': return `\n${content}\n`;
-                case 'br': return '\n';
-                case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
-                default: return content;
-            }
-        }
-        return '';
-    };
-    
-    let md = walk(temp);
-    md = md.replace(/\n{3,}/g, '\n\n').trim();
-    md = md.replace(/&nbsp;/g, ' ');
-    return applyTypography(md);
+      if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          filtered = filtered.filter(n => 
+              n.content.toLowerCase().includes(q) || 
+              (n.title && n.title.toLowerCase().includes(q)) || 
+              n.tags.some(t => t.toLowerCase().includes(q))
+          );
+      }
+      return filtered.sort((a, b) => b.createdAt - a.createdAt);
+  }, [notes, activeTab, searchQuery]);
+
+  return (
+    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] relative overflow-hidden">
+        
+        {/* HEADER */}
+        <div className="shrink-0 w-full px-4 md:px-8 pt-4 md:pt-8 mb-6 z-50">
+             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">
+                        Заметки
+                    </h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">Хаос и Порядок</p>
+                </div>
+                
+                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                    <button 
+                        onClick={() => setActiveTab('inbox')}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'inbox' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                    >
+                        Входящие
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('library')}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                    >
+                        Библиотека
+                    </button>
+                </div>
+             </header>
+        </div>
+
+        {/* SEARCH BAR */}
+        <div className="px-4 md:px-8 mb-6 shrink-0">
+            <div className="relative max-w-xl">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input 
+                    type="text" 
+                    placeholder="Поиск мыслей..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1e293b] border border-slate-100 dark:border-slate-800 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-slate-400"
+                />
+            </div>
+        </div>
+
+        {/* CONTENT */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar-light px-4 md:px-8 pb-20">
+            {visibleNotes.length === 0 ? (
+                <EmptyState 
+                    icon={activeTab === 'inbox' ? StickyNote : Library} 
+                    title={activeTab === 'inbox' ? "Входящие пусты" : "Библиотека пуста"} 
+                    description={activeTab === 'inbox' ? "Создайте новую заметку, чтобы начать" : "Переместите заметки из входящих для хранения"}
+                    color="indigo"
+                />
+            ) : (
+                <Masonry breakpointCols={breakpointColumnsObj} className="my-masonry-grid" columnClassName="my-masonry-grid_column">
+                    {visibleNotes.map(note => {
+                        const previewText = getPreviewContent(note.content);
+                        const colorClass = colors.find(c => c.id === note.color)?.class || 'bg-white dark:bg-[#1e293b]';
+                        
+                        // --- CONNECTION LOGIC ---
+                        // 1. Hub (Sandbox): Note is connected to another note that is in Sandbox status
+                        const connectedIds = note.connectedNoteIds || [];
+                        const hubConnection = notes.find(n => n.status === 'sandbox' && connectedIds.includes(n.id));
+                        
+                        // 2. Journal: Entry references this note
+                        const journalConnection = journalEntries.find(j => (j.linkedNoteIds?.includes(note.id) || j.linkedNoteId === note.id));
+                        const isJournalArchived = journalConnection?.isArchived;
+                        
+                        // 3. Sprint (Task): Task connected via explicit ID linkage (custom convention)
+                        // Or reverse check if we assume tasks track connected note IDs
+                        const taskConnection = tasks.find(t => connectedIds.includes(t.id));
+                        const isTaskArchived = taskConnection?.isArchived;
+
+                        // 4. Sketchpad
+                        const sketchConnection = sketchItems.find(s => connectedIds.includes(s.id));
+
+                        return (
+                            <motion.div 
+                                key={note.id}
+                                layoutId={note.id}
+                                className={`relative rounded-2xl border transition-all duration-300 group overflow-hidden flex flex-col mb-6 ${colorClass} border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-md`}
+                            >
+                                {note.coverUrl && (
+                                    <div className="h-32 w-full shrink-0 relative overflow-hidden">
+                                        <img src={note.coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                                    </div>
+                                )}
+                                
+                                <div className="p-5 flex flex-col gap-2">
+                                    {/* Header */}
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1 min-w-0">
+                                            {note.title && <h3 className="font-sans font-bold text-lg text-slate-800 dark:text-slate-100 leading-tight mb-1 truncate">{note.title}</h3>}
+                                            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">
+                                                {new Date(note.createdAt).toLocaleDateString()}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="text-slate-600 dark:text-slate-300 font-serif text-sm leading-relaxed line-clamp-6 my-2">
+                                        <ReactMarkdown components={markdownComponents}>{previewText}</ReactMarkdown>
+                                    </div>
+
+                                    {/* Footer: Connections & Actions */}
+                                    <div className="flex justify-between items-end pt-3 mt-auto border-t border-slate-100 dark:border-slate-800/50">
+                                        
+                                        {/* GHOST DOTS (Connections) */}
+                                        <div className="flex items-center gap-1.5 h-6">
+                                            {/* Hub */}
+                                            {hubConnection && (
+                                                <Tooltip content="В Хабе">
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); onNavigateToItem && onNavigateToItem(Module.SANDBOX, hubConnection.id); }}
+                                                        className="w-1.5 h-1.5 rounded-full border border-amber-400 bg-transparent hover:bg-amber-400 transition-colors" 
+                                                    />
+                                                </Tooltip>
+                                            )}
+                                            
+                                            {/* Journal */}
+                                            {journalConnection && (
+                                                <Tooltip content={isJournalArchived ? "В архиве дневника" : "В Дневнике"}>
+                                                    <button 
+                                                        onClick={(e) => { 
+                                                            e.stopPropagation(); 
+                                                            onNavigateToItem && onNavigateToItem(isJournalArchived ? Module.ARCHIVE : Module.JOURNAL, journalConnection.id); 
+                                                        }}
+                                                        className={`w-1.5 h-1.5 rounded-full border border-cyan-400 bg-transparent hover:bg-cyan-400 transition-colors ${isJournalArchived ? 'opacity-50 border-dashed' : ''}`} 
+                                                    />
+                                                </Tooltip>
+                                            )}
+
+                                            {/* Kanban */}
+                                            {taskConnection && (
+                                                <Tooltip content={isTaskArchived ? "В Зале славы" : "В Спринтах"}>
+                                                    <button 
+                                                        onClick={(e) => { 
+                                                            e.stopPropagation(); 
+                                                            onNavigateToItem && onNavigateToItem(isTaskArchived ? Module.ARCHIVE : Module.KANBAN, taskConnection.id); 
+                                                        }}
+                                                        className={`w-1.5 h-1.5 rounded-full border border-emerald-400 bg-transparent hover:bg-emerald-400 transition-colors ${isTaskArchived ? 'opacity-50 border-dashed' : ''}`} 
+                                                    />
+                                                </Tooltip>
+                                            )}
+
+                                            {/* Sketchpad */}
+                                            {sketchConnection && (
+                                                <Tooltip content="В Скетчпаде">
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); onNavigateToItem && onNavigateToItem(Module.SKETCHPAD, sketchConnection.id); }}
+                                                        className="w-1.5 h-1.5 rounded-full border border-fuchsia-400 bg-transparent hover:bg-fuchsia-400 transition-colors" 
+                                                    />
+                                                </Tooltip>
+                                            )}
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Tooltip content="В Хаб">
+                                                <button onClick={() => moveNoteToSandbox(note.id)} className="p-1.5 text-slate-400 hover:text-amber-500 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20"><Box size={14} /></button>
+                                            </Tooltip>
+                                            <Tooltip content="Архивировать">
+                                                <button onClick={() => archiveNote(note.id)} className="p-1.5 text-slate-400 hover:text-indigo-500 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20"><Archive size={14} /></button>
+                                            </Tooltip>
+                                            <Tooltip content="Удалить">
+                                                <button onClick={() => deleteNote(note.id)} className="p-1.5 text-slate-400 hover:text-red-500 rounded hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 size={14} /></button>
+                                            </Tooltip>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </Masonry>
+            )}
+        </div>
+    </div>
+  );
 };
 
-const markdownToHtml = (md: string) => {
-    if (!md) return '';
-    let html = md;
-    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
-    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
-    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
-    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
-        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px
+export default Napkins;
