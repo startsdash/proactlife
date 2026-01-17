@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
@@ -21,7 +21,6 @@ interface Props {
   deleteNote: (id: string) => void;
   deleteJournalEntry: (id: string) => void;
   restoreJournalEntry: (id: string) => void;
-  highlightedItemId?: string;
 }
 
 const colors = [
@@ -88,17 +87,8 @@ const markdownComponents = {
     img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
 };
 
-const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTask, moveNoteToInbox, deleteNote, deleteJournalEntry, restoreJournalEntry, highlightedItemId }) => {
+const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTask, moveNoteToInbox, deleteNote, deleteJournalEntry, restoreJournalEntry }) => {
   const [activeTab, setActiveTab] = useState<'hall_of_fame' | 'notes' | 'journal'>('hall_of_fame');
-
-  // Auto-switch tab if highlighted item is found
-  useEffect(() => {
-      if (highlightedItemId) {
-          if (tasks.some(t => t.id === highlightedItemId)) setActiveTab('hall_of_fame');
-          else if (notes.some(n => n.id === highlightedItemId)) setActiveTab('notes');
-          else if (journal.some(j => j.id === highlightedItemId)) setActiveTab('journal');
-      }
-  }, [highlightedItemId, tasks, notes, journal]);
 
   // --- DATA FILTERING ---
   const archivedTasks = tasks
@@ -112,10 +102,6 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
   const archivedJournal = journal
     .filter(j => j.isArchived)
     .sort((a, b) => b.date - a.date);
-
-  const getHighlightClass = (id: string) => {
-      return id === highlightedItemId ? 'ring-2 ring-yellow-400 dark:ring-yellow-500 bg-yellow-50/10 dark:bg-yellow-900/10' : '';
-  };
 
   const renderHallOfFame = () => (
     <>
@@ -137,8 +123,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={task.id} 
-                    id={`task-${task.id}`}
-                    className={`${getTaskColorClass(task.color)} backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group overflow-hidden mb-6 ${getHighlightClass(task.id)}`}
+                    className={`${getTaskColorClass(task.color)} backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group overflow-hidden mb-6`}
                   >
                     {task.coverUrl && (
                         <div className="h-32 w-full shrink-0 relative overflow-hidden"><img src={task.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
@@ -229,8 +214,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={note.id} 
-                    id={`note-${note.id}`}
-                    className={`${getNoteColorClass(note.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800 ${getHighlightClass(note.id)}`}
+                    className={`${getNoteColorClass(note.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800`}
                   >
                     <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
@@ -317,8 +301,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={entry.id} 
-                    id={`journal-${entry.id}`}
-                    className={`${getJournalColorClass(entry.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800 ${getHighlightClass(entry.id)}`}
+                    className={`${getJournalColorClass(entry.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800`}
                   >
                     <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
