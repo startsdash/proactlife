@@ -1,19 +1,17 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
 import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard, Habit, Module } from '../types';
-import { applyTypography, ICON_MAP } from '../constants';
+import { findNotesByMood, autoTagNote } from '../services/geminiService';
+import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { 
-  Plus, Search, X, Trash2, Archive, Edit3, 
-  MoreHorizontal, ArrowRight, CornerDownRight, 
-  Layout, Palette, StickyNote, Inbox, Library,
-  Grid, List, CheckCircle2, Link as LinkIcon
-} from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Aperture, Layers, Filter } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -56,7 +54,21 @@ const colors = [
     { id: 'purple', class: 'bg-purple-50 dark:bg-purple-900/20', hex: '#faf5ff' },
 ];
 
-const getNoteColorClass = (colorId?: string) => colors.find(c => c.id === colorId)?.class || 'bg-white dark:bg-[#1e293b]';
+const ORACLE_VIBES = [
+    { id: 'cosmos', icon: Gem, label: 'Инсайт', color: 'from-indigo-500 to-purple-600', text: 'text-indigo-100' },
+    { id: 'fire', icon: Zap, label: 'Энергия', color: 'from-orange-500 to-red-600', text: 'text-orange-100' },
+    { id: 'zen', icon: Circle, label: 'Дзен', color: 'from-emerald-500 to-teal-600', text: 'text-emerald-100' },
+    { id: 'luck', icon: Dices, label: 'Случай', color: 'from-slate-700 to-slate-900', text: 'text-slate-200' },
+];
+
+const UNSPLASH_PRESETS = [
+    'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=400&q=80',
+    'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&q=80',
+    'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=400&q=80',
+    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&q=80',
+];
+
+const NOISE_PATTERN = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E")`;
 
 const breakpointColumnsObj = {
   default: 4,
@@ -65,317 +77,147 @@ const breakpointColumnsObj = {
   700: 1
 };
 
+// --- HELPER FUNCTIONS ---
+
 const allowDataUrls = (url: string) => url;
 
-const markdownComponents = {
-    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-slate-700 dark:text-slate-300" {...props} />,
-    a: ({node, ...props}: any) => <a className="text-indigo-600 dark:text-indigo-400 hover:underline" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} {...props} />,
-    ul: ({node, ...props}: any) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
-    ol: ({node, ...props}: any) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
-    li: ({node, ...props}: any) => <li className="pl-1" {...props} />,
-    h1: ({node, ...props}: any) => <h1 className="font-sans font-bold text-lg mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-    h2: ({node, ...props}: any) => <h2 className="font-sans font-bold text-base mt-2 mb-1 text-slate-900 dark:text-slate-100" {...props} />,
-    blockquote: ({node, ...props}: any) => <blockquote className="border-l-2 border-slate-300 dark:border-slate-600 pl-3 italic text-slate-500 dark:text-slate-400 my-2 text-sm" {...props} />,
-    img: ({node, ...props}: any) => <img className="rounded-lg max-h-48 object-cover my-2 w-full" {...props} loading="lazy" />,
+const extractImages = (content: string): string[] => {
+    const matches = content.matchAll(/!\[.*?\]\((.*?)\)/g);
+    return Array.from(matches, m => m[1]);
 };
 
-const Napkins: React.FC<Props> = ({ 
-  notes, 
-  config, 
-  addNote, 
-  updateNote, 
-  deleteNote, 
-  archiveNote,
-  moveNoteToSandbox,
-  moveNoteToInbox,
-  initialNoteId, 
-  onClearInitialNote,
-  onNavigateToItem
-}) => {
-  const [activeTab, setActiveTab] = useState<'inbox' | 'library'>('inbox');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const [newNoteContent, setNewNoteContent] = useState('');
-  
-  // Note Refs for scrolling
-  const noteRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
-
-  // Auto-scroll to initialNoteId
-  useEffect(() => {
-    if (initialNoteId && noteRefs.current[initialNoteId]) {
-      // Small delay to ensure layout is stable
-      setTimeout(() => {
-        noteRefs.current[initialNoteId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        onClearInitialNote?.();
-      }, 300);
+const getPreviewContent = (content: string) => {
+    let cleanText = content.replace(/!\[.*?\]\(.*?\)/g, '');
+    cleanText = cleanText.replace(/[ \t]+/g, ' ').trim();
+    const sentences = cleanText.match(/[^\.!\?]+[\.!\?]+(?=\s|$)/g) || [cleanText];
+    let limit = 0;
+    let sentenceCount = 0;
+    for (let s of sentences) {
+        if (sentenceCount >= 3) break;
+        if (limit + s.length > 300 && sentenceCount >= 1) break;
+        limit += s.length;
+        sentenceCount++;
     }
-  }, [initialNoteId, onClearInitialNote, activeTab]);
+    let preview = sentences.slice(0, sentenceCount).join(' ');
+    if (preview.length === 0 && cleanText.length > 0) preview = cleanText;
+    if (preview.length > 300) {
+        preview = preview.slice(0, 300);
+        const lastSpace = preview.lastIndexOf(' ');
+        if (lastSpace > 0) preview = preview.slice(0, lastSpace);
+    }
+    if (preview.length < cleanText.length) preview = preview.replace(/[\.!\?,\s]+$/, '') + '...';
+    return preview;
+};
 
-  // Switch tab if initialNoteId is in library
-  useEffect(() => {
-      if (initialNoteId) {
-          const targetNote = notes.find(n => n.id === initialNoteId);
-          if (targetNote) {
-              if (targetNote.status === 'inbox' && activeTab !== 'inbox') setActiveTab('inbox');
-              if (targetNote.status === 'archived' && activeTab !== 'library') setActiveTab('library');
-          }
-      }
-  }, [initialNoteId, notes]);
+const processImage = (file: File | Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        if (!file.type.startsWith('image/')) {
+            reject(new Error('File is not an image'));
+            return;
+        }
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                const MAX_HEIGHT = 800;
+                let width = img.width;
+                let height = img.height;
 
-  const filteredNotes = notes
-    .filter(n => {
-      if (activeTab === 'inbox') return n.status === 'inbox';
-      if (activeTab === 'library') return n.status === 'archived';
-      return false;
-    })
-    .filter(n => n.content.toLowerCase().includes(searchQuery.toLowerCase()) || n.title?.toLowerCase().includes(searchQuery.toLowerCase()))
-    .sort((a, b) => b.createdAt - a.createdAt);
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
 
-  const handleCreateNote = () => {
-    if (!newNoteContent.trim()) return;
-    addNote({
-      id: Date.now().toString(),
-      content: applyTypography(newNoteContent),
-      tags: [],
-      createdAt: Date.now(),
-      status: 'inbox',
-      color: 'white'
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    resolve(dataUrl);
+                } else {
+                    reject(new Error('Canvas context failed'));
+                }
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
     });
-    setNewNoteContent('');
-    setIsInputFocused(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      handleCreateNote();
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a]">
-      {/* Header */}
-      <header className="px-6 py-6 md:py-8 shrink-0 flex flex-col md:flex-row md:items-end justify-between gap-4 z-20">
-        <div>
-          <h1 className="text-3xl font-light text-slate-800 dark:text-slate-200 tracking-tight font-sans">
-            Заметки
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-sans">
-            Буфер обмена мыслей
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <button 
-            onClick={() => setActiveTab('inbox')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'inbox' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
-          >
-            <Inbox size={14} /> Входящие
-          </button>
-          <button 
-            onClick={() => setActiveTab('library')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'library' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
-          >
-            <Library size={14} /> Библиотека
-          </button>
-        </div>
-      </header>
-
-      {/* Input Area (Only in Inbox) */}
-      {activeTab === 'inbox' && (
-        <div className="px-6 pb-6 shrink-0 z-20">
-          <div className={`
-            max-w-2xl mx-auto w-full transition-all duration-300 rounded-2xl border
-            ${isInputFocused ? 'bg-white dark:bg-[#1e293b] shadow-xl border-indigo-200 dark:border-indigo-800 scale-100' : 'bg-white/60 dark:bg-[#1e293b]/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'}
-          `}>
-            <div className="relative">
-              <textarea
-                value={newNoteContent}
-                onChange={(e) => setNewNoteContent(e.target.value)}
-                onFocus={() => setIsInputFocused(true)}
-                onBlur={() => !newNoteContent && setIsInputFocused(false)}
-                onKeyDown={handleKeyDown}
-                placeholder="Записать мысль..."
-                className={`
-                  w-full bg-transparent border-none outline-none resize-none p-4 text-base font-serif leading-relaxed text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500
-                  ${isInputFocused ? 'min-h-[120px]' : 'min-h-[56px]'}
-                  transition-all duration-300
-                `}
-              />
-              <AnimatePresence>
-                {isInputFocused && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="flex justify-between items-center px-4 pb-3 border-t border-slate-100 dark:border-slate-700/50 pt-3"
-                  >
-                    <span className="text-[10px] text-slate-400 font-mono">CMD + ENTER</span>
-                    <button 
-                      onClick={handleCreateNote}
-                      disabled={!newNoteContent.trim()}
-                      className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-xs font-bold uppercase tracking-wider hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-lg"
-                    >
-                      Сохранить
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto px-6 pb-20 custom-scrollbar-light">
-        
-        {/* Search Bar (Only if items exist) */}
-        {notes.length > 0 && (
-          <div className="max-w-md mx-auto mb-8 relative group">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Поиск в заметках..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-transparent border-b border-slate-200 dark:border-slate-700 text-sm focus:border-indigo-500 outline-none transition-colors text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
-            />
-          </div>
-        )}
-
-        {filteredNotes.length === 0 ? (
-          <div className="py-20">
-            <EmptyState 
-              icon={StickyNote} 
-              title={activeTab === 'inbox' ? "Входящие пусты" : "Библиотека пуста"} 
-              description={activeTab === 'inbox' ? "Отличное время записать новую идею" : "Здесь будут храниться обработанные заметки"}
-              color="indigo" 
-            />
-          </div>
-        ) : (
-          <Masonry
-            breakpointCols={breakpointColumnsObj}
-            className="my-masonry-grid"
-            columnClassName="my-masonry-grid_column"
-          >
-            {filteredNotes.map(note => {
-              const isHighlighted = note.id === initialNoteId;
-              
-              return (
-                <div 
-                  key={note.id} 
-                  ref={el => noteRefs.current[note.id] = el}
-                  className={`relative group mb-6 transition-all duration-500 ${isHighlighted ? 'z-10' : 'z-0'}`}
-                >
-                  {/* Glow Effect for Highlighted Note */}
-                  {isHighlighted && (
-                    <div className="absolute -inset-0.5 bg-indigo-500/30 dark:bg-indigo-400/20 rounded-3xl blur-lg animate-pulse pointer-events-none" />
-                  )}
-
-                  <motion.div 
-                    layoutId={note.id}
-                    className={`
-                      ${getNoteColorClass(note.color)} rounded-2xl border shadow-sm p-5 relative overflow-hidden flex flex-col gap-3
-                      ${isHighlighted ? 'ring-2 ring-indigo-500 shadow-xl scale-[1.02]' : 'border-slate-200 dark:border-slate-800 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600'}
-                      transition-all duration-300
-                    `}
-                  >
-                    {/* Header */}
-                    <div className="flex justify-between items-start">
-                      <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">
-                        {new Date(note.createdAt).toLocaleDateString()}
-                      </div>
-                      
-                      {/* Connection Indicator (Ghost Style) */}
-                      {note.connectedNoteIds && note.connectedNoteIds.length > 0 && (
-                        <Tooltip content={`${note.connectedNoteIds.length} связей`}>
-                          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50 text-[9px] font-mono text-slate-500">
-                            <LinkIcon size={10} />
-                            <span>{note.connectedNoteIds.length}</span>
-                          </div>
-                        </Tooltip>
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="font-serif text-slate-700 dark:text-slate-300 text-sm leading-relaxed max-h-[400px] overflow-hidden relative">
-                      <ReactMarkdown 
-                        components={markdownComponents}
-                        urlTransform={allowDataUrls}
-                        remarkPlugins={[remarkGfm]}
-                        rehypePlugins={[rehypeRaw]}
-                      >
-                        {applyTypography(note.content)}
-                      </ReactMarkdown>
-                      {/* Gradient fade for long content */}
-                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-[#1e293b] to-transparent pointer-events-none opacity-50" />
-                    </div>
-
-                    {/* Footer Actions */}
-                    <div className="pt-3 mt-auto border-t border-slate-100 dark:border-slate-700/50 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      <div className="flex gap-1">
-                        <Tooltip content="В Хаб (Обработка)">
-                          <button 
-                            onClick={() => moveNoteToSandbox(note.id)}
-                            className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
-                          >
-                            <CornerDownRight size={14} />
-                          </button>
-                        </Tooltip>
-                        
-                        {activeTab === 'inbox' ? (
-                          <Tooltip content="В архив">
-                            <button 
-                              onClick={() => archiveNote(note.id)}
-                              className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                            >
-                              <Archive size={14} />
-                            </button>
-                          </Tooltip>
-                        ) : (
-                          <Tooltip content="В заметки">
-                            <button 
-                              onClick={() => moveNoteToInbox(note.id)}
-                              className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                            >
-                              <Inbox size={14} />
-                            </button>
-                          </Tooltip>
-                        )}
-                        
-                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 self-center" />
-                        
-                        <Tooltip content="Удалить">
-                          <button 
-                            onClick={() => { if(confirm("Удалить заметку?")) deleteNote(note.id); }}
-                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </Tooltip>
-                      </div>
-
-                      {/* Color Picker Trigger could go here */}
-                      <button 
-                        onClick={() => {
-                           // Cycle color logic
-                           const currentIndex = colors.findIndex(c => c.id === (note.color || 'white'));
-                           const nextColor = colors[(currentIndex + 1) % colors.length].id;
-                           updateNote({ ...note, color: nextColor });
-                        }}
-                        className="p-1.5 text-slate-300 hover:text-slate-500 dark:hover:text-slate-400 rounded-lg transition-colors"
-                      >
-                        <Palette size={14} />
-                      </button>
-                    </div>
-                  </motion.div>
-                </div>
-              );
-            })}
-          </Masonry>
-        )}
-      </div>
-    </div>
-  );
 };
 
-export default Napkins;
+const findFirstUrl = (text: string): string | null => {
+    const maskedText = text.replace(/!\[.*?\]\(.*?\)/g, '');
+    const match = maskedText.match(/(https?:\/\/[^\s\)]+)/);
+    return match ? match[0] : null;
+};
+
+const htmlToMarkdown = (html: string) => {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+
+    const wrap = (text: string, marker: string) => {
+        const match = text.match(/^(\s*)(.*?)(\s*)$/s);
+        if (match && match[2]) {
+            return `${match[1]}${marker}${match[2]}${marker}${match[3]}`;
+        }
+        return text.trim() ? `${marker}${text}${marker}` : '';
+    };
+
+    const walk = (node: Node): string => {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            const tag = el.tagName.toLowerCase();
+            let content = '';
+            el.childNodes.forEach(child => content += walk(child));
+            
+            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) return `<u>${content}</u>`;
+            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight || '0') >= 700) return wrap(content, '**');
+            if (el.style.fontStyle === 'italic') return wrap(content, '*');
+            
+            switch (tag) {
+                case 'b': case 'strong': return wrap(content, '**');
+                case 'i': case 'em': return wrap(content, '*');
+                case 'u': return content.trim() ? `<u>${content}</u>` : '';
+                case 'code': return `\`${content}\``;
+                case 'h1': return `\n# ${content}\n`;
+                case 'h2': return `\n## ${content}\n`;
+                case 'div': return content ? `\n${content}` : '\n'; 
+                case 'p': return `\n${content}\n`;
+                case 'br': return '\n';
+                case 'img': return `\n![${(el as HTMLImageElement).alt || 'image'}](${(el as HTMLImageElement).src})\n`;
+                default: return content;
+            }
+        }
+        return '';
+    };
+    
+    let md = walk(temp);
+    md = md.replace(/\n{3,}/g, '\n\n').trim();
+    md = md.replace(/&nbsp;/g, ' ');
+    return applyTypography(md);
+};
+
+const markdownToHtml = (md: string) => {
+    if (!md) return '';
+    let html = md;
+    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
+    html = html.replace(/__([\s\S]*?)__/g, '<b>$1</b>');
+    html = html.replace(/_([\s\S]*?)_/g, '<i>$1</i>');
+    html = html.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
+        return `<img src="${src}" alt="${alt}" style="max-height: 300px; border-radius: 8px
