@@ -884,7 +884,7 @@ interface NoteCardProps {
 
 const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: boolean, journal: boolean, journalInsight: boolean } }) => {
     return (
-        <div className="w-8 shrink-0 border-r border-slate-100 dark:border-white/5 relative flex flex-col items-center justify-center">
+        <div className="w-8 shrink-0 relative flex flex-col items-center justify-center">
             {/* The Vertical Line */}
             <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px bg-slate-200/50 dark:bg-white/5" />
             
