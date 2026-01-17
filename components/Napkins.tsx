@@ -1896,7 +1896,7 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="relative w-full max-w-2xl bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-[40px] shadow-2xl overflow-hidden border border-white/50 dark:border-white/10 flex flex-col min-h-[500px] max-h-[85vh]"
+            className="relative w-full max-w-2xl bg-white/80 dark:bg-[#1e293b]/90 backdrop-blur-xl rounded-[40px] shadow-2xl overflow-hidden border border-white/50 dark:border-white/10 flex flex-col h-[600px] max-h-[85vh]"
             onClick={e => e.stopPropagation()}
           >
              <button onClick={closeOracle} className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors z-20">
@@ -1953,7 +1953,7 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
                             transition={{ duration: 1, ease: "easeOut" }}
                             className="my-auto text-center w-full"
                         >
-                            <div className="font-serif text-2xl md:text-3xl leading-relaxed text-slate-800 dark:text-slate-200">
+                            <div className="font-serif text-xl md:text-2xl leading-relaxed text-slate-800 dark:text-slate-200">
                                 <ReactMarkdown components={{...markdownComponents, p: ({children}: any) => <span>{children}</span>}} urlTransform={allowDataUrls} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                                     {oracleNote.content}
                                 </ReactMarkdown>
