@@ -1165,12 +1165,22 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
       const hubNote = notes.find(n => n.status === 'sandbox' && n.content === note.content);
       const hubId = hubNote?.id;
       
+      const snippet = note.content.trim().substring(0, 50);
+
       // Sprint: Check heuristic (content match)
-      const task = tasks.find(t => !t.isArchived && (t.title === note.title || t.content.includes(note.content.substring(0, 50))));
+      // Checks title, content content, or description (for Hub-generated tasks)
+      const task = tasks.find(t => !t.isArchived && (
+          (t.title && note.title && t.title === note.title) || 
+          (snippet && t.content.includes(snippet)) || 
+          (snippet && t.description && t.description.includes(snippet))
+      ));
       const sprintId = task?.id;
 
       // Habit: Heuristic
-      const habit = habits.find(h => !h.isArchived && (h.description?.includes(note.content.substring(0, 50)) || (note.title && h.title === note.title)));
+      const habit = habits.find(h => !h.isArchived && (
+          (h.description && snippet && h.description.includes(snippet)) || 
+          (note.title && h.title === note.title)
+      ));
       
       // Journal: Check for links
       const entry = journalEntries?.find(j => 
