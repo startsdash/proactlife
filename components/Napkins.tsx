@@ -888,63 +888,63 @@ const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: 
             {/* The Vertical Line */}
             <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px bg-slate-200/50 dark:bg-white/5" />
             
-            <div className="flex flex-col gap-3 relative z-10 py-2 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-full">
-                {/* 1. Hub */}
-                <div className="relative group/node">
+            <div className="flex flex-col gap-4 relative z-10 py-3 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-full border border-slate-100/50 dark:border-white/5">
+                {/* 1. Hub (Purple) */}
+                <div className="relative group/node flex items-center justify-center w-4 h-4">
                     <motion.div 
-                        animate={status.hub ? { scale: [1, 1.1, 1] } : {}}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.hub ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
-                    >
-                        <Box size={9} strokeWidth={status.hub ? 2 : 1.5} />
-                    </motion.div>
+                        animate={status.hub ? { scale: [1, 1.4, 1] } : {}}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        className={`w-2 h-2 rounded-full transition-all duration-500 ${
+                            status.hub 
+                            ? 'bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.8)]' 
+                            : 'bg-slate-300 dark:bg-slate-600'
+                        }`}
+                    />
                     <Tooltip content={status.hub ? "В Хабе" : "Хаб"} side="right"><div className="absolute inset-0" /></Tooltip>
                 </div>
 
-                {/* 2. Sprint (Kanban) */}
-                <div className="relative group/node">
+                {/* 2. Sprint (Green) */}
+                <div className="relative group/node flex items-center justify-center w-4 h-4">
                     <motion.div 
-                        animate={status.sprint ? { scale: [1, 1.1, 1] } : {}}
-                        transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.sprint ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
-                    >
-                        <Kanban size={9} strokeWidth={status.sprint ? 2 : 1.5} className={status.sprint ? "fill-emerald-500/20" : ""} />
-                    </motion.div>
+                        animate={status.sprint ? { scale: [1, 1.4, 1] } : {}}
+                        transition={{ duration: 2, repeat: Infinity, delay: 0.5, ease: "easeInOut" }}
+                        className={`w-2 h-2 rounded-full transition-all duration-500 ${
+                            status.sprint 
+                            ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]' 
+                            : 'bg-slate-300 dark:bg-slate-600'
+                        }`}
+                    />
                     <Tooltip content="Спринты" side="right"><div className="absolute inset-0" /></Tooltip>
                 </div>
 
-                {/* 3. Habit */}
-                <div className="relative group/node">
+                {/* 3. Tracker (Red) */}
+                <div className="relative group/node flex items-center justify-center w-4 h-4">
                     <motion.div 
-                        animate={status.habit ? { scale: [1, 1.1, 1] } : {}}
-                        transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.habit ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800 text-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
-                    >
-                        <Flame size={9} strokeWidth={status.habit ? 2 : 1.5} className={status.habit ? "fill-rose-500/20" : ""} />
-                    </motion.div>
-                    <Tooltip content="Привычки" side="right"><div className="absolute inset-0" /></Tooltip>
+                        animate={status.habit ? { scale: [1, 1.4, 1] } : {}}
+                        transition={{ duration: 2, repeat: Infinity, delay: 1, ease: "easeInOut" }}
+                        className={`w-2 h-2 rounded-full transition-all duration-500 ${
+                            status.habit 
+                            ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.8)]' 
+                            : 'bg-slate-300 dark:bg-slate-600'
+                        }`}
+                    />
+                    <Tooltip content="Трекер" side="right"><div className="absolute inset-0" /></Tooltip>
                 </div>
 
-                {/* 4. Journal (Reflection) */}
-                <div className="relative group/node">
+                {/* 4. Journal (Cyan) */}
+                <div className="relative group/node flex items-center justify-center w-4 h-4">
                     <motion.div 
-                        animate={status.journal ? { scale: [1, 1.1, 1] } : {}}
-                        transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
-                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border transition-colors duration-300 
-                            ${status.journal 
+                        animate={status.journal ? { scale: [1, 1.4, 1] } : {}}
+                        transition={{ duration: 2, repeat: Infinity, delay: 1.5, ease: "easeInOut" }}
+                        className={`w-2 h-2 rounded-full transition-all duration-500 ${
+                            status.journal 
                                 ? (status.journalInsight 
-                                    ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
-                                    : 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800 text-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.3)]')
-                                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'
-                            }`}
-                    >
-                        {status.journalInsight ? (
-                            <Gem size={9} strokeWidth={2} className="fill-purple-500/20" />
-                        ) : (
-                            <Book size={9} strokeWidth={status.journal ? 2 : 1.5} className={status.journal ? "fill-cyan-500/20" : ""} />
-                        )}
-                    </motion.div>
-                    <Tooltip content="Рефлексия" side="right"><div className="absolute inset-0" /></Tooltip>
+                                    ? 'bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,1)] border border-white dark:border-white/50' 
+                                    : 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]')
+                                : 'bg-slate-300 dark:bg-slate-600'
+                        }`}
+                    />
+                    <Tooltip content="Дневник" side="right"><div className="absolute inset-0" /></Tooltip>
                 </div>
             </div>
         </div>
