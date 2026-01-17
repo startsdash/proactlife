@@ -894,9 +894,9 @@ const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: 
                     <motion.div 
                         animate={status.hub ? { scale: [1, 1.1, 1] } : {}}
                         transition={{ duration: 2, repeat: Infinity }}
-                        className={`w-4 h-4 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.hub ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
+                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.hub ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
                     >
-                        <Box size={10} strokeWidth={status.hub ? 2 : 1.5} />
+                        <Box size={9} strokeWidth={status.hub ? 2 : 1.5} />
                     </motion.div>
                     <Tooltip content={status.hub ? "В Хабе" : "Хаб"} side="right"><div className="absolute inset-0" /></Tooltip>
                 </div>
@@ -906,11 +906,11 @@ const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: 
                     <motion.div 
                         animate={status.sprint ? { scale: [1, 1.1, 1] } : {}}
                         transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                        className={`w-4 h-4 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.sprint ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
+                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.sprint ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
                     >
-                        <Kanban size={10} strokeWidth={status.sprint ? 2 : 1.5} className={status.sprint ? "fill-emerald-500/20" : ""} />
+                        <Kanban size={9} strokeWidth={status.sprint ? 2 : 1.5} className={status.sprint ? "fill-emerald-500/20" : ""} />
                     </motion.div>
-                    <Tooltip content={status.sprint ? "В Спринтах" : "Спринты"} side="right"><div className="absolute inset-0" /></Tooltip>
+                    <Tooltip content="Спринты" side="right"><div className="absolute inset-0" /></Tooltip>
                 </div>
 
                 {/* 3. Habit */}
@@ -918,11 +918,11 @@ const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: 
                     <motion.div 
                         animate={status.habit ? { scale: [1, 1.1, 1] } : {}}
                         transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-                        className={`w-4 h-4 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.habit ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800 text-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
+                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.habit ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800 text-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
                     >
-                        <Flame size={10} strokeWidth={status.habit ? 2 : 1.5} className={status.habit ? "fill-rose-500/20" : ""} />
+                        <Flame size={9} strokeWidth={status.habit ? 2 : 1.5} className={status.habit ? "fill-rose-500/20" : ""} />
                     </motion.div>
-                    <Tooltip content={status.habit ? "В Трекере" : "Привычки"} side="right"><div className="absolute inset-0" /></Tooltip>
+                    <Tooltip content="Привычки" side="right"><div className="absolute inset-0" /></Tooltip>
                 </div>
 
                 {/* 4. Journal (Reflection) */}
@@ -930,7 +930,7 @@ const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: 
                     <motion.div 
                         animate={status.journal ? { scale: [1, 1.1, 1] } : {}}
                         transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
-                        className={`w-4 h-4 rounded-full flex items-center justify-center border transition-colors duration-300 
+                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border transition-colors duration-300 
                             ${status.journal 
                                 ? (status.journalInsight 
                                     ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
@@ -939,12 +939,12 @@ const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: 
                             }`}
                     >
                         {status.journalInsight ? (
-                            <Zap size={10} strokeWidth={2} className="fill-purple-500/20" />
+                            <Gem size={9} strokeWidth={2} className="fill-purple-500/20" />
                         ) : (
-                            <Book size={10} strokeWidth={status.journal ? 2 : 1.5} className={status.journal ? "fill-cyan-500/20" : ""} />
+                            <Book size={9} strokeWidth={status.journal ? 2 : 1.5} className={status.journal ? "fill-cyan-500/20" : ""} />
                         )}
                     </motion.div>
-                    <Tooltip content={status.journal ? (status.journalInsight ? "Инсайт в Дневнике" : "В Дневнике") : "Рефлексия"} side="right"><div className="absolute inset-0" /></Tooltip>
+                    <Tooltip content="Рефлексия" side="right"><div className="absolute inset-0" /></Tooltip>
                 </div>
             </div>
         </div>
