@@ -941,9 +941,9 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
             {isArchived && hasConnections && (
                 <div className="absolute top-5 left-5 z-30">
                     <Tooltip content="Есть связи">
-                        <div className="relative w-2.5 h-2.5">
-                            <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-75"></div>
-                            <div className="relative w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+                        <div className="relative w-2 h-2">
+                            <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-30"></div>
+                            <div className="relative w-2 h-2 rounded-full border border-emerald-500/50 bg-emerald-500/10"></div>
                         </div>
                     </Tooltip>
                 </div>
