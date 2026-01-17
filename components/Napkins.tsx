@@ -41,6 +41,7 @@ interface Props {
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
   onNavigate: (module: Module) => void;
+  onNavigateToArchive?: (tab: 'hall_of_fame' | 'notes' | 'journal') => void;
 }
 
 const colors = [
@@ -791,7 +792,10 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
 interface PathStatus {
     hubId?: string;
     sprintId?: string;
+    isSprintArchived?: boolean;
     journalId?: string;
+    isJournalArchived?: boolean;
+    journalInsight?: boolean;
     sketchpadId?: string;
 }
 
@@ -813,6 +817,7 @@ interface NoteCardProps {
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
         onNavigate: (module: Module) => void;
+        onNavigateToArchive?: (tab: 'hall_of_fame' | 'notes' | 'journal') => void;
     }
 }
 
@@ -895,7 +900,11 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
     const handleToSprint = (e: React.MouseEvent) => {
         e.stopPropagation();
         if(pathStatus.sprintId) {
-            handlers.onNavigate(Module.KANBAN);
+            if (pathStatus.isSprintArchived && handlers.onNavigateToArchive) {
+                handlers.onNavigateToArchive('hall_of_fame');
+            } else {
+                handlers.onNavigate(Module.KANBAN);
+            }
         } else {
             if(window.confirm('В спринты?')) { 
                 handlers.onAddTask({ 
@@ -912,7 +921,11 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
     const handleJournalClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if(pathStatus.journalId) {
-            handlers.onNavigate(Module.JOURNAL);
+            if (pathStatus.isJournalArchived && handlers.onNavigateToArchive) {
+                handlers.onNavigateToArchive('journal');
+            } else {
+                handlers.onNavigate(Module.JOURNAL);
+            }
         } else {
             handleToJournal(e);
         }
@@ -1048,7 +1061,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
                                 </button>
                             </Tooltip>
                             
-                            <Tooltip content={pathStatus.sprintId ? "В спринтах" : "В спринты"}>
+                            <Tooltip content={pathStatus.sprintId ? (pathStatus.isSprintArchived ? "В Зале славы" : "В спринтах") : "В спринты"}>
                                 <button 
                                     onClick={handleToSprint}
                                     className={`p-2 rounded-full transition-all ${
@@ -1061,7 +1074,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
                                 </button>
                             </Tooltip>
                             
-                            <Tooltip content={pathStatus.journalId ? "В дневнике" : "В дневник"}>
+                            <Tooltip content={pathStatus.journalId ? (pathStatus.isJournalArchived ? "В архиве дневника" : "В дневнике") : "В дневник"}>
                                 <button 
                                     onClick={handleJournalClick}
                                     className={`p-2 rounded-full transition-all ${
@@ -1108,7 +1121,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], sketchItems = [], config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, deleteFlashcard, toggleFlashcardStar, defaultTab, initialNoteId, onClearInitialNote, journalEntries, onNavigate }) => {
+const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], sketchItems = [], config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, deleteFlashcard, toggleFlashcardStar, defaultTab, initialNoteId, onClearInitialNote, journalEntries, onNavigate, onNavigateToArchive }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -1169,12 +1182,20 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
 
       // Sprint: Check heuristic (content match)
       // Checks title, content content, or description (for Hub-generated tasks)
-      const task = tasks.find(t => !t.isArchived && (
+      let task = tasks.find(t => !t.isArchived && (
           (t.title && note.title && t.title === note.title) || 
           (snippet && t.content.includes(snippet)) || 
           (snippet && t.description && t.description.includes(snippet))
       ));
+      if (!task) {
+          task = tasks.find(t => t.isArchived && (
+              (t.title && note.title && t.title === note.title) || 
+              (snippet && t.content.includes(snippet)) || 
+              (snippet && t.description && t.description.includes(snippet))
+          ));
+      }
       const sprintId = task?.id;
+      const isSprintArchived = task?.isArchived;
 
       // Habit: Heuristic
       const habit = habits.find(h => !h.isArchived && (
@@ -1183,10 +1204,18 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
       ));
       
       // Journal: Check for links
-      const entry = journalEntries?.find(j => 
+      // Active first
+      let entry = journalEntries?.find(j => 
           (j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id)) && !j.isArchived
       );
+      // Then archived
+      if (!entry) {
+          entry = journalEntries?.find(j => 
+              (j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id)) && j.isArchived
+          );
+      }
       const journalId = entry?.id;
+      const isJournalArchived = entry?.isArchived;
       const journalInsight = entry?.isInsight || false;
 
       // Sketchpad
@@ -1196,7 +1225,9 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
       return {
           hubId,
           sprintId,
+          isSprintArchived,
           journalId,
+          isJournalArchived,
           sketchpadId,
           habit: !!habit,
           journalInsight
@@ -1620,8 +1651,9 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
       onAddJournalEntry,
       addSketchItem,
       onNavigate,
+      onNavigateToArchive,
       onImageClick: (src: string) => setLightboxSrc(src)
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, onNavigate, setLightboxSrc]);
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, onNavigate, onNavigateToArchive, setLightboxSrc]);
 
   const markdownRenderComponents = {
       ...markdownComponents,

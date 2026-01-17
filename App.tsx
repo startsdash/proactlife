@@ -110,6 +110,7 @@ const App: React.FC = () => {
   const [journalContextTaskId, setJournalContextTaskId] = useState<string | null>(null); // Context for navigation (Journal)
   const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
   const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null); // Context for navigation (Napkins)
+  const [archiveContextTab, setArchiveContextTab] = useState<'hall_of_fame' | 'notes' | 'journal' | null>(null); // Context for navigation (Archive)
   
   // INVITE CODE LOGIC
   const [inviteCodeInput, setInviteCodeInput] = useState('');
@@ -343,6 +344,11 @@ const App: React.FC = () => {
     handleNavigate(Module.NAPKINS);
   };
 
+  const handleNavigateToArchive = (tab: 'hall_of_fame' | 'notes' | 'journal') => {
+    setArchiveContextTab(tab);
+    handleNavigate(Module.ARCHIVE);
+  };
+
   const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
   const updateProfileConfig = (newProfileConfig: UserProfileConfig) => setData(p => ({ ...p, profileConfig: newProfileConfig }));
   
@@ -498,6 +504,7 @@ const App: React.FC = () => {
               onClearInitialNote={() => setNapkinsContextNoteId(null)}
               journalEntries={data.journal}
               onNavigate={handleNavigate}
+              onNavigateToArchive={handleNavigateToArchive}
             />
         )}
         
@@ -534,7 +541,9 @@ const App: React.FC = () => {
               moveNoteToInbox={restoreNote} 
               deleteNote={hardDeleteNote} 
               deleteJournalEntry={deleteJournalEntry} 
-              restoreJournalEntry={restoreJournalEntry} 
+              restoreJournalEntry={restoreJournalEntry}
+              initialTab={archiveContextTab}
+              onClearInitialTab={() => setArchiveContextTab(null)}
             />
         )}
         

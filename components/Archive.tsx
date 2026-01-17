@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
@@ -21,6 +21,8 @@ interface Props {
   deleteNote: (id: string) => void;
   deleteJournalEntry: (id: string) => void;
   restoreJournalEntry: (id: string) => void;
+  initialTab?: 'hall_of_fame' | 'notes' | 'journal' | null;
+  onClearInitialTab?: () => void;
 }
 
 const colors = [
@@ -87,8 +89,15 @@ const markdownComponents = {
     img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
 };
 
-const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTask, moveNoteToInbox, deleteNote, deleteJournalEntry, restoreJournalEntry }) => {
+const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTask, moveNoteToInbox, deleteNote, deleteJournalEntry, restoreJournalEntry, initialTab, onClearInitialTab }) => {
   const [activeTab, setActiveTab] = useState<'hall_of_fame' | 'notes' | 'journal'>('hall_of_fame');
+
+  useEffect(() => {
+    if (initialTab) {
+        setActiveTab(initialTab);
+        onClearInitialTab?.();
+    }
+  }, [initialTab, onClearInitialTab]);
 
   // --- DATA FILTERING ---
   const archivedTasks = tasks
