@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
@@ -21,6 +21,7 @@ interface Props {
   deleteNote: (id: string) => void;
   deleteJournalEntry: (id: string) => void;
   restoreJournalEntry: (id: string) => void;
+  highlightId?: string | null;
 }
 
 const colors = [
@@ -87,8 +88,24 @@ const markdownComponents = {
     img: ({node, ...props}: any) => <img className="rounded-xl max-h-60 object-cover my-3 block w-full shadow-sm" {...props} loading="lazy" />,
 };
 
-const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTask, moveNoteToInbox, deleteNote, deleteJournalEntry, restoreJournalEntry }) => {
+const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTask, moveNoteToInbox, deleteNote, deleteJournalEntry, restoreJournalEntry, highlightId }) => {
   const [activeTab, setActiveTab] = useState<'hall_of_fame' | 'notes' | 'journal'>('hall_of_fame');
+  const highlightedRef = useRef<HTMLDivElement>(null);
+
+  // Auto-switch tab if highlighted item is found
+  useEffect(() => {
+      if (highlightId) {
+          if (tasks.some(t => t.id === highlightId && t.isArchived)) setActiveTab('hall_of_fame');
+          else if (notes.some(n => n.id === highlightId && n.status === 'trash')) setActiveTab('notes');
+          else if (journal.some(j => j.id === highlightId && j.isArchived)) setActiveTab('journal');
+      }
+  }, [highlightId, tasks, notes, journal]);
+
+  useEffect(() => {
+      if (highlightedRef.current) {
+          highlightedRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+  }, [activeTab, highlightId]); // Run after tab switch
 
   // --- DATA FILTERING ---
   const archivedTasks = tasks
@@ -119,11 +136,13 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
             {archivedTasks.map(task => {
                 const sphere = task.spheres?.[0];
                 const sphereColor = sphere && sphere === 'productivity' ? '#6366f1' : sphere === 'growth' ? '#10b981' : sphere === 'relationships' ? '#f43f5e' : '#6366f1';
+                const isHighlighted = task.id === highlightId;
                 
                 return (
                   <div 
                     key={task.id} 
-                    className={`${getTaskColorClass(task.color)} backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group overflow-hidden mb-6`}
+                    ref={isHighlighted ? highlightedRef : null}
+                    className={`${getTaskColorClass(task.color)} backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative group overflow-hidden mb-6 ${isHighlighted ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 shadow-[0_0_15px_rgba(251,191,36,0.4)]' : ''}`}
                   >
                     {task.coverUrl && (
                         <div className="h-32 w-full shrink-0 relative overflow-hidden"><img src={task.coverUrl} alt="Cover" className="w-full h-full object-cover" /></div>
@@ -210,11 +229,13 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 const previewText = getPreviewContent(note.content);
                 const contentImages = extractImages(note.content);
                 const imagesToShow = contentImages.filter(img => img !== note.coverUrl).slice(0, 1);
+                const isHighlighted = note.id === highlightId;
 
                 return (
                   <div 
                     key={note.id} 
-                    className={`${getNoteColorClass(note.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800`}
+                    ref={isHighlighted ? highlightedRef : null}
+                    className={`${getNoteColorClass(note.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 shadow-[0_0_15px_rgba(251,191,36,0.4)]' : ''}`}
                   >
                     <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
@@ -294,6 +315,7 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
             {archivedJournal.map(entry => {
                 const previewText = getPreviewContent(entry.content);
                 const hasTask = !!entry.linkedTaskId;
+                const isHighlighted = entry.id === highlightId;
                 
                 const sphere = entry.spheres?.[0];
                 const sphereColor = sphere && sphere === 'productivity' ? '#6366f1' : sphere === 'growth' ? '#10b981' : sphere === 'relationships' ? '#f43f5e' : null;
@@ -301,7 +323,8 @@ const Archive: React.FC<Props> = ({ tasks, notes, journal, restoreTask, deleteTa
                 return (
                   <div 
                     key={entry.id} 
-                    className={`${getJournalColorClass(entry.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800`}
+                    ref={isHighlighted ? highlightedRef : null}
+                    className={`${getJournalColorClass(entry.color)} rounded-3xl transition-all relative group overflow-hidden mb-6 flex flex-col shadow-sm border border-slate-200/50 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 shadow-[0_0_15px_rgba(251,191,36,0.4)]' : ''}`}
                   >
                     <div style={{ backgroundImage: NOISE_PATTERN }} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 z-0"></div>
 
