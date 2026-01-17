@@ -864,6 +864,7 @@ interface NoteCardProps {
         sprint: boolean;
         habit: boolean;
         journal: boolean;
+        journalInsight: boolean;
     };
     handlers: {
         handleDragStart: (e: React.DragEvent, id: string) => void;
@@ -881,67 +882,69 @@ interface NoteCardProps {
     }
 }
 
-const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: boolean, journal: boolean } }) => {
+const NotePath = ({ status }: { status: { hub: boolean, sprint: boolean, habit: boolean, journal: boolean, journalInsight: boolean } }) => {
     return (
-        <div className="flex flex-col items-center py-6 px-1 h-full relative w-10 shrink-0 border-r border-slate-100 dark:border-white/5">
+        <div className="w-8 shrink-0 border-r border-slate-100 dark:border-white/5 relative flex flex-col items-center justify-center">
             {/* The Vertical Line */}
-            <div className="absolute top-8 bottom-8 left-1/2 -translate-x-1/2 w-px bg-slate-200/60 dark:bg-white/10" />
+            <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px bg-slate-200/50 dark:bg-white/5" />
             
-            <div className="flex flex-col justify-between h-full relative z-10 gap-2">
-                {/* 1. Waiting (Default Start) */}
-                <div className="relative group/node">
-                    <div className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-400">
-                        <Circle size={8} />
-                    </div>
-                    <Tooltip content="Ожидание пути" side="right"><div className="absolute inset-0" /></Tooltip>
-                </div>
-
-                {/* 2. Hub (Logos) */}
+            <div className="flex flex-col gap-3 relative z-10 py-2 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-full">
+                {/* 1. Hub */}
                 <div className="relative group/node">
                     <motion.div 
                         animate={status.hub ? { scale: [1, 1.1, 1] } : {}}
                         transition={{ duration: 2, repeat: Infinity }}
-                        className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.hub ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
+                        className={`w-4 h-4 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.hub ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
                     >
                         <Box size={10} strokeWidth={status.hub ? 2 : 1.5} />
                     </motion.div>
                     <Tooltip content={status.hub ? "В Хабе" : "Хаб"} side="right"><div className="absolute inset-0" /></Tooltip>
                 </div>
 
-                {/* 3. Sprint (Action) */}
+                {/* 2. Sprint (Kanban) */}
                 <div className="relative group/node">
                     <motion.div 
                         animate={status.sprint ? { scale: [1, 1.1, 1] } : {}}
                         transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                        className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.sprint ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
+                        className={`w-4 h-4 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.sprint ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
                     >
-                        <Zap size={10} strokeWidth={status.sprint ? 2 : 1.5} className={status.sprint ? "fill-emerald-500/20" : ""} />
+                        <Kanban size={10} strokeWidth={status.sprint ? 2 : 1.5} className={status.sprint ? "fill-emerald-500/20" : ""} />
                     </motion.div>
-                    <Tooltip content={status.sprint ? "В Спринтах" : "Спринт"} side="right"><div className="absolute inset-0" /></Tooltip>
+                    <Tooltip content={status.sprint ? "В Спринтах" : "Спринты"} side="right"><div className="absolute inset-0" /></Tooltip>
                 </div>
 
-                {/* 4. Habit (System) */}
+                {/* 3. Habit */}
                 <div className="relative group/node">
                     <motion.div 
                         animate={status.habit ? { scale: [1, 1.1, 1] } : {}}
                         transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-                        className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.habit ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800 text-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
+                        className={`w-4 h-4 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.habit ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800 text-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
                     >
                         <Flame size={10} strokeWidth={status.habit ? 2 : 1.5} className={status.habit ? "fill-rose-500/20" : ""} />
                     </motion.div>
-                    <Tooltip content={status.habit ? "В Трекере" : "Привычка"} side="right"><div className="absolute inset-0" /></Tooltip>
+                    <Tooltip content={status.habit ? "В Трекере" : "Привычки"} side="right"><div className="absolute inset-0" /></Tooltip>
                 </div>
 
-                {/* 5. Journal (Reflection) */}
+                {/* 4. Journal (Reflection) */}
                 <div className="relative group/node">
                     <motion.div 
                         animate={status.journal ? { scale: [1, 1.1, 1] } : {}}
                         transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
-                        className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors duration-300 ${status.journal ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'}`}
+                        className={`w-4 h-4 rounded-full flex items-center justify-center border transition-colors duration-300 
+                            ${status.journal 
+                                ? (status.journalInsight 
+                                    ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
+                                    : 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800 text-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.3)]')
+                                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300'
+                            }`}
                     >
-                        <Gem size={10} strokeWidth={status.journal ? 2 : 1.5} className={status.journal ? "fill-purple-500/20" : ""} />
+                        {status.journalInsight ? (
+                            <Zap size={10} strokeWidth={2} className="fill-purple-500/20" />
+                        ) : (
+                            <Book size={10} strokeWidth={status.journal ? 2 : 1.5} className={status.journal ? "fill-cyan-500/20" : ""} />
+                        )}
                     </motion.div>
-                    <Tooltip content={status.journal ? "В Дневнике" : "Рефлексия"} side="right"><div className="absolute inset-0" /></Tooltip>
+                    <Tooltip content={status.journal ? (status.journalInsight ? "Инсайт в Дневнике" : "В Дневнике") : "Рефлексия"} side="right"><div className="absolute inset-0" /></Tooltip>
                 </div>
             </div>
         </div>
@@ -1109,7 +1112,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
                 </div>
             </div>
             
-            <div className={`absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end ${isArchived ? 'pl-16' : ''}`}>
+            <div className={`absolute bottom-0 left-0 right-0 p-4 pt-12 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20 flex justify-between items-end ${isArchived ? 'pl-12' : ''}`}>
                 <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
                     {!isArchived ? (
                         // Inbox: Only Archive button
@@ -1250,15 +1253,21 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
           return false;
       });
 
-      const isLinkedToJournal = linkedNoteIds.has(note.id);
+      // Journal: Check for links and insights
+      const journalLinks = journalEntries?.filter(j => 
+          (j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id)) && !j.isArchived
+      ) || [];
+      const isLinkedToJournal = journalLinks.length > 0;
+      const hasInsight = journalLinks.some(j => j.isInsight);
 
       return {
           hub: isLinkedToHub,
           sprint: isLinkedToSprint,
           habit: isLinkedToHabit,
-          journal: isLinkedToJournal
+          journal: isLinkedToJournal,
+          journalInsight: hasInsight
       };
-  }, [tasks, habits, linkedNoteIds]);
+  }, [tasks, habits, journalEntries]);
 
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab as any);
