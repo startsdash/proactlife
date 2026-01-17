@@ -11,7 +11,7 @@ import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
 import { Tooltip } from './Tooltip';
-import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Aperture, Layers, Filter } from 'lucide-react';
+import { Send, Tag as TagIcon, RotateCcw, RotateCw, X, Trash2, GripVertical, ChevronUp, ChevronDown, LayoutGrid, Library, Box, Edit3, Pin, Palette, Check, Search, Plus, Sparkles, Kanban, Dices, Shuffle, Quote, ArrowRight, PenTool, Orbit, Flame, Waves, Clover, ArrowLeft, Image as ImageIcon, Bold, Italic, List, Code, Underline, Eraser, Type, Globe, Layout, Upload, RefreshCw, Archive, Clock, Diamond, Tablet, Book, BrainCircuit, Star, Pause, Play, Maximize2, Zap, Circle, Gem, Aperture, Layers, Filter, Trophy } from 'lucide-react';
 
 interface Props {
   notes: Note[];
@@ -40,7 +40,7 @@ interface Props {
   initialNoteId?: string | null;
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
-  onNavigate: (module: Module) => void;
+  onNavigate: (module: Module, highlightId?: string) => void;
 }
 
 const colors = [
@@ -790,8 +790,8 @@ const CoverPicker: React.FC<{ onSelect: (url: string) => void, onClose: () => vo
 
 interface PathStatus {
     hubId?: string;
-    sprintId?: string;
-    journalId?: string;
+    sprint: { id: string, isArchived?: boolean } | null;
+    journal: { id: string, isArchived?: boolean, isInsight?: boolean } | null;
     sketchpadId?: string;
 }
 
@@ -812,7 +812,7 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
-        onNavigate: (module: Module) => void;
+        onNavigate: (module: Module, highlightId?: string) => void;
     }
 }
 
@@ -886,7 +886,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
     const handleToSandbox = (e: React.MouseEvent) => {
         e.stopPropagation();
         if(pathStatus.hubId) {
-            handlers.onNavigate(Module.SANDBOX);
+            handlers.onNavigate(Module.SANDBOX, pathStatus.hubId);
         } else {
             if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id);
         }
@@ -894,8 +894,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
 
     const handleToSprint = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if(pathStatus.sprintId) {
-            handlers.onNavigate(Module.KANBAN);
+        if(pathStatus.sprint) {
+            if (pathStatus.sprint.isArchived) {
+                handlers.onNavigate(Module.ARCHIVE, pathStatus.sprint.id);
+            } else {
+                handlers.onNavigate(Module.KANBAN, pathStatus.sprint.id);
+            }
         } else {
             if(window.confirm('В спринты?')) { 
                 handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); 
@@ -905,8 +909,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
 
     const handleJournalClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if(pathStatus.journalId) {
-            handlers.onNavigate(Module.JOURNAL);
+        if(pathStatus.journal) {
+            if (pathStatus.journal.isArchived) {
+                handlers.onNavigate(Module.ARCHIVE, pathStatus.journal.id);
+            } else {
+                handlers.onNavigate(Module.JOURNAL, pathStatus.journal.id);
+            }
         } else {
             handleToJournal(e);
         }
@@ -915,13 +923,13 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
     const handleSketchpadClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if(pathStatus.sketchpadId) {
-            handlers.onNavigate(Module.SKETCHPAD);
+            handlers.onNavigate(Module.SKETCHPAD, pathStatus.sketchpadId);
         } else if(handlers.addSketchItem) {
             handleToSketchpad(e);
         }
     };
 
-    const hasConnections = !!(pathStatus.hubId || pathStatus.sprintId || pathStatus.journalId || pathStatus.sketchpadId);
+    const hasConnections = !!(pathStatus.hubId || pathStatus.sprint || pathStatus.journal || pathStatus.sketchpadId);
 
     return (
         <div 
@@ -941,9 +949,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
             {isArchived && hasConnections && (
                 <div className="absolute top-5 left-5 z-30">
                     <Tooltip content="Есть связи">
-                        <div className="relative w-2.5 h-2.5">
-                            <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-75"></div>
-                            <div className="relative w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+                        <div className="relative w-2 h-2">
+                            <div className="relative w-2 h-2 bg-emerald-500/20 border border-emerald-500/50 rounded-full shadow-none"></div>
                         </div>
                     </Tooltip>
                 </div>
@@ -1042,24 +1049,24 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
                                 </button>
                             </Tooltip>
                             
-                            <Tooltip content={pathStatus.sprintId ? "В спринтах" : "В спринты"}>
+                            <Tooltip content={pathStatus.sprint ? (pathStatus.sprint.isArchived ? "В Зале славы" : "В спринтах") : "В спринты"}>
                                 <button 
                                     onClick={handleToSprint}
                                     className={`p-2 rounded-full transition-all ${
-                                        pathStatus.sprintId 
+                                        pathStatus.sprint 
                                         ? 'text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 opacity-100' 
                                         : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
                                     }`}
                                 >
-                                    <Kanban size={16} strokeWidth={1.5} />
+                                    {pathStatus.sprint && pathStatus.sprint.isArchived ? <Trophy size={16} strokeWidth={1.5} /> : <Kanban size={16} strokeWidth={1.5} />}
                                 </button>
                             </Tooltip>
                             
-                            <Tooltip content={pathStatus.journalId ? "В дневнике" : "В дневник"}>
+                            <Tooltip content={pathStatus.journal ? (pathStatus.journal.isArchived ? "В архиве дневника" : "В дневнике") : "В дневник"}>
                                 <button 
                                     onClick={handleJournalClick}
                                     className={`p-2 rounded-full transition-all ${
-                                        pathStatus.journalId 
+                                        pathStatus.journal 
                                         ? 'text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 opacity-100' 
                                         : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
                                     }`}
@@ -1160,18 +1167,14 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
       const hubId = hubNote?.id;
       
       // Sprint: Check heuristic (content match)
-      const task = tasks.find(t => !t.isArchived && (t.title === note.title || t.content.includes(note.content.substring(0, 50))));
-      const sprintId = task?.id;
+      const task = tasks.find(t => t.title === note.title || t.content.includes(note.content.substring(0, 50)));
+      const sprint = task ? { id: task.id, isArchived: task.isArchived } : null;
 
-      // Habit: Heuristic
-      const habit = habits.find(h => !h.isArchived && (h.description?.includes(note.content.substring(0, 50)) || (note.title && h.title === note.title)));
-      
       // Journal: Check for links
       const entry = journalEntries?.find(j => 
-          (j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id)) && !j.isArchived
+          (j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id))
       );
-      const journalId = entry?.id;
-      const journalInsight = entry?.isInsight || false;
+      const journal = entry ? { id: entry.id, isArchived: entry.isArchived, isInsight: entry.isInsight } : null;
 
       // Sketchpad
       const sketchItem = sketchItems?.find(i => i.content === note.content);
@@ -1179,11 +1182,9 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
 
       return {
           hubId,
-          sprintId,
-          journalId,
+          sprint,
+          journal,
           sketchpadId,
-          habit: !!habit,
-          journalInsight
       };
   }, [tasks, habits, journalEntries, notes, sketchItems]);
 
@@ -1585,8 +1586,8 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
       // 2. Connection Priority
       const aStats = getPathStatus(a);
       const bStats = getPathStatus(b);
-      const aHasConn = !!(aStats.hubId || aStats.sprintId || aStats.journalId || aStats.sketchpadId);
-      const bHasConn = !!(bStats.hubId || bStats.sprintId || bStats.journalId || bStats.sketchpadId);
+      const aHasConn = !!(aStats.hubId || aStats.sprint || aStats.journal || aStats.sketchpadId);
+      const bHasConn = !!(bStats.hubId || bStats.sprint || bStats.journal || bStats.sketchpadId);
       
       return (Number(bHasConn) - Number(aHasConn));
   }));
