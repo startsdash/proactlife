@@ -107,9 +107,14 @@ const App: React.FC = () => {
   const [syncStatus, setSyncStatus] = useState<'disconnected' | 'syncing' | 'synced' | 'error'>('disconnected');
   const [isDriveConnected, setIsDriveConnected] = useState(false);
   const [hasLoadedFromCloud, setHasLoadedFromCloud] = useState(false); // Guard state
-  const [journalContextTaskId, setJournalContextTaskId] = useState<string | null>(null); // Context for navigation (Journal)
-  const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // Context for navigation (Kanban)
-  const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null); // Context for navigation (Napkins)
+  
+  // Context states for navigation
+  const [journalContextTaskId, setJournalContextTaskId] = useState<string | null>(null); // For Journal task filter
+  const [journalContextEntryId, setJournalContextEntryId] = useState<string | null>(null); // For Journal entry focus
+  const [kanbanContextTaskId, setKanbanContextTaskId] = useState<string | null>(null); // For Kanban task focus
+  const [napkinsContextNoteId, setNapkinsContextNoteId] = useState<string | null>(null); // For Napkins note focus
+  const [sandboxContextNoteId, setSandboxContextNoteId] = useState<string | null>(null); // For Sandbox note focus
+  const [sketchpadContextItemId, setSketchpadContextItemId] = useState<string | null>(null); // For Sketchpad item focus
   
   // INVITE CODE LOGIC
   const [inviteCodeInput, setInviteCodeInput] = useState('');
@@ -328,6 +333,7 @@ const App: React.FC = () => {
   const addMentorAnalysis = (analysis: MentorAnalysis) => setData(p => ({ ...p, mentorAnalyses: [analysis, ...p.mentorAnalyses] }));
   const deleteMentorAnalysis = (id: string) => setData(p => ({ ...p, mentorAnalyses: p.mentorAnalyses.filter(a => a.id !== id) }));
 
+  // --- NAVIGATION HANDLERS ---
   const handleReflectInJournal = (taskId: string) => {
     setJournalContextTaskId(taskId);
     handleNavigate(Module.JOURNAL);
@@ -341,6 +347,30 @@ const App: React.FC = () => {
   const handleNavigateToNote = (noteId: string) => {
     setNapkinsContextNoteId(noteId);
     handleNavigate(Module.NAPKINS);
+  };
+
+  // General Navigation Handler for Deep Linking from Napkins (or anywhere)
+  const handleDeepNavigate = (targetModule: Module, targetId?: string) => {
+      if (targetId) {
+          switch (targetModule) {
+              case Module.KANBAN:
+                  setKanbanContextTaskId(targetId);
+                  break;
+              case Module.JOURNAL:
+                  setJournalContextEntryId(targetId);
+                  break;
+              case Module.SANDBOX:
+                  setSandboxContextNoteId(targetId);
+                  break;
+              case Module.SKETCHPAD:
+                  setSketchpadContextItemId(targetId);
+                  break;
+              case Module.NAPKINS:
+                  setNapkinsContextNoteId(targetId);
+                  break;
+          }
+      }
+      handleNavigate(targetModule);
   };
 
   const updateConfig = (newConfig: AppConfig) => setData(p => ({ ...p, config: newConfig }));
@@ -478,8 +508,9 @@ const App: React.FC = () => {
             <Napkins 
               notes={data.notes.filter(n => n.status !== 'trash')} 
               flashcards={data.flashcards}
-              tasks={data.tasks} // Added
-              habits={data.habits} // Added
+              tasks={data.tasks} 
+              habits={data.habits}
+              sketchItems={data.sketchpad} // Pass sketchpad items for linking detection
               config={visibleConfig} 
               addNote={addNote} 
               moveNoteToSandbox={moveNoteToSandbox} 
@@ -496,6 +527,7 @@ const App: React.FC = () => {
               initialNoteId={napkinsContextNoteId}
               onClearInitialNote={() => setNapkinsContextNoteId(null)}
               journalEntries={data.journal}
+              onNavigate={handleDeepNavigate}
             />
         )}
         
@@ -504,7 +536,9 @@ const App: React.FC = () => {
               items={data.sketchpad || []} 
               addItem={addSketchItem} 
               deleteItem={deleteSketchItem} 
-              updateItem={updateSketchItem} 
+              updateItem={updateSketchItem}
+              initialItemId={sketchpadContextItemId}
+              onClearInitialItem={() => setSketchpadContextItemId(null)}
             />
         )}
 
@@ -515,11 +549,24 @@ const App: React.FC = () => {
             />
         )}
 
-        {module === Module.SANDBOX && <Sandbox notes={data.notes} tasks={data.tasks} flashcards={data.flashcards} config={visibleConfig} onProcessNote={archiveNote} onAddTask={addTask} onAddFlashcard={addFlashcard} deleteNote={deleteNote} />}
+        {module === Module.SANDBOX && (
+            <Sandbox 
+                notes={data.notes} 
+                tasks={data.tasks} 
+                flashcards={data.flashcards} 
+                config={visibleConfig} 
+                onProcessNote={archiveNote} 
+                onAddTask={addTask} 
+                onAddFlashcard={addFlashcard} 
+                deleteNote={deleteNote} 
+                initialNoteId={sandboxContextNoteId}
+                onClearInitialNote={() => setSandboxContextNoteId(null)}
+            />
+        )}
         {module === Module.KANBAN && <Kanban tasks={data.tasks.filter(t => !t.isArchived)} journalEntries={data.journal.filter(j => !j.isArchived)} config={visibleConfig} addTask={addTask} updateTask={updateTask} deleteTask={archiveTask} reorderTask={reorderTask} archiveTask={archiveTask} onReflectInJournal={handleReflectInJournal} initialTaskId={kanbanContextTaskId} onClearInitialTask={() => setKanbanContextTaskId(null)} />}
         {module === Module.RITUALS && <Rituals habits={data.habits} addHabit={addHabit} updateHabit={updateHabit} deleteHabit={deleteHabit} />}
         {module === Module.MENTAL_GYM && <MentalGym flashcards={data.flashcards} tasks={data.tasks} deleteFlashcard={deleteFlashcard} toggleFlashcardStar={toggleFlashcardStar} />}
-        {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} notes={data.notes} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} onNavigateToTask={handleNavigateToTask} onNavigateToNote={handleNavigateToNote} />}
+        {module === Module.JOURNAL && <Journal entries={data.journal.filter(j => !j.isArchived)} mentorAnalyses={data.mentorAnalyses} tasks={data.tasks} notes={data.notes} config={visibleConfig} addEntry={addJournalEntry} deleteEntry={archiveJournalEntry} updateEntry={updateJournalEntry} addMentorAnalysis={addMentorAnalysis} deleteMentorAnalysis={deleteMentorAnalysis} initialTaskId={journalContextTaskId} onClearInitialTask={() => setJournalContextTaskId(null)} initialEntryId={journalContextEntryId} onClearInitialEntry={() => setJournalContextEntryId(null)} onNavigateToTask={handleNavigateToTask} onNavigateToNote={handleNavigateToNote} />}
         {module === Module.MOODBAR && <Moodbar entries={data.journal.filter(j => !j.isArchived)} onAddEntry={addJournalEntry} />}
         
         {module === Module.ARCHIVE && (

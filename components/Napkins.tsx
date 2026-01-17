@@ -6,7 +6,7 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import Masonry from 'react-masonry-css';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard, Habit } from '../types';
+import { Note, AppConfig, Task, SketchItem, JournalEntry, Flashcard, Habit, Module } from '../types';
 import { findNotesByMood, autoTagNote } from '../services/geminiService';
 import { applyTypography } from '../constants';
 import EmptyState from './EmptyState';
@@ -41,6 +41,8 @@ interface Props {
   initialNoteId?: string | null;
   onClearInitialNote?: () => void;
   journalEntries?: JournalEntry[];
+  
+  onNavigate?: (module: Module, id?: string) => void;
 }
 
 const colors = [
@@ -860,10 +862,11 @@ interface NoteCardProps {
     note: Note;
     isArchived: boolean;
     pathStatus: {
-        hub: boolean;
-        sprint: boolean;
-        habit: boolean;
-        journal: boolean;
+        hub: string | null;
+        sprint: string | null;
+        habit: boolean; // Keep boolean for habits as we don't link to a specific ID in UI yet
+        journal: string | null;
+        sketchpad: string | null;
         journalInsight: boolean;
     };
     handlers: {
@@ -879,6 +882,7 @@ interface NoteCardProps {
         onAddJournalEntry: (entry: JournalEntry) => void;
         addSketchItem?: (item: SketchItem) => void;
         onImageClick?: (src: string) => void;
+        onNavigate?: (module: Module, id?: string) => void;
     }
 }
 
@@ -1051,25 +1055,91 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
                     ) : (
                         // Library: Action buttons moved here
                         <>
-                            <Tooltip content="В хаб"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Box size={16} strokeWidth={1.5} /></button></Tooltip>
-                            
-                            <Tooltip content="В спринты"><button onClick={(e) => { e.stopPropagation(); if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } }} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Kanban size={16} strokeWidth={1.5} /></button></Tooltip>
-                            
-                            <Tooltip content={pathStatus.journal ? "В дневнике" : "В дневник"}>
+                            {/* HUB BUTTON */}
+                            <Tooltip content={pathStatus.hub ? "В хабе" : "В хаб"}>
                                 <button 
-                                    onClick={pathStatus.journal ? undefined : handleToJournal} 
-                                    disabled={pathStatus.journal}
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        if (pathStatus.hub) {
+                                            handlers.onNavigate?.(Module.SANDBOX, pathStatus.hub);
+                                        } else {
+                                            if(window.confirm('В хаб?')) handlers.moveNoteToSandbox(note.id); 
+                                        }
+                                    }} 
                                     className={`p-2 rounded-full transition-all ${
-                                        pathStatus.journal 
-                                        ? 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 opacity-100 cursor-default' 
+                                        pathStatus.hub
+                                        ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 opacity-100'
                                         : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
                                     }`}
                                 >
-                                    <Book size={16} strokeWidth={1.5} />
+                                    <Box size={16} strokeWidth={pathStatus.hub ? 2 : 1.5} />
                                 </button>
                             </Tooltip>
                             
-                            {handlers.addSketchItem && <Tooltip content="В скетчпад"><button onClick={handleToSketchpad} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-all opacity-60 hover:opacity-100"><Tablet size={16} strokeWidth={1.5} /></button></Tooltip>}
+                            {/* SPRINTS BUTTON */}
+                            <Tooltip content={pathStatus.sprint ? "В спринтах" : "В спринты"}>
+                                <button 
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        if (pathStatus.sprint) {
+                                            handlers.onNavigate?.(Module.KANBAN, pathStatus.sprint);
+                                        } else {
+                                            if(window.confirm('В спринты?')) { handlers.onAddTask({ id: Date.now().toString(), title: note.title, content: note.content, column: 'todo', createdAt: Date.now() }); } 
+                                        }
+                                    }} 
+                                    className={`p-2 rounded-full transition-all ${
+                                        pathStatus.sprint
+                                        ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 opacity-100'
+                                        : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
+                                    }`}
+                                >
+                                    <Kanban size={16} strokeWidth={pathStatus.sprint ? 2 : 1.5} />
+                                </button>
+                            </Tooltip>
+                            
+                            {/* JOURNAL BUTTON */}
+                            <Tooltip content={pathStatus.journal ? "В дневнике" : "В дневник"}>
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (pathStatus.journal) {
+                                            handlers.onNavigate?.(Module.JOURNAL, pathStatus.journal);
+                                        } else {
+                                            handleToJournal(e);
+                                        }
+                                    }} 
+                                    className={`p-2 rounded-full transition-all ${
+                                        pathStatus.journal 
+                                        ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 opacity-100' 
+                                        : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
+                                    }`}
+                                >
+                                    <Book size={16} strokeWidth={pathStatus.journal ? 2 : 1.5} />
+                                </button>
+                            </Tooltip>
+                            
+                            {/* SKETCHPAD BUTTON */}
+                            {handlers.addSketchItem && (
+                                <Tooltip content={pathStatus.sketchpad ? "В скетчпаде" : "В скетчпад"}>
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (pathStatus.sketchpad) {
+                                                handlers.onNavigate?.(Module.SKETCHPAD, pathStatus.sketchpad);
+                                            } else {
+                                                handleToSketchpad(e);
+                                            }
+                                        }} 
+                                        className={`p-2 rounded-full transition-all ${
+                                            pathStatus.sketchpad
+                                            ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 opacity-100'
+                                            : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 opacity-60 hover:opacity-100'
+                                        }`}
+                                    >
+                                        <Tablet size={16} strokeWidth={pathStatus.sketchpad ? 2 : 1.5} />
+                                    </button>
+                                </Tooltip>
+                            )}
                         </>
                     )}
                 </div>
@@ -1091,7 +1161,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isArchived, pathStatus, handl
     );
 };
 
-const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, deleteFlashcard, toggleFlashcardStar, defaultTab, initialNoteId, onClearInitialNote, journalEntries }) => {
+const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], config, addNote, moveNoteToSandbox, moveNoteToInbox, archiveNote, deleteNote, reorderNote, updateNote, onAddTask, onAddJournalEntry, addSketchItem, deleteFlashcard, toggleFlashcardStar, defaultTab, initialNoteId, onClearInitialNote, journalEntries, sketchItems, onNavigate }) => {
   const [title, setTitle] = useState('');
   const [creationTags, setCreationTags] = useState<string[]>([]);
   const [creationColor, setCreationColor] = useState('white');
@@ -1142,39 +1212,17 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
   const creationCoverBtnRef = useRef<HTMLButtonElement>(null);
   const editCoverBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Memoize linked note IDs from journal entries for efficient checking
-  // Used for quick prop, but also used inside loop
-  const linkedNoteIds = useMemo(() => {
-      const ids = new Set<string>();
-      if (journalEntries) {
-          journalEntries.forEach(entry => {
-              if (entry.linkedNoteId && !entry.isArchived) {
-                  ids.add(entry.linkedNoteId);
-              }
-              if (entry.linkedNoteIds && !entry.isArchived) {
-                  entry.linkedNoteIds.forEach(id => ids.add(id));
-              }
-          });
-      }
-      return ids;
-  }, [journalEntries]);
-
   // Derived state for path status checking
   const getPathStatus = useCallback((note: Note) => {
-      // Hub Check: Status 'sandbox' (cloned or current) or Content Match in Sandbox
-      const isLinkedToHub = note.previousStatus === 'sandbox' || note.status === 'sandbox' || notes.some(n => n.status === 'sandbox' && n.content === note.content);
+      // Hub Check: Look for sandbox clones or content match
+      const hubNote = notes.find(n => n.status === 'sandbox' && (n.id === note.id || n.content === note.content));
+      const hubId = hubNote ? hubNote.id : null;
       
       // Sprint: Check heuristic (content match)
-      const isLinkedToSprint = tasks.some(t => {
-          if (!t.isArchived) {
-              // Heuristic: check if title matches or content starts with
-              if (note.title && t.title === note.title) return true;
-              if (t.content.includes(note.content.substring(0, 50))) return true;
-          }
-          return false;
-      });
+      const sprintTask = tasks.find(t => !t.isArchived && (t.title === note.title || t.content.includes(note.content.substring(0, 50))));
+      const sprintId = sprintTask ? sprintTask.id : null;
 
-      // Habit: Heuristic
+      // Habit: Heuristic (Just boolean for now as habits aren't deep-linkable by ID easily yet)
       const isLinkedToHabit = habits.some(h => {
           if (!h.isArchived) {
               if (h.description?.includes(note.content.substring(0, 50))) return true;
@@ -1183,21 +1231,24 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
           return false;
       });
 
-      // Journal: Check for links and insights
-      const journalLinks = journalEntries?.filter(j => 
-          (j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id)) && !j.isArchived
-      ) || [];
-      const isLinkedToJournal = journalLinks.length > 0;
-      const hasInsight = journalLinks.some(j => j.isInsight);
+      // Journal: Check for links
+      const journalEntry = journalEntries?.find(j => (j.linkedNoteId === note.id || j.linkedNoteIds?.includes(note.id)) && !j.isArchived);
+      const journalId = journalEntry ? journalEntry.id : null;
+      const hasInsight = !!journalEntry?.isInsight;
+
+      // Sketchpad: Content match
+      const sketchItem = sketchItems?.find(s => s.type === 'text' && s.content === note.content);
+      const sketchpadId = sketchItem ? sketchItem.id : null;
 
       return {
-          hub: isLinkedToHub,
-          sprint: isLinkedToSprint,
+          hub: hubId,
+          sprint: sprintId,
           habit: isLinkedToHabit,
-          journal: isLinkedToJournal,
+          journal: journalId,
+          sketchpad: sketchpadId,
           journalInsight: hasInsight
       };
-  }, [tasks, habits, journalEntries, notes]);
+  }, [tasks, habits, journalEntries, notes, sketchItems]);
 
   useEffect(() => {
       if(defaultTab) setActiveTab(defaultTab as any);
@@ -1601,8 +1652,9 @@ const Napkins: React.FC<Props> = ({ notes, flashcards, tasks = [], habits = [], 
       moveNoteToInbox,
       onAddJournalEntry,
       addSketchItem,
-      onImageClick: (src: string) => setLightboxSrc(src)
-  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc]);
+      onImageClick: (src: string) => setLightboxSrc(src),
+      onNavigate
+  }), [handleDragStart, handleDragOver, handleDrop, handleOpenNote, togglePin, onAddTask, moveNoteToSandbox, archiveNote, moveNoteToInbox, onAddJournalEntry, addSketchItem, setLightboxSrc, onNavigate]);
 
   const markdownRenderComponents = {
       ...markdownComponents,
